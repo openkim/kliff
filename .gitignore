@@ -1,3 +1,8 @@
 *.in
 *.log
 nbc-test-orthogonal-periodic-large
+*.out
+screen*
+*bkp
+training
+develop_test
