@@ -1,4 +1,5 @@
- 
+import argparse
+
 class InputKeywords:
     '''
     Class to deal with controlling keywords. 
@@ -10,8 +11,8 @@ class InputKeywords:
         self.keywords = dict()
         
         # file names
-        self.add_keyword('file_model',      'str',          './KIMmodel.txt')
-        self.add_keyword('file_training',   'str',          './train.xyz')
+        self.add_keyword('file_model',      'str')
+        self.add_keyword('file_training',   'str')
         self.add_keyword('file_test',       'str')
 
         # optimization related
@@ -27,26 +28,13 @@ class InputKeywords:
     def add_keyword(self, name, dtype, value=None, readin=False):
         self.keywords[name] = {'type':dtype, 'value':value, 'readin':readin}
         
-    
-    def remove_comments(self, lines):
-        'Remove lines starting with # and content after #.'
-        processed_lines = []
-        for line in lines:
-            line = line.strip()
-            if not line or line[0] == '#':
-                continue
-            if '#' in line:
-                line = line[0:line.index('#')] 
-            processed_lines.append(line)
-        return processed_lines
-
-
-    def read(self, fname='kimfit.in'):
-        'Read keywords from file.'
+    def read(self):
+        '''Read keywords from file.'''
+        fname, = parse_arg()
         keyword_names = self.keywords.keys()
         with open(fname, 'r') as fin:
             infile = fin.readlines()
-        infile_hash_removed= self.remove_comments(infile)
+        infile_hash_removed = remove_comments(infile)
         for line in infile_hash_removed:
             line = line.split()
             name = line[0]; value = line[1]
@@ -79,12 +67,41 @@ class InputKeywords:
 
 
     def echo_readin(self):
-        'Echo the keywords that are read in from file.'
+        '''Echo the keywords that are read in from file.'''
         print '='*80
         print 'Keywords read from input file.\n'
         for name in self.keywords: 
             if self.keywords[name]['readin']:
                 print '{}   {}'.format(name, self.keywords[name]['value'])
+
+    def get_value(self, key):
+        ''' Get the "value" of keywords "key". '''
+        return self.keywords[key]['value']
+
+   
+
+
+def parse_arg():
+    '''Parse stdin argument.'''
+    parser = argparse.ArgumentParser(description='OpenKIM potential model fitting program.')
+    parser.add_argument('file_in', type=str, help='Name of input file that contains the '
+                                                  'keywords of the program.')
+    args = parser.parse_args()
+    return [args.file_in] 
+
+ 
+def remove_comments(lines):
+    '''Remove lines in a string list that start with # and content after #.'''
+    processed_lines = []
+    for line in lines:
+        line = line.strip()
+        if not line or line[0] == '#':
+            continue
+        if '#' in line:
+            line = line[0:line.index('#')] 
+        processed_lines.append(line)
+    return processed_lines
+
 
 
 
@@ -102,7 +119,7 @@ if __name__ == '__main__':
                     fout.write('{}   {}\n'.format(name, self.keywords[name]['value']))
 
     keys = write_all_keywords()
-    keys.read('develop_test/kimfit.in')
+    keys.read()
     keys.echo_readin()
     keys.write('./kimfit.log')
 

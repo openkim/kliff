@@ -1,8 +1,10 @@
 *.in
 *.log
+*.pyc
 nbc-test-orthogonal-periodic-large
 *.out
 screen*
 *bkp
-training
+training_set
 develop_test
+kimcalculator.py

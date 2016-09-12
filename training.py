@@ -2,7 +2,7 @@ import os
 import glob
 import numpy as np
 
-class OneConfig:
+class Config:
     '''
     Class to read and store the information in one configuraiton. 
     '''
@@ -68,6 +68,11 @@ class OneConfig:
                 raise Exception('not enough data lines. Number of atoms = {}, while '
                                 'number of lines = {}.'.format(self.natoms, num_lines))
     
+    def get_unique_species(self):
+        '''
+        Get a set of the species list.
+        '''
+        return list(set(self.species))
     def get_num_atoms(self):
         return self.natoms
     def get_lattice_vectors(self):
@@ -137,7 +142,7 @@ class TrainingSet():
     Training set class, to deal with multiple configurations.
     '''
     def __init__(self):
-        self.num_configs = 0
+        self.size = 0
         self.configs = []
     
     def read(self, fname):
@@ -150,30 +155,46 @@ class TrainingSet():
             dirpath = os.path.dirname(fname)
         all_files = glob.glob(dirpath+os.path.sep+'*xyz')
         for f in all_files:
-            conf = OneConfig()
+            conf = Config()
             conf.read_extxyz(f)
-            self.num_configs += 1
             self.configs.append(conf)
+        self.size = len(self.configs) 
+        if self.size <= 0:
+            raise Exception('no training set files (ended with .xyz) found '
+                            'in directory: {}/'.format(dirpath))
 
-    def get_num_configs(self):
-        return self.num_configs
+    def get_unique_species(self):
+        '''
+        Get all the species that appear in the training set. 
+        '''
+        unique_species = []
+        for conf in self.configs:
+            unique_species += conf.get_unique_species()
+        return list(set(unique_species))
+        
+    def get_size(self):
+        return self.size
     def get_configs(self):
         return self.configs 
 
 
 # test
 if __name__ == '__main__':
-    #configs = OneConfig()
-    #configs.read_extxyz('T150_training_1000.xyz')
-    #configs.write_extxyz('./echo.xyz')
+#    configs = Config()
+#    configs.read_extxyz('./training_set/T150_training_1000.xyz')
+#    configs.write_extxyz('./echo.xyz')
+#    s =  configs.get_unique_species()
+#    print 'unique species:',s
+#
 
     Tset = TrainingSet()
-    Tset.read('./training')
-    print 'num of configurations', Tset.get_num_configs()
+    Tset.read('./training_set')
+    print 'num of configurations', Tset.get_size()
     configs = Tset.get_configs()
     for i,conf in enumerate(configs):
         conf.write_extxyz('echo{}.xyz'.format(i))
-
+    # get unique species
+    print 'unique species of training set:',Tset.get_unique_species()
 
 
 
