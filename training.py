@@ -76,9 +76,9 @@ class Config:
     def get_num_atoms(self):
         return self.natoms
     def get_lattice_vectors(self):
-        return self.latvec()
+        return self.latvec
     def get_energy(self):
-        return self.energy()
+        return self.energy
     def get_species(self):
         return self.species
     def get_coords(self):

@@ -138,138 +138,86 @@ class KIMobject:
             self.km_coords[i] = c 
 
 #NOTE
-# if we want to use MIOPBC, we need to add something below
+# if we want to use MIOPBC, we need to add something below  see potfit
+
+
+# NOTE see universal test about how to set up neighborlist
+# we still need to still ghost if we want to use neigh_pure
+# or possibly, we can use periodic boundary conditions for neigh_pure
+
 
         # set up the neighborlist 
+        NBC = self.get_NBC_method()
+        # flags to use periodic boundary conditions or not 
+        if NBC=='NEIGH_PURE_F' or NBC=='NEIGH_PURE_H':
+            PBC = [0 ,0, 0]
+        else:
+            PBC = [1, 1, 1]
+        cell = self.conf.get_lattice_vectors().flatten()
         kimnl.nbl_initialize(self.pkim)
+        kimnl.nbl_set_cell(cell, PBC)
+        kimnl.nbl_build_neighborlist(self.pkim)
 
 
-
-
-
+#NOTE
+# this may not be needed, since the the __del__ will do the free automatically
     def free_kim(self):
         if self.uses_neighbors:
             kimnl.nbl_cleanup(self.pkim)
         ks.KIM_API_model_destroy(self.pkim)
         ks.KIM_API_free(self.pkim)
-
         self.pkim = None
 
-    def make_test_string(self, atoms, tmp_name="test_name"):
-        """ Makes string if it doesn't exist, if exists just keeps it as is """
-        if not self.teststring or self.cell_BC_changed(atoms):
-            self.teststring = make_kimscript(tmp_name, self.modelname, atoms)
 
-    def cell_BC_changed(self, atoms):
-        """
-        Check whether BC has changed and cell orthogonality has changed
-        because we might want to change neighbor list generator method
-        """
-        return ((self.pbc != atoms.get_pbc()).any() or
-                 self.cell_orthogonal != orthogonal(atoms.get_cell()))
+# NOTE
+# we may want to define a function `update` to publish parameters  
 
-    def calculation_required(self, atoms, quantities):
-        """
-        Check whether or not the atoms configuration has
-        changed and we need to recalculate..
-        """
-        return (self.km_energy is None or
-               (self.km_numberOfAtoms[0] != atoms.get_number_of_atoms()) or
-               (self.km_atomTypes[:] != atoms.get_atomic_numbers()).any() or
-               (self.km_coordinates[:] != atoms.get_positions().flatten()).any() or
-               (self.pbc != atoms.get_pbc()).any() or
-               (self.cell != atoms.get_cell()).any())
 
-    def update(self, atoms):
-        """
-        Connect the KIM pointers to values in the ase atoms class
-        set up neighborlist and perform calculation
-        """
-        # here we only reinitialize the model if the number of Atoms /
-        # types of atoms have changed, or if the model is uninitialized
-        natoms = atoms.get_number_of_atoms()
-        ntypes = len(set(atoms.get_atomic_numbers()))
+    def compute(self):
+        ks.KIM_API_model_compute(self.pkim)
 
-        if (self.km_numberOfAtoms[0] != natoms or
-            self.km_numberAtomTypes[0] != ntypes or
-            self.cell_BC_changed(atoms)):
-            self.set_atoms(atoms)
 
-        if (not self.check_before_update or
-            (self.check_before_update and self.calculation_required(atoms, ""))):
-            # if the calculation is required we proceed to set the values
-            # of the standard things each model and atom class has
-            self.km_numberOfAtoms[0] = natoms
-            self.km_numberAtomTypes[0] = ntypes
-            self.km_coordinates[:] = atoms.get_positions().flatten()
-            if self.km_particleCharge:
-                km_particleCharge[:] = atoms.get_charges()
-
-            # fill the proper chemical identifiers
-            symbols = atoms.get_chemical_symbols()
-            for i in range(natoms):
-                self.km_atomTypes[i] = ks.KIM_API_get_species_code(self.pkim, symbols[i])
-
-            # build the neighborlist (type depends on model set by pkim)
-            if self.uses_neighbors:
-                kimnl.nbl_set_cell(atoms.get_cell().flatten(), atoms.get_pbc().flatten().astype('int8'))
-                kimnl.nbl_build_neighborlist(self.pkim)
-            ks.KIM_API_model_compute(self.pkim)
-
-    def get_potential_energy(self, atoms=None, force_consistent=False):
-        if not self.manual_update_only:
-            self.update(atoms)
+    def get_potential_energy(self):
         if self.km_energy is not None:
             return self.km_energy.copy()[0]
         else:
             raise SupportError("energy")
 
-    def get_potential_energies(self, atoms):
-        if not self.manual_update_only:
-            self.update(atoms)
+    def get_particle_energy(self):
         if self.km_particleEnergy is not None:
-            particleEnergies = self.km_particleEnergy
-            return particleEnergies.copy()
+            return self.km_particleEnergy.copy()
         else:
-            raise SupportError("potential energies")
+            raise SupportError("partile energy")
 
-    def get_forces(self, atoms):
-        if not self.manual_update_only:
-            self.update(atoms)
+    def get_forces(self):
         if self.km_forces is not None:
-            forces = self.km_forces.reshape((self.km_numberOfAtoms[0], 3))
-            return forces.copy()
+            return self.km_forces.copy()
         else:
             raise SupportError("forces")
 
-    def get_stress(self, atoms):
-        if not self.manual_update_only:
-            self.update(atoms)
-        if self.km_virial is not None:
-            return self.km_virial.copy()
-        else:
-            raise SupportError("stress")
-
-    def get_stresses(self, atoms):
-        if not self.manual_update_only:
-            self.update(atoms)
-        if self.km_particleVirial is not None:
-            return self.km_particleVirial.copy()
-        else:
-            raise SupportError("stress per particle")
-
-    def get_hessian(self, atoms):
-        if not self.manual_update_only:
-            self.update(atoms)
-        if self.km_hessian is not None:
-            return self.km_hessian.copy()
-        else:
-            raise SupportError("hessian")
-
+#    def get_stress(self, atoms):
+#        if self.km_virial is not None:
+#            return self.km_virial.copy()
+#        else:
+#            raise SupportError("stress")
+#
+#    def get_stresses(self, atoms):
+#        if self.km_particleVirial is not None:
+#            return self.km_particleVirial.copy()
+#        else:
+#            raise SupportError("stress per particle")
+#
+#    def get_hessian(self, atoms):
+#        if self.km_hessian is not None:
+#            return self.km_hessian.copy()
+#        else:
+#            raise SupportError("hessian")
+#
     def get_NBC_method(self):
         if self.pkim:
             return ks.KIM_API_get_NBC_method(self.pkim)
 
+# NOTE needed for NEIGH PURE
     def set_ghosts(self, ghosts):
         if self.uses_neighbors:
             kimnl.nbl_set_ghosts(ghosts, self.get_NBC_method() == "NEIGH_PURE_H")
@@ -331,12 +279,12 @@ def generate_kimstr(modelname, species):
     kimstr += 'Neigh_LocaAccess flag\n'
     kimstr += 'Neigh_IterAccess flag\n'
     kimstr += 'Neigh_BothAccess flag\n'
-    kimstr += 'NEIGH_RVEC_H flag\n'
     kimstr += 'NEIGH_RVEC_F flag\n'
-    kimstr += 'NEIGH_PURE_H flag\n'
-    kimstr += 'NEIGH_PURE_F flag\n'
+    kimstr += 'NEIGH_RVEC_H flag\n'
     kimstr += 'MI_OPBC_F    flag\n'
     kimstr += 'MI_OPBC_H    flag\n'
+    kimstr += 'NEIGH_PURE_H flag\n'
+    kimstr += 'NEIGH_PURE_F flag\n'
     kimstr += 'CLUSTER      flag\n'
 
     # model input
@@ -416,19 +364,36 @@ if __name__ == '__main__':
     # test generate_kimstr()
     from training import TrainingSet
     tset = TrainingSet()
-    tset.read('./training_set')
     #modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
+    
+    #tset.read('./training_set')
+    #tset.read('./training_set/T150_training_1000.xyz')
+    tset.read('./develop_test/config.txt_20x20')
     modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
+    
+    #tset.read('./develop_test/training_set_Si.xyz')
+    #modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
+    
     configs = tset.get_configs()
     
     # test generate_kimstr
     species = set(configs[0].get_species())
     kimstr = generate_kimstr(modelname, species)
-    print kimstr
+    #print kimstr
 
     # initialize objects
     KIMobj = KIMobject(modelname, configs[0]) 
     KIMobj.initialize()
-    
-    
-    
+    KIMobj.compute()  
+    print KIMobj.get_NBC_method()
+    print KIMobj.get_potential_energy() 
+    forces = KIMobj.get_forces() 
+    for i,f in enumerate(forces):
+        print '{:15.7e}'.format(f),
+        if i%3 == 2:
+            print 
+
+
+    #print KIMobj.km_coords 
+
+    #ks.KIM_API_print(KIMobj.pkim)
