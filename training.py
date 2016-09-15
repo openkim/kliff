@@ -10,6 +10,7 @@ class Config:
     def __init__(self):
         self.natoms = None 
         self.latvec = None 
+        self.PBC = None
         self.energy = None 
         self.species = []
         self.coords = []
@@ -22,29 +23,15 @@ class Config:
             try:
                 self.natoms = int(lines[0].split()[0])
             except ValueError as err:
-                raise ValueError('{}.\nIncorrect data type at line {} of '
-                                 'file: {}.'.format(err, 1, fname)) 
-            # lattice const and energy
+                raise InputError('{}.\nCorrupted data at line 1 in file: {}.'.format(err, fname)) 
+            # lattice vector, PBC, and energy
             line = lines[1]
-            if 'Lattice' not in line:
-                raise Exception('"Lattice" not found at line {} of file: {}.\n'.format(2, fname))
-            elif 'Energy' not in line:
-                raise Exception('"Energy" not found at line {} of file: {}.\n'.format(2, fname))
-            else:
-                try:
-                    latvec = self.parse_key_value('Lattice', line) 
-                    latvec = [float(i) for i in latvec.split()]
-                    self.latvec = np.array(latvec).reshape((3, 3))
-                except ValueError as err:
-                    raise ValueError('{}.\nCorrupted "Lattice" data at line {} of '
-                                     'file {}.'.format(err, 2, fname)) 
-                try:
-                    energy = self.parse_key_value('Energy', line) 
-                    self.energy = float(energy)
-                except ValueError as err:
-                    raise ValueError('{}.\nCorrupted "Energy" data at line {} of '
-                                     'file {}.'.format(err, 2, fname)) 
-            # read symbol and x, y, z fx, fy, fz
+            latvec = self.parse_key_value(line, 'Lattice', 'float', 9, fname) 
+            self.latvec = np.array(latvec).reshape((3, 3))
+            self.PBC = self.parse_key_value(line, 'PBC', 'float', 3, fname) 
+            energy = self.parse_key_value(line, 'Energy', 'float', 1, fname) 
+            self.energy = energy[0] 
+            # species symbol and x, y, z fx, fy, fz
             try:
                 num_lines = 0
                 for line in lines[2:]:
@@ -62,11 +49,11 @@ class Config:
                         if num_lines == self.natoms:
                             break
             except ValueError as err: 
-                raise ValueError('{}.\nCorrupted data at line {} of '
+                raise InputError('{}.\nCorrupted data at line {} in '
                                  'file {}.'.format(err, num_lines+2+1, fname)) 
             if num_lines < self.natoms:
-                raise Exception('not enough data lines. Number of atoms = {}, while '
-                                'number of lines = {}.'.format(self.natoms, num_lines))
+                raise InputError('Not enough data lines in file: {}. Number of atoms = {}, while '
+                                 'number of data lines = {}.'.format(fname, self.natoms, num_lines))
 #NOTE not needed    
 #    def get_unique_species(self):
 #        '''
@@ -75,7 +62,7 @@ class Config:
 #        return list(set(self.species))
     def get_num_atoms(self):
         return self.natoms
-    def get_lattice_vectors(self):
+    def get_cell(self):
         return self.latvec
     def get_energy(self):
         return self.energy
@@ -85,22 +72,49 @@ class Config:
         return self.coords
     def get_forces(self):
         return self.forces
-
-
-
-
-
-
-    def parse_key_value(self, key, line):
+    def get_pbc(self):
+        return self.PBC
+    
+    def parse_key_value(self, line, key, dtype, size, fname):
         '''
         Given key, parse a string like 'other stuff key = "value" other stuff'
         to get value.
+
+        Parameters:
+        ----------
+        line: The sting line
+
+        key: keyword we want to parse
+      
+        dtype: expected data type of value
+      
+        size: expected size of value
+      
+        fname: file name where the line comes from
+
+        Returns:
+        --------
+        A list of valves assocaited with key
         '''
-        value = line[line.index(key)+len(key):]
-        value = value[value.index('=')+1:]
+        if key not in line:
+            raise InputError('"{}" not found at line 2 in file: {}.'.format(key, fname))
+        value = line[line.index(key):]
         value = value[value.index('"')+1:]
         value = value[:value.index('"')]
+        value = value.split() 
+        if len(value) != size:
+            raise InputError('Incorrect size of "{}" at line 2 in file: {}.\nRequired: {}, '
+                             'provided: {}.'.format(key, fname, size, len(value)))
+
+        try:
+            if dtype == 'float':
+                value = [float(i) for i in value]
+            elif dtype == 'int':
+                value = [int(i) for i in value]
+        except ValueError as err:
+            raise InputError('{}.\nCorrupted "{}" data at line 2 in file: {}.'.format(err, key, fname)) 
         return value
+
 
     def write_extxyz(self, fname='./echo_config.xyz'):
         with open (fname, 'w') as fout:
@@ -161,8 +175,8 @@ class TrainingSet():
             self.configs.append(conf)
         self.size = len(self.configs) 
         if self.size <= 0:
-            raise Exception('no training set files (ended with .xyz) found '
-                            'in directory: {}/'.format(dirpath))
+            raise InputError('No training set files (ended with .xyz) found '
+                             'in directory: {}/'.format(dirpath))
 
 # not needed
 #    def get_unique_species(self):
@@ -180,6 +194,17 @@ class TrainingSet():
         return self.configs 
 
 
+
+class InputError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return self.value
+            
+            
+            
+
+
 # test
 if __name__ == '__main__':
 #    configs = Config()
@@ -189,7 +214,7 @@ if __name__ == '__main__':
 
     Tset = TrainingSet()
     #Tset.read('./training_set')
-    Tset.read('./training_set/T150_training_1000.xyz')
+    Tset.read('./develop_test/T150_training_1000.xyz')
     print 'num of configurations', Tset.get_size()
     configs = Tset.get_configs()
     for i,conf in enumerate(configs):

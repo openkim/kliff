@@ -1,5 +1,6 @@
 import kimservice as ks
 import kimneighborlist as kimnl
+import numpy as np
 
 class KIMobject:
     ''' 
@@ -43,10 +44,10 @@ class KIMobject:
         self.km_particleVirial = None
         self.km_hessian = None
 
-        # initialize ase atoms specifications
-        self.pbc = None
-        self.cell = None
-        self.cell_orthogonal = None
+#        # initialize ase atoms specifications
+#        self.pbc = None
+#        self.cell = None
+#        self.cell_orthogonal = None
 
         # the KIM object
         self.pkim = None
@@ -86,25 +87,18 @@ class KIMobject:
         nspecies = len(species)
         nparticles = self.conf.get_num_atoms()
         coords = self.conf.get_coords()
+        cell = self.conf.get_cell().flatten()
 
-        kim_str = generate_kimstr(self.modelname, species) 
+        kimstr = generate_kimstr(self.modelname, cell, species) 
         status, self.pkim = ks.KIM_API_init_str(kimstr, self.modelname)
         if ks.KIM_STATUS_OK != status:
             ks.KIM_API_report_error('KIM_API_init', status)
             raise InitializationError(self.modelname)
 
-#NOTE the following two status may not work, Matt's code does not use it
-# yes it does not work
-        status = ks.KIM_API_allocate(self.pkim, nparticles, nspecies)
-#        if ks.KIM_STATUS_OK != status:
-#            ks.KIM_API_report_error('KIM_API_allocate', status)
-#            raise InitializationError(self.modelname)
-#
-        status = ks.KIM_API_model_init(self.pkim)
-#        if ks.KIM_STATUS_OK != status:
-#            ks.KIM_API_report_error('KIM_API_model_init', status)
-#            raise InitializationError(self.modelname)
-#
+        ks.KIM_API_allocate(self.pkim, nparticles, nspecies)
+
+        ks.KIM_API_model_init(self.pkim)
+
         # get pointers to model inputs
         self.km_nparticles = ks.KIM_API_get_data_ulonglong(self.pkim, "numberOfParticles")
         self.km_nparticles[0] = nparticles
@@ -145,21 +139,36 @@ class KIMobject:
 # we still need to still ghost if we want to use neigh_pure
 # or possibly, we can use periodic boundary conditions for neigh_pure
 
+        # set up neighbor list 
+        self.set_neighborlist()
 
-        # set up the neighborlist 
+
+    def compute(self):
+        ks.KIM_API_model_compute(self.pkim)
+
+
+    def set_neighborlist(self):
+        '''
+        Initialize neighborlist once and for all.
+        '''
+        PBC = self.conf.get_pbc()
+        cell = self.conf.get_cell().flatten()
         NBC = self.get_NBC_method()
-        # flags to use periodic boundary conditions or not 
-        if NBC=='NEIGH_PURE_F' or NBC=='NEIGH_PURE_H':
-            PBC = [0 ,0, 0]
+        if NBC == 'CLUSTER':
+            self.uses_neighbors = False
         else:
-            PBC = [1, 1, 1]
-        cell = self.conf.get_lattice_vectors().flatten()
-        kimnl.nbl_initialize(self.pkim)
-        kimnl.nbl_set_cell(cell, PBC)
-        kimnl.nbl_build_neighborlist(self.pkim)
+            self.uses_neighbors = True
+        if self.uses_neighbors == True:
+            kimnl.nbl_initialize(self.pkim)
+            kimnl.nbl_set_cell(cell, PBC)
+            kimnl.nbl_build_neighborlist(self.pkim)
+
+
 
 
 #NOTE
+#But we may want to move KIM_API_model_destroy to __del__
+
 # this may not be needed, since the the __del__ will do the free automatically
     def free_kim(self):
         if self.uses_neighbors:
@@ -168,13 +177,14 @@ class KIMobject:
         ks.KIM_API_free(self.pkim)
         self.pkim = None
 
-
 # NOTE
 # we may want to define a function `update` to publish parameters  
 
-
-    def compute(self):
-        ks.KIM_API_model_compute(self.pkim)
+    def get_coords(self):
+        if self.km_coords is not None:
+            return self.km_coords.copy()
+        else:
+            raise SupportError("forces")
 
 
     def get_potential_energy(self):
@@ -217,11 +227,6 @@ class KIMobject:
         if self.pkim:
             return ks.KIM_API_get_NBC_method(self.pkim)
 
-# NOTE needed for NEIGH PURE
-    def set_ghosts(self, ghosts):
-        if self.uses_neighbors:
-            kimnl.nbl_set_ghosts(ghosts, self.get_NBC_method() == "NEIGH_PURE_H")
-            self.uses_ghosts = True
 
     def __del__(self):
         """ Garbage collects the KIM API objects automatically """
@@ -231,17 +236,10 @@ class KIMobject:
             ks.KIM_API_free(self.pkim)
         self.pkim = None
 
-    def __str__(self):
-        return "KIMCalculator(" + self.modelname + ")"
 
 
 
-
-
-
-
-
-def generate_kimstr(modelname, species):
+def generate_kimstr(modelname, cell, species):
     '''
     Creates a valid KIM file that will be used to initialize the KIM object.
 
@@ -279,12 +277,11 @@ def generate_kimstr(modelname, species):
     kimstr += 'Neigh_LocaAccess flag\n'
     kimstr += 'Neigh_IterAccess flag\n'
     kimstr += 'Neigh_BothAccess flag\n'
-    kimstr += 'NEIGH_RVEC_F flag\n'
     kimstr += 'NEIGH_RVEC_H flag\n'
-    kimstr += 'MI_OPBC_F    flag\n'
-    kimstr += 'MI_OPBC_H    flag\n'
-    kimstr += 'NEIGH_PURE_H flag\n'
-    kimstr += 'NEIGH_PURE_F flag\n'
+    kimstr += 'NEIGH_RVEC_F flag\n'
+    if orthogonal(cell):
+        kimstr += 'MI_OPBC_H    flag\n'
+        kimstr += 'MI_OPBC_F    flag\n'
     kimstr += 'CLUSTER      flag\n'
 
     # model input
@@ -329,8 +326,16 @@ def generate_kimstr(modelname, species):
     # free KIM object
     #ks.KIM_API_model_destroy(kimmdl)
     #ks.KIM_API_free(kimmdl)
-
     return kimstr
+
+
+def orthogonal(cell):
+    '''
+    Check whether the supercell is orthogonal. 
+    '''
+    return ((abs(np.dot(cell[0], cell[1])) +
+             abs(np.dot(cell[0], cell[2])) +
+             abs(np.dot(cell[1], cell[2]))) < 1e-8)
 
 
 def checkIndex(pkim, variablename):
@@ -376,24 +381,23 @@ if __name__ == '__main__':
     
     configs = tset.get_configs()
     
-    # test generate_kimstr
-    species = set(configs[0].get_species())
-    kimstr = generate_kimstr(modelname, species)
-    #print kimstr
 
     # initialize objects
     KIMobj = KIMobject(modelname, configs[0]) 
     KIMobj.initialize()
     KIMobj.compute()  
+    
     print KIMobj.get_NBC_method()
     print KIMobj.get_potential_energy() 
+    coords = KIMobj.get_coords()
     forces = KIMobj.get_forces() 
-    for i,f in enumerate(forces):
-        print '{:15.7e}'.format(f),
-        if i%3 == 2:
-            print 
-
+    coords = np.reshape(coords, (len(coords)/3, 3))
+    forces = np.reshape(forces, (len(forces)/3, 3))
+    for r,f in zip(coords,forces):
+        for i in r:
+            print '{:15.7e}'.format(i),
+        for j in f:
+            print '{:15.7e}'.format(j),
+        print
 
     #print KIMobj.km_coords 
-
-    #ks.KIM_API_print(KIMobj.pkim)
