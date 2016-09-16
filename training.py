@@ -1,6 +1,7 @@
 import os
 import glob
 import numpy as np
+from error import InputError
 
 class Config:
     '''
@@ -193,15 +194,7 @@ class TrainingSet():
     def get_configs(self):
         return self.configs 
 
-
-
-class InputError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return self.value
-            
-            
+           
             
 
 

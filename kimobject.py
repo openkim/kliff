@@ -393,11 +393,13 @@ if __name__ == '__main__':
     forces = KIMobj.get_forces() 
     coords = np.reshape(coords, (len(coords)/3, 3))
     forces = np.reshape(forces, (len(forces)/3, 3))
-    for r,f in zip(coords,forces):
-        for i in r:
-            print '{:15.7e}'.format(i),
-        for j in f:
-            print '{:15.7e}'.format(j),
-        print
+#    for r,f in zip(coords,forces):
+#        for i in r:
+#            print '{:15.7e}'.format(i),
+#        for j in f:
+#            print '{:15.7e}'.format(j),
+#        print
 
-    #print KIMobj.km_coords 
+#    print KIMobj.km_coords 
+
+    ks.KIM_API_print(KIMobj.pkim)

@@ -1,4 +1,5 @@
 import argparse
+from error import InputError
 
 class InputKeywords:
     '''
@@ -10,7 +11,8 @@ class InputKeywords:
         data type, default value.   
         '''
         self.keywords = dict()
-        
+        self.blocks = dict() 
+
         # names
         self.add_keyword('modelname',       'str')
         self.add_keyword('trainingset',     'str')
@@ -25,18 +27,26 @@ class InputKeywords:
         # Levenberg-Marquardt
         self.add_keyword('lm.lambda',       'float',        1.12)
 
+        # block values that will be delt with elsewhere
+        self.add_block_keyword('modelparameters')
+
 
     def add_keyword(self, kwd, dtype, value=None, readin=False, name=None):
         self.keywords[kwd] = {'type':dtype, 'value':value, 'readin':readin, 'name':name}
-        
+      
+    def add_block_keyword(self, kwd):
+        self.blocks[kwd] = None 
+
     def read(self):
         '''Read keywords from file.'''
         fname, = parse_arg()
         all_keywords = self.keywords.keys()
         with open(fname, 'r') as fin:
-            infile = fin.readlines()
-        infile_hash_removed = remove_comments(infile)
-        for line in infile_hash_removed:
+            lines = fin.readlines()
+        lines_hash_removed = remove_comments(lines)
+        lines_block_extracted = self.extract_block(lines_hash_removed)
+
+        for line in lines_block_extracted:
             line = line.split()
             kwd = line[0]
             if len(line) >= 2:     
@@ -71,12 +81,36 @@ class InputKeywords:
                 # this keyword has value read in from file, record it
                 self.keywords[kwd_lower]['readin'] = True 
                 self.keywords[kwd_lower]['name'] = kwd
+    
+    def extract_block(self, lines):
+        line_num = 0
+
+        while line_num < len(lines):
+            line = lines[line_num]
+            split = line.split()
+            block = []
+            if split[0].lower() == '%block':
+                block_keyword = split[1].lower()
+                block.append(line)
+                lines.remove(line)
+                while line_num < len(lines):
+                    line = lines[line_num]
+                    block.append(line)
+                    lines.remove(line)
+                    split = line.split()
+                    if split[0].lower() == '%endblock':
+                        break
+                if block_keyword in self.blocks.keys():
+                    self.blocks[block_keyword] = block 
+            else:
+                line_num += 1
+        return lines
 
 
-    def echo_readin(self):
+    def echo(self):
         '''Echo the keywords that are read in from file.'''
         print '='*80
-        print 'Keywords read from input file.\n'
+        print 'Keywords read from input file:\n'
         for name in self.keywords: 
             if self.keywords[name]['readin']:
                 print '{:15} {}'.format(self.keywords[name]['name'],
@@ -86,7 +120,9 @@ class InputKeywords:
         ''' Get the "value" of keywords "key". '''
         return self.keywords[key]['value']
 
-   
+    def get_block(self, key):
+        ''' Get a list of input lines block characterized by the "key".'''
+        return self.blocks[key]
 
 
 def parse_arg():
@@ -111,20 +147,12 @@ def remove_comments(lines):
     return processed_lines
 
           
-class InputError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return self.value 
-
-
-
 
 # test
 if __name__ == '__main__':
     #keys = InputKeywords()
     #keys.read('develop_test/kimfit.in')
-    #keys.echo_readin()
+    #keys.echo()
 
     class write_all_keywords(InputKeywords):
         def write(self, fname='./kimfit.log'):
@@ -135,7 +163,7 @@ if __name__ == '__main__':
 
     keys = write_all_keywords()
     keys.read()
-    keys.echo_readin()
+    keys.echo()
     keys.write('./kimfit.log')
 
 
