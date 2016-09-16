@@ -15,7 +15,8 @@ Tset.read(training_set_file_name)
 
 
 # test FreeParam class
-free_params = FreeParams()
+modelname = keywords.get_value('modelname')
+free_params = FreeParams(modelname)
 free_params.inquire_free_params()
 #free_params.echo()
 

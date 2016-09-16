@@ -1,4 +1,5 @@
 import argparse
+from collections import OrderedDict
 from error import InputError
 
 class InputKeywords:
@@ -10,7 +11,7 @@ class InputKeywords:
         List all the supported keywords here, including internal name, 
         data type, default value.   
         '''
-        self.keywords = dict()
+        self.keywords = OrderedDict()
         self.blocks = dict() 
 
         # names

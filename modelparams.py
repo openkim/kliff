@@ -1,6 +1,9 @@
 import sys
 import numpy as np
+from collections import OrderedDict
+import kimservice as ks
 from error import InputError
+from utils import generate_dummy_kimstr
 
 class AttemptedParams():
     '''
@@ -35,7 +38,7 @@ class AttemptedParams():
         '''
         self.lines = lines
         self.avail_params = avail_params
-        self.params = dict()
+        self.params = OrderedDict()
 
     def read(self):
         avail_names = self.avail_params.get_names()
@@ -169,23 +172,36 @@ class FreeParams():
     Class of adjustable parameters whose name begins with "PARAM_FREE" in the 
     descriptor file of a model. 
     '''
-    def __init__(self):
+    def __init__(self, modelname):
+        self.modelname = modelname
         self.nparams = 0
         self.params = dict()
-
+        self.pkim = None
 
     def inquire_free_params(self):
+
+        kimstr = generate_dummy_kimstr(self.modelname)
+        status, self.pkim = ks.KIM_API_init_str(kimstr, self.modelname)
+        if ks.KIM_STATUS_OK != status:
+            ks.KIM_API_report_error('KIM_API_init', status)
+            raise InitializationError(self.modelname)
+        # set dummy numberOfSpeces and numberOfParticles to 1
+        ks.KIM_API_allocate(self.pkim, 1, 1) 
+        ks.KIM_API_model_init(self.pkim)
+
 #NOTE modifications needed to call KIM_API_get_free_params to get the names
-        self.add_param('PARAM_FREE_A')
-        self.add_param('PARAM_FREE_B')
-        self.add_param('PARAM_FREE_C')
+        free_params = ['PARAM_FREE_A', 'PARAM_FREE_B', 'PARAM_FREE_p'] 
         self.nparams=len(self.params)
+
+        for p in free_params:
+            self.add_param(p)
+        
 
     def add_param(self, name):
 #NOTE modifications needed to call get_rank, get_shape and get_data to set them
         rank = 1
-        shape = 2
-        value = [0.1, 0.2]
+        shape = 3
+        value = ks.KIM_API_get_data_double(self.pkim, name)
         
         size = np.prod(shape) 
         self.params[name] = {'rank':rank, 'shape':shape, 'size':size, 'value':value}
@@ -224,8 +240,12 @@ class FreeParams():
     def get_size(self, name):
         return self.params[name]['size']
 
-
-
+    def __del__(self):
+        ''' Garbage collects the KIM API objects automatically '''
+        if self.pkim:
+            ks.KIM_API_model_destroy(self.pkim)
+            ks.KIM_API_free(self.pkim)
+        self.pkim = None
 
 
 
@@ -240,16 +260,22 @@ class OptimizeParams():
 
 
 if __name__ == '__main__':
-
+    modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
 
     # test FreeParam class
-    free_params = FreeParams()
+    free_params = FreeParams(modelname)
     free_params.inquire_free_params()
 #    free_params.echo()
     
     lines=['PARAM_FREE_A']
-    lines.append('kim 0 2.2')
+    lines.append('kim 0 20')
     lines.append('2.0 fix')
+    lines.append('2.0 fix')
+    lines.append('PARAM_FREE_p')
+    lines.append('kim 0 20')
+    lines.append('2.0  1.0  3.0')
+    lines.append('2.0 fix')
+
 
     att_params = AttemptedParams(lines, free_params)
     att_params.read()
