@@ -1,7 +1,6 @@
 from training import TrainingSet
 from keywords import InputKeywords
-from modelparams import FreeParams
-from modelparams import AttemptedParams
+from modelparams import ModelParams
 
 # read keywords
 keywords = InputKeywords()
@@ -15,16 +14,16 @@ Tset.read(training_set_file_name)
 
 
 # test FreeParam class
-modelname = keywords.get_value('modelname')
-free_params = FreeParams(modelname)
-free_params.inquire_free_params()
 #free_params.echo()
 
 
+modelname = keywords.get_value('modelname')
 input_params = keywords.get_block('modelparameters')
-att_params = AttemptedParams(input_params, free_params)
+att_params = ModelParams(input_params, modelname)
+att_params.get_avail_params()
+#att_params.echo_avail_params()
 att_params.read()
-att_params.echo()    
+att_params.echo_opt_params()    
 #print lines
 
 
