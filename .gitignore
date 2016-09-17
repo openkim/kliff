@@ -1,11 +1,11 @@
 *.in
 *.log
 *.pyc
-nbc-test-orthogonal-periodic-large
 *.out
 screen*
 *bkp
 training_set
-develop_test
+test
 kimcalculator.py
 lib
+docs

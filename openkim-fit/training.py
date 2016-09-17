@@ -82,7 +82,7 @@ class Config:
         to get value.
 
         Parameters:
-        ----------
+        
         line: The sting line
 
         key: keyword we want to parse
@@ -94,7 +94,7 @@ class Config:
         fname: file name where the line comes from
 
         Returns:
-        --------
+       
         A list of valves assocaited with key
         '''
         if key not in line:
