@@ -103,12 +103,14 @@ class ModelParams():
                     continue
             else:
                 name = line
-                rank = self.avail_params[name]['rank']
-                shape = self.avail_params[name]['shape']
+#                rank = self.avail_params[name]['rank']
+#                shape = self.avail_params[name]['shape']
+#                size = self.avail_params[name]['size']
+#                tmp_dict = {'rank':        rank,
+#                            'shape':       shape,
+
                 size = self.avail_params[name]['size']
-                tmp_dict = {'rank':        rank,
-                            'shape':       shape,
-                            'size':        size,
+                tmp_dict = {'size':        size,
                             'value':       [None for i in range(size)], 
                             'use-kim':     [False for i in range(size)], 
                             'fix':         [False for i in range(size)], 
@@ -152,6 +154,8 @@ class ModelParams():
     def read_1st_item(self, name, j, first):
         if first.lower() == 'kim':
             self.opt_params[name]['use-kim'][j] = True
+            model_value = self.avail_params[name]['value']
+            self.opt_params[name]['value'][j] = model_value[j] 
         else:
             try:
                 self.opt_params[name]['value'][j] = float(first) 
@@ -164,15 +168,15 @@ class ModelParams():
         Check whether the initial guess of a paramter is within its lower and upper bounds.
         '''
         for name,attr in self.opt_params.iteritems():
-            model_value = self.avail_params[name]['value']
+#            model_value = self.avail_params[name]['value']
             for i in range(attr['size']):
                 lower_bound = attr['lower_bound'][i] 
                 if lower_bound != None:
                     upper_bound = attr['upper_bound'][i] 
-                    read_value = attr['value'][i]
-                    if attr['use-kim'][i]:
-                        read_value = model_value[i]
-                    if read_value<lower_bound or read_value>upper_bound:
+                    value = attr['value'][i]
+#                    if attr['use-kim'][i]:
+#                        read_value = model_value[i]
+                    if value < lower_bound or value > upper_bound:
                         raise InputError('Initial guess at line {} of {} is out of '
                                          'bounds.\n'.format(i+1, name))
 
@@ -201,10 +205,10 @@ class ModelParams():
 
     def get_names(self):
         return self.opt_params.keys()
-    def get_rank(self, name):
-        return self.opt_params[name]['rank']
-    def get_shape(self, name):
-        return self.opt_params[name]['shape']
+#    def get_rank(self, name):
+#        return self.opt_params[name]['rank']
+#    def get_shape(self, name):
+#        return self.opt_params[name]['shape']
     def get_size(self, name):
         return self.opt_params[name]['size']
     def get_value(self, name):

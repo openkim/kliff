@@ -30,11 +30,8 @@ def generate_kimstr(modelname, cell, species):
     # 'code' does not matter, so just give it 0 
     kimstr += 'PARTICLE_SPECIES:\n'
     kimstr += '# Symbol/name    Type    code\n'
-    if type(species) == list:
-        for s in species:
-            kimstr += s+'  spec    0\n' 
-    else:
-            kimstr += species+'  spec    0\n' 
+    for s in species:
+        kimstr += s+'  spec    0\n' 
 
     # conversions 
     kimstr += 'CONVENTIONS:\n'
@@ -101,6 +98,7 @@ def generate_dummy_kimstr(modelname):
     '''
     status, kimmdl = ks.KIM_API_model_info(modelname)
     species = ks.KIM_API_get_model_species(kimmdl, 0) 
+    species = [species]
     dummy_cell = [1, 1, 1]
     kimstr = generate_kimstr(modelname, dummy_cell, species) 
 
