@@ -99,7 +99,7 @@ def generate_dummy_kimstr(modelname):
     status, kimmdl = ks.KIM_API_model_info(modelname)
     species = ks.KIM_API_get_model_species(kimmdl, 0) 
     species = [species]
-    dummy_cell = [1, 1, 1]
+    dummy_cell = [[1,0,0], [0,1,0],[0,0,1]]
     kimstr = generate_kimstr(modelname, dummy_cell, species) 
 
 #NOTE free needed, as above 

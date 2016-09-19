@@ -68,7 +68,7 @@ class KIMobject:
 #
 
     def initialize(self):
-        ''' Initialize the KIM object for self.conf''' 
+        ''' Initialize the KIM object for the configuration of atoms in self.conf.''' 
 
 #        self.pbc = atoms.get_pbc()
 #        self.cell = atoms.get_cell()
@@ -94,7 +94,7 @@ class KIMobject:
         nspecies = len(species)
         nparticles = self.conf.get_num_atoms()
         coords = self.conf.get_coords()
-        cell = self.conf.get_cell().flatten()
+        cell = self.conf.get_cell()
 
         kimstr = generate_kimstr(self.modelname, cell, species) 
         status, self.pkim = ks.KIM_API_init_str(kimstr, self.modelname)
@@ -124,13 +124,13 @@ class KIMobject:
             self.km_forces = ks.KIM_API_get_data_double(self.pkim, "forces")
         if checkIndex(self.pkim, "particleEnergy") >= 0:
             self.km_particleEnergy = ks.KIM_API_get_data_double(self.pkim, "particleEnergy")
-        if checkIndex(self.pkim, "virial") >= 0:
-            self.km_virial = ks.KIM_API_get_data_double(self.pkim, "virial")
-        if checkIndex(self.pkim, "particleVirial") >= 0:
-            self.km_particleVirial = ks.KIM_API_get_data_double(self.pkim, "particleVirial")
-        if checkIndex(self.pkim, "hessian") >= 0:
-            self.km_hessian = ks.KIM_API_get_data_double(self.pkim, "hessian")
-
+#        if checkIndex(self.pkim, "virial") >= 0:
+#            self.km_virial = ks.KIM_API_get_data_double(self.pkim, "virial")
+#        if checkIndex(self.pkim, "particleVirial") >= 0:
+#            self.km_particleVirial = ks.KIM_API_get_data_double(self.pkim, "particleVirial")
+#        if checkIndex(self.pkim, "hessian") >= 0:
+#            self.km_hessian = ks.KIM_API_get_data_double(self.pkim, "hessian")
+#
         # copy particle species
         for i,s in enumerate(particleSpecies):
             self.km_particleSpecies[i] = ks.KIM_API_get_species_code(self.pkim, s)
@@ -241,25 +241,25 @@ class KIMobject:
 
     def publish_params(self, opt_x):
         '''
-        Update parameters from optimzier to KIM object.
+        Update parameters from optimzier to KIM object and then re-initiate the model.
         '''
         for i,val in enumerate(opt_x):
             name = self.params_index[i]['name']
             value_slot = self.params_index[i]['value_slot']
             self.params[name]['value'][value_slot] = val
-
+        ks.KIM_API_model_reinit(self.pkim)
 
     def get_opt_x0(self):
         '''
         Nest all parameter values (except the fix ones) to a list. And this will
         be fed to the optimizer as the starting parameters.
         '''
-        opt_x0 = []
+        opt_x0 = [] 
         for idx in self.params_index:
             name = idx['name']
             value_slot = idx['value_slot']
             opt_x0.append(self.params[name]['value'][value_slot]) 
-        return opt_x0
+        return np.array(opt_x0)
 
 
 
@@ -297,8 +297,7 @@ class KIMobject:
         else:
             raise SupportError("forces")
 
-
-    def get_potential_energy(self):
+    def get_energy(self):
         if self.km_energy is not None:
             return self.km_energy.copy()[0]
         else:
@@ -365,6 +364,23 @@ class InitializationError(Exception):
 
 
 
+
+def init_KIMobjects(modelname, confs, initial_params):
+    '''
+    Wrapper function to instantiate multiple KIMobject class, one for each 
+    configuration in the training set.
+    '''
+    kim_objects = []
+    for c in confs:
+        obj = KIMobject(modelname, c)
+        obj.initialize()
+        obj.map_opt_index(initial_params)
+        obj.compute()
+        kim_objects.append(obj)
+    return kim_objects
+
+
+
 if __name__ == '__main__':
    
     # test generate_kimstr()
@@ -372,11 +388,11 @@ if __name__ == '__main__':
     tset = TrainingSet()
     #modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
     
-    #tset.read('.tests/training_set')
-    #tset.read('.tests/training_set/T150_training_1000.xyz')
+    #tset.read('../tests/training_set')
+    #tset.read('../tests/training_set/T150_training_1000.xyz')
     tset.read('../tests/config.txt_20x20')
     modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
-    #tset.read('./tests/training_set_Si.xyz')
+    #tset.read('../tests/training_set_Si.xyz')
     #modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
     configs = tset.get_configs()
     
@@ -384,10 +400,11 @@ if __name__ == '__main__':
     # initialize objects
     KIMobj = KIMobject(modelname, configs[0]) 
     KIMobj.initialize()
+
     KIMobj.compute()  
-    
     print KIMobj.get_NBC_method()
-    print KIMobj.get_potential_energy() 
+    print KIMobj.get_energy() 
+    print KIMobj.get_forces()[0:3]
 
     coords = KIMobj.get_coords()
     forces = KIMobj.get_forces() 
