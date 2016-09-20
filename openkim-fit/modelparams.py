@@ -38,7 +38,7 @@ class ModelParams():
         '''
         self.lines = lines
         self.modelname = modelname
-        self.avail_params = dict()
+        self.avail_params = OrderedDict()
         self.opt_params = OrderedDict()
         self.pkim = None
 
@@ -56,15 +56,16 @@ class ModelParams():
         # set dummy numberOfSpeces and numberOfParticles to 1
         ks.KIM_API_allocate(self.pkim, 1, 1) 
         ks.KIM_API_model_init(self.pkim)
-
-#NOTE modifications needed to call KIM_API_get_free_params to get the names
-        free_params = ['PARAM_FREE_A', 'PARAM_FREE_B', 'PARAM_FREE_p'] 
-        for name in free_params:
-#NOTE modifications needed to call get_rank, get_shape and get_data to set them
-            rank = 1
-            shape = 3
+        N_free_params = ks.KIM_API_get_num_free_params(self.pkim)
+        for i in range(N_free_params):
+            name = ks.KIM_API_get_free_parameter(self.pkim, i)
+            rank = ks.KIM_API_get_rank(self.pkim, name)
+            shape = ks.KIM_API_get_shape(self.pkim, name)
             value = ks.KIM_API_get_data_double(self.pkim, name)
-            size = np.prod(shape) 
+            if rank == 0:
+                size = 1
+            else:
+                size = np.prod(shape) 
             self.avail_params[name] = {'rank':rank, 'shape':shape, 
                                        'size':size, 'value':value}
 
@@ -168,14 +169,11 @@ class ModelParams():
         Check whether the initial guess of a paramter is within its lower and upper bounds.
         '''
         for name,attr in self.opt_params.iteritems():
-#            model_value = self.avail_params[name]['value']
             for i in range(attr['size']):
                 lower_bound = attr['lower_bound'][i] 
                 if lower_bound != None:
                     upper_bound = attr['upper_bound'][i] 
                     value = attr['value'][i]
-#                    if attr['use-kim'][i]:
-#                        read_value = model_value[i]
                     if value < lower_bound or value > upper_bound:
                         raise InputError('Initial guess at line {} of {} is out of '
                                          'bounds.\n'.format(i+1, name))
@@ -232,8 +230,9 @@ class ModelParams():
 
 
 if __name__ == '__main__':
+    modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
+    modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
     modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
-
     # test FreeParam class
 #    free_params = FreeParams(modelname)
 #    free_params.inquire_free_params()
@@ -251,7 +250,10 @@ if __name__ == '__main__':
 
     att_params = ModelParams(lines, modelname)
     att_params.get_avail_params()
-    #att_params.echo_avail_params()
+    att_params.echo_avail_params()
+
+
+    sys.exit(0)
     att_params.read()
     att_params.echo_opt_params()    
     #print lines
