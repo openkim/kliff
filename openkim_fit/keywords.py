@@ -14,16 +14,16 @@ class InputKeywords:
         self.keywords = OrderedDict()
         self.blocks = dict() 
 
-        # names
-        self.add_keyword('modelname',       'str')
-        self.add_keyword('trainingset',     'str')
-        self.add_keyword('testset',         'str')
+        self.add_keyword('trainingset',         'str')
+        self.add_keyword('testset',             'str')
+        self.add_keyword('modelname',           'str')
+        self.add_keyword('echo_avail_params',   'bool',     False)
 
         # optimization related
-        self.add_keyword('maxsteps',        'int',          10000)
-        self.add_keyword('regularity',      'boolean',      False)
-        self.add_keyword('global',          'boolean',      False)
-        self.add_keyword('optimize',        'boolean',      True)
+        self.add_keyword('maxsteps',            'int',      10000)
+        self.add_keyword('regularity',          'bool',     False)
+        self.add_keyword('global',              'bool',     False)
+        self.add_keyword('optimize',            'bool',     True)
 
         # Levenberg-Marquardt
         self.add_keyword('lm.lambda',       'float',        1.12)
@@ -72,7 +72,7 @@ class InputKeywords:
                     except ValueError as err:
                         raise  ValueError('{}.\ndata type of "{}" in keyword file should be '
                                           '"{}".'.format(err, kwd, expected_type))
-                elif expected_type == 'boolean':
+                elif expected_type == 'bool':
                     if value.lower() == 'true' or value.lower() == 't':
                         self.keywords[kwd_lower]['value'] = True
                     else:

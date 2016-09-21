@@ -250,10 +250,8 @@ if __name__ == '__main__':
 
     att_params = ModelParams(lines, modelname)
     att_params.get_avail_params()
-    att_params.echo_avail_params()
+#    att_params.echo_avail_params()
 
-
-    sys.exit(0)
     att_params.read()
     att_params.echo_opt_params()    
     #print lines

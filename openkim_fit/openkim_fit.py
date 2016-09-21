@@ -22,7 +22,8 @@ input_params = keywords.get_block('modelparameters')
 modelname = keywords.get_value('modelname')
 att_params = ModelParams(input_params, modelname)
 att_params.get_avail_params()
-#att_params.echo_avail_params()
+if keywords.get_value('echo_avail_params'):
+    att_params.echo_avail_params()
 att_params.read()
 att_params.echo_opt_params()    
 
