@@ -10,14 +10,14 @@ class Config:
     
     def __init__(self):
         self.natoms = None 
-        self.latvec = None 
+        self.cell = None 
         self.PBC = None
         self.energy = None 
         self.species = []
         self.coords = []
         self.forces = []
 
-    def read_extxyz(self, fname='./train.xyz'):
+    def read_extxyz(self, fname):
         with open(fname, 'r') as fin:
             lines = fin.readlines() 
             # number of atoms
@@ -27,8 +27,8 @@ class Config:
                 raise InputError('{}.\nCorrupted data at line 1 in file: {}.'.format(err, fname)) 
             # lattice vector, PBC, and energy
             line = lines[1]
-            latvec = self.parse_key_value(line, 'Lattice', 'float', 9, fname) 
-            self.latvec = np.array(latvec).reshape((3, 3))
+            cell = self.parse_key_value(line, 'Lattice', 'float', 9, fname) 
+            self.cell = np.array(cell).reshape((3, 3))
             self.PBC = self.parse_key_value(line, 'PBC', 'float', 3, fname) 
             energy = self.parse_key_value(line, 'Energy', 'float', 1, fname) 
             self.energy = energy[0] 
@@ -64,7 +64,7 @@ class Config:
     def get_num_atoms(self):
         return self.natoms
     def get_cell(self):
-        return self.latvec
+        return self.cell
     def get_energy(self):
         return self.energy
     def get_species(self):
@@ -124,7 +124,7 @@ class Config:
             # second line 
             # lattice 
             fout.write('Lattice="')
-            for line in self.latvec:
+            for line in self.cell:
                 for item in line:
                     fout.write('{:10.6f}'.format(item))
             fout.write('" ') 
@@ -179,6 +179,8 @@ class TrainingSet():
             raise InputError('No training set files (ended with .xyz) found '
                              'in directory: {}/'.format(dirpath))
 
+        print 'size training', self.size
+
 # not needed
 #    def get_unique_species(self):
 #        '''
@@ -207,7 +209,7 @@ if __name__ == '__main__':
 
     Tset = TrainingSet()
     #Tset.read('./training_set')
-    Tset.read('./develop_test/T150_training_1000.xyz')
+    Tset.read('../tests/T150_training_1000.xyz')
     print 'num of configurations', Tset.get_size()
     configs = Tset.get_configs()
     for i,conf in enumerate(configs):

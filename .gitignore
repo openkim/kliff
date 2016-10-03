@@ -6,8 +6,8 @@ screen*
 *bkp
 training_set
 tests
-kimcalculator.py
 lib
 docs
 .cache
 TODO
+test_params.txt

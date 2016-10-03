@@ -1,6 +1,7 @@
 import argparse
 from collections import OrderedDict
 from error import InputError
+from utils import remove_comments
 
 class InputKeywords:
     '''
@@ -134,20 +135,7 @@ def parse_arg():
     args = parser.parse_args()
     return [args.file_in] 
 
- 
-def remove_comments(lines):
-    '''Remove lines in a string list that start with # and content after #.'''
-    processed_lines = []
-    for line in lines:
-        line = line.strip()
-        if not line or line[0] == '#':
-            continue
-        if '#' in line:
-            line = line[0:line.index('#')] 
-        processed_lines.append(line)
-    return processed_lines
-
-          
+         
 
 # test
 if __name__ == '__main__':

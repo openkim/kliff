@@ -1,37 +1,36 @@
 import numpy as np
-from collections import OrderedDict
 import kimservice as ks 
 import kimneighborlist as kimnl
 from utils import generate_kimstr
 from utils import checkIndex 
+from modelparams import ModelParams
 
-class KIMobject:
+class KIMcalculator:
     ''' 
-    KIMobject class which initializes an OpenKIM object that stores the Model 
-    information and provides access to the registered compute method.
+    KIM calculator class that can compute the energy, forces, and stresses for
+    a given configuration.
     ''' 
-    def __init__(self, modelname, conf):
+
+    def __init__(self, modelname, opt_params, conf):
         '''
-        Creates a KIM calculator to ASE for a given modelname.
+        Creates a KIM calculator for a given potential model.
 
         Parameters
-        ----------
+
         modelname: str
             the KIM Model upon which the KIM object is built 
+       
+        params: instance of class ModelParams
 
         conf: Config object in which the atoms information are stored
-
-        kimstring: str
-            descriptor string (functions the same as descriptor.kim file) of the
-            this test, which is used to match the KIM Model
-
         Returns
-        -------
-            out: KIM object
+
+        out: KIM object
         '''
         
         # class members
         self.modelname = modelname
+        self.opt_params = opt_params
         self.conf = conf
 
         # initialize pointers for kim
@@ -56,16 +55,19 @@ class KIMobject:
         self.pkim = None
         self.uses_neighbors = None
 
-        # optimization parameters
-        self.params = OrderedDict()
-        self.params_index = [] 
+        #  parameters
+        self.params = dict() 
+
 
 #    def set_atoms(self, atoms):
 #        """ Called by Atoms class in function set_calculator """
 #        if self.pkim:
 #            self.free_kim()
 #        self.initialize(atoms)
-#
+
+
+
+
 
     def initialize(self):
         ''' Initialize the KIM object for the configuration of atoms in self.conf.''' 
@@ -131,16 +133,26 @@ class KIMobject:
 #        if checkIndex(self.pkim, "hessian") >= 0:
 #            self.km_hessian = ks.KIM_API_get_data_double(self.pkim, "hessian")
 #
-        # copy particle species
+        # copy particle species to KIM object
         for i,s in enumerate(particleSpecies):
             self.km_particleSpecies[i] = ks.KIM_API_get_species_code(self.pkim, s)
 
-        # copy coordinates 
+        # copy coordinates to KIM object 
         for i,c in enumerate(coords):
             self.km_coords[i] = c 
 
+        # get value in KIM object
+        opt_param_names = self.opt_params.get_names()
+        for name in opt_param_names:
+            value = ks.KIM_API_get_data_double(self.pkim, name)
+            size = self.opt_params.get_size(name)
+            self.params[name] = {'size':size,'value':value}
+
+
+
+
 #NOTE
-# if we want to use MIOPBC, we need to add something below  see potfit
+# if we want to use MIOPBC, we need to add something below  box side length see potfit
 
 
 # NOTE see universal test about how to set up neighborlist
@@ -161,7 +173,17 @@ class KIMobject:
             kimnl.nbl_build_neighborlist(self.pkim)
 
 
-
+    def update_params(self):
+        '''
+        Update potential model parameters from ModelParams class to KIM object.
+        '''
+        for name,attr in self.params.iteritems():
+            new_value = self.opt_params.get_value(name)
+            size  = attr['size']
+            value = attr['value']
+            for i in range(size):
+                value[i] = new_value[i]
+        ks.KIM_API_model_reinit(self.pkim) 
 
 #NOTE
 #But we may want to move KIM_API_model_destroy to __del__
@@ -174,121 +196,24 @@ class KIMobject:
         ks.KIM_API_free(self.pkim)
         self.pkim = None
 
-# NOTE
-# we may want to define a function `update` to publish parameters  
-
-    def map_opt_index(self, initial_params):
-        '''
-        Set up the map between initial parameters that are read in from input
-        and the parameters that are to be optimzied. The latter is a one-dimensional
-        list that is going to be used by the optimized directly. "index" means
-        the slot of of a parameter in the one-dimensional list. For example, 
-        given the following potential model paramters in the input file:
-
-        PARAM_FREE_A
-        1.1  fix 
-        KIM  2.2  3.3
-        
-        PARAM_FREE_B
-        4.4
-        KIM  fix
-        5.5  2.2  6.6 
-       
-        and a one-dimensional list opt_x, KIM in PARAM_FREE_A will have index 0 in
-        opt_x, and 4.4 and 5.5 in PARAM_FREE_B will have indices 1 and 2, respectively.
-        '''
-        initial_param_names = initial_params.get_names()
-        for name in initial_param_names:
-            value = ks.KIM_API_get_data_double(self.pkim, name)
-            initial_value = initial_params.get_value(name) 
-            size          = initial_params.get_size(name) 
-            lower_bound   = initial_params.get_lower_bound(name) 
-            upper_bound   = initial_params.get_upper_bound(name) 
-            fix           = initial_params.get_fix(name) 
-            
-            # copy intial guesses to KIM
-            # should not do: value = initial_value.copy() since this will simply 
-            # reassign value to another object. Here, we should regard value as 
-            # a C-type pointer registered in the KIM object
-            for i in range(size):
-                value[i] = initial_value[i]
-
-            self.params[name] = {'size':size, 'value':value,
-                                 'lower_bound':lower_bound,
-                                 'upper_bound':upper_bound,
-                                 'fix':fix}
-
-            # create index 
-            for i in range(size):
-                if not fix[i]:
-                    tmp_idx = {'name':name, 'value_slot':i}
-                    self.params_index.append(tmp_idx)
-
-
-            # create index 
-#            for i in range(size):
-#                if not fix[i]:
-#                    index[i] = idx
-#                    idx += 1 
-#                else:
-#                    index[i] = None
-#
-#            self.params[name] = {'size':size, 'value':value,
-#                                 'lower_bound':lower_bound,
-#                                 'upper_bound':upper_bound,
-#                                 'fix':fix, 'index':index}
-#
-
-    def publish_params(self, opt_x):
-        '''
-        Update parameters from optimzier to KIM object and then re-initiate the model.
-        '''
-        for i,val in enumerate(opt_x):
-            name = self.params_index[i]['name']
-            value_slot = self.params_index[i]['value_slot']
-            self.params[name]['value'][value_slot] = val
-        ks.KIM_API_model_reinit(self.pkim)
-
-    def get_opt_x0(self):
-        '''
-        Nest all parameter values (except the fix ones) to a list. And this will
-        be fed to the optimizer as the starting parameters.
-        '''
-        opt_x0 = [] 
-        for idx in self.params_index:
-            name = idx['name']
-            value_slot = idx['value_slot']
-            opt_x0.append(self.params[name]['value'][value_slot]) 
-        return np.array(opt_x0)
-
-
-
-    def echo_params(self):
-        print '='*80
-        print 'Potential model parameters that will be optimzied:\n'
-        for name,attr in self.params.iteritems(): 
-            print name
-            for i in range(attr['size']):
-                print attr['value'][i], '  ',
-                if not attr['fix'][i] and attr['lower_bound'][i] == None:
-                    print   # print new line if only given value
-                if attr['fix'][i]:
-                    print 'fix'
-                if attr['lower_bound'][i] != None:
-                    print attr['lower_bound'][i], '  ',
-                if attr['upper_bound'][i]:
-                    print attr['upper_bound'][i]
-            print 
-
-
-
-
-
-
-
 
     def compute(self):
         ks.KIM_API_model_compute(self.pkim)
+
+    
+    def get_prediction(self):
+        self.compute()
+        if self.km_energy is not None:
+            energy = self.km_energy.copy()[0]
+        else:
+            raise SupportError("energy")
+        if self.km_forces is not None:
+            forces = self.km_forces.copy()
+        else:
+            raise SupportError("force")
+#        return np.concatenate(([energy], forces))
+# NOTE we only return forces here, may be modified
+        return forces
 
 
     def get_coords(self):
@@ -363,23 +288,23 @@ class InitializationError(Exception):
         return repr(self.value) + " initialization failed"
 
 
-
-
-def init_KIMobjects(modelname, confs, initial_params):
-    '''
-    Wrapper function to instantiate multiple KIMobject class, one for each 
-    configuration in the training set.
-    '''
-    kim_objects = []
-    for c in confs:
-        obj = KIMobject(modelname, c)
-        obj.initialize()
-        obj.map_opt_index(initial_params)
-        obj.compute()
-        kim_objects.append(obj)
-    return kim_objects
-
-
+#
+#
+#def init_KIMobjects(modelname, confs, initial_params):
+#    '''
+#    Wrapper function to instantiate multiple KIMobject class, one for each 
+#    configuration in the training set.
+#    '''
+#    kim_objects = []
+#    for c in confs:
+#        obj = KIMobject(modelname, c)
+#        obj.initialize()
+#        obj.map_opt_index(initial_params)
+#        obj.compute()
+#        kim_objects.append(obj)
+#    return kim_objects
+#
+#
 
 if __name__ == '__main__':
    
@@ -396,29 +321,23 @@ if __name__ == '__main__':
     #modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
     configs = tset.get_configs()
     
+    # read model params that will be optimized
+    optparams = ModelParams(modelname)
+    fname = '../tests/test_params.txt'
+    optparams.read(fname)
 
-    # initialize objects
-    KIMobj = KIMobject(modelname, configs[0]) 
+
+    # calculator 
+    KIMobj = KIMcalculator(modelname, optparams, configs[0] ) 
     KIMobj.initialize()
-
+    KIMobj.update_params()
     KIMobj.compute()  
+    print 'energy', KIMobj.get_energy() 
+    print 'forces', KIMobj.get_forces()[:3]
+    print 'get prediction', KIMobj.get_prediction()[:4] 
     print KIMobj.get_NBC_method()
-    print KIMobj.get_energy() 
-    print KIMobj.get_forces()[0:3]
 
-    coords = KIMobj.get_coords()
-    forces = KIMobj.get_forces() 
-    coords = np.reshape(coords, (len(coords)/3, 3))
-    forces = np.reshape(forces, (len(forces)/3, 3))
-#    for r,f in zip(coords,forces):
-#        for i in r:
-#            print '{:15.7e}'.format(i),
-#        for j in f:
-#            print '{:15.7e}'.format(j),
-#        print
-
-#    print KIMobj.km_coords 
 
 #    ks.KIM_API_print(KIMobj.pkim)
 
-    
+ 
