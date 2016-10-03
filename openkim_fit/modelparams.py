@@ -24,7 +24,7 @@ class ModelParams():
         self._params = OrderedDict()
         self._params_index = []
         self._pkim = None
-        self._cutoff = None
+        self._cutoff = dict(value=None, use_kim=None) 
         # inquire KIM for the available parameters
         self._get_avail_params()
 
@@ -190,8 +190,10 @@ class ModelParams():
 #
 
     def set_cutoff(self, cutoff):
-        self._cutoff = cutoff
-    
+        self._cutoff['value'] = cutoff
+        self._cutoff['use_kim'] = False
+
+
     def get_names(self):
         return np.array(self._params.keys()).copy()
 #    def get_rank(self, name):
@@ -210,7 +212,11 @@ class ModelParams():
 #        return self._params[name]['fix'].copy()
 
     def get_cutoff(self):
-        return self._cutoff
+        return self._cutoff['value']
+
+    def get_cutoff_use_kim(self):
+        return self._cutoff['use_kim']
+
 
     def update_params(self, opt_x):
         '''
@@ -260,7 +266,8 @@ class ModelParams():
                                        'size':size, 'value':value}
         # cutoff
         cutoff = ks.KIM_API_get_data_double(self._pkim, 'cutoff')
-        self._cutoff = cutoff[0]
+        self._cutoff['value'] = cutoff[0]
+        self._cutoff['use_kim'] = True
         
 
     def _read_1_item(self, name, j, line):
@@ -389,8 +396,11 @@ if __name__ == '__main__':
     print( att_params.get_value('PARAM_FREE_A'))
     print( att_params.get_size('PARAM_FREE_A'))
     print('cutoff', att_params.get_cutoff())
+    print('cutoff use kim', att_params._cutoff['use_kim'])
     att_params.set_cutoff(6.0)
     print('cutoff after set', att_params.get_cutoff())
+    print('cutoff after set', att_params._cutoff['value'])
+    print('cutoff use kim', att_params._cutoff['use_kim'])
 
 
 

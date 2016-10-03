@@ -159,6 +159,11 @@ class KIMcalculator:
 # we still need to still ghost if we want to use neigh_pure
 # or possibly, we can use periodic boundary conditions for neigh_pure
 
+        # set cutoff once for all
+        cutoff = ks.KIM_API_get_data_double(self.pkim, 'cutoff')
+        cutoff[0] = self.opt_params.get_cutoff()
+        ks.KIM_API_model_reinit(self.pkim)
+
         # set up neighbor list 
         PBC = self.conf.get_pbc()
         cell = self.conf.get_cell().flatten()

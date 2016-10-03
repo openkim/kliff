@@ -19,14 +19,19 @@ params = ModelParams(modelname)
 params.echo_avail_params()
 #fname = '../tests/test_params.txt' 
 #params.read(fname)
-param_A = ('PARAM_FREE_A',
-           ('kim', 0, 20),
-           ('kim', 'fix'),
-           ('kim', 0.1, 9.9))
-params.set_param(param_A)
+#param_A = ('PARAM_FREE_A',
+#           ('kim', 0, 20),
+#           ('kim', 'fix'),
+#           ('kim', 0.1, 9.9))
+#params.set_param(param_A)
+#params.echo_params()    
+#params.set_cutoff(6.0)
+
+fname = '../tests/mos2_init_guess.txt' 
+params.read(fname)
 params.echo_params()    
 
-params.set_cutoff(6.0)
+# initial guess of params
 x0 = params.get_x0()
 print 'type(x0)',type(x0)
 print 'len(x0)',len(x0)
@@ -35,9 +40,9 @@ print 'x0', x0
 
 # read config and reference data
 tset = TrainingSet()
-tset.read('../tests/config.txt_20x20')
+#tset.read('../tests/config.txt_20x20')
 #tset.read('../tests/T150_training_1000.xyz')
-#tset.read('../tests/training_set/')
+tset.read('../tests/training_set/')
 configs = tset.get_configs()
 
 # prediction 
@@ -73,11 +78,11 @@ func = cst.get_residual
 #method = 'scipy-lm'
 method = 'geodesiclm'
 if method == 'geodesiclm': 
-    xf, info = geodesiclm(func, x0, 
-                          full_output=1, print_level=2, iaccel=1, maxiters=10000,
-                          artol=-1.0, xtol=-1, ftol=-1, avmax = 2.0)
-    print info
-    print xf
+    xf = geodesiclm(func, x0, h1=1e-5, h2=0.1, factoraccept=5, factorreject=2,
+                          imethod=2, initialfactor=1, damp_model=0, print_level=2, 
+                          maxiters=10000, Cgoal=0.5e-7, artol=1.E-8, gtol=1.5e-8, xtol=1e-6,
+                          xrtol=1.5e-6, ftol=-1, frtol=1.5e-6)
+    print 'fitted params', xf
 
 elif method == 'scipy-lm':
     # test scipy.optimize minimization method
