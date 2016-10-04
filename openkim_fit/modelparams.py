@@ -97,8 +97,10 @@ class ModelParams():
             instance_of_this_class.set_param(param_A)
         '''
         name = lines[0].strip()
-        if name in self._params:
-            raise InputError('Parameter {} already set.'.format(name))
+#NOTE we want to use set_param to perturbe params so as to compute Fisher information 
+#matrix, where the following two lines are annoying
+#        if name in self._params:
+#            raise InputError('Parameter {} already set.'.format(name))
         if name not in self._avail_params:
             raise InputError('Parameter {} not supported by the potential model.'.format(name))
         size = self._avail_params[name]['size']
