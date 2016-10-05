@@ -1,4 +1,5 @@
 from __future__ import print_function
+import sys
 import numpy as np
 from collections import OrderedDict
 import kimservice as ks
@@ -147,24 +148,31 @@ class ModelParams():
             print()
 
 
-    def echo_params(self):
-        print()
-        print('='*80)
-        print('Potential model parameters that will be optimzied:')
-        print()
+    def echo_params(self, fname=None):
+        if fname:
+            fout = open(fname, 'w')
+        else:
+            fout = sys.stdout
+        print(file=fout)
+        print('='*80, file=fout)
+        print('Potential model parameters that are optimzied:',file=fout)
+        print(file=fout)
         for name,attr in self._params.iteritems(): 
-            print (name)
+            print (name, file=fout)
             for i in range(attr['size']):
-                print(attr['value'][i], end='  ')
+                print(attr['value'][i], end='  ', file=fout)
                 if not attr['fix'][i] and attr['lower_bound'][i] == None:
-                    print()   # print new line if only given value
+                    print(file=fout)   # print new line if only given value
                 if attr['fix'][i]:
-                    print('fix')
+                    print('fix', file=fout)
                 if attr['lower_bound'][i] != None:
-                    print(attr['lower_bound'][i], end='  ')
+                    print(attr['lower_bound'][i], end='  ', file=fout)
                 if attr['upper_bound'][i]:
-                    print(attr['upper_bound'][i])
-            print() 
+                    print(attr['upper_bound'][i], file=fout)
+            print(file=fout) 
+        if fname:
+            fout.close()
+
 
 #NOTE, the following will echo KIM, if the initial params is from KIM
 #
@@ -392,7 +400,6 @@ if __name__ == '__main__':
                (2.0, 'fix'),
                (2.2, 1.1, 3.3))
     att_params.set_param(param_B)
-
     att_params.echo_params()    
 
     print( att_params.get_value('PARAM_FREE_A'))
