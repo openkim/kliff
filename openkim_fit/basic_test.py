@@ -1,10 +1,9 @@
 from training import TrainingSet
 from keywords import InputKeywords
 from modelparams import ModelParams
-#from kimobject import init_KIMobjects
 from kimcalculator import KIMcalculator
 import sys
-sys.path.append('../lib/geodesicLMv1.1/pythonInterface')
+sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
 from geodesiclm import geodesiclm
 from traincost import Cost 
 from scipy.optimize import least_squares

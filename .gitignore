@@ -6,7 +6,7 @@ screen*
 *bkp
 training_set
 tests
-lib
+libs
 docs
 .cache
 TODO
