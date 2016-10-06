@@ -1,15 +1,15 @@
 import numpy as np
-import kimservice as ks 
+import kimservice as ks
 import kimneighborlist as kimnl
 from utils import generate_kimstr
-from utils import checkIndex 
+from utils import checkIndex
 from modelparams import ModelParams
 
 class KIMcalculator:
-    ''' 
+    '''
     KIM calculator class that can compute the energy, forces, and stresses for
     a given configuration.
-    ''' 
+    '''
 
     def __init__(self, modelname, opt_params, conf):
         '''
@@ -18,8 +18,8 @@ class KIMcalculator:
         Parameters
 
         modelname: str
-            the KIM Model upon which the KIM object is built 
-       
+            the KIM Model upon which the KIM object is built
+
         params: instance of class ModelParams
 
         conf: Config object in which the atoms information are stored
@@ -27,7 +27,7 @@ class KIMcalculator:
 
         out: KIM object
         '''
-        
+
         # class members
         self.modelname = modelname
         self.opt_params = opt_params
@@ -35,7 +35,7 @@ class KIMcalculator:
 
         # initialize pointers for kim
         self.km_nparticles = None
-        self.km_nspecies = None 
+        self.km_nspecies = None
         self.km_particleSpecies = None
         self.km_coords = None
 
@@ -56,7 +56,7 @@ class KIMcalculator:
         self.uses_neighbors = None
 
         #  parameters
-        self.params = dict() 
+        self.params = dict()
 
 
 #    def set_atoms(self, atoms):
@@ -70,7 +70,7 @@ class KIMcalculator:
 
 
     def initialize(self):
-        ''' Initialize the KIM object for the configuration of atoms in self.conf.''' 
+        ''' Initialize the KIM object for the configuration of atoms in self.conf.'''
 
 #        self.pbc = atoms.get_pbc()
 #        self.cell = atoms.get_cell()
@@ -89,7 +89,7 @@ class KIMcalculator:
 #            # KIM string which describes the capabilities that we require
 #            self.make_test_string(atoms)
 #            status, self.pkim = ks.KIM_API_init_str(self.teststring,
-       
+
         # inquire information from the conf
         particleSpecies = self.conf.get_species()
         species = set(particleSpecies)
@@ -98,7 +98,7 @@ class KIMcalculator:
         coords = self.conf.get_coords()
         cell = self.conf.get_cell()
 
-        kimstr = generate_kimstr(self.modelname, cell, species) 
+        kimstr = generate_kimstr(self.modelname, cell, species)
         status, self.pkim = ks.KIM_API_init_str(kimstr, self.modelname)
         if ks.KIM_STATUS_OK != status:
             ks.KIM_API_report_error('KIM_API_init', status)
@@ -117,7 +117,7 @@ class KIMcalculator:
         self.km_coords = ks.KIM_API_get_data_double(self.pkim, "coordinates")
 
 
-#NOTE we may need numberOfcontributingAtoms to use half list 
+#NOTE we may need numberOfcontributingAtoms to use half list
 
         # check what the model calculates and get model outputs
         if checkIndex(self.pkim, "energy") >= 0:
@@ -137,9 +137,9 @@ class KIMcalculator:
         for i,s in enumerate(particleSpecies):
             self.km_particleSpecies[i] = ks.KIM_API_get_species_code(self.pkim, s)
 
-        # copy coordinates to KIM object 
+        # copy coordinates to KIM object
         for i,c in enumerate(coords):
-            self.km_coords[i] = c 
+            self.km_coords[i] = c
 
         # get parameter value in KIM object (can be updated through update_param)
         opt_param_names = self.opt_params.get_names()
@@ -162,7 +162,7 @@ class KIMcalculator:
         cutoff[0] = self.opt_params.get_cutoff()
         ks.KIM_API_model_reinit(self.pkim)
 
-        # set up neighbor list 
+        # set up neighbor list
         PBC = self.conf.get_pbc()
         cell = self.conf.get_cell().flatten()
         NBC = self.get_NBC_method()
@@ -186,7 +186,7 @@ class KIMcalculator:
             value = attr['value']
             for i in range(size):
                 value[i] = new_value[i]
-        ks.KIM_API_model_reinit(self.pkim) 
+        ks.KIM_API_model_reinit(self.pkim)
 
 #NOTE
 #But we may want to move KIM_API_model_destroy to __del__
@@ -203,7 +203,7 @@ class KIMcalculator:
     def compute(self):
         ks.KIM_API_model_compute(self.pkim)
 
-    
+
     def get_prediction(self):
         self.compute()
         if self.km_energy is not None:
@@ -282,8 +282,8 @@ class SupportError(Exception):
        self.value = value
     def __str__(self):
         return repr(self.value) + " computation not supported by model"
-          
-          
+
+
 class InitializationError(Exception):
     def __init__(self, value):
         self.value = value
@@ -295,7 +295,7 @@ class InitializationError(Exception):
 #
 #def init_KIMobjects(modelname, confs, initial_params):
 #    '''
-#    Wrapper function to instantiate multiple KIMobject class, one for each 
+#    Wrapper function to instantiate multiple KIMobject class, one for each
 #    configuration in the training set.
 #    '''
 #    kim_objects = []
@@ -310,12 +310,12 @@ class InitializationError(Exception):
 #
 
 if __name__ == '__main__':
-   
+
     # test generate_kimstr()
     from training import TrainingSet
     tset = TrainingSet()
     #modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
-    
+
     #tset.read('../tests/training_set')
     #tset.read('../tests/training_set/T150_training_1000.xyz')
     tset.read('../tests/config.txt_20x20')
@@ -323,24 +323,24 @@ if __name__ == '__main__':
     #tset.read('../tests/training_set_Si.xyz')
     #modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
     configs = tset.get_configs()
-    
+
     # read model params that will be optimized
     optparams = ModelParams(modelname)
     fname = '../tests/test_params.txt'
     optparams.read(fname)
 
 
-    # calculator 
-    KIMobj = KIMcalculator(modelname, optparams, configs[0] ) 
+    # calculator
+    KIMobj = KIMcalculator(modelname, optparams, configs[0] )
     KIMobj.initialize()
     KIMobj.update_params()
-    KIMobj.compute()  
-    print 'energy', KIMobj.get_energy() 
+    KIMobj.compute()
+    print 'energy', KIMobj.get_energy()
     print 'forces', KIMobj.get_forces()[:3]
-    print 'get prediction', KIMobj.get_prediction()[:4] 
+    print 'get prediction', KIMobj.get_prediction()[:4]
     print KIMobj.get_NBC_method()
 
 
 #    ks.KIM_API_print(KIMobj.pkim)
 
- 
+

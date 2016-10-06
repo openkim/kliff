@@ -10,14 +10,14 @@ def generate_kimstr(modelname, cell, species):
     modelname: KIM Model name
 
     Tset: TrainingSet object
-        the training set object from which we get the atom species 
+        the training set object from which we get the atom species
 
     Returns
     -------
     kimstring: str
         a string of the KIM file for the configuration object
     '''
-    
+
     # version and units
     kimstr  = 'KIM_API_Version := 1.7.0\n'
     kimstr += 'Unit_length := A\n'
@@ -27,13 +27,13 @@ def generate_kimstr(modelname, cell, species):
     kimstr += 'Unit_time := ps\n'
 
     # particle species
-    # 'code' does not matter, so just give it 0 
+    # 'code' does not matter, so just give it 0
     kimstr += 'PARTICLE_SPECIES:\n'
     kimstr += '# Symbol/name    Type    code\n'
     for s in species:
-        kimstr += s+'  spec    0\n' 
+        kimstr += s+'  spec    0\n'
 
-    # conversions 
+    # conversions
     kimstr += 'CONVENTIONS:\n'
     kimstr += 'ZeroBasedLists   flag\n'
     kimstr += 'Neigh_LocaAccess flag\n'
@@ -59,7 +59,7 @@ def generate_kimstr(modelname, cell, species):
 
     # model output
     # create a temporary object to inquire the info
-    status, kimmdl = ks.KIM_API_model_info(modelname) 
+    status, kimmdl = ks.KIM_API_model_info(modelname)
     kimstr += "MODEL_OUTPUT:\n"
     if checkIndex(kimmdl, 'compute') >= 0:
         kimstr += 'compute  method  none  []\n'
@@ -97,12 +97,12 @@ def generate_dummy_kimstr(modelname):
     Generate a kimstr using the first species supported by the model.
     '''
     status, kimmdl = ks.KIM_API_model_info(modelname)
-    species = ks.KIM_API_get_model_species(kimmdl, 0) 
+    species = ks.KIM_API_get_model_species(kimmdl, 0)
     species = [species]
     dummy_cell = [[1,0,0], [0,1,0],[0,0,1]]
-    kimstr = generate_kimstr(modelname, dummy_cell, species) 
+    kimstr = generate_kimstr(modelname, dummy_cell, species)
 
-#NOTE free needed, as above 
+#NOTE free needed, as above
     return kimstr
 
 
@@ -110,7 +110,7 @@ def generate_dummy_kimstr(modelname):
 
 def orthogonal(cell):
     '''
-    Check whether the supercell is orthogonal. 
+    Check whether the supercell is orthogonal.
     '''
     return ((abs(np.dot(cell[0], cell[1])) +
              abs(np.dot(cell[0], cell[2])) +
@@ -128,7 +128,7 @@ def checkIndex(pkim, variablename):
     return index
 
 
- 
+
 def remove_comments(lines):
     '''Remove lines in a string list that start with # and content after #.'''
     processed_lines = []
@@ -137,8 +137,8 @@ def remove_comments(lines):
         if not line or line[0] == '#':
             continue
         if '#' in line:
-            line = line[0:line.index('#')] 
+            line = line[0:line.index('#')]
         processed_lines.append(line)
     return processed_lines
 
- 
+
