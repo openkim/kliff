@@ -5,19 +5,20 @@ from collections import OrderedDict
 import kimservice as ks
 from error import InputError
 from utils import generate_dummy_kimstr
-from utils import remove_comments 
+from utils import remove_comments
+import os
 
 class ModelParams():
     '''
     Class of the potential model parameters. It will interact with optimizer to
-    provide initial guesses of parameters and receive updated paramters. Also, 
+    provide initial guesses of parameters and receive updated paramters. Also,
     prediction tests will inqure updated parameters from this class.
     '''
 
     def __init__(self, modelname):
         '''
         Parameters:
-       
+
         modelname: KIM model name
         '''
         self._modelname = modelname
@@ -25,7 +26,7 @@ class ModelParams():
         self._params = OrderedDict()
         self._params_index = []
         self._pkim = None
-        self._cutoff = dict(value=None, use_kim=None) 
+        self._cutoff = dict(value=None, use_kim=None)
         # inquire KIM for the available parameters
         self._get_avail_params()
 
@@ -33,14 +34,14 @@ class ModelParams():
     def read(self,fname):
         '''
         For a given model parameter, one or multiple initial values may be required,
-        and each must be given in a new line. For each line, the initial guess value 
-        is mandatory, where 'KIM' (case insensitive) can be given to use the value 
-        from the KIM model. Optionally, "fix" can be followed not to optimize this 
-        parameters, or lower and upper bounds can be given to limit the parameter 
-        in the range.  The following are valid input examples. 
-        
+        and each must be given in a new line. For each line, the initial guess value
+        is mandatory, where 'KIM' (case insensitive) can be given to use the value
+        from the KIM model. Optionally, "fix" can be followed not to optimize this
+        parameters, or lower and upper bounds can be given to limit the parameter
+        in the range.  The following are valid input examples.
+
         Examples:
-        
+
         PARAM_FREE_A
         KIM
         1.1
@@ -52,7 +53,7 @@ class ModelParams():
         PARAM_FREE_C
         KIM  0.1  2.1
         1.0  0.1  2.1
-        2.0  fix 
+        2.0  fix
 
         Params:
 
@@ -76,7 +77,7 @@ class ModelParams():
                     continue
             name = line
             size = self._avail_params[name]['size']
-            param_lines = [name] 
+            param_lines = [name]
             for j in range(size):
                 param_lines.append(lines[num_line].split())
                 num_line += 1
@@ -86,7 +87,7 @@ class ModelParams():
         '''
         Set parameters that will be optimized in the ModelParams object. This is
         an alternative of the read method of this class.  The name of the parameter
-        should be given as the first entry of a list (or tuple), and then each data 
+        should be given as the first entry of a list (or tuple), and then each data
         line should be given in in a list.
 
         Example:
@@ -98,7 +99,7 @@ class ModelParams():
             instance_of_this_class.set_param(param_A)
         '''
         name = lines[0].strip()
-#NOTE we want to use set_param to perturbe params so as to compute Fisher information 
+#NOTE we want to use set_param to perturbe params so as to compute Fisher information
 #matrix, where the following two lines are annoying
 #        if name in self._params:
 #            raise InputError('Parameter {} already set.'.format(name))
@@ -108,12 +109,12 @@ class ModelParams():
         if len(lines)-1 != size:
             raise InputError('Incorrect number of data lines for paramter {}.'.format(name))
         tmp_dict = {'size':        size,
-                    'value':       np.array([None for i in range(size)]), 
-                    'use-kim':     np.array([False for i in range(size)]), 
-                    'fix':         np.array([False for i in range(size)]), 
-                    'lower_bound': np.array([None for i in range(size)]), 
+                    'value':       np.array([None for i in range(size)]),
+                    'use-kim':     np.array([False for i in range(size)]),
+                    'fix':         np.array([False for i in range(size)]),
+                    'lower_bound': np.array([None for i in range(size)]),
                     'upper_bound': np.array([None for i in range(size)])}
-        self._params[name] = tmp_dict 
+        self._params[name] = tmp_dict
         for j in range(size):
             line = lines[j+1]
             num_items = len(line)
@@ -139,7 +140,7 @@ class ModelParams():
         print('the names and the initial guesses (optionally, lower and upper bounds)')
         print('of the parameters that you want to optimize in the input file.')
         print()
-        for name,attr in self._avail_params.iteritems(): 
+        for name,attr in self._avail_params.iteritems():
             print('name: ', name)
 #            print('rank: ', attr['rank'])
 #            print('shape:', attr['shape'])
@@ -148,17 +149,21 @@ class ModelParams():
             print()
 
 
-    def echo_params(self, fname=None):
+    def echo_params(self, fname=None, print_size=False):
+        ''' Print parameters to stdout or file.'''
         if fname:
             fout = open(fname, 'w')
         else:
             fout = sys.stdout
-        print(file=fout)
+        #print(file=fout)
         print('='*80, file=fout)
         print('Potential model parameters that are optimzied:',file=fout)
         print(file=fout)
-        for name,attr in self._params.iteritems(): 
-            print (name, file=fout)
+        for name,attr in self._params.iteritems():
+            if print_size:
+                print (name, attr['size'], file=fout)
+            else:
+                print (name, file=fout)
             for i in range(attr['size']):
                 print(attr['value'][i], end='  ', file=fout)
                 if not attr['fix'][i] and attr['lower_bound'][i] == None:
@@ -169,9 +174,18 @@ class ModelParams():
                     print(attr['lower_bound'][i], end='  ', file=fout)
                 if attr['upper_bound'][i]:
                     print(attr['upper_bound'][i], file=fout)
-            print(file=fout) 
+            print(file=fout)
         if fname:
             fout.close()
+
+    def set_env_var(self):
+        '''Write parameters to file KIM_MODEL_PARAMS, and also give its path to the
+        enviroment variable that has the same name KIM_MODEL_PARAMS'''
+
+        self.echo_params(fname='KIM_MODEL_PARAMS', print_size=True)
+        cwd = os.getcwd()
+        fname = cwd + os.path.sep + 'KIM_MODEL_PARAMS'
+        os.environ['KIM_MODEL_PARAMS'] = fname
 
 
 #NOTE, the following will echo KIM, if the initial params is from KIM
@@ -181,7 +195,7 @@ class ModelParams():
 #        print('='*80)
 #        print('Potential model parameters that will be optimzied:')
 #        print()
-#        for name,attr in self._params.iteritems(): 
+#        for name,attr in self._params.iteritems():
 #            print (name)
 #            for i in range(attr['size']):
 #                if attr['use-kim'][i]:
@@ -196,7 +210,7 @@ class ModelParams():
 #                    print(attr['lower_bound'][i], end='  ')
 #                if attr['upper_bound'][i]:
 #                    print(attr['upper_bound'][i])
-#            print() 
+#            print()
 #
 
     def set_cutoff(self, cutoff):
@@ -230,7 +244,7 @@ class ModelParams():
 
     def update_params(self, opt_x):
         '''
-        Update parameter values from optimzier. 
+        Update parameter values from optimzier.
         '''
         for i,val in enumerate(opt_x):
             name = self._params_index[i]['name']
@@ -242,16 +256,16 @@ class ModelParams():
         Nest all parameter values (except the fix ones) to a list. And this will
         be fed to the optimizer as the starting parameters.
         '''
-        opt_x0 = [] 
+        opt_x0 = []
         for idx in self._params_index:
             name = idx['name']
             value_slot = idx['value_slot']
-            opt_x0.append(self._params[name]['value'][value_slot]) 
+            opt_x0.append(self._params[name]['value'][value_slot])
         return np.array(opt_x0)
 
     def _get_avail_params(self):
         '''
-        Inqure the potential model to get all the potential parameters whoes values 
+        Inqure the potential model to get all the potential parameters whoes values
         are allowed to adjust. Namely, the "PARAM_FREE" in the model's descriptor file.
         '''
         kimstr = generate_dummy_kimstr(self._modelname)
@@ -260,7 +274,7 @@ class ModelParams():
             ks.KIM_API_report_error('KIM_API_init', status)
             raise InitializationError(self._modelname)
         # set dummy numberOfSpeces and numberOfParticles to 1
-        ks.KIM_API_allocate(self._pkim, 1, 1) 
+        ks.KIM_API_allocate(self._pkim, 1, 1)
         ks.KIM_API_model_init(self._pkim)
         N_free_params = ks.KIM_API_get_num_free_params(self._pkim)
         for i in range(N_free_params):
@@ -271,14 +285,14 @@ class ModelParams():
             if rank == 0:
                 size = 1
             else:
-                size = np.prod(shape) 
-            self._avail_params[name] = {'rank':rank, 'shape':shape, 
+                size = np.prod(shape)
+            self._avail_params[name] = {'rank':rank, 'shape':shape,
                                        'size':size, 'value':value}
         # cutoff
         cutoff = ks.KIM_API_get_data_double(self._pkim, 'cutoff')
         self._cutoff['value'] = cutoff[0]
         self._cutoff['use_kim'] = True
-        
+
 
     def _read_1_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
@@ -305,14 +319,14 @@ class ModelParams():
         if type(first)==str and first.lower() == 'kim':
             self._params[name]['use-kim'][j] = True
             model_value = self._avail_params[name]['value']
-            self._params[name]['value'][j] = model_value[j] 
+            self._params[name]['value'][j] = model_value[j]
         else:
             try:
-                self._params[name]['value'][j] = float(first) 
+                self._params[name]['value'][j] = float(first)
             except ValueError as err:
                 raise InputError('{}.\nData at line {} of {} corrupted.\n'.format(err, j+1, name))
 
-        
+
     def _check_bounds(self, name):
         '''
         Check whether the initial guess of a paramter is within its lower and
@@ -320,8 +334,8 @@ class ModelParams():
         '''
         attr = self._params[name]
         for i in range(attr['size']):
-            lower_bound = attr['lower_bound'][i] 
-            upper_bound = attr['upper_bound'][i] 
+            lower_bound = attr['lower_bound'][i]
+            upper_bound = attr['upper_bound'][i]
             if lower_bound != None:
                 value = attr['value'][i]
                 if value < lower_bound or value > upper_bound:
@@ -331,22 +345,22 @@ class ModelParams():
 
     def _set_param_index(self, name):
         '''
-        Check whether a specific data value of a parameter will be optimized or 
+        Check whether a specific data value of a parameter will be optimized or
         not (by checking its "fix" attribute). If yes, include it in the index
         list.
-        
+
         Given a parameter at its values such as:
-        
+
         PARAM_FREE_B
-        1.1 
+        1.1
         2.2  fix
-        4.4  3.3  5.5 
-      
-        the first slot (1.1) and the third slot (4.4) will be included in the 
-        _params_index, and later be optimized. 
+        4.4  3.3  5.5
+
+        the first slot (1.1) and the third slot (4.4) will be included in the
+        _params_index, and later be optimized.
         '''
-        size = self._params[name]['size']  
-        fix  = self._params[name]['fix']  
+        size = self._params[name]['size']
+        fix  = self._params[name]['fix']
         for i in range(size):
             if not fix[i]:
                 tmp_idx = {'name':name, 'value_slot':i}
@@ -367,7 +381,7 @@ if __name__ == '__main__':
     modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
     modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
     modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
-    
+
     # create a tmp input file
     lines=['PARAM_FREE_A']
     lines.append('kim 0 20')
@@ -386,7 +400,7 @@ if __name__ == '__main__':
     att_params = ModelParams(modelname)
     att_params._get_avail_params()
     att_params.echo_avail_params()
-   
+
     att_params.read(fname)
 
     param_A = ['PARAM_FREE_A',
@@ -394,13 +408,13 @@ if __name__ == '__main__':
                [2.0, 'fix'],
                [2.2, 1.1, 3.3]]
 #    att_params.set_param(param_A)
-   
+
     param_B = ('PARAM_FREE_B',
                ('kim', 0, 20),
                (2.0, 'fix'),
                (2.2, 1.1, 3.3))
     att_params.set_param(param_B)
-    att_params.echo_params()    
+    att_params.echo_params()
 
     print( att_params.get_value('PARAM_FREE_A'))
     print( att_params.get_size('PARAM_FREE_A'))

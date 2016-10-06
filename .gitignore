@@ -11,3 +11,7 @@ docs
 .cache
 TODO
 test_params.txt
+build
+KIM_MODEL_PARAMS
+
+

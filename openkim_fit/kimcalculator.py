@@ -141,14 +141,12 @@ class KIMcalculator:
         for i,c in enumerate(coords):
             self.km_coords[i] = c 
 
-        # get value in KIM object
+        # get parameter value in KIM object (can be updated through update_param)
         opt_param_names = self.opt_params.get_names()
         for name in opt_param_names:
             value = ks.KIM_API_get_data_double(self.pkim, name)
             size = self.opt_params.get_size(name)
             self.params[name] = {'size':size,'value':value}
-
-
 
 
 #NOTE
