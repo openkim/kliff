@@ -1,17 +1,26 @@
+#ignore the following files
+
 *.in
 *.log
 *.pyc
 *.out
-screen*
-*bkp
-training_set
-tests
-libs
-docs
 .cache
 TODO
+tests
+libs
+screen*
+*bkp
 test_params.txt
 build
 KIM_MODEL_PARAMS
 
+
+# special for docs
+docs/*
+!docs/source
+docs/source/*
+!docs/source/conf.py
+!docs/source/quickstart.rst
+!docs/source/installation.rst
+!docs/source/index.rst
 
