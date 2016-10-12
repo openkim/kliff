@@ -147,7 +147,9 @@ class KIMcalculator:
             value = ks.KIM_API_get_data_double(self.pkim, name)
             size = self.opt_params.get_size(name)
             self.params[name] = {'size':size,'value':value}
-
+        # this needs to be called before setting up neighborlist, since possibly
+        # the cutoff may be changed through FREE_PARAM_ ...
+        self.update_params()
 
 #NOTE
 # if we want to use MIOPBC, we need to add something below  box side length see potfit
@@ -156,11 +158,6 @@ class KIMcalculator:
 # NOTE see universal test about how to set up neighborlist
 # we still need to still ghost if we want to use neigh_pure
 # or possibly, we can use periodic boundary conditions for neigh_pure
-
-        # set cutoff once for all
-        cutoff = ks.KIM_API_get_data_double(self.pkim, 'cutoff')
-        cutoff[0] = self.opt_params.get_cutoff()
-        ks.KIM_API_model_reinit(self.pkim)
 
         # set up neighbor list
         PBC = self.conf.get_pbc()
