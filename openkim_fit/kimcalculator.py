@@ -149,7 +149,7 @@ class KIMcalculator:
             self.params[name] = {'size':size,'value':value}
         # this needs to be called before setting up neighborlist, since possibly
         # the cutoff may be changed through FREE_PARAM_ ...
-        self.update_params()
+        self._update_params()
 
 #NOTE
 # if we want to use MIOPBC, we need to add something below  box side length see potfit
@@ -173,7 +173,7 @@ class KIMcalculator:
             kimnl.nbl_build_neighborlist(self.pkim)
 
 
-    def update_params(self):
+    def _update_params(self):
         '''
         Update potential model parameters from ModelParams class to KIM object.
         '''
@@ -197,12 +197,10 @@ class KIMcalculator:
         self.pkim = None
 
 
-    def compute(self):
-        ks.KIM_API_model_compute(self.pkim)
-
 
     def get_prediction(self):
-        self.compute()
+        self._update_params()
+        ks.KIM_API_model_compute(self.pkim)
         if self.km_energy is not None:
             energy = self.km_energy.copy()[0]
         else:
@@ -330,7 +328,6 @@ if __name__ == '__main__':
     # calculator
     KIMobj = KIMcalculator(modelname, optparams, configs[0] )
     KIMobj.initialize()
-    KIMobj.update_params()
     KIMobj.compute()
     print 'energy', KIMobj.get_energy()
     print 'forces', KIMobj.get_forces()[:3]

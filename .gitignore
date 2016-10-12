@@ -13,7 +13,8 @@ screen*
 test_params.txt
 build
 KIM_MODEL_PARAMS
-
+*.edn
+*.lammps
 
 # special for docs
 docs/*

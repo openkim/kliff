@@ -24,7 +24,6 @@ params.echo_avail_params()
 #           ('kim', 0.1, 9.9))
 #params.set_param(param_A)
 #params.echo_params()
-#params.set_cutoff(6.0)
 
 fname = '../tests/mos2_init_guess.txt'
 params.read(fname)
@@ -60,7 +59,7 @@ for i in range(len(configs)):
     refs.append(f)
 
 # cost function
-cst = Cost(params)
+cst = Cost(params, nprocs=1)
 for i in range(len(configs)):
     cst.add(KIMobjs[i], refs[i], weight=1)
 
