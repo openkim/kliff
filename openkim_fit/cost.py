@@ -32,7 +32,7 @@ class Cost:
         self.weight_group = None
         self.fun_group = None
 
-
+# NOTE Ause np.array_split
     def _group_preds(self):
         """
         Group the predictors (and the associated references, weights and wrapper

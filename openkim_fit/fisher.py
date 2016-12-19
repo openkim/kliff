@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import sys
 
 class Fisher():
     '''Fisher information matrix.
@@ -15,6 +16,7 @@ class Fisher():
         self.KIMobjs = KIMobjs
         self.params = params
         self.F = None
+        self.F_std = None
         self.delta_params = None
 
 
@@ -30,7 +32,9 @@ class Fisher():
             dfdp = self._get_derivative_one_conf(kimobj)
             F_all.append(np.dot(dfdp, dfdp.T))
         self.F = np.mean(F_all, axis=0)
-        return self.F
+        self.F_std = np.std(F_all, axis=0)
+        return F_all, self.F_std
+        #return self.F, self.F_std
 
 
     def _get_derivative_one_conf(self, kimobj):
@@ -161,20 +165,26 @@ if __name__ == '__main__':
     from kimcalculator import KIMcalculator
 
     # Temperature
-    T = 450
+    T = 750
 
 
     # KIM model parameters
     modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
     params = ModelParams(modelname)
     params.echo_avail_params()
-    fname = '../tests/mos2_fitted-T'+str(T)
+    #fname = '../tests/mos2_fitted-T'+str(T)
+    #fname = '../tests/mos2_fitted-T'+str(T)+'_interval4'
+    fname = '/home/wenz/Applications/use_kimfit/mos2_T'+str(T)+'/mos2_fitted-T'+str(T)+'_interval4'
     params.read(fname)
     params.echo_params()
 
     # read config and reference data
     tset = TrainingSet()
-    fname = '../tests/training_set-T'+str(T)
+    #fname = '../tests/training_set-T'+str(T)
+    #fname = '../tests/training_set-T'+str(T)+'_1'
+    #fname = '../tests/training_set-T'+str(T)+'_2'
+    fname = '/home/wenz/Applications/use_kimfit/mos2_T'+str(T)+'/training_set_T'+str(T)+'_interval4_1'
+    #fname = '/home/wenz/Applications/use_kimfit/mos2_T'+str(T)+'/training_set_T'+str(T)+'_interval4_2'
     tset.read(fname)
     configs = tset.get_configs()
 
@@ -188,12 +198,13 @@ if __name__ == '__main__':
     print 'hello there, started computing Fisher information matrix. It may take a'
     print 'while, so take a cup of coffee.'
     fisher = Fisher(KIMobjs, params)
-    Fij = fisher.compute_fisher_matrix()
+    Fij, Fij_std = fisher.compute_fisher_matrix()
 
     # pickle
-#    fname = 'fisher_mat'
-#    np.save(fname, Fij)
+    fname = 'fisher_mat_T'+str(T)
+    np.save(fname, Fij)
 
+    sys.exit(1)
 #    # load
 #    fname = 'fisher_mat.npy'
 #    Fij = np.load(fname)
@@ -208,23 +219,33 @@ if __name__ == '__main__':
 
     for t in range(1):
 
-        Fij_rv = np.dot(np.dot(np.diag(param_values), Fij), np.diag(param_values))
+        # relative variance
+        Fij = np.dot(np.dot(np.diag(param_values), Fij), np.diag(param_values))
+        Fij_std = np.dot(np.dot(np.diag(param_values), Fij_std), np.diag(param_values))
+
 
         with open('Fij'+str(t), 'w') as fout:
-            for line in Fij_rv:
+            for line in Fij:
                 for i in line:
                     fout.write('{:24.16e} '.format(i))
                     #fout.write('{:10.2e} '.format(i))
                 fout.write('\n')
 
-        Fij_diag = np.diag(Fij_rv)
+        with open('Fij_std'+str(t), 'w') as fout:
+            for line in Fij_std:
+                for i in line:
+                    fout.write('{:24.16e} '.format(i))
+                    #fout.write('{:10.2e} '.format(i))
+                fout.write('\n')
+
+        Fij_diag = np.diag(Fij)
         with open('Fij_diag'+str(t), 'w') as fout:
             for line in Fij_diag:
                 #fout.write('{:13.5e}\n'.format(line))
                 fout.write('{:13.5e}\n'.format(line**0.5))
 
         # inverse
-        Fij_inv = np.linalg.inv(Fij_rv)
+        Fij_inv = np.linalg.inv(Fij)
         with open('Fij_inv'+str(t), 'w') as fout:
             for line in Fij_inv:
                 for i in line:
@@ -240,7 +261,7 @@ if __name__ == '__main__':
                 fout.write('{:13.5e}\n'.format(line**0.5))
 
         # eiven analysis
-        w,v = np.linalg.eig(Fij_rv)
+        w,v = np.linalg.eig(Fij)
         with open('eigenVec'+str(t),'w') as fout:
           for row in v:
             for item in row:

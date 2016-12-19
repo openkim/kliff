@@ -15,6 +15,7 @@ build
 KIM_MODEL_PARAMS
 *.edn
 *.lammps
+fisher_rslt
 
 # special for docs
 docs/*

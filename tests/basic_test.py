@@ -13,7 +13,7 @@ import numpy as np
 # KIM model parameters
 modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
 modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
-modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
+modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_001'
 params = ModelParams(modelname)
 params.echo_avail_params()
 #fname = '../tests/test_params.txt'

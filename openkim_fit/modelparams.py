@@ -164,15 +164,15 @@ class ModelParams():
             else:
                 print (name, file=fout)
             for i in range(attr['size']):
-                print(attr['value'][i], end='  ', file=fout)
+                print('{:24.16e}'.format(attr['value'][i]), end=' ', file=fout)
                 if not attr['fix'][i] and attr['lower_bound'][i] == None:
                     print(file=fout)   # print new line if only given value
                 if attr['fix'][i]:
                     print('fix', file=fout)
                 if attr['lower_bound'][i] != None:
-                    print(attr['lower_bound'][i], end='  ', file=fout)
+                    print('{:24.16e}'.format(attr['lower_bound'][i]), end=' ', file=fout)
                 if attr['upper_bound'][i]:
-                    print(attr['upper_bound'][i], file=fout)
+                    print('{:24.16e}'.format(attr['upper_bound'][i]), file=fout)
             print(file=fout)
         if fname:
             fout.close()
