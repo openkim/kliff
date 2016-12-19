@@ -308,37 +308,3 @@ class InitializationError(Exception):
 #
 #
 
-if __name__ == '__main__':
-
-    # test generate_kimstr()
-    from training import TrainingSet
-    tset = TrainingSet()
-    #modelname = 'Pair_Lennard_Jones_Truncated_Nguyen_Ar__MO_398194508715_000'
-
-    #tset.read('../tests/training_set')
-    #tset.read('../tests/training_set/T150_training_1000.xyz')
-    tset.read('../tests/config.txt_20x20')
-    modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
-    #tset.read('../tests/training_set_Si.xyz')
-    #modelname = 'EDIP_BOP_Bazant_Kaxiras_Si__MO_958932894036_001'
-    configs = tset.get_configs()
-
-    # read model params that will be optimized
-    optparams = ModelParams(modelname)
-    fname = '../tests/test_params.txt'
-    optparams.read(fname)
-
-
-    # calculator
-    KIMobj = KIMcalculator(modelname, optparams, configs[0] )
-    KIMobj.initialize()
-    KIMobj.compute()
-    print 'energy', KIMobj.get_energy()
-    print 'forces', KIMobj.get_forces()[:3]
-    print 'get prediction', KIMobj.get_prediction()[:4]
-    print KIMobj.get_NBC_method()
-
-
-#    ks.KIM_API_print(KIMobj.pkim)
-
-

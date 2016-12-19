@@ -128,6 +128,11 @@ class Config:
                 for item in line:
                     fout.write('{:10.6f}'.format(item))
             fout.write('" ')
+            # PBC
+            fout.write('PBC="')
+            for i in self.PBC:
+                    fout.write('{} '.format(int(i)))
+            fout.write('" ')
             # properties
             fout.write('Properties="species:S:1:pos:R:3:vel:R:3" ')
             # energy
@@ -179,7 +184,7 @@ class TrainingSet():
             raise InputError('No training set files (ended with .xyz) found '
                              'in directory: {}/'.format(dirpath))
 
-        print 'size training', self.size
+        print 'Number of configurations in traning set:', self.size
 
 # not needed
 #    def get_unique_species(self):
@@ -195,26 +200,6 @@ class TrainingSet():
         return self.size
     def get_configs(self):
         return self.configs
-
-
-
-
-
-# test
-if __name__ == '__main__':
-#    configs = Config()
-#    configs.read_extxyz('./training_set/T150_training_1000.xyz')
-#    configs.write_extxyz('./echo.xyz')
-#
-
-    Tset = TrainingSet()
-    #Tset.read('./training_set')
-    Tset.read('../tests/T150_training_1000.xyz')
-    print 'num of configurations', Tset.get_size()
-    configs = Tset.get_configs()
-    for i,conf in enumerate(configs):
-        conf.write_extxyz('echo{}.xyz'.format(i))
-
 
 
 

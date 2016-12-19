@@ -1,21 +1,19 @@
 #ignore the following files
-
 *.in
 *.log
 *.pyc
 *.out
 .cache
 TODO
-tests
 libs
 screen*
 *bkp
-test_params.txt
 build
 KIM_MODEL_PARAMS
 *.edn
 *.lammps
-fisher_rslt
+maybe_needed
+tests/echo*
 
 # special for docs
 docs/*

@@ -1,3 +1,4 @@
+##NOTE the interface has changed, and we do not need this file to parse input file
 import argparse
 from collections import OrderedDict
 from error import InputError

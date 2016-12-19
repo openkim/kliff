@@ -1,0 +1,4 @@
+To start running all the test_*.py, simply do:
+
+$ pytest
+
