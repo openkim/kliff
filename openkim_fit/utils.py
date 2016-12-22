@@ -52,8 +52,8 @@ def generate_kimstr(modelname, cell, species):
     kimstr += 'numberOfSpecies    integer  none    []\n'
     kimstr += 'particleSpecies    integer  none    [numberOfParticles]\n'
     kimstr += 'coordinates        double   length  [numberOfParticles,3]\n'
-    kimstr += 'boxSideLengths     double   length  [3]\n'
-    kimstr += 'numberContributingParticles integer none  []\n'
+#    kimstr += 'boxSideLengths     double   length  [3]\n'
+#    kimstr += 'numberContributingParticles integer none  []\n'
     kimstr += 'get_neigh          method   none    []\n'
     kimstr += 'neighObject        pointer  none    []\n'
 
@@ -73,15 +73,16 @@ def generate_kimstr(modelname, cell, species):
         kimstr += 'energy  double  energy  []\n'
     if checkIndex(kimmdl, 'forces') >= 0:
         kimstr += 'forces  double  force  [numberOfParticles,3]\n'
-    if checkIndex(kimmdl, 'particleEnergy') >= 0:
-        kimstr += 'particleEnergy  double  energy  [numberOfParticles]\n'
-    if (checkIndex(kimmdl, 'virial') >= 0 or checkIndex(kimmdl, 'process_dEdr') >=0):
-        kimstr += 'virial  double  energy  [6]\n'
-    if (checkIndex(kimmdl, 'particleVirial') >= 0 or checkIndex(kimmdl, 'process_dEdr') >=0):
-        kimstr += 'particleVirial  double  energy  [numberOfParticles,6]\n'
-    if (checkIndex(kimmdl, 'hessian') >= 0 or
-	   (checkIndex(kimmdl, 'process_dEdr') >= 0 and checkIndex(kimmdl, 'process_d2Edr2') >= 0)):
-        kimstr += 'hessian  double  pressure  [numberOfParticles,numberOfParticles,3,3]\n'
+#NOTE, we do not need them, sice we want to use forces only (possibly energy)
+#    if checkIndex(kimmdl, 'particleEnergy') >= 0:
+#        kimstr += 'particleEnergy  double  energy  [numberOfParticles]\n'
+#    if (checkIndex(kimmdl, 'virial') >= 0 or checkIndex(kimmdl, 'process_dEdr') >=0):
+#        kimstr += 'virial  double  energy  [6]\n'
+#    if (checkIndex(kimmdl, 'particleVirial') >= 0 or checkIndex(kimmdl, 'process_dEdr') >=0):
+#        kimstr += 'particleVirial  double  energy  [numberOfParticles,6]\n'
+#    if (checkIndex(kimmdl, 'hessian') >= 0 or
+#	   (checkIndex(kimmdl, 'process_dEdr') >= 0 and checkIndex(kimmdl, 'process_d2Edr2') >= 0)):
+#        kimstr += 'hessian  double  pressure  [numberOfParticles,numberOfParticles,3,3]\n'
 
 #NOTE if we free it, segfault error will occur; Ask Matt whether we don't need to free?
 #NOTE in kimcalculator, it is not freed

@@ -5,6 +5,7 @@ from utils import generate_kimstr
 from utils import checkIndex
 from modelparams import ModelParams
 
+import sys
 class KIMcalculator:
     '''
     KIM calculator class that can compute the energy, forces, and stresses for
@@ -36,20 +37,17 @@ class KIMcalculator:
         # initialize pointers for kim
         self.km_nparticles = None
         self.km_nspecies = None
-        self.km_particleSpecies = None
+        self.km_particle_spec_code = None
         self.km_coords = None
 
+        # output of model
         self.km_energy = None
         self.km_forces = None
-        self.km_particleEnergy = None
-        self.km_virial = None
-        self.km_particleVirial = None
-        self.km_hessian = None
-
-#        # initialize ase atoms specifications
-#        self.pbc = None
-#        self.cell = None
-#        self.cell_orthogonal = None
+        self.km_cutoff = None           # this is needed init model; but not used
+#        self.km_particleEnergy = None
+#        self.km_virial = None
+#        self.km_particleVirial = None
+#        self.km_hessian = None
 
         # the KIM object
         self.pkim = None
@@ -59,43 +57,16 @@ class KIMcalculator:
         self.params = dict()
 
 
-#    def set_atoms(self, atoms):
-#        """ Called by Atoms class in function set_calculator """
-#        if self.pkim:
-#            self.free_kim()
-#        self.initialize(atoms)
-
-
-
-
 
     def initialize(self):
         ''' Initialize the KIM object for the configuration of atoms in self.conf.'''
 
-#        self.pbc = atoms.get_pbc()
-#        self.cell = atoms.get_cell()
-#        self.cell_orthogonal = orthogonal(self.cell)
-#
-#        if self.kimfile:
-#            # initialize with the KIM file in a standard directory
-#            status, self.pkim = ks.KIM_API_file_init(self.kimfile,
-#                    self.modelname)
-#        elif self.teststring:
-#            # initialize with the string we found in our kim file
-#            status, self.pkim = ks.KIM_API_init_str(self.teststring,
-#                    self.modelname)
-#        else:
-#            # if we haven't found a kim file yet, then go ahead and make a
-#            # KIM string which describes the capabilities that we require
-#            self.make_test_string(atoms)
-#            status, self.pkim = ks.KIM_API_init_str(self.teststring,
-
         # inquire information from the conf
-        particleSpecies = self.conf.get_species()
-        species = set(particleSpecies)
-        nspecies = len(species)
-        nparticles = self.conf.get_num_atoms()
-        coords = self.conf.get_coords()
+        particle_species = self.conf.get_species()
+        species = set(particle_species)
+        self.km_nspecies =  np.array([len(species)]).astype(np.int32)
+        self.km_nparticles = np.array([self.conf.get_num_atoms()]).astype(np.int32)
+        self.km_coords = self.conf.get_coords()
         cell = self.conf.get_cell()
 
         kimstr = generate_kimstr(self.modelname, cell, species)
@@ -104,42 +75,32 @@ class KIMcalculator:
             ks.KIM_API_report_error('KIM_API_init', status)
             raise InitializationError(self.modelname)
 
-        ks.KIM_API_allocate(self.pkim, nparticles, nspecies)
+#        # get species code for all the atoms
+        self.km_particle_spec_code = []
+        for i,s in enumerate(particle_species):
+            self.km_particle_spec_code.append(ks.KIM_API_get_species_code(self.pkim, s))
+        self.km_particle_spec_code = np.array(self.km_particle_spec_code).astype(np.int32)
 
+        # set KIM object pointers (input for KIM object)
+        ks.KIM_API_set_data_int(self.pkim, "numberOfParticles", self.km_nparticles)
+        ks.KIM_API_set_data_double(self.pkim, "coordinates", self.km_coords)
+        ks.KIM_API_set_data_int(self.pkim, "numberOfSpecies", self.km_nspecies)
+        ks.KIM_API_set_data_int(self.pkim, "particleSpecies", self.km_particle_spec_code)
+
+        # initialize energy and forces and register their KIM pointer (output of KIM object)
+        self.km_energy = np.array([0.])
+        self.km_forces = np.array([0.0]*(3*self.km_nparticles[0]))  # 3 for 3D
+        ks.KIM_API_set_data_double(self.pkim, "energy", self.km_energy)
+        ks.KIM_API_set_data_double(self.pkim, "forces", self.km_forces)
+
+        # init model
+        # memory for `cutoff' must be allocated and registered before calling model_init
+        self.km_cutoff = np.array([0.])
+        ks.KIM_API_set_data_double(self.pkim, "cutoff", self.km_cutoff)
         ks.KIM_API_model_init(self.pkim)
 
-        # get pointers to model inputs
-        self.km_nparticles = ks.KIM_API_get_data_ulonglong(self.pkim, "numberOfParticles")
-        self.km_nparticles[0] = nparticles
-        self.km_nspecies = ks.KIM_API_get_data_int(self.pkim, "numberOfSpecies")
-        self.km_nspecies[0] = nspecies
-        self.km_particleSpecies = ks.KIM_API_get_data_int(self.pkim, "particleSpecies")
-        self.km_coords = ks.KIM_API_get_data_double(self.pkim, "coordinates")
-
-
 #NOTE we may need numberOfcontributingAtoms to use half list
-
-        # check what the model calculates and get model outputs
-        if checkIndex(self.pkim, "energy") >= 0:
-            self.km_energy = ks.KIM_API_get_data_double(self.pkim, "energy")
-        if checkIndex(self.pkim, "forces") >= 0:
-            self.km_forces = ks.KIM_API_get_data_double(self.pkim, "forces")
-        if checkIndex(self.pkim, "particleEnergy") >= 0:
-            self.km_particleEnergy = ks.KIM_API_get_data_double(self.pkim, "particleEnergy")
-#        if checkIndex(self.pkim, "virial") >= 0:
-#            self.km_virial = ks.KIM_API_get_data_double(self.pkim, "virial")
-#        if checkIndex(self.pkim, "particleVirial") >= 0:
-#            self.km_particleVirial = ks.KIM_API_get_data_double(self.pkim, "particleVirial")
-#        if checkIndex(self.pkim, "hessian") >= 0:
-#            self.km_hessian = ks.KIM_API_get_data_double(self.pkim, "hessian")
-#
-        # copy particle species to KIM object
-        for i,s in enumerate(particleSpecies):
-            self.km_particleSpecies[i] = ks.KIM_API_get_species_code(self.pkim, s)
-
-        # copy coordinates to KIM object
-        for i,c in enumerate(coords):
-            self.km_coords[i] = c
+# if we want to use MIOPBC, we need to add something below  box side length see potfit
 
         # get parameter value in KIM object (can be updated through update_param)
         opt_param_names = self.opt_params.get_names()
@@ -150,10 +111,6 @@ class KIMcalculator:
         # this needs to be called before setting up neighborlist, since possibly
         # the cutoff may be changed through FREE_PARAM_ ...
         self.update_params()
-
-#NOTE
-# if we want to use MIOPBC, we need to add something below  box side length see potfit
-
 
 # NOTE see universal test about how to set up neighborlist
 # we still need to still ghost if we want to use neigh_pure
