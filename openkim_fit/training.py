@@ -1,21 +1,22 @@
+from __future__ import print_function
 import os
 import glob
 import numpy as np
 from error import InputError
 
 class Config:
-    '''
-    Class to read and store the information in one configuraiton.
-    '''
+    """
+    Class to read and store the information in one configuraiton in extented xyz format.
+    """
 
     def __init__(self):
-        self.natoms = None
-        self.cell = None
-        self.PBC = None
-        self.energy = None
-        self.species = []
-        self.coords = []
-        self.forces = []
+        self.natoms = None      # int
+        self.cell = None        # 3 by 3 np.array
+        self.PBC = None         # 1 by 3 int
+        self.energy = None      # float
+        self.species = []       # N by 1 str list (N: number of atoms)
+        self.coords = []        # 3N by 1 np.array (N: number of atoms)
+        self.forces = []        # 3N by 1 np.array (N: number of atoms)
 
     def read_extxyz(self, fname):
         with open(fname, 'r') as fin:
@@ -27,11 +28,10 @@ class Config:
                 raise InputError('{}.\nCorrupted data at line 1 in file: {}.'.format(err, fname))
             # lattice vector, PBC, and energy
             line = lines[1]
-            cell = self.parse_key_value(line, 'Lattice', 'float', 9, fname)
-            self.cell = np.array(cell).reshape((3, 3))
-            self.PBC = self.parse_key_value(line, 'PBC', 'float', 3, fname)
-            energy = self.parse_key_value(line, 'Energy', 'float', 1, fname)
-            self.energy = energy[0]
+            self.cell = self.parse_key_value(line, 'Lattice', 'float', 9, fname)
+            self.cell = np.array(self.cell).reshape((3, 3))
+            self.PBC = self.parse_key_value(line, 'PBC', 'int', 3, fname)
+            self.energy = self.parse_key_value(line, 'Energy', 'float', 1, fname)[0]
             # species symbol and x, y, z fx, fy, fz
             try:
                 num_lines = 0
@@ -49,6 +49,8 @@ class Config:
                         num_lines += 1
                         if num_lines == self.natoms:
                             break
+                self.coords = np.array(self.coords)
+                self.forces = np.array(self.forces)
             except ValueError as err:
                 raise InputError('{}.\nCorrupted data at line {} in '
                                  'file {}.'.format(err, num_lines+2+1, fname))
@@ -152,11 +154,6 @@ class Config:
 
 
 
-
-
-
-
-
 class TrainingSet():
     '''
     Training set class, to deal with multiple configurations.
@@ -166,9 +163,10 @@ class TrainingSet():
         self.configs = []
 
     def read(self, fname):
-        '''
-        Read training set, where each file stores a configuration.
-        '''
+        """
+        Read training set, where each file stores a configuration. If given a directory,
+        all the files end with 'xyz' will be treated as valid.
+        """
         if os.path.isdir(fname):
             dirpath = fname
             all_files = glob.glob(dirpath+os.path.sep+'*xyz')
@@ -184,9 +182,9 @@ class TrainingSet():
             raise InputError('No training set files (ended with .xyz) found '
                              'in directory: {}/'.format(dirpath))
 
-        print 'Number of configurations in traning set:', self.size
+        print('Number of configurations in traning set:', self.size)
 
-# not needed
+#NOTE not needed
 #    def get_unique_species(self):
 #        '''
 #        Get all the species that appear in the training set.
