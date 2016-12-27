@@ -11,23 +11,23 @@ from fisher import Fisher
 def test_fisher(relative_variance = False):
 
     # temperature
-    T = 450
+    T = 150
 
     # KIM model parameters
     modelname = 'Three_Body_Stillinger_Weber_MoS__MO_000000111111_000'
     params = ModelParams(modelname)
     params.echo_avail_params()
-    #fname = 'input/fitted_params_T150.txt'
-    fname = '/media/sf_share/mos2_fitted-T{}_interval4'.format(T)
+    fname = 'input/fitted_params_T150.txt'
+    #fname = '/media/sf_share/mos2_fitted-T{}_interval4'.format(T)
     params.read(fname)
     params.echo_params()
 
     # read config and reference data
     tset = TrainingSet()
-    #fname = 'training_set/training_set_multi_small'
+    fname = 'training_set/training_set_multi_small'
     #fname = 'training_set/training_set_multi_large'
     #fname = '/media/sf_share/xyz_interval4/'
-    fname = '/media/sf_share/training_set_T{}_interval4'.format(T)
+    #fname = '/media/sf_share/training_set_T{}_interval4'.format(T)
     #fname = '/media/sf_share/T150_training_1000.xyz'
     tset.read(fname)
     configs = tset.get_configs()

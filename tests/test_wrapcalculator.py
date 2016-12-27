@@ -3,7 +3,7 @@ sys.path.append('../openkim_fit')
 from wrapcalculator import WrapCalculator
 
 def test_wrapcalculator():
-    fname = '../tests/data_4x4.edn'
+    fname = 'input/data_4x4.edn'
 
     keys = ['unrelaxed-periodic-cell-vector-1',
             'unrelaxed-configuration-positions',

@@ -1,1 +1,3 @@
 OpenKIM based interatomic potential fitting program.
+
+Prerequisite: kim-api, swig, openkim-python, edn_format
