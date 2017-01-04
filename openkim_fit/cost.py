@@ -1,9 +1,7 @@
 import numpy as np
-import collections
 import multiprocessing as mp
+import collections
 from modelparams import ModelParams
-import time
-import copy
 
 
 class Cost:
@@ -26,59 +24,15 @@ class Cost:
         self.pred_obj = []
         self.ref = []
         self.weight = []
-        self.fun = []
+        self.func = []
         self.pred_obj_group = None
         self.ref_group = None
         self.weight_group = None
-        self.fun_group = None
-
-# NOTE Ause np.array_split
-    def _group_preds(self):
-        """
-        Group the predictors (and the associated references, weights and wrapper
-        functions) into 'nprocs' groups, so that each group can be processed by a
-        processor. The predictors are randomly assigned to each group to account for
-        load balance in each group.
-        """
-        tot_size = len(self.pred_obj)
-        avg_size = int(tot_size/self.nprocs)
-        remainder = tot_size % self.nprocs
-        # random order
-        np.random.seed(1)               # we may not want this
-        idx = np.arange(tot_size)
-        #np.random.shuffle(idx)
-        # size of each group
-        group_size = []
-        for i in range(self.nprocs):
-            if i < remainder:
-                group_size.append(avg_size+1)
-            else:
-                group_size.append(avg_size)
-        # split data into groups
-        self.pred_obj_group = []
-        self.ref_group = []
-        self.weight_group = []
-        self.fun_group = []
-        k = 0
-        for i in range(self.nprocs):
-            tmp_pred_obj = []
-            tmp_ref = []
-            tmp_weight = []
-            tmp_fun = []
-            for j in range(group_size[i]):
-                tmp_pred_obj.append(self.pred_obj[idx[k]])
-                tmp_ref.append(self.ref[idx[k]])
-                tmp_weight.append(self.weight[idx[k]])
-                tmp_fun.append(self.fun[idx[k]])
-                k += 1
-            self.pred_obj_group.append(tmp_pred_obj)
-            self.ref_group.append(tmp_ref)
-            self.weight_group.append(tmp_weight)
-            self.fun_group.append(tmp_fun)
+        self.func_group = None
 
 
-    def add(self, pred_obj, reference, weight=1, fun=None):
-        """
+    def add(self, pred_obj, reference, weight=1, func=None):
+        """Add a contribution part to the cost.
 
         Parameters
         ----------
@@ -98,15 +52,14 @@ class Cost:
             weight for the prediction and reference data. If a float number
             is entered, all the prediction and reference data entries will
             use the same value. Its length should match reference data if
-            "fun" is not set, otherwise, its length should match the length
-            of the return value of "fun".
+            "func" is not set, otherwise, its length should match the length
+            of the return value of "func".
 
-        fun(pred_obj.get_prediction(), reference):
+        func(pred_obj.get_prediction(), reference):
             a function to generate residual using a method rather than the
             default one. It takes two R^m list arguments, and returns a R^n
             list.
         """
-
 
         # check correct length
         pred = pred_obj.get_prediction()
@@ -114,49 +67,65 @@ class Cost:
         if len_pred != len(reference):
             raise InputError('Cost.add(): lengths of prediction and reference data '
                              'do not match.')
-        if fun == None:
-# NOTE this is unsafe, what if we pass a numpy array
-            if type(weight) == list or type(weight) == tuple:
-                if len(weight) != len_pred:
-                    raise InputError('Cost.add(): lenghs of prediction data and '
-                                     'weight do not match.')
-            else:
-                weight = [weight for i in range(len_pred)]
+        # construct weight list according to input type
+        if func is None:
+            len_resid = len_pred
         else:
-            residual = fun(pred,reference)
+            residual = func(pred,reference)
             len_resid = len(residual)
-# NOTE this is unsafe, what if we pass a numpy array
-            if type(weight) == list or type(weight) == tuple:
-                if len(weight) != len_resid:
-                    raise InputError('Cost.add(): lenghs of return data of "fun" '
-                                     'data and weight do not match.')
-            else:
-                weight = [weight for i in range(len_pred)]
+        if isinstance(weight, (collections.Sequence, np.ndarray)):
+            if len(weight) != len_resid:
+                raise InputError('Cost.add(): lenghs of return data of "func" '
+                                 'data and weight do not match.')
+        else:
+            weight = [weight for i in range(len_resid)]
 
         # record data
         self.pred_obj.append(pred_obj)
         self.ref.append(reference)
         self.weight.append(weight)
-        self.fun.append(fun)
+        self.func.append(func)
         # group objects added so far
         self._group_preds()
 
 
+    def _group_preds(self):
+        """ Group the predictors (and the associated references, weights and wrapper
+        functions) into 'nprocs' groups, so that each group can be processed by a
+        processor. The predictors are randomly assigned to each group to account for
+        load balance in each group.
+        """
+#NOTE we may not want the shuffling while developing the code, such that it gives
+# deterministic results
+        # shuffle before grouping, in case some processors get quite heavy jobs but
+        # others get light ones.
+#        combined = zip(self.pred_obj, self.ref, self.weight, self.func)
+#        np.random.shuffle(combined)
+#        self.pred_obj[:], self.ref[:], self.weight[:], self.func[:] = zip(*combined)
 
-    def _update_params(self, x0):
-        # update params x0 from minimizer to ModelParams
-        self.params.update_params(x0)
-        # set enviroment variable such that standard KIM test can update params
-        self.params.set_env_var()
+        # grouping
+        self.pred_obj_group= np.array_split(self.pred_obj, self.nprocs)
+        self.ref_group= np.array_split(self.ref, self.nprocs)
+        self.weight_group= np.array_split(self.weight, self.nprocs)
+        self.func_group= np.array_split(self.func, self.nprocs)
 
 
     def get_residual(self, x0):
+        """ Compute the residual for the cost.
+        This is a callable for optimizer that usually passed as the first positional
+        argument.
+
+        Parameters
+        ----------
+
+        x0: list
+            optimizing parameter values
+        """
         # update params from minimizer to ModelParams
         self._update_params(x0)
         # create jobs and start
         jobs = []
         pipe_list = []
-        #residuals = [None for i in range(self.nprocs)]
         for g in range(self.nprocs):
             # create pipes
             recv_end, send_end = mp.Pipe(False)
@@ -164,48 +133,66 @@ class Cost:
             pred = self.pred_obj_group[g]
             ref = self.ref_group[g]
             weight = self.weight_group[g]
-            fun = self.fun_group[g]
-            p = mp.Process(target=self._get_residual_group, args=(pred, ref, weight, fun, send_end,))
+            func = self.func_group[g]
+            p = mp.Process(target=self._get_residual_group, args=(pred, ref, weight, func, send_end,))
             p.start()
             jobs.append(p)
             pipe_list.append(recv_end)
 
         # we should place recv() before join()
         residuals = [x.recv() for x in pipe_list]
-        #for g in range(self.nprocs):
-        #    residuals[g] = pipe_list[g].recv()
-
         # wait for the all the jobs to complete
         for p in jobs:
             p.join()
         return np.concatenate(residuals)
 
 
-    def _get_residual_group(self, pred_g, ref_g, weight_g, fun_g, send_end):
+    def get_cost(self, x0):
+        """ Compute the cost.
+        This can be used as the callable for optimizer (e.g. scipy.optimize.minimize
+        method='CG')
+
+        Parameters
+        ----------
+
+        x0: list
+            optimizing parameter values
+        """
+        residual = self.get_residual(x0)
+        cost = 0.5*np.linalg.norm(residual)**2
+        return cost
+
+
+    def _update_params(self, x0):
+        """Update parameter values from minimizer to ModelParams object.
+
+        Parameters
+        ----------
+
+        x0: list
+            optimizing parameter values
+        """
+
+        self.params.update_params(x0)
+        # set enviroment variable such that standard KIM test can update params
+        self.params.set_env_var()
+
+
+    def _get_residual_group(self, pred_g, ref_g, weight_g, func_g, send_end):
+        """Helper function to do the computation of residuals.
+        """
         residual = []
         for i in range(len(pred_g)):
             pred = pred_g[i].get_prediction()
             ref = ref_g[i]
             weight = np.sqrt(weight_g[i])
-            fun = fun_g[i]
-            if fun == None:
+            func = func_g[i]
+            if func is None:
                 difference = np.subtract(pred, ref)
             else:
-                difference = fun(pred, ref)
+                difference = func(pred, ref)
             tmp_resid = np.multiply(weight, difference)
             residual = np.concatenate((residual, tmp_resid))
         send_end.send(residual)
-
-
-
-
-    def get_cost(self, x0):
-        '''
-        least squares cost function
-        '''
-        residual = self.get_residual(x0)
-        cost = 0.5*np.linalg.norm(residual)**2
-        return cost
-
 
 
