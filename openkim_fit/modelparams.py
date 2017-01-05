@@ -9,37 +9,47 @@ from utils import remove_comments
 import os
 
 class ModelParams():
-    '''
-    Class of the potential model parameters. It will interact with optimizer to
-    provide initial guesses of parameters and receive updated paramters. Also,
-    prediction tests will inqure updated parameters from this class.
-    '''
+    """Class of the potential model parameters.
+    It will interact with optimizer to provide initial guesses of parameters and
+    receive updated paramters from the optimizer. Besides, predictors will inqure
+    updated parameters from this class.
+
+    Parameters
+    ----------
+
+    modelname: str
+        KIM model name
+    """
 
     def __init__(self, modelname):
-        '''
-        Parameters:
-
-        modelname: KIM model name
-        '''
         self._modelname = modelname
         self._avail_params = OrderedDict()
         self._params = OrderedDict()
-        self._params_index = []
+        self._params_index = [] # index (name and slot) of optimizing params in _params
+        self._opt_x0 = None
         self._pkim = None
         # inquire KIM for the available parameters
         self._get_avail_params()
 
 
     def read(self,fname):
-        '''
+        """Read the initial values of parameters. An alternative is set_param().
         For a given model parameter, one or multiple initial values may be required,
         and each must be given in a new line. For each line, the initial guess value
         is mandatory, where 'KIM' (case insensitive) can be given to use the value
-        from the KIM model. Optionally, "fix" can be followed not to optimize this
+        from the KIM model. Optionally, 'fix' can be followed not to optimize this
         parameters, or lower and upper bounds can be given to limit the parameter
-        in the range.  The following are valid input examples.
+        value in the range. Note that lower or upper bounds may not be effective if
+        the optimizer does not support it. The following are valid input examples.
 
-        Examples:
+        Parameters
+        ----------
+
+        fname: str
+            name of the input file where the optimizing parameters are listed
+
+        Examples
+        --------
 
         PARAM_FREE_A
         KIM
@@ -53,11 +63,7 @@ class ModelParams():
         KIM  0.1  2.1
         1.0  0.1  2.1
         2.0  fix
-
-        Params:
-
-        fname (str), name of the file where the parameters to optimize are listed.
-        '''
+        """
 
         with open (fname, 'r') as fin:
             lines = fin.readlines()
@@ -82,21 +88,29 @@ class ModelParams():
                 num_line += 1
             self.set_param(param_lines)
 
-    def set_param(self, lines):
-        '''
-        Set parameters that will be optimized in the ModelParams object. This is
-        an alternative of the read method of this class.  The name of the parameter
-        should be given as the first entry of a list (or tuple), and then each data
-        line should be given in in a list.
 
-        Example:
+    def set_param(self, lines):
+        """Set parameters that will be optimized. An alternative is Read().
+        The name of the parameter should be given as the first entry of a list
+        (or tuple), and then each data line should be given in in a list.
+
+        Parameters
+        ----------
+
+        lines, str
+            optimizing parameter initial values, settings
+
+        Example
+        -------
+
             param_A = ['PARAM_FREE_A',
                        ['kim', 0, 20],
                        [2.0, 'fix'],
                        [2.2, 1.1, 3.3]
                       ]
             instance_of_this_class.set_param(param_A)
-        '''
+        """
+
         name = lines[0].strip()
 #NOTE we want to use set_param to perturbe params so as to compute Fisher information
 #matrix, where the following two lines are annoying
@@ -128,11 +142,15 @@ class ModelParams():
                                  '{} for parameter {}.'.format(j+1, name))
             self._check_bounds(name)
         self._set_param_index(name)
+        # write to file, and set environmental variable
+        # Enviroment variable should be set  before any KIM predictor is initialized,
+        # so placed here.
+        self._set_env_var()
+
 
     def echo_avail_params(self):
-        '''
-        Echo the adjustable parameters to stdout.
-        '''
+        """Echo the optimizable parameters to stdout.
+        """
         print()
         print('='*80)
         print('Model: ', self._modelname)
@@ -151,7 +169,20 @@ class ModelParams():
 
 
     def echo_params(self, fname=None, print_size=False):
-        ''' Print parameters to stdout or file.'''
+        """Print the optimizing parameters to stdout or file.
+
+        Parameters
+        ----------
+
+        fname: str
+            Name of the file to print the optimizing parameters. If None, printing
+            to stdout.
+
+        print_size: bool
+            Flag to indicate whether print the size of parameter. Recall that a
+            parameter may have one or more values.
+        """
+
         if fname:
             fout = open(fname, 'w')
         else:
@@ -179,40 +210,44 @@ class ModelParams():
         if fname:
             fout.close()
 
-    def set_env_var(self):
-        '''Write parameters to file KIM_MODEL_PARAMS, and also give its path to the
-        enviroment variable that has the same name KIM_MODEL_PARAMS'''
 
-        self.echo_params(fname='KIM_MODEL_PARAMS', print_size=True)
-        cwd = os.getcwd()
-        fname = cwd + os.path.sep + 'KIM_MODEL_PARAMS'
-        os.environ['KIM_MODEL_PARAMS'] = fname
+    def update_params(self, opt_x):
+        """ Update parameter values from optimzier.
+        This is the opposite operation of get_x0().
+
+        Parameters
+        ----------
+
+        opt_x, list of floats
+            parameter values from the optimizer.
+
+        """
+        for i,val in enumerate(opt_x):
+            name = self._params_index[i]['name']
+            value_slot = self._params_index[i]['value_slot']
+            self._params[name]['value'][value_slot] = val
+
+        # write params to file and setup environmental variable.
+        self._set_env_var()
 
 
-#NOTE, the following will echo KIM, if the initial params is from KIM
-#
-#    def echo_params(self):
-#        print()
-#        print('='*80)
-#        print('Potential model parameters that will be optimzied:')
-#        print()
-#        for name,attr in self._params.iteritems():
-#            print (name)
-#            for i in range(attr['size']):
-#                if attr['use-kim'][i]:
-#                    print('KIM', end='  ')
-#                else:
-#                    print(attr['value'][i], end='  ')
-#                if not attr['fix'][i] and attr['lower_bound'][i] == None:
-#                    print()   # print new line if only given value
-#                if attr['fix'][i]:
-#                    print('fix')
-#                if attr['lower_bound'][i] != None:
-#                    print(attr['lower_bound'][i], end='  ')
-#                if attr['upper_bound'][i]:
-#                    print(attr['upper_bound'][i])
-#            print()
-#
+    def get_x0(self):
+        """Nest all parameter values (except the fix ones) to a list.
+        This is the opposite operation of update_params(). This can be fed to the
+        optimizer as the starting parameters.
+
+        Return
+        ------
+            A list of nested optimizing parameter values.
+        """
+        self.opt_x0 = []
+        for idx in self._params_index:
+            name = idx['name']
+            value_slot = idx['value_slot']
+            self.opt_x0.append(self._params[name]['value'][value_slot])
+        self.opt_x0 = np.array(self.opt_x0)
+        return self.opt_x0
+
 
     def get_names(self):
         return np.array(self._params.keys()).copy()
@@ -231,32 +266,11 @@ class ModelParams():
 #    def get_fix(self, name):
 #        return self._params[name]['fix'].copy()
 
-    def update_params(self, opt_x):
-        '''
-        Update parameter values from optimzier.
-        '''
-        for i,val in enumerate(opt_x):
-            name = self._params_index[i]['name']
-            value_slot = self._params_index[i]['value_slot']
-            self._params[name]['value'][value_slot] = val
-
-    def get_x0(self):
-        '''
-        Nest all parameter values (except the fix ones) to a list. And this will
-        be fed to the optimizer as the starting parameters.
-        '''
-        opt_x0 = []
-        for idx in self._params_index:
-            name = idx['name']
-            value_slot = idx['value_slot']
-            opt_x0.append(self._params[name]['value'][value_slot])
-        return np.array(opt_x0)
 
     def _get_avail_params(self):
-        '''
-        Inqure the potential model to get all the potential parameters whoes values
-        are allowed to adjust. Namely, the "PARAM_FREE" in the model's descriptor file.
-        '''
+        """Inqure KIM model to get all the optimizable parameters. Namely, the
+        paramters with a prefactor 'PARAM_FREE_' in the model's descriptor file.
+        """
         kimstr = generate_dummy_kimstr(self._modelname)
         status, self._pkim = ks.KIM_API_init_str(kimstr, self._modelname)
         if ks.KIM_STATUS_OK != status:
@@ -279,9 +293,19 @@ class ModelParams():
                                        'size':size, 'value':value}
 
 
+    def _set_env_var(self):
+        """Write parameters to file KIM_MODEL_PARAMS, and also give its path to the
+        enviroment variable that has the same name KIM_MODEL_PARAMS.
+        """
+        #name = 'KIM_MODEL_PARAMS_' + self._modelname
+        name = 'KIM_MODEL_PARAMS'
+        self.echo_params(name, print_size=True)
+        path = os.getcwd() + os.path.sep + name
+        os.environ[name] = path
+
+
     def _read_1_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
-
 
     def _read_2_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
@@ -290,7 +314,6 @@ class ModelParams():
         else:
             raise InputError('Data at line {} of {} corrupted.\n'.format(j+1, name))
 
-
     def _read_3_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
         try:
@@ -298,7 +321,6 @@ class ModelParams():
             self._params[name]['upper_bound'][j] = float(line[2])
         except ValueError as err:
             raise InputError('{}.\nData at line {} of {} corrupted.\n'.format(err, j+1, name))
-
 
     def _read_1st_item(self, name, j, first):
         if type(first)==str and first.lower() == 'kim':
@@ -313,10 +335,9 @@ class ModelParams():
 
 
     def _check_bounds(self, name):
-        '''
-        Check whether the initial guess of a paramter is within its lower and
+        """Check whether the initial guess of a paramter is within its lower and
         upper bounds.
-        '''
+        """
         attr = self._params[name]
         for i in range(attr['size']):
             lower_bound = attr['lower_bound'][i]
@@ -329,12 +350,11 @@ class ModelParams():
 
 
     def _set_param_index(self, name):
-        '''
-        Check whether a specific data value of a parameter will be optimized or
-        not (by checking its "fix" attribute). If yes, include it in the index
+        """Check whether a specific data value of a parameter will be optimized or
+        not (by checking its 'fix' attribute). If yes, include it in the index
         list.
 
-        Given a parameter at its values such as:
+        Given a parameter and its values such as:
 
         PARAM_FREE_B
         1.1
@@ -343,7 +363,8 @@ class ModelParams():
 
         the first slot (1.1) and the third slot (4.4) will be included in the
         _params_index, and later be optimized.
-        '''
+        """
+
         size = self._params[name]['size']
         fix  = self._params[name]['fix']
         for i in range(size):
@@ -353,11 +374,72 @@ class ModelParams():
 
 
     def __del__(self):
-        ''' Garbage collects the KIM API objects automatically '''
+        """Garbage collects the KIM API objects automatically """
         if self._pkim:
             ks.KIM_API_model_destroy(self._pkim)
             ks.KIM_API_free(self._pkim)
         self._pkim = None
+
+
+
+class WrapperModelParams():
+    """Wrapper of ModelParams to deal with multiple models used in cost.
+
+    Parameters
+    ----------
+
+    modelparams
+        list of ModelParam objects
+    """
+
+    def __init__(self, modelparams):
+        self.modelparams = modelparams
+        self.opt_x0 = None
+        self._index = []
+        self._set_index()
+
+    def _set_index(self):
+        """Compute the start and end indices of the x0 from each ModelParams object
+        in self.opt_x0.
+        """
+        i = 0
+        for obj in self.modelparams:
+            x0 = obj.get_x0()
+            num = len(x0)
+            idx = {'start':i, 'end':i+num}
+            self._index.append(idx)
+            i += num
+
+    def get_x0(self):
+        """Nest optimizing parameter values from all ModelParams objects.
+        This can be fed to the optimizer as the starting parameter values.
+
+        Return
+        ------
+            A list of nested optimizing parameter values.
+        """
+        self.opt_x0 = []
+        for obj in self.modelparams:
+            x0 = obj.get_x0()
+            self.opt_x0.append(x0)
+        self.opt_x0 = np.array(self.opt_x0).flatten()
+        return self.opt_x0
+
+    def update_params(self, opt_x):
+        """Wrapper to call 'update_params()' of each ModelParam object.
+        """
+        for i,obj in enumerate(self.modelparams):
+            start = self._index[i]['start']
+            end = self._index[i]['end']
+            x0 = opt_x[start:end]
+            obj.update_params(x0)
+
+
+    def set_env_var(self):
+        """Wrapper to call 'set_env_var()' of each ModelParams object.
+        """
+        for obj in self.modelparams:
+            obj.set_env_var()
 
 
 
