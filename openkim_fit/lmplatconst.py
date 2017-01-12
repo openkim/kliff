@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-def lmp_lat_const():
+def lmp_lat_const(modelname):
     lmp_input_str="""# Define unit set and class of atomic model
     units metal
     atom_style atomic
@@ -29,7 +29,7 @@ def lmp_lat_const():
     mass            2 32.065
 
     # Specify which KIM Model to use, letting LAMMPS compute the virial/pressure
-    pair_style      kim LAMMPSvirial Three_Body_Stillinger_Weber_MoS__MO_000000111111_000
+    pair_style      kim LAMMPSvirial rpls_modelname
     pair_coeff      * * Mo S
 
     # set pressure in x and y direction, so as to relax boxsize
@@ -46,14 +46,15 @@ def lmp_lat_const():
     print "lat_const = ${mylx}"
     """
 
+    # create lammps input file
+    lmp_input_str = lmp_input_str.replace('rpls_modelname', modelname)
     with open('lammps.in', 'w') as fout:
         fout.write(lmp_input_str)
 
-# NOTE use subprocess, you may pass string as stdin and stdout
-#subprocess.call(['ls', '-lsh'])
-#subprocess.Popen('lmp_serial < lammps.in')
-    os.system('lmp_serial <lammps.in > lammps.out')
-# write results to edn format
+    # run lammps
+    subprocess.call('lmp_serial <lammps.in > lammps.out', shell=True)
+
+    # write results to edn format
     with open('lammps.out', 'r') as fin:
         for line in fin:
             if 'lat_const' in line:
@@ -67,9 +68,11 @@ def lmp_lat_const():
 
             "lattice-const" {
                 "source-unit"   "Angstrom"
-                "source-value"  %f
+                "source-value"  %22.15e
             }
         }'''%(lat_const)
 
         fout.write(edn_str)
 
+if __name__ == '__main__':
+    lmp_lat_const()
