@@ -1,6 +1,7 @@
 import edn_format
 import numpy as np
 import collections
+import os
 
 class WrapCalculator:
     """ Wrapper over user-defined predictor function.
@@ -20,21 +21,30 @@ class WrapCalculator:
         Keywords in the 'outname' EDN file, whose value will be parsed as the prediction.
     """
 
-    def __init__(self, runner, outname, keys):
-        self.runner = runner
+    def __init__(self, params, outname, keys, runner, *args):
+        self.params = params
         self.outname = outname
         self.keys = keys
+        self.runner = runner
+        self.args = args
 
     def get_prediction(self):
         """
         Return 1D array of floats.
         """
-        self.runner()
+        self._update_params()
+        self.runner(*self.args)
         return self._parse_edn(self.outname, self.keys)
 
+    def _update_params(self):
+        """Write parameters to file KIM_MODEL_PARAMS + modelname, and also give its path to the
+        enviroment variable that has the same name: KIM_MODEL_PARAMS + modelname.
+        """
+        name = 'KIM_MODEL_PARAMS_' + self.params._modelname
+        self.params.echo_params(name, print_size=True)
+        path = os.getcwd() + os.path.sep + name
+        os.environ[name] = path
 
-    def update_params(self):
-        pass
 
     def _parse_edn(self, fname, keys):
         """ Wrapper to use end_format to parse output file of 'runner' in edn format.

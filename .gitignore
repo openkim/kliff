@@ -9,7 +9,7 @@ libs
 screen*
 *bkp
 build
-KIM_MODEL_PARAMS
+KIM_MODEL_PARAMS*
 *.edn
 *.lammps
 maybe_needed

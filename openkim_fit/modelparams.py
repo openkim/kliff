@@ -142,10 +142,7 @@ class ModelParams():
                                  '{} for parameter {}.'.format(j+1, name))
             self._check_bounds(name)
         self._set_param_index(name)
-        # write to file, and set environmental variable
-        # Enviroment variable should be set  before any KIM predictor is initialized,
-        # so placed here.
-        self._set_env_var()
+
 
 
     def echo_avail_params(self):
@@ -227,9 +224,6 @@ class ModelParams():
             value_slot = self._params_index[i]['value_slot']
             self._params[name]['value'][value_slot] = val
 
-        # write params to file and setup environmental variable.
-        self._set_env_var()
-
 
     def get_x0(self):
         """Nest all parameter values (except the fix ones) to a list.
@@ -291,17 +285,6 @@ class ModelParams():
                 size = np.prod(shape)
             self._avail_params[name] = {'rank':rank, 'shape':shape,
                                        'size':size, 'value':value}
-
-
-    def _set_env_var(self):
-        """Write parameters to file KIM_MODEL_PARAMS, and also give its path to the
-        enviroment variable that has the same name KIM_MODEL_PARAMS.
-        """
-        #name = 'KIM_MODEL_PARAMS_' + self._modelname
-        name = 'KIM_MODEL_PARAMS'
-        self.echo_params(name, print_size=True)
-        path = os.getcwd() + os.path.sep + name
-        os.environ[name] = path
 
 
     def _read_1_item(self, name, j, line):
@@ -433,13 +416,5 @@ class WrapperModelParams():
             end = self._index[i]['end']
             x0 = opt_x[start:end]
             obj.update_params(x0)
-
-
-    def set_env_var(self):
-        """Wrapper to call 'set_env_var()' of each ModelParams object.
-        """
-        for obj in self.modelparams:
-            obj.set_env_var()
-
 
 

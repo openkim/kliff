@@ -123,6 +123,8 @@ class Cost:
         """
         # update params from minimizer to ModelParams
         self._update_params(x0)
+
+
         # create jobs and start
         jobs = []
         pipe_list = []
@@ -144,6 +146,7 @@ class Cost:
         # wait for the all the jobs to complete
         for p in jobs:
             p.join()
+
         return np.concatenate(residuals)
 
 
@@ -172,10 +175,7 @@ class Cost:
         x0: list
             optimizing parameter values
         """
-
         self.params.update_params(x0)
-        # set enviroment variable such that standard KIM test can update params
-        self.params.set_env_var()
 
 
     def _get_residual_group(self, pred_g, ref_g, weight_g, func_g, send_end):
