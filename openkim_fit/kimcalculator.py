@@ -38,6 +38,7 @@ class KIMcalculator:
         self.km_nparticles = None
         self.km_nspecies = None
         self.km_particle_spec_code = None
+        self.km_particle_status = None
         self.km_coords = None
 
         # output of model
@@ -81,11 +82,15 @@ class KIMcalculator:
             self.km_particle_spec_code.append(ks.KIM_API_get_species_code(self.pkim, s))
         self.km_particle_spec_code = np.array(self.km_particle_spec_code).astype(np.int32)
 
+        # set particle status (contributing or not)
+        self.km_particle_status = np.nones(self.km_nparticles)
+
         # set KIM object pointers (input for KIM object)
         ks.KIM_API_set_data_int(self.pkim, "numberOfParticles", self.km_nparticles)
         ks.KIM_API_set_data_double(self.pkim, "coordinates", self.km_coords)
         ks.KIM_API_set_data_int(self.pkim, "numberOfSpecies", self.km_nspecies)
         ks.KIM_API_set_data_int(self.pkim, "particleSpecies", self.km_particle_spec_code)
+        ks.KIM_API_set_data_int(self.pkim, "particleStatus", self.km_particle_status)
 
         # initialize energy and forces and register their KIM pointer (output of KIM object)
         self.km_energy = np.array([0.])
@@ -110,7 +115,7 @@ class KIMcalculator:
             self.params[name] = {'size':size,'value':value}
         # this needs to be called before setting up neighborlist, since possibly
         # the cutoff may be changed through FREE_PARAM_ ...
-        self.update_params()
+        self._update_params()
 
 # NOTE see universal test about how to set up neighborlist
 # we still need to still ghost if we want to use neigh_pure
@@ -130,7 +135,7 @@ class KIMcalculator:
             kimnl.nbl_build_neighborlist(self.pkim)
 
 
-    def update_params(self):
+    def _update_params(self):
         '''
         Update potential model parameters from ModelParams class to KIM object.
         '''
@@ -159,7 +164,7 @@ class KIMcalculator:
 
 
     def get_prediction(self):
-        self.update_params()
+        self._update_params()
         self.compute()
 
         if self.km_energy is not None:
