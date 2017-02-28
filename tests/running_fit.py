@@ -1,7 +1,6 @@
 import sys
 sys.path.append('../openkim_fit')
 sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
-sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
 from training import TrainingSet
 from keywords import InputKeywords
 from modelparams import ModelParams
@@ -11,7 +10,7 @@ from geodesiclm import geodesiclm
 from scipy.optimize import least_squares
 import numpy as np
 import time
-import resource
+
 
 start_time = time.time()
 
@@ -51,19 +50,6 @@ tset.read('training_set/training_set_multi_small/')
 #tset.read('/media/sf_share/xyz_interval4_2/')
 configs = tset.get_configs()
 
-count = 500
-print 'after training set'
-mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-
-
-
 
 # prediction
 KIMobjs=[]
@@ -74,19 +60,6 @@ for i in range(len(configs)):
     #obj.compute()
     KIMobjs.append(obj)
 
-count = 500
-print 'after prediction'
-mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-
-
-
 
 # reference
 refs = []
@@ -95,35 +68,10 @@ for i in range(len(configs)):
     refs.append(f)
 
 
-count = 500
-print 'after refs'
-mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-
-
 # cost function
-cst = Cost(params, nprocs=4)
-#cst = Cost(params)
+cst = Cost(params, nprocs=2)
 for i in range(len(configs)):
     cst.add(KIMobjs[i], refs[i], weight=1)
-
-
-count = 500
-print 'after cost'
-mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
 
 
 resid = cst.get_residual(x0)
@@ -146,16 +94,6 @@ elif method == 'scipy-lm':
     # test scipy.optimize minimization method
     res_1 = least_squares(func, x0, method='lm')
     print res_1
-
-count = 500
-print 'after fitting'
-mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
-
-mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-print "Memory usage is: {0} KB".format(mem)
-print "Size per foo obj: {0} KB".format(float(mem)/count)
 
 
 params.echo_params()

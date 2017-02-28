@@ -6,6 +6,7 @@ from utils import generate_kimstr
 from modelparams import ModelParams
 import sys
 
+
 class KIMcalculator:
     """ KIM calculator class that computes the energy, forces for a given configuration.
 
@@ -89,20 +90,17 @@ class KIMcalculator:
         self.NBC = self.get_NBC_method()
         if 'PURE' in self.NBC:
             self.ncontrib = self.km_nparticles[0]
-            pad_coords, pad_spec, self.pad_image = set_padding(cell, PBC, particle_spec, self.km_coords, self.km_cutoff[0])
-
-
+            pad_coords, pad_spec, self.pad_image = set_padding(cell, PBC, particle_spec,
+                self.km_coords, self.km_cutoff[0])
 
             self.km_coords = np.concatenate((self.km_coords, pad_coords))
             particle_spec = np.concatenate((particle_spec, pad_spec))
             npadding = len(pad_spec)
             self.km_nparticles[0] += npadding
-# NOTE for future
-            # set particle status (contributing or not)
-            #self.km_particle_status =np.concatnate((np.ones(self.ncontrib), np.zeros(npadding))).astype(np.int32)
 
-            # whether need neighbors for an atom
+            # assume all atoms need neigh, even padding atoms
             not_need_neigh = np.zeros(self.km_nparticles[0]).astype(np.int32)
+            # turn off generating neighbors for those who do not need
             if not self.need_padding_neigh:
                 not_need_neigh[self.ncontrib:] = 1
 
@@ -118,7 +116,6 @@ class KIMcalculator:
         ks.KIM_API_set_data_double(self.pkim, "coordinates", self.km_coords)
         ks.KIM_API_set_data_int(self.pkim, "numberOfSpecies", self.km_nspecies)
         ks.KIM_API_set_data_int(self.pkim, "particleSpecies", self.km_particle_spec_code)
-        #ks.KIM_API_set_data_int(self.pkim, "particleStatus", self.km_particle_status)
 
         # initialize energy and forces and register their KIM pointer (output of KIM object)
         self.km_energy = np.array([0.])
