@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 import kimservice as ks
 import kimneighborlist as kimnl
-from utils import generate_kimstr
+from utils import generate_kimstr, write_extxyz
 from modelparams import ModelParams
 import sys
 
@@ -56,7 +56,7 @@ class KIMcalculator:
         self.uses_neighbors = None
         self.pad_image = None
         self.ncontrib = None
-        self.need_padding_neigh = False
+        self.need_padding_neigh = True
 
         #  parameters
         self.params = dict()
@@ -98,11 +98,18 @@ class KIMcalculator:
             npadding = len(pad_spec)
             self.km_nparticles[0] += npadding
 
+            # set particle status (contributing or not)
+            self.km_particle_status =np.concatenate((np.ones(self.ncontrib),
+                np.zeros(npadding))).astype(np.int32)
+
             # assume all atoms need neigh, even padding atoms
             not_need_neigh = np.zeros(self.km_nparticles[0]).astype(np.int32)
             # turn off generating neighbors for those who do not need
             if not self.need_padding_neigh:
                 not_need_neigh[self.ncontrib:] = 1
+
+# NOTE for debug use only
+        write_extxyz(cell, particle_spec, self.km_coords, fname='check_set_padding2.xyz')
 
         # get species code for all the atoms
         self.km_particle_spec_code = []
@@ -110,12 +117,12 @@ class KIMcalculator:
             self.km_particle_spec_code.append(ks.KIM_API_get_species_code(self.pkim, s))
         self.km_particle_spec_code = np.array(self.km_particle_spec_code).astype(np.int32)
 
-
         # set KIM object pointers (input for KIM object)
         ks.KIM_API_set_data_int(self.pkim, "numberOfParticles", self.km_nparticles)
         ks.KIM_API_set_data_double(self.pkim, "coordinates", self.km_coords)
         ks.KIM_API_set_data_int(self.pkim, "numberOfSpecies", self.km_nspecies)
         ks.KIM_API_set_data_int(self.pkim, "particleSpecies", self.km_particle_spec_code)
+        ks.KIM_API_set_data_int(self.pkim, "particleStatus", self.km_particle_status)
 
         # initialize energy and forces and register their KIM pointer (output of KIM object)
         self.km_energy = np.array([0.])
@@ -148,6 +155,8 @@ class KIMcalculator:
             if 'PURE' in self.NBC:
                 kimnl.nbl_set_ghosts(not_need_neigh, 0)
             kimnl.nbl_build_neighborlist(self.pkim)
+
+
 
 
     def _update_params(self):

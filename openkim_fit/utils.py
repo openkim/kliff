@@ -54,6 +54,7 @@ def generate_kimstr(modelname, cell, species):
     kimstr += 'numberOfParticles  integer  none    []\n'
     kimstr += 'numberOfSpecies    integer  none    []\n'
     kimstr += 'particleSpecies    integer  none    [numberOfParticles]\n'
+    kimstr += 'particleStatus     integer  none    [numberOfParticles]\n'
     kimstr += 'coordinates        double   length  [numberOfParticles,3]\n'
 #    kimstr += 'boxSideLengths     double   length  [3]\n'
 #    kimstr += 'numberContributingParticles integer none  []\n'
