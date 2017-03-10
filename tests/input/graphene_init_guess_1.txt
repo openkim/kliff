@@ -1,0 +1,23 @@
+PARAM_FREE_C0
+1.571e-02 fix
+
+PARAM_FREE_C2
+1.229e-02
+
+PARAM_FREE_C4
+4.933e-03 fix
+
+PARAM_FREE_C
+3.03e-03 fix
+
+PARAM_FREE_delta
+5.78e-01 fix
+
+PARAM_FREE_lambda
+3.629e+00 fix
+
+PARAM_FREE_A
+1.0238e-02 fix
+
+PARAM_FREE_z0
+3.35e+00   fix

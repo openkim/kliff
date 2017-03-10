@@ -13,6 +13,7 @@ KIM_MODEL_PARAMS*
 *.lammps
 maybe_needed
 tests/echo*
+FINAL_FITTED_PARAMS
 
 # special for docs
 docs/*

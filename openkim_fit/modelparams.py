@@ -259,6 +259,8 @@ class ModelParams():
 #        return self._params[name]['upper_bound'].copy()
 #    def get_fix(self, name):
 #        return self._params[name]['fix'].copy()
+    def set_value(self, name, value):
+        self._params[name]['value'] = value
 
 
     def _get_avail_params(self):
