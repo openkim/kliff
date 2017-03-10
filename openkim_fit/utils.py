@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import kimservice as ks
 import sys
@@ -165,13 +165,30 @@ def write_extxyz(cell, species, coords, fname='config.txt'):
 
         # species, coords
         if natoms != len(coords)//3:
-            print 'Number of atoms is inconsistent from species nad coords.'
-            print 'len(specis)=', natoms
-            print 'len(coords)=', len(coords)//3
+            print ('Number of atoms is inconsistent from species nad coords.')
+            print ('len(specis)=', natoms)
+            print ('len(coords)=', len(coords)//3)
             sys.exit(1)
         for i in range(natoms):
             fout.write('{:4}'.format(species[i]))
             fout.write('{:12.5e} '.format(coords[3*i+0]))
             fout.write('{:12.5e} '.format(coords[3*i+1]))
             fout.write('{:12.5e} 0 0 0\n'.format(coords[3*i+2]))
+
+
+def banner():
+    """ Banner of openKIM-fit.
+    """
+
+    bn = '''
+                                  _    _            __ _ _
+          ___  _ __   ____  _ __ | | _(_)_ __ ___  / _(_) |_
+         / _ \| '_ \ / __ \| '_ \| |/ / | '_ ` _ \| |_| | __|
+        | (_) | |_) | /___/| | | |   <| | | | | | |  _| | |_
+         \___/| .__/ \____ |_| |_|_|\_\_|_| |_| |_|_| |_|\__|
+              |_|
+    '''
+
+    print ('='*80)
+    print (bn)
 

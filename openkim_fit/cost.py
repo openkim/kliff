@@ -200,8 +200,9 @@ class Cost:
 
 
     def __del__(self):
-        """Write fitted params to `FINAL_FITTED_PARAMS' at end.
+        """Write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
         """
         self.params.echo_params(fname='FINAL_FITTED_PARAMS')
+        self.params.echo_params()
 
 
