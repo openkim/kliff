@@ -177,6 +177,9 @@ class Cost:
         """
         self.params.update_params(x0)
 
+# NOTE (we we support print to screen every N steps)
+# print to file while minimizion
+        self.params.echo_params('params.txt')
 
     def _get_residual_group(self, pred_g, ref_g, weight_g, func_g, send_end):
         """Helper function to do the computation of residuals.
@@ -194,5 +197,11 @@ class Cost:
             tmp_resid = np.multiply(weight, difference)
             residual = np.concatenate((residual, tmp_resid))
         send_end.send(residual)
+
+
+    def __del__(self):
+        """Write fitted params to `FINAL_FITTED_PARAMS' at end.
+        """
+        self.params.echo_params(fname='FINAL_FITTED_PARAMS')
 
 
