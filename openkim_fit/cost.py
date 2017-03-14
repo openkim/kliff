@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import multiprocessing as mp
 import collections
@@ -10,17 +11,22 @@ class Cost:
     Parameters
     ----------
 
-    params: ModelParams object
+    params, ModelParams object
         It's method 'update_params' will be used to update parameters from
         the optimizer.
 
-    nprocs: int
+    nprocs, int
         Number of processors to parallel to run the predictors.
+    verbose, int
+        Integer code to denote to whether echo running cost to screen.
+        0, do not echo anything
+        1, echo running cost
     """
-    def __init__(self, params, nprocs=1):
+    def __init__(self, params, nprocs=1, verbose=0):
 
         self.params = params
         self.nprocs = nprocs
+        self.verbose = verbose
         self.pred_obj = []
         self.ref = []
         self.weight = []
@@ -147,7 +153,13 @@ class Cost:
         for p in jobs:
             p.join()
 
-        return np.concatenate(residuals)
+        residuals = np.concatenate(residuals)
+
+        if self.verbose == 1:
+            cost = 0.5*np.linalg.norm(residuals)**2
+            print ('cost: {:18.10e}'.format(cost))
+
+        return residuals
 
 
     def get_cost(self, x0):
