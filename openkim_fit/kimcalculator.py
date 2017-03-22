@@ -109,7 +109,7 @@ class KIMcalculator:
                 not_need_neigh[self.ncontrib:] = 1
 
 # NOTE for debug use only
-        write_extxyz(cell, particle_spec, self.km_coords, fname='check_set_padding2.xyz')
+#        write_extxyz(cell, particle_spec, self.km_coords, fname='check_set_padding2.xyz')
 
         # get species code for all the atoms
         self.km_particle_spec_code = []

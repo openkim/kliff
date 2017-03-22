@@ -42,41 +42,41 @@ def alternate_fix_params(modelname, paramfiles, Ntimes=10):
         init_params.append(params)
 
         def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
 
-            for i,j in itertools.product(range(Ntimes), range(Nparamfiles)):
-                print ()
-                print ('='*80)
-                print ("Number of iterations of running function `{}': {}.\n"
-                    .format(func.__name__, i*Nparamfiles+j+1) )
+                for i,j in itertools.product(range(Ntimes), range(Nparamfiles)):
+                    print ()
+                    print ('='*80)
+                    print ("Number of iterations of running function `{}': {}.\n"
+                        .format(func.__name__, i*Nparamfiles+j+1) )
 
-                # run the fitting
-                try:
-                    func(*args, **kwargs)
-                except Exception as e:
-                    raise Exception("Function `{}' passed to decorator `alter_fix_params' "
-                        "cannot be executed.\n{}".format(func.__name__, e) )
+                    # run the fitting
+                    try:
+                        func(*args, **kwargs)
+                    except Exception as e:
+                        raise Exception("Function `{}' passed to decorator `alter_fix_params' "
+                            "cannot be executed.\n{}".format(func.__name__, e) )
 
-                # generete param file for the next run
-                # index of the param file in init_params for the next run
-                idx = (j+1)%Nparamfiles
-                next_run_params = init_params[idx]
-                next_run_params_names = next_run_params.get_names()
+                    # generete param file for the next run
+                    # index of the param file in init_params for the next run
+                    idx = (j+1)%Nparamfiles
+                    next_run_params = init_params[idx]
+                    next_run_params_names = next_run_params.get_names()
 
-                # get fitted params values
-                fitted_params = ModelParams(modelname)
-                fitted_params.read('FINAL_FITTED_PARAMS')
-                fitted_param_names = fitted_params.get_names()
-                for name in fitted_param_names:
-                    value = fitted_params.get_value(name)
-                    if name in next_run_params_names:
-                        next_run_params.set_value(name, value)
+                    # get fitted params values
+                    fitted_params = ModelParams(modelname)
+                    fitted_params.read('FINAL_FITTED_PARAMS')
+                    fitted_param_names = fitted_params.get_names()
+                    for name in fitted_param_names:
+                        value = fitted_params.get_value(name)
+                        if name in next_run_params_names:
+                            next_run_params.set_value(name, value)
 
-                # write params info to file
-                next_run_params.echo_params(firstname)
+                    # write params info to file
+                    next_run_params.echo_params(firstname)
 
-        return wrapper
+            return wrapper
 
     return decorator
 
