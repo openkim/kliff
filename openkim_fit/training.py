@@ -9,14 +9,15 @@ class Config:
     Class to read and store the information in one configuraiton in extented xyz format.
     """
 
-    def __init__(self):
+    def __init__(self, identifier):
+        self.id = identifier
         self.natoms = None      # int
         self.cell = None        # 3 by 3 np.array
         self.PBC = None         # 1 by 3 int
         self.energy = None      # float
-        self.species = []       # N by 1 str list (N: number of atoms)
-        self.coords = []        # 3N by 1 np.array (N: number of atoms)
-        self.forces = []        # 3N by 1 np.array (N: number of atoms)
+        self.species = []       # 1 by N str list (N: number of atoms)
+        self.coords = []        # 1 by 3N np.array (N: number of atoms)
+        self.forces = []        # 1 by 3N np.array (N: number of atoms)
 
     def read_extxyz(self, fname):
         with open(fname, 'r') as fin:
@@ -169,12 +170,12 @@ class TrainingSet():
         """
         if os.path.isdir(fname):
             dirpath = fname
-            all_files = glob.glob(dirpath+os.path.sep+'*xyz')
+            all_files = sorted(glob.glob(dirpath+os.path.sep+'*xyz'))
         else:
             dirpath = os.path.dirname(fname)
             all_files = [fname]
         for f in all_files:
-            conf = Config()
+            conf = Config(f)
             conf.read_extxyz(f)
             self.configs.append(conf)
         self.size = len(self.configs)

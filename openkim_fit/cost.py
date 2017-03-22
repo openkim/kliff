@@ -36,6 +36,8 @@ class Cost:
         self.weight_group = None
         self.func_group = None
 
+    def __enter__(self):
+      return self
 
     def add(self, pred_obj, reference, weight=1, func=None):
         """Add a contribution part to the cost.
@@ -211,10 +213,40 @@ class Cost:
         send_end.send(residual)
 
 
-    def __del__(self):
-        """Write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
-        """
+    def _error_report(self, fname='ERROR_REPORT'):
+      """Write error of each configuration to fname.
+      """
+      residuals = self.get_residual(self.params.get_x0())
+      cost_all = 0.5*residuals**2
+
+      # the order of residual is the same as grouped prediction objects
+      pred_objs = np.concatenate(self.pred_obj_group)
+      refs = np.concatenate(self.ref_group)
+      weights = np.concatenate(self.weight_group)
+
+      start = 0
+      with open (fname, 'w') as fout:
+          fout.write('Total error: {:18.10e}\n\n'.format(sum(cost_all)))
+          fout.write('Below is error by each configuration.\n')
+          for p_obj, r, w in zip(pred_objs, refs, weights):
+              identifier = p_obj.conf.id
+              p = p_obj.get_prediction()
+              end = start + len(p)
+              cost_config = sum(cost_all[start:end])
+              start = end
+              fout.write('\nconfig: {},    config error:{:18.10e}\n'.format(identifier, cost_config))
+              fout.write('      Prediction          Reference            Weight             Error\n')
+              for i,j,k in zip(p,r,w):
+                  error = 0.5*k*(i-j)**2
+                  fout.write('  {:18.10e} {:18.10e} {:18.10e} {:18.10e}\n'.format(i,j,k,error))
+
+
+    def __exit__(self, exec_type, exec_value, trackback):
+
+        # write error report
+        self._error_report()
+
+        #write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
         self.params.echo_params(fname='FINAL_FITTED_PARAMS')
         self.params.echo_params()
-
 
