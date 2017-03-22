@@ -87,7 +87,7 @@ class Fisher():
         """
         values[idx] = x
         self.params.update_params(values) # pass params to ModelParams
-        kimobj.update_params() # pass params to KIMcalculator
+        kimobj._update_params() # pass params to KIMcalculator
         kimobj.compute()
         forces = kimobj.get_forces()
         return forces
