@@ -1,9 +1,9 @@
-from __future__ import print_function
+from __future__ import print_function, division
 import numpy as np
 import multiprocessing as mp
 import collections
 from modelparams import ModelParams
-
+from error import InputError
 
 class Cost:
     """Objective cost function that will be minimized.
@@ -80,11 +80,14 @@ class Cost:
             len_resid = len_pred
         else:
             residual = func(pred,reference)
+            if not isinstance(residual, (collections.Sequence, np.ndarray)):
+                raise InputError('Cost.add(): return value of "{}" should be a list.'.format(func.__name__))
             len_resid = len(residual)
+
         if isinstance(weight, (collections.Sequence, np.ndarray)):
             if len(weight) != len_resid:
-                raise InputError('Cost.add(): lenghs of return data of "func" '
-                                 'data and weight do not match.')
+                raise InputError('Cost.add(): length of return value of "{}" '
+                                 'and that of weight do not match.'.format(func.__name__))
         else:
             weight = [weight for i in range(len_resid)]
 
@@ -144,7 +147,7 @@ class Cost:
             ref = self.ref_group[g]
             weight = self.weight_group[g]
             func = self.func_group[g]
-            p = mp.Process(target=self._get_residual_group, args=(pred, ref, weight, func, send_end,))
+            p = mp.Process(target=self._get_residual_group, args=(pred,ref,weight,func,send_end,))
             p.start()
             jobs.append(p)
             pipe_list.append(recv_end)
@@ -235,13 +238,22 @@ class Cost:
               cost_config = sum(cost_all[start:end])
               start = end
               fout.write('\nconfig: {},    config error:{:18.10e}\n'.format(identifier, cost_config))
-              fout.write('      Prediction          Reference            Weight             Error\n')
+              fout.write('     Prediction      Reference     Difference     Diff./Ref.       Weight         Error\n')
               for i,j,k in zip(p,r,w):
-                  error = 0.5*k*(i-j)**2
-                  fout.write('  {:18.10e} {:18.10e} {:18.10e} {:18.10e}\n'.format(i,j,k,error))
+                  diff = i-j
+                  try:
+                    ratio = float(diff)/float(j) # change np.float to float to catch error
+                  except ZeroDivisionError:
+                    ratio = np.inf
+                  error = 0.5*k*diff**2
+                  fout.write('  {:14.6e} {:14.6e} {:14.6e} {:14.6e} {:14.6e} {:14.6e}\n'.format(i,j,diff,ratio,k,error))
 
 
     def __exit__(self, exec_type, exec_value, trackback):
+
+        # if there is expections, raise it (not for KeyboardInterrupt)
+        if exec_type is not None and exec_type is not KeyboardInterrupt:
+            return False # return False will cause Python to re-raise the expection
 
         # write error report
         self._error_report()
