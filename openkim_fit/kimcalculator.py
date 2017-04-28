@@ -197,15 +197,14 @@ class KIMcalculator:
             forces on contributing atoms
         """
 
-        # loop over forces on padding atoms
-        for i in range(self.ncontrib, len(forces)//3):
-            # master atom, the current padding atom is an image of which
-            at = self.pad_image[i - self.ncontrib]
-            forces[3*at+0] += forces[3*i+0]
-            forces[3*at+1] += forces[3*i+1]
-            forces[3*at+2] += forces[3*i+2]
+        forces = np.reshape(forces, (len(forces)//3, 3))
+        pad_forces = forces[self.ncontrib:]
+        for i in range(self.ncontrib):
+            # idx: the indices of padding atoms that are images of contributing atom i
+            idx = np.where(np.array(self.pad_image) == i)
+            forces[i] += np.sum(pad_forces[idx], axis=0)
         # only return forces of contributing atoms
-        return forces[:3*self.ncontrib]
+        return np.reshape(forces[:self.ncontrib], 3*self.ncontrib)
 
 
     def compute(self):
