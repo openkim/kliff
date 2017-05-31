@@ -21,12 +21,19 @@ class Cost:
         Integer code to denote to whether echo running cost to screen.
         0, do not echo anything
         1, echo running cost
+# NOTE normalize is not good, since here the cost is general, but normalize only work
+    for forces. A better implementation is to specify the normalization in configuraion
+    input file as weight.
+    normalize, bool
+        False, do not normalize forces
+        True, normalize forces by reference values
     """
-    def __init__(self, params, nprocs=1, verbose=0):
+    def __init__(self, params, nprocs=1, verbose=0, normalize=False):
 
         self.params = params
         self.nprocs = nprocs
         self.verbose = verbose
+        self.normalize = normalize
         self.pred_obj = []
         self.ref = []
         self.weight = []
@@ -167,6 +174,33 @@ class Cost:
         return residuals
 
 
+
+
+## do not use multiprocessing
+#    def get_residual(self, x0):
+#       # publish params x0 to predictor
+#       self._update_params(x0)
+#       # compute properties using new params x0
+#       #self._compute_predictions()
+#
+#       residual = []
+#       for i in range(len(self.pred_obj)):
+#           pred = self.pred_obj[i].get_prediction()
+#           ref = self.ref[i]
+#           weight = np.sqrt(self.weight[i])
+#           fun = self.func[i]
+#           if fun == None:
+#               difference = np.subtract(pred, ref)
+#           else:
+#               difference = fun(pred, ref)
+#           tmp_resid = np.multiply(weight, difference)
+#           residual = np.concatenate((residual, tmp_resid))
+#       return residual
+
+
+
+
+
     def get_cost(self, x0):
         """ Compute the cost.
         This can be used as the callable for optimizer (e.g. scipy.optimize.minimize
@@ -194,9 +228,10 @@ class Cost:
         """
         self.params.update_params(x0)
 
-# NOTE (we we support print to screen every N steps)
+# NOTE (we may support print to screen every N steps)
 # print to file while minimizion
         self.params.echo_params('params.txt')
+
 
     def _get_residual_group(self, pred_g, ref_g, weight_g, func_g, send_end):
         """Helper function to do the computation of residuals.
@@ -211,6 +246,21 @@ class Cost:
                 difference = np.subtract(pred, ref)
             else:
                 difference = func(pred, ref)
+
+            #NOTE this is not good, only for temporary use, see doc in _init__.
+            # here we have assumed that difference[0] is energy, difference[1],
+            # difference[2], and difference[3] are the x,y,z component forces of
+            # atom 1, and so on.
+            # we normalize forces by magnitude of reference forces. Do not normalize
+            # energy.
+            if self.normalize:
+                normalizer = [1.] # do not normalize energy
+                for i in range(1, len(difference), 3):
+                    forces = ref[i:i+3]
+                    fmag = np.linalg.norm(forces)
+                    normalizer.extend([fmag, fmag, fmag])
+                difference = np.divide(difference, normalizer)
+
             tmp_resid = np.multiply(weight, difference)
             residual = np.concatenate((residual, tmp_resid))
         send_end.send(residual)
