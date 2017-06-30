@@ -1,4 +1,9 @@
-from distutils.core import setup
+from distutils.core import setup, Extension
+from Cython.Distutils import build_ext
+from Cython.Build import cythonize
+import numpy
+
+
 
 # to use geodesiclm add the following:
 # from geolm.geodesiclm import geodesiclm
@@ -12,7 +17,12 @@ setup(name='openkim_fit',
       packages=['openkim_fit','geolm'],
       package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
       package_data={'geolm':['_geodesiclm.so']},
-      )
+
+      cmdclass={'build_ext': build_ext},
+      ext_modules=cythonize([Extension( 'cos_doubles',
+      sources=['c_extension/cos_doubles.pyx', 'c_extension/c_cos_doubles.c'],
+      include_dirs=[numpy.get_include()] )]),
+     )
 
 # NOTE
 # It seems not easy to not install geodesiclm in a package.
@@ -20,5 +30,7 @@ setup(name='openkim_fit',
 #from setuptools import setup,find_packages
 
 # if we use setuptools, _geodesiclm.so will be egged, then it is not each to
-# import it. People who write code need to use pkg_resources to get access to 
+# import it. People who write code need to use pkg_resources to get access to
 # it. It is not easy to do.
+
+
