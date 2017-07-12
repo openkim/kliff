@@ -1,5 +1,177 @@
 from __future__ import division
 import numpy as np
+import sys
+
+
+class SetNeigh:
+    """Transform the cartesian coords to generalized coords that is the input layer.
+
+    Parameters
+    ----------
+    conf: Configuration object in which the atoms information are stored
+
+    rcut: dictionary
+        the cutoffs for all types of interactions.
+
+        e.g. rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}
+    """
+
+    def __init__(self, conf, rcut):
+        self.conf = conf
+
+        # create full binary cutoff
+        self.rcut = generate_full_cutoff(rcut)
+
+        # data from config
+        self.spec_contrib = self.conf.get_species()
+        self.coords_contrib = self.conf.get_coords()
+        self.ncontrib = len(self.spec_contrib)
+        species_set = set(self.spec_contrib)
+        self.nspecies = len(species_set)
+
+        # pad_iamge[0] = 3: padding atom 1 is the image of contributing atom 3
+        self.image_pad = None
+
+        # all atoms: contrib + padding
+        self.coords = None
+        self.spec = None
+        self.natoms = None
+
+        # neigh
+        self.numneigh = None
+        self.neighlist = None
+
+        self.setup_neigh()
+
+
+    def setup_neigh(self):
+
+        # inquire information from the conf
+        cell = self.conf.get_cell()
+        PBC = self.conf.get_pbc()
+
+        # create padding atoms
+        maxrcut = self.rcut[max(self.rcut, key=self.rcut.get)]
+        coords_pad, spec_pad, self.image_pad = set_padding(cell, PBC,
+            self.spec_contrib, self.coords_contrib, maxrcut)
+        self.coords = np.concatenate((self.coords_contrib, coords_pad))
+        self.spec = np.concatenate((self.spec_contrib, spec_pad))
+        npad = len(spec_pad)
+        self.natoms = self.ncontrib + npad
+
+        # generate neighbor list for contributing atoms
+        need_neigh = [1 for _ in range(self.ncontrib)] + [0 for _ in range(npad)]
+        self.numneigh, self.neighlist = create_neigh(self.coords, maxrcut, need_neigh)
+
+
+    def get_neigh(self, i):
+        """Get the number of neighbors and the neighbor list of atom `i'.
+
+        Returns
+        -------
+        n: int
+            number of neighbors
+        neighs: 1D array
+            neighbor list
+        """
+        n = self.numneigh(i)
+        neighs = self.neighlist(i)
+        return n, neighs
+
+
+#    def add_sym_func(self, sepc_type, name, params):
+#        """Add symmetry function `name' with parameters `params' to atomic species type `spec_type'."""
+#
+#
+#    def cutoff(self, r, rcut):
+#        if r < rcut:
+#            fc = 0.5 * (np.cos(np.pi*r/rcut) + 1)
+#            dfc = -0.5*np.pi/rcut*np.sin(np.pi*r/rcut)
+#            return fc, dfc
+#        else:
+#            return 0., 0.
+#
+#
+#    def g2(self, r, rcut, eta, Rs):
+#        fc, dfc = self.cutoff(r,rcut)
+#        eterm = np.exp(-eta*(r-Rs)**2)
+#        g = eterm*fc
+#        dg = -2*eta(r-rcut)*eterm*fc + eterm*dfc
+#        return g,dg
+#
+#
+#    def g3(self, r, rcut, kappa):
+#        fc, dfc = self.cutoff(r,rcut)
+#        kdotr = kappa*r
+#        g = np.cos(kdotr)*fc
+#        dg = - kappa*np.sin(kdotr)*fc + np.cos(kdotr)*dfc
+#        return g,dg
+#
+#
+#
+#
+#
+
+def generate_full_cutoff(rcut):
+    """Generate a full binary cutoff dictionary.
+        e.g. for input
+            rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}
+        the output would be
+            rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}
+    """
+    rcut2 = dict()
+    for key, val in rcut.iteritems():
+        spec1,spec2 = key.split('-')
+        if spec1 != spec2:
+            rcut2[str(spec2)+'-'+str(spec1)] = val
+    # merge
+    rcut2.update(rcut)
+    return rcut2
+
+
+
+
+
+def create_neigh(coords, rcut, need_neigh):
+    """Create a full neighbor list.
+
+    Returns
+    -------
+
+    numneigh: 1D array
+        number of neighbors of each atom
+
+    neighlist: 2D array
+        neighbor list of each atom
+    """
+
+    natoms = len(coords)//3
+    coords = np.array(coords).reshape(natoms, 3)
+
+    neighlist = []
+    numneigh = []
+    for i in xrange(natoms):
+        if not need_neigh[i]:
+            continue
+        xyzi = coords[i]
+        k = 0
+        tmplist = []
+        for j in xrange(natoms):
+            if j == i:
+                continue
+            xyzj = coords[j]
+            rijmag = np.linalg.norm(np.subtract(xyzi, xyzj))
+            if rijmag < rcut:
+                tmplist.append(j)
+                k += 1
+        neighlist.append(tmplist)
+        numneigh.append(k)
+
+    return numneigh, neighlist
+
+
+
+
 
 def set_padding(cell, PBC, species, coords, rcut):
     """ Create padding atoms for PURE PBC so as to generate neighbor list.
@@ -31,7 +203,7 @@ def set_padding(cell, PBC, species, coords, rcut):
     pad_spec: list of string
         species of padding atoms
 
-    pad_image: list of int
+    image_pad: list of int
         atom number, of which the padding atom is an image
 
     """
