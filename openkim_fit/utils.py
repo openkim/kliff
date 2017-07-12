@@ -161,7 +161,7 @@ def write_extxyz(cell, species, coords, fname='config.txt'):
                 fout.write('{} '.format(item))
         fout.write('" ')
         # properties
-        fout.write('Properties="species:S:1:pos:R:3:for:R:3"\n')
+        fout.write('Properties=species:S:1:pos:R:3:for:R:3\n')
 
         # species, coords
         if natoms != len(coords)//3:

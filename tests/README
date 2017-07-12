@@ -2,3 +2,6 @@ To start running all the test_*.py, simply do:
 
 $ pytest
 
+To run a specific test
+$ pytest file_name
+
