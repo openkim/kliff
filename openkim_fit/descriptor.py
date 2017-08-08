@@ -40,6 +40,7 @@ class Descriptor:
   def __init__(self,cutname, cutvalue, hyperparams):
 
     self._desc = OrderedDict()
+    self._starting_index = dict()
     self._cutname = None
     self._cutoff = None   # cutoff funciton
     self._rcut = None   # dictionary of cutoff values
@@ -58,15 +59,21 @@ class Descriptor:
     self._rcut = generate_full_cutoff(cutvalue)
 
     # store hyperparams of descriptors
+    index = 0
     for name, value in hyperparams.iteritems():
-      if name.lower() not in['g1', 'g2', 'g3', 'g4', 'g5']:
+      if name.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
         raise UnsupportedError("Symmetry function `{}' unsupported.".format(name))
-      # g1 needs no hyperparams, let a placeholder taking its place
+
+      # g1 needs no hyperparams, put a placeholder
       if name.lower() == 'g1':
         value = ['placeholder']
       self._desc[name.lower()] = value
       if name.lower() == 'g4' or name.lower() == 'g5':
         self._has_three_body = True
+
+      # starting index of a descriptor in all generalized coords
+      self._starting_index[name.lower()] = index
+      index += len(value)
 
 
   def get_num_descriptors(self):
@@ -135,52 +142,46 @@ class Descriptor:
 
         if rijmag > rcutij: continue  # i and j not interacting
 
-        idx = 0
-
         # loop over two-body descriptors
         for key, values in self._desc.iteritems():
+          if key not in ['g1', 'g2', 'g3']: continue
+          idx = self._starting_index[key]
 
           #loop over descriptor parameter set
-          flag_need_add = False
           for params in values:
 
             if key == 'g1': # g1 has no hyperparams
               g, dg = self._sym_d_g1(rijmag, rcutij)
-              flag_need_add = True
             elif key == 'g2':
               eta = params['eta']
               Rs = params['Rs']
               g, dg = self._sym_d_g2(eta, Rs, rijmag, rcutij)
-              flag_need_add = True
             elif key == 'g3':
               kappa = params['kappa']
               g, dg = self._sym_d_g3(kappa, rijmag, rcutij)
-              flag_need_add = True
 
             # add generalized coords and forces (derivatives) (BC considered)
-            if flag_need_add:
-              gen_coords[i, idx] += g
-              pair = dg*rij/rijmag
-              for dim in xrange(DIM):
-                dgen_coords[i, idx, i*DIM+dim] += pair[dim]
-                dgen_coords[i, idx, image[j]*DIM+dim] -= pair[dim]
+            gen_coords[i, idx] += g
+            pair = dg*rij/rijmag
+            for dim in xrange(DIM):
+              dgen_coords[i, idx, i*DIM+dim] += pair[dim]
+              dgen_coords[i, idx, image[j]*DIM+dim] -= pair[dim]
 
-              idx += 1
-              flag_need_add = False
+            idx += 1
 
 
         # three-body descriptors
         if not self._has_three_body: continue
 
         # loop over three-body atom k
-        for k in neighlist:
+        for k in neighlist[i]:
           if k <= j: continue   #three-body angle only need to be considered once
           rk = coords[k]
           kspec = species[k]
           rik = rk - ri
           rjk = rk - rj
-          rikmag = no.linalg(rik)
-          rjkmag = no.linalg(rjk)
+          rikmag = np.linalg.norm(rik)
+          rjkmag = np.linalg.norm(rjk)
           rcutik = self._rcut[ispec+'-'+kspec]
           rcutjk = self._rcut[jspec+'-'+kspec]
 
@@ -188,36 +189,35 @@ class Descriptor:
 
           #loop over three-body descriptor
           for key, values in self._desc.iteritems():
+            if key not in ['g4', 'g5']: continue
+            idx = self._starting_index[key]
 
+            rmag3 = [rijmag, rikmag, rjkmag]
+            rcut3 = [rcutij, rcutik, rcutjk]
             #loop over descriptor parameter set
-            flag_need_add = False
             for params in values:
               if key == 'g4':
                 zeta = params['zeta']
                 lam = params['lambda']
                 eta = params['eta']
-                g, dg = self._sym_d_g2(zeta, lam, eta, rijmag, rcutij)
-                flag_need_add = True
+                g, dg = self._sym_d_g4(zeta, lam, eta, rmag3, rcut3)
               elif key == 'g5':
                 zeta = params['zeta']
                 lam = params['lambda']
                 eta = params['eta']
-                g, dg = self._sym_d_g2(zeta, lam, eta, rijmag, rcutij)
-                flag_need_add = True
+                g, dg = self._sym_d_g5(zeta, lam, eta, rmag3, rcut3)
 
               # add generalized coords and forces (derivatives) (BC considered)
-              if flag_need_add:
-                gen_coords[i, idx] += g
-                pair_ij = dg*rij/rijmag
-                pair_ik = dg*rik/rikmag
-                pair_jk = dg*rjk/rjkmag
-                for dim in xrange(DIM):
-                  dgen_coords[i, idx, i*DIM+dim] += pair_ij[dim] +pair_ik[dim]
-                  dgen_coords[i, idx, image[j]*DIM+dim] += -pair_ij[dim] +pair_jk[dim]
-                  dgen_coords[i, idx, image[k]*DIM+dim] += -pair_ik[dim] -pair_jk[dim]
+              gen_coords[i, idx] += g
+              pair_ij = dg[0]*rij/rijmag
+              pair_ik = dg[1]*rik/rikmag
+              pair_jk = dg[2]*rjk/rjkmag
+              for dim in xrange(DIM):
+                dgen_coords[i, idx, i*DIM+dim] += pair_ij[dim] +pair_ik[dim]
+                dgen_coords[i, idx, image[j]*DIM+dim] += -pair_ij[dim] +pair_jk[dim]
+                dgen_coords[i, idx, image[k]*DIM+dim] += -pair_ik[dim] -pair_jk[dim]
 
-                flag_need_add = False
-                idx += 1
+              idx += 1
 
     # return
     return gen_coords, dgen_coords
@@ -383,11 +383,9 @@ class Descriptor:
     # cutoff
     fcij, dfcij = self._cutoff(rij, rcutij)
     fcik, dfcik = self._cutoff(rik, rcutik)
-    fcjk, dfcjk = self._cutoff(rjk, rcutjk)
-    fcprod = fcij*fcik*fcjk
-    dfcprod_dij = dfcij*fcik*fcjk
-    dfcprod_dik = dfcik*fcij*fcjk
-    dfcprod_djk = dfcjk*fcij*fcik
+    fcprod = fcij*fcik
+    dfcprod_dij = dfcij*fcik
+    dfcprod_dik = dfcik*fcij
 
     #g
     g =  p2 * costerm * eterm * fcprod
