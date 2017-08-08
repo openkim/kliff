@@ -40,14 +40,18 @@ class Descriptor:
   def __init__(self,cutname, cutvalue, hyperparams):
 
     self._desc = OrderedDict()
+    self._cutname = None
     self._cutoff = None   # cutoff funciton
     self._rcut = None   # dictionary of cutoff values
     self._has_three_body = False
 
+
+
     # set cutoff function and values
-    if cutname.lower() == 'cos':
+    self._cutname = cutname.lower()
+    if self._cutname == 'cos':
       self._cutoff = self._cut_cos
-    elif cutname.lower() == 'exp':
+    elif self._cutname == 'exp':
       self._cutoff = self._exp_cos
     else:
       raise UnsupportedError("Cutoff `{}' unsupported.".format(name))
@@ -71,6 +75,18 @@ class Descriptor:
     for key in self._desc:
       N += len(self._desc[key])
     return N
+
+
+  def get_cutoff(self):
+    """ Return the name and values of cutoff. """
+    return self._cutname, self._rcut
+
+
+  def get_hyperparams(self):
+    """ Return the hyperparameters of descriptors. """
+    return self._desc
+
+
 
   def generate_generalized_coords(self, conf):
     """Transform atomic coords to generalized coords.
