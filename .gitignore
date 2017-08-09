@@ -3,8 +3,9 @@
 *.log
 *.pyc
 *.out
+*.o
+*.so
 .cache
-libs
 screen*
 *bkp
 build
@@ -14,6 +15,7 @@ KIM_MODEL_PARAMS*
 maybe_needed
 tests/echo*
 FINAL_FITTED_PARAMS
+libs/geodesicLMv1.1
 
 # special for docs
 docs/*

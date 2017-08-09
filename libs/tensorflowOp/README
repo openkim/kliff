@@ -1,0 +1,3 @@
+To install:
+
+Run $make in this directory, and then $make in the main directory of openkim-fit.
