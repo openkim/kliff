@@ -373,7 +373,7 @@ class Descriptor:
     dcosterm_djk = dcosterm_dcos * dcos_djk
 
     # exponential term
-    eterm = np.exp(-eta*(rijsq + riksq + rjksq))
+    eterm = np.exp(-eta*(rijsq + riksq))
     determ_dij = -2*eterm*eta*rij
     determ_dik = -2*eterm*eta*rik
 

@@ -28,7 +28,7 @@ class NeighborList:
         self.nspecies = len(species_set)
 
 #TODO delete this; we use image for all atoms now.
-        # pad_iamge[0] = 3: padding atom 1 is the image of contributing atom 3
+        # pad_image[0] = 3: padding atom 1 is the image of contributing atom 3
         self.image_pad = None
 
         # all atoms: contrib + padding
@@ -36,7 +36,7 @@ class NeighborList:
         self.spec = None
         self.natoms = None
         # image of all atoms. For contributing atoms 0~(ncontrib-1), image[i] = i
-        # for padding atoms, iamge[i] = j means padding atom i is an image of
+        # for padding atoms, image[i] = j means padding atom i is an image of
         # contributing atom j
         self.image = None
 
@@ -62,7 +62,11 @@ class NeighborList:
         self.spec = np.concatenate((self.spec_contrib, spec_pad))
         npad = len(spec_pad)
         self.natoms = self.ncontrib + npad
-        self.image = np.concatenate((np.arange(self.ncontrib), self.image_pad))
+        # if self.image_pad is empty, concatenate will generate floating values
+        if self.image_pad:
+          self.image = np.concatenate((np.arange(self.ncontrib), self.image_pad))
+        else:
+          self.image = np.arange(self.ncontrib)
 
         # generate neighbor list for contributing atoms
         need_neigh = [1 for _ in range(self.ncontrib)] + [0 for _ in range(npad)]

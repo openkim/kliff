@@ -1,5 +1,5 @@
-def write_kim_ann(descriptor, weights, biases, activation='tanh',
-    mode='float', fname='ann_kim.params'):
+def write_kim_ann(descriptor, weights, biases, activation, mode='float',
+    fname='ann_kim.params'):
   """Output ANN structure, parameters etc. in the format of the KIM ANN model.
 
   Parameter
