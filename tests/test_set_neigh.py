@@ -2,7 +2,7 @@ from __future__ import division
 import sys
 sys.path.append('../openkim_fit')
 from training import TrainingSet
-from neighbor import SetNeigh
+from neighbor import NeighborList
 from utils import write_extxyz
 import numpy as np
 
@@ -13,7 +13,7 @@ def test_neigh():
     configs = tset.get_configs()
 
     rcut = {'C-C':2}
-    nei = SetNeigh(configs[0], rcut)
+    nei = NeighborList(configs[0], rcut)
     write_extxyz(nei.conf.get_cell(), nei.spec, nei.coords, fname='check_set_neigh.xyz')
 
     assert nei.natoms == 16

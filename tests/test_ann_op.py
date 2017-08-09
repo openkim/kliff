@@ -16,7 +16,7 @@ int_pot = int_pot_module.int_pot
 
 # read config and reference data
 tset = TrainingSet()
-tset.read('./training_set/config_1x1.xyz')
+tset.read('./training_set/training_set_graphene/bilayer_sep3.36_i2_j3.xyz')
 configs = tset.get_configs()
 conf = configs[0]
 

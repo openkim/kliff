@@ -9,7 +9,7 @@ class Config:
     Class to read and store the information in one configuraiton in extented xyz format.
     """
 
-    def __init__(self, identifier):
+    def __init__(self, identifier='id_name'):
         self.id = identifier
         self.natoms = None      # int
         self.cell = None        # 3 by 3 np.array
