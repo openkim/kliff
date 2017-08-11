@@ -148,24 +148,24 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
         if name == 'g2':
           for val in values:
             if mode == 'double':
-              fout.write('{:.15g}  {:.15g}'.format(val['eta'], val['Rs']))
+              fout.write('{:.15g} {:.15g}'.format(val[0], val[1]))
             else:
-              fout.write('{:.7g}  {:.7g}'.format(val['eta'], val['Rs']))
+              fout.write('{:.7g} {:.7g}'.format(val[0], val[1]))
             fout.write('    # eta  Rs\n')
           fout.write('\n')
         elif name =='g3':
           for val in values:
             if mode == 'double':
-              fout.write('{:.15g}'.format(val['kappa']))
+              fout.write('{:.15g}'.format(val[0]))
             else:
-              fout.write('{:.7g}'.format(val['kappa']))
+              fout.write('{:.7g}'.format(val[0]))
             fout.write('    # kappa\n')
           fout.write('\n')
         elif name =='g4':
           for val in values:
-            zeta = val['zeta']
-            lam = val['lambda']
-            eta = val['eta']
+            zeta = val[0]
+            lam = val[1]
+            eta = val[2]
             if mode == 'double':
               fout.write('{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta))
             else:
@@ -174,9 +174,9 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
           fout.write('\n')
         elif name =='g5':
           for val in values:
-            zeta = val['zeta']
-            lam = val['lambda']
-            eta = val['eta']
+            zeta = val[0]
+            lam = val[1]
+            eta = val[2]
             if mode == 'double':
               fout.write('{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta))
             else:

@@ -19,10 +19,9 @@ setup(name='openkim_fit',
                    'tfop':'libs/tensorflowOp'},
       package_data={'geolm':['_geodesiclm.so'],
                     'tfop':['int_pot_op.so']},
-
-      cmdclass={'build_ext': build_ext},
-      ext_modules=cythonize([Extension( 'cos_doubles',
-      sources=['c_extension/cos_doubles.pyx', 'c_extension/c_cos_doubles.c'],
+      ext_modules=cythonize([Extension('desc',
+      sources=['openkim_fit/desc.pyx', 'openkim_fit/descriptor_c.cpp'],
+      language = 'c++',
       include_dirs=[numpy.get_include()] )]),
      )
 

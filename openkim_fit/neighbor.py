@@ -33,7 +33,7 @@ class NeighborList:
 
         # all atoms: contrib + padding
         self.coords = None
-        self.spec = None
+        self.species = None
         self.natoms = None
         # image of all atoms. For contributing atoms 0~(ncontrib-1), image[i] = i
         # for padding atoms, image[i] = j means padding atom i is an image of
@@ -59,7 +59,7 @@ class NeighborList:
         coords_pad, spec_pad, self.image_pad = set_padding(cell, PBC,
             self.spec_contrib, self.coords_contrib, maxrcut)
         self.coords = np.concatenate((self.coords_contrib, coords_pad))
-        self.spec = np.concatenate((self.spec_contrib, spec_pad))
+        self.species = np.concatenate((self.spec_contrib, spec_pad))
         npad = len(spec_pad)
         self.natoms = self.ncontrib + npad
         # if self.image_pad is empty, concatenate will generate floating values

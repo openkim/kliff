@@ -6,8 +6,7 @@ from collections import OrderedDict
 
 from neighbor import NeighborList
 from error import UnsupportedError
-
-DIM = 3
+from desc import CythonDescriptor
 
 
 class Descriptor:
@@ -40,40 +39,105 @@ class Descriptor:
   def __init__(self,cutname, cutvalue, hyperparams):
 
     self._desc = OrderedDict()
-    self._starting_index = dict()
-    self._cutname = None
-    self._cutoff = None   # cutoff funciton
-    self._rcut = None   # dictionary of cutoff values
-    self._has_three_body = False
-
-
-
-    # set cutoff function and values
     self._cutname = cutname.lower()
-    if self._cutname == 'cos':
-      self._cutoff = self._cut_cos
-    elif self._cutname == 'exp':
-      self._cutoff = self._exp_cos
-    else:
-      raise UnsupportedError("Cutoff `{}' unsupported.".format(name))
     self._rcut = generate_full_cutoff(cutvalue)
+    self._species_code = dict()
+    self._cdesc = CythonDescriptor()
 
-    # store hyperparams of descriptors
-    index = 0
-    for name, value in hyperparams.iteritems():
-      if name.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
-        raise UnsupportedError("Symmetry function `{}' unsupported.".format(name))
+    # check cutoff support
+    if self._cutname not in ['cos', 'exp']:
+      raise UnsupportedError("Cutoff `{}' unsupported.".format(cutname))
+
+    species = set()
+    for key, value in self._rcut.iteritems():
+      spec1, spec2 = key.split('-')
+      species.update([spec1, spec2])
+    species = list(species)
+    num_species = len(species)
+
+    # create integer code for each species type and cutoff values based on species code
+    rcutsym = np.zeros([num_species, num_species])
+    for i,si in enumerate(species):
+      self._species_code[si] = i
+      for j,sj in enumerate(species):
+        rcutsym[i][j] = self._rcut[si+'-'+sj]
+
+    # store cutoff values in cpp class
+    self._cdesc.set_cutoff('cos', num_species, rcutsym)
+
+    # hyperparams of descriptors
+    for key, values in hyperparams.iteritems():
+      if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
+        raise UnsupportedError("Symmetry function `{}' unsupported.".format(key))
 
       # g1 needs no hyperparams, put a placeholder
-      if name.lower() == 'g1':
-        value = ['placeholder']
-      self._desc[name.lower()] = value
-      if name.lower() == 'g4' or name.lower() == 'g5':
-        self._has_three_body = True
+      name = key.lower()
+      if name == 'g1':
+        rows = 1
+        cols = 1
+        params = np.zeros([1,1])  # it has no hyperparams, zeros([1,1]) for placeholder
+      else:
+        rows = len(values)
+        cols = len(values[0])
+        params = np.zeros([rows,cols])
+        for i,line in enumerate(values):
+          if name == 'g2':
+            params[i][0] = line['eta']
+            params[i][1] = line['Rs']
+          elif name == 'g3':
+            params[i][0] = line['kappa']
+          elif key == 'g4':
+            params[i][0] = line['zeta']
+            params[i][1] = line['lambda']
+            params[i][2] = line['eta']
+          elif key == 'g5':
+            params[i][0] = line['zeta']
+            params[i][1] = line['lambda']
+            params[i][2] = line['eta']
 
-      # starting index of a descriptor in all generalized coords
-      self._starting_index[name.lower()] = index
-      index += len(value)
+      # store cutoff values in both this python and cpp class
+      self._desc[name] = params
+      self._cdesc.add_descriptor(name, params, rows, cols)
+
+
+  def generate_generalized_coords(self, conf):
+    """Transform atomic coords to generalized coords.
+
+    Parameter
+    ---------
+
+    conf: Configuration object in which the atoms information are stored
+
+    Returns
+    -------
+    gen_coords, 2D float array
+      generalized coordinates of size [Ncontrib, Ndescriptors]
+
+    d_gen_coords, 3D float array
+      derivative of generalized coordinates w.r.t atomic coords of size
+      [Ncontrib, Ndescriptors, 3*Ncontrib]
+
+    """
+
+    # create neighbor list
+    nei = NeighborList(conf, self._rcut)
+    coords = nei.coords
+    species_code = np.array([self._species_code[i] for i in nei.species])
+    Ncontrib = nei.ncontrib
+    Natoms = nei.natoms
+    neighlist = np.concatenate(nei.neighlist)
+    numneigh = nei.numneigh
+    image = nei.image
+
+    # loop to set up generalized coords
+    Ndesc = self.get_num_descriptors()
+
+    gen_coords, d_gen_coords = self._cdesc.generate_generalized_coords(coords,
+        species_code.astype('int32'), neighlist.astype('int32'),
+        numneigh.astype('int32'), image.astype('int32'),
+        Natoms, Ncontrib, Ndesc)
+
+    return gen_coords, d_gen_coords
 
 
   def get_num_descriptors(self):
@@ -95,331 +159,6 @@ class Descriptor:
 
 
 
-  def generate_generalized_coords(self, conf):
-    """Transform atomic coords to generalized coords.
-
-    Parameter
-    ---------
-
-    conf: Configuration object in which the atoms information are stored
-
-    Returns
-    -------
-    gen_coords, 2D float array
-      generalized coordinates of size [Ncontrib, Ndescriptors]
-
-    dgen_coords, 3D float array
-      derivative of generalized coordinates w.r.t atomic coords of size
-      [Ncontrib, Ndescriptors, 3*Ncontrib]
-
-    """
-
-    # create neighbor list
-    nei = NeighborList(conf, self._rcut)
-    coords = np.reshape(nei.coords, (-1,3))
-    species = nei.spec
-    Ncontrib = nei.ncontrib
-    neighlist = nei.neighlist
-    image = nei.image
-
-    # loop to set up generalized coords
-    Ndesc = self.get_num_descriptors()
-    gen_coords = np.zeros([Ncontrib, Ndesc])
-    dgen_coords = np.zeros([Ncontrib, Ndesc, 3*Ncontrib])
-
-    # loop over contributing atoms
-    for i in xrange(Ncontrib):
-      ri = coords[i]
-      ispec = species[i]
-
-      # loop over neighbors of atom i
-      for j in neighlist[i]:
-        rj = coords[j]
-        jspec = species[j]
-        rij = rj - ri
-        rijmag = np.linalg.norm(rij)
-        rcutij = self._rcut[ispec+'-'+jspec]
-
-        if rijmag > rcutij: continue  # i and j not interacting
-
-        # loop over two-body descriptors
-        for key, values in self._desc.iteritems():
-          if key not in ['g1', 'g2', 'g3']: continue
-          idx = self._starting_index[key]
-
-          #loop over descriptor parameter set
-          for params in values:
-
-            if key == 'g1': # g1 has no hyperparams
-              g, dg = self._sym_d_g1(rijmag, rcutij)
-            elif key == 'g2':
-              eta = params['eta']
-              Rs = params['Rs']
-              g, dg = self._sym_d_g2(eta, Rs, rijmag, rcutij)
-            elif key == 'g3':
-              kappa = params['kappa']
-              g, dg = self._sym_d_g3(kappa, rijmag, rcutij)
-
-            # add generalized coords and forces (derivatives) (BC considered)
-            gen_coords[i, idx] += g
-            pair = dg*rij/rijmag
-            for dim in xrange(DIM):
-              dgen_coords[i, idx, i*DIM+dim] += pair[dim]
-              dgen_coords[i, idx, image[j]*DIM+dim] -= pair[dim]
-
-            idx += 1
-
-
-        # three-body descriptors
-        if not self._has_three_body: continue
-
-        # loop over three-body atom k
-        for k in neighlist[i]:
-          if k <= j: continue   #three-body angle only need to be considered once
-          rk = coords[k]
-          kspec = species[k]
-          rik = rk - ri
-          rjk = rk - rj
-          rikmag = np.linalg.norm(rik)
-          rjkmag = np.linalg.norm(rjk)
-          rcutik = self._rcut[ispec+'-'+kspec]
-          rcutjk = self._rcut[jspec+'-'+kspec]
-
-          if rikmag > rcutik: continue  # three-body not interacting
-
-          #loop over three-body descriptor
-          for key, values in self._desc.iteritems():
-            if key not in ['g4', 'g5']: continue
-            idx = self._starting_index[key]
-
-            rmag3 = [rijmag, rikmag, rjkmag]
-            rcut3 = [rcutij, rcutik, rcutjk]
-            #loop over descriptor parameter set
-            for params in values:
-              if key == 'g4':
-                zeta = params['zeta']
-                lam = params['lambda']
-                eta = params['eta']
-                g, dg = self._sym_d_g4(zeta, lam, eta, rmag3, rcut3)
-              elif key == 'g5':
-                zeta = params['zeta']
-                lam = params['lambda']
-                eta = params['eta']
-                g, dg = self._sym_d_g5(zeta, lam, eta, rmag3, rcut3)
-
-              # add generalized coords and forces (derivatives) (BC considered)
-              gen_coords[i, idx] += g
-              pair_ij = dg[0]*rij/rijmag
-              pair_ik = dg[1]*rik/rikmag
-              pair_jk = dg[2]*rjk/rjkmag
-              for dim in xrange(DIM):
-                dgen_coords[i, idx, i*DIM+dim] += pair_ij[dim] +pair_ik[dim]
-                dgen_coords[i, idx, image[j]*DIM+dim] += -pair_ij[dim] +pair_jk[dim]
-                dgen_coords[i, idx, image[k]*DIM+dim] += -pair_ik[dim] -pair_jk[dim]
-
-              idx += 1
-
-    # return
-    return gen_coords, dgen_coords
-
-
-
-  def _sym_g1(self, r, rcut):
-    fc, dfc = self._cutoff(r, rcut)
-    return fc
-
-  def _sym_d_g1(self, r, rcut):
-    return self._cutoff(r, rcut)
-
-  def _sym_g2(self, eta, Rs, r, rcut):
-    fc, dfc = self._cutoff(r, rcut)
-    eterm = np.exp(-eta*(r-Rs)**2)
-    g = eterm*fc
-    return g
-
-  def _sym_d_g2(self, eta, Rs, r, rcut):
-    fc, dfc = self._cutoff(r, rcut)
-    eterm = np.exp(-eta*(r-Rs)**2)
-    g = eterm*fc
-    dg = -2*eta*(r-Rs)*eterm*fc + eterm*dfc
-    return g, dg
-
-  def _sym_g3(self, kappa, r, rcut):
-    fc, dfc = self._cutoff(r, rcut)
-    g = np.cos(kappa*r)*fc
-    return g
-
-  def _sym_d_g3(self, kappa, r, rcut):
-    fc, dfc = self._cutoff(r, rcut)
-    kdotr = kappa*r
-    g = np.cos(kdotr)*fc
-    dg = - kappa*np.sin(kdotr)*fc + np.cos(kdotr)*dfc
-    return g, dg
-
-  def _sym_g4(self, zeta, lam, eta, r, rcut):
-    rij = r[0]
-    rik = r[1]
-    rjk = r[2]
-    rcutij = rcut[0]
-    rcutik = rcut[1]
-    rcutjk = rcut[2]
-    rijsq = rij*rij
-    riksq = rik*rik
-    rjksq = rjk*rjk
-    fcij, dummy = self._cutoff(rij, rcutij)
-    fcik, dummy = self._cutoff(rik, rcutik)
-    fcjk, dummy = self._cutoff(rjk, rcutjk)
-
-    cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik)
-    costerm = (1+lam*cos_ijk)**zeta
-    eterm = np.exp(-eta*(rijsq + riksq + rjksq))
-
-    g = 2**(1-zeta) * costerm * eterm * fcij * fcik * fcjk
-    return g
-
-  def _sym_d_g4(self, zeta, lam, eta, r, rcut):
-    rij = r[0]
-    rik = r[1]
-    rjk = r[2]
-    rcutij = rcut[0]
-    rcutik = rcut[1]
-    rcutjk = rcut[2]
-    rijsq = rij*rij
-    riksq = rik*rik
-    rjksq = rjk*rjk
-
-    # cosine term, i is the apex atom
-    cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik)
-    costerm = (1+lam*cos_ijk)**zeta
-    dcos_dij = (rijsq - riksq + rjksq)/(2*rijsq*rik)
-    dcos_dik = (riksq - rijsq + rjksq)/(2*rij*riksq)
-    dcos_djk = -rjk/(rij*rik)
-    dcosterm_dcos = zeta * (1+lam*cos_ijk)**(zeta-1) * lam
-    dcosterm_dij = dcosterm_dcos * dcos_dij
-    dcosterm_dik = dcosterm_dcos * dcos_dik
-    dcosterm_djk = dcosterm_dcos * dcos_djk
-
-    # exponential term
-    eterm = np.exp(-eta*(rijsq + riksq + rjksq))
-    determ_dij = -2*eterm*eta*rij
-    determ_dik = -2*eterm*eta*rik
-    determ_djk = -2*eterm*eta*rjk
-
-    # power 2 term
-    p2 = 2**(1-zeta)
-
-    # cutoff
-    fcij, dfcij = self._cutoff(rij, rcutij)
-    fcik, dfcik = self._cutoff(rik, rcutik)
-    fcjk, dfcjk = self._cutoff(rjk, rcutjk)
-    fcprod = fcij*fcik*fcjk
-    dfcprod_dij = dfcij*fcik*fcjk
-    dfcprod_dik = dfcik*fcij*fcjk
-    dfcprod_djk = dfcjk*fcij*fcik
-
-    #g
-    g =  p2 * costerm * eterm * fcprod
-    # dg_dij
-    dg = [0., 0., 0.]
-    dg[0] = p2 * (dcosterm_dij*eterm*fcprod + costerm*determ_dij*fcprod
-        + costerm*eterm*dfcprod_dij)
-    # dg_dik
-    dg[1] = p2 * (dcosterm_dik*eterm*fcprod + costerm*determ_dik*fcprod
-        + costerm*eterm*dfcprod_dik)
-    # dg_djk
-    dg[2] = p2 * (dcosterm_djk*eterm*fcprod + costerm*determ_djk*fcprod
-        + costerm*eterm*dfcprod_djk)
-    return g, dg
-
-  def _sym_g5(self, zeta, lam, eta, r, rcut):
-    rij = r[0]
-    rik = r[1]
-    rjk = r[2]
-    rcutij = rcut[0]
-    rcutik = rcut[1]
-    rijsq = rij*rij
-    riksq = rik*rik
-    rjksq = rjk*rjk
-    fcij, dummy = self._cutoff(rij, rcutij)
-    fcik, dummy = self._cutoff(rik, rcutik)
-
-    # i is the apex atom
-    cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik)
-    costerm = (1+lam*cos_ijk)**zeta
-    eterm = np.exp(-eta*(rijsq + riksq))
-
-    g = 2**(1-zeta) * costerm * eterm * fcij * fcik
-    return g
-
-  def _sym_d_g5(self, zeta, lam, eta, r, rcut):
-    rij = r[0]
-    rik = r[1]
-    rjk = r[2]
-    rcutij = rcut[0]
-    rcutik = rcut[1]
-    rijsq = rij*rij
-    riksq = rik*rik
-    rjksq = rjk*rjk
-
-    # cosine term, i is the apex atom
-    cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik)
-    costerm = (1+lam*cos_ijk)**zeta
-    dcos_dij = (rijsq - riksq + rjksq)/(2*rijsq*rik)
-    dcos_dik = (riksq - rijsq + rjksq)/(2*rij*riksq)
-    dcos_djk = -rjk/(rij*rik)
-    dcosterm_dcos = zeta * (1+lam*cos_ijk)**(zeta-1) * lam
-    dcosterm_dij = dcosterm_dcos * dcos_dij
-    dcosterm_dik = dcosterm_dcos * dcos_dik
-    dcosterm_djk = dcosterm_dcos * dcos_djk
-
-    # exponential term
-    eterm = np.exp(-eta*(rijsq + riksq))
-    determ_dij = -2*eterm*eta*rij
-    determ_dik = -2*eterm*eta*rik
-
-    # power 2 term
-    p2 = 2**(1-zeta)
-
-    # cutoff
-    fcij, dfcij = self._cutoff(rij, rcutij)
-    fcik, dfcik = self._cutoff(rik, rcutik)
-    fcprod = fcij*fcik
-    dfcprod_dij = dfcij*fcik
-    dfcprod_dik = dfcik*fcij
-
-    #g
-    g =  p2 * costerm * eterm * fcprod
-    # dg_dij
-    dg = [0., 0., 0.]
-    dg[0] = p2 * (dcosterm_dij*eterm*fcprod + costerm*determ_dij*fcprod
-        + costerm*eterm*dfcprod_dij)
-    # dg_dik
-    dg[1] = p2 * (dcosterm_dik*eterm*fcprod + costerm*determ_dik*fcprod
-        + costerm*eterm*dfcprod_dik)
-    # dg_djk
-    dg[2] = p2 * dcosterm_djk*eterm*fcprod
-    return g, dg
-
-
-
-  def _cut_cos(self, r, rcut):
-    if r < rcut:
-      fc = 0.5 * (np.cos(np.pi*r/rcut) + 1)
-      dfc = -0.5*np.pi/rcut*np.sin(np.pi*r/rcut)
-      return fc, dfc
-    else:
-      return 0., 0.
-
-#TODO correct it
-  def _cut_exp(self, r, rcut):
-    if r < rcut:
-      fc = 0.5 * (np.cos(np.pi*r/rcut) + 1)
-      dfc = -0.5*np.pi/rcut*np.sin(np.pi*r/rcut)
-      return fc, dfc
-    else:
-      return 0., 0.
-
-
 def generate_full_cutoff(rcut):
     """Generate a full binary cutoff dictionary.
         e.g. for input
@@ -431,7 +170,7 @@ def generate_full_cutoff(rcut):
     for key, val in rcut.iteritems():
         spec1,spec2 = key.split('-')
         if spec1 != spec2:
-            rcut2[str(spec2)+'-'+str(spec1)] = val
+            rcut2[spec2+'-'+spec1] = val
     # merge
     rcut2.update(rcut)
     return rcut2

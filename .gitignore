@@ -5,6 +5,7 @@
 *.out
 *.o
 *.so
+desc.cpp
 .cache
 screen*
 *bkp
