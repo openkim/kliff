@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
+import numpy as np
 import os
 import inspect
 import tfop._int_pot_grad
@@ -27,7 +28,7 @@ def weight_variable(input_dim, output_dim, dtype=tf.float32):
   """Create a weight variable with appropriate initialization."""
   with tf.name_scope('weights'):
     shape = [input_dim, output_dim]
-    weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1), dtype=dtype)
+    weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1, dtype=dtype))
     variable_summaries(weights)
     return weights
 
@@ -36,31 +37,32 @@ def bias_variable(output_dim, dtype=tf.float32):
   """Create a bias variable with appropriate initialization."""
   with tf.name_scope('biases'):
     shape = [output_dim]
-    biases = tf.Variable(tf.constant(0.1, shape=shape), dtype=dtype)
+    #biases = tf.Variable(tf.constant(0.1, shape=shape, dtype=dtype))
+    biases = tf.constant(0.1, shape=shape, dtype=dtype)
     variable_summaries(biases)
     return biases
 
 
-def parameters(num_descriptors, units):
+def parameters(num_descriptors, units, dtype=tf.float32):
   """Create all weights and biases."""
   weights = []
   biases = []
   # input layer to first nn layer
-  w = weight_variable(num_descriptors, units[0])
-  b = bias_variable(units[0])
+  w = weight_variable(num_descriptors, units[0], dtype)
+  b = bias_variable(units[0], dtype)
   weights.append(w)
   biases.append(b)
   # nn layer to next till output
   nlayers = len(units)
   for i in range(1, nlayers):
-    w = weight_variable(units[i-1], units[i])
-    b = bias_variable(units[i])
+    w = weight_variable(units[i-1], units[i], dtype)
+    b = bias_variable(units[i], dtype)
     weights.append(w)
     biases.append(b)
   return weights, biases
 
 
-def nn_layer(input_tensor, weights, biases, layer_name, act=tf.nn.relu):
+def nn_layer(input_tensor, weights, biases, layer_name='hidden_layer', act=tf.nn.relu):
   """Reusable code for making a simple neural net layer.
 
   It does a matrix multiply, bias add, and then uses relu to nonlinearize.
@@ -77,7 +79,7 @@ def nn_layer(input_tensor, weights, biases, layer_name, act=tf.nn.relu):
     return activations
 
 
-def output_layer(input_tensor, weights, biases, layer_name):
+def output_layer(input_tensor, weights, biases, layer_name='output_layer'):
   """Reusable code for making a simple neural net layer.
 
   It does a matrix multiply, bias add, no activation is used.
@@ -90,16 +92,64 @@ def output_layer(input_tensor, weights, biases, layer_name):
     return preactivate
 
 
-def input_layer(config, descriptor, ftype=tf.float32):
+def preprocess(configs, descriptor):
+  """Preprocess the data to generate the generalized coords and its derivatives.
+
+  Parameter
+  ---------
+
+  configs, list of Config objects.
+
+  descriptor, object of Descriptor class.
+  """
+
+  all_zeta = []
+  all_dzetadr = []
+  for i,conf in enumerate(configs):
+    print('Preprocessing configuration:', i)
+    zeta,dzetadr = descriptor.generate_generalized_coords(conf)
+    all_zeta.append(zeta)
+    all_dzetadr.append(dzetadr)
+  all_zeta_concatenated = np.concatenate(all_zeta)
+  mean = np.mean(all_zeta_concatenated, axis=0)
+  std = np.std(all_zeta_concatenated, axis=0)
+
+  # centering and normalization
+  all_zeta_processed = []
+  all_dzetadr_processed = []
+  for zeta in all_zeta:
+    all_zeta_processed.append( (zeta - mean) / std )
+  for dzetadr in all_dzetadr:
+    all_dzetadr_processed.append( dzetadr / np.atleast_2d(std).T)
+
+  return all_zeta_processed, all_dzetadr_processed
+
+
+def input_layer_using_preprocessed(zeta, dzetadr, layer_name='input_layer',
+    dtype=tf.float32):
+  """Reusable code for making an input layer for a configuration."""
+
+  # we only need some placeholder for coords, since it is not used
+#TODO we'd better use the actual coords
+  shape = [zeta.shape[0]*3]
+  coords = tf.constant(0.1, dtype=dtype, shape=shape)
+  with tf.name_scope(layer_name):
+    input, dummy = int_pot(coords=coords, zeta=tf.constant(zeta, dtype),
+        dzetadr=tf.constant(dzetadr, dtype))
+    return input,coords
+
+
+def input_layer(config, descriptor, dtype=tf.float32):
   """Reusable code for making an input layer for a configuration."""
 
   layer_name = os.path.splitext(os.path.basename(config.id))[0]
   # need to return a tensor of coords since we want to take derivaives w.r.t it
-  coords = tf.constant(config.get_coords(), ftype)
+  coords = tf.constant(config.get_coords(), dtype)
   zeta,dzetadr = descriptor.generate_generalized_coords(config)
+
   with tf.name_scope(layer_name):
-    input, dummy = int_pot(coords = coords, zeta=tf.constant(zeta, ftype),
-        dzetadr=tf.constant(dzetadr, ftype))
+    input, dummy = int_pot(coords = coords, zeta=tf.constant(zeta, dtype),
+        dzetadr=tf.constant(dzetadr, dtype))
     return input, coords
 
 
