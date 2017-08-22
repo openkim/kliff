@@ -37,8 +37,8 @@ def bias_variable(output_dim, dtype=tf.float32):
   """Create a bias variable with appropriate initialization."""
   with tf.name_scope('biases'):
     shape = [output_dim]
-    #biases = tf.Variable(tf.constant(0.1, shape=shape, dtype=dtype))
-    biases = tf.constant(0.1, shape=shape, dtype=dtype)
+    biases = tf.Variable(tf.constant(0.01, shape=shape, dtype=dtype))
+    #biases = tf.constant(0.1, shape=shape, dtype=dtype)
     variable_summaries(biases)
     return biases
 
@@ -125,6 +125,147 @@ def preprocess(configs, descriptor):
   return all_zeta_processed, all_dzetadr_processed
 
 
+def _bytes_feature(value):
+  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+def _int64_feature(value):
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+def _float_feature(value):
+  return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
+
+#TODO we may add a flag to indicate wheter do centering and normalization or not
+def convert_to_tfrecords(configs, descriptor, name, do_generate=True,
+    dtype=tf.float32, directory='/tmp/data'):
+  """Preprocess the data to generate the generalized coords and its derivatives,
+  and store them, together with coords, and label as tfRecord binary.
+
+  Parameter
+  ---------
+
+  configs, list of Config objects.
+
+  descriptor, object of Descriptor class.
+
+  directory, path to store the tfRecords data.
+  """
+
+  fname = os.path.join(directory, name+'.tfrecords')
+  if not os.path.exists(fname):
+    do_generate = True
+
+  if do_generate:
+
+    if not os.path.exists(directory):
+      os.mkdir(directory)
+
+    print('Wrining tfRecords of "{}" data as: {}'.format(name, fname))
+    writer = tf.python_io.TFRecordWriter(fname)
+
+    # determine the data type
+    if dtype == tf.float32:
+      np_dtype = np.float32
+    elif dtype == tf.float64:
+      np_dtype = np.float64
+
+    for i,conf in enumerate(configs):
+      print('Preprocessing configuration:', i)
+      zeta,dzetadr = descriptor.generate_generalized_coords(conf)
+
+      num_atoms = conf.get_num_atoms()
+      num_descriptors = descriptor.get_num_descriptors()
+      zeta_raw = zeta.astype(np_dtype).tostring()
+      dzetadr_raw = dzetadr.astype(np_dtype).tostring()
+      coords_raw = conf.get_coords().astype(np_dtype).tostring()
+      energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
+      forces_raw = conf.get_forces().astype(np_dtype).tostring()
+
+      example = tf.train.Example(features=tf.train.Features(feature={
+        # meta data
+        'num_atoms': _int64_feature(num_atoms),
+        'num_descriptors': _int64_feature(num_descriptors),
+        # input data
+        'atomic_coords': _bytes_feature(coords_raw),
+        'gen_coords': _bytes_feature(zeta_raw),
+        'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
+        # labels
+        'energy': _bytes_feature(energy),
+        'forces': _bytes_feature(forces_raw)
+      }))
+
+      writer.write(example.SerializeToString())
+    writer.close()
+
+  return fname
+
+
+def _parse_function(example_proto):
+  """Transforms a scalar string `example_proto' (corresponding to an atomic
+  configuration) into usable data.
+  """
+  features = {
+      # meta data
+      'num_atoms': tf.FixedLenFeature((), tf.int64),
+      'num_descriptors': tf.FixedLenFeature((), tf.int64),
+      # input data
+      'atomic_coords': tf.FixedLenFeature((), tf.string),
+      'gen_coords': tf.FixedLenFeature((), tf.string),
+      'dgen_datomic_coords': tf.FixedLenFeature((), tf.string),
+      # labels
+      'energy': tf.FixedLenFeature((), tf.string),
+      'forces': tf.FixedLenFeature((), tf.string)
+      }
+  parsed_features = tf.parse_single_example(example_proto, features)
+
+  num_atoms = tf.cast(parsed_features['num_atoms'], tf.int32)
+  num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int32)
+  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
+
+  # shape of tensors
+  DIM = 3
+  shape1 = tf.stack([num_atoms*DIM])
+  shape2 = tf.stack([num_atoms, num_descriptors])
+  shape3 = tf.stack([num_atoms, num_descriptors, num_atoms*DIM])
+
+  # input
+  atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
+  atomic_coords = tf.reshape(atomic_coords, shape1)
+  gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
+  gen_coords = tf.reshape(gen_coords, shape2)
+  dgen_datomic_coords = tf.decode_raw(parsed_features['dgen_datomic_coords'], dtype)
+  dgen_datomic_coords = tf.reshape(dgen_datomic_coords, shape3)
+  # labels
+  energy = tf.decode_raw(parsed_features['energy'], dtype)
+  forces = tf.decode_raw(parsed_features['forces'], dtype)
+  forces = tf.reshape(forces, shape1)
+
+  return atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
+
+
+def read_from_tfrecords(fname, dtype=tf.float32):
+  """Read preprocessed TFRecords data from `fname'.
+
+  Parameter
+  ---------
+
+  fname, name of the TFRecords data file.
+
+  Return
+  ------
+
+  Instance of tf.contrib.data.
+  """
+
+  dataset = tf.contrib.data.TFRecordDataset(fname)
+#TODO not sure whether this global variable is efficient
+  global HACKED_DTYPE
+  HACKED_DTYPE=dtype
+  dataset = dataset.map(_parse_function)
+
+  return dataset
+
+
+
 def input_layer_using_preprocessed(zeta, dzetadr, layer_name='input_layer',
     dtype=tf.float32):
   """Reusable code for making an input layer for a configuration."""
@@ -151,6 +292,14 @@ def input_layer(config, descriptor, dtype=tf.float32):
     input, dummy = int_pot(coords = coords, zeta=tf.constant(zeta, dtype),
         dzetadr=tf.constant(dzetadr, dtype))
     return input, coords
+
+
+def input_layer_given_data(coords, zeta, dzetadr, layer_name='input_layer'):
+  """Reusable code for making an input layer for a configuration."""
+
+  with tf.name_scope(layer_name):
+    input, dummy = int_pot(coords=coords, zeta=zeta, dzetadr=dzetadr)
+    return input
 
 
 def write_kim_ann(descriptor, weights, biases, activation, mode='float',
