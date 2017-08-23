@@ -4,6 +4,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import os
+import shutil
 import inspect
 import tfop._int_pot_grad
 path = os.path.dirname(inspect.getfile(tfop._int_pot_grad))
@@ -92,39 +93,6 @@ def output_layer(input_tensor, weights, biases, layer_name='output_layer'):
     return preactivate
 
 
-def preprocess(configs, descriptor):
-  """Preprocess the data to generate the generalized coords and its derivatives.
-
-  Parameter
-  ---------
-
-  configs, list of Config objects.
-
-  descriptor, object of Descriptor class.
-  """
-
-  all_zeta = []
-  all_dzetadr = []
-  for i,conf in enumerate(configs):
-    print('Preprocessing configuration:', i)
-    zeta,dzetadr = descriptor.generate_generalized_coords(conf)
-    all_zeta.append(zeta)
-    all_dzetadr.append(dzetadr)
-  all_zeta_concatenated = np.concatenate(all_zeta)
-  mean = np.mean(all_zeta_concatenated, axis=0)
-  std = np.std(all_zeta_concatenated, axis=0)
-
-  # centering and normalization
-  all_zeta_processed = []
-  all_dzetadr_processed = []
-  for zeta in all_zeta:
-    all_zeta_processed.append( (zeta - mean) / std )
-  for dzetadr in all_dzetadr:
-    all_dzetadr_processed.append( dzetadr / np.atleast_2d(std).T)
-
-  return all_zeta_processed, all_dzetadr_processed
-
-
 def _bytes_feature(value):
   return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
@@ -134,9 +102,8 @@ def _int64_feature(value):
 def _float_feature(value):
   return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-#TODO we may add a flag to indicate wheter do centering and normalization or not
-def convert_to_tfrecords(configs, descriptor, name, do_generate=True,
-    dtype=tf.float32, directory='/tmp/data'):
+def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
+    do_generate=True, do_normalize=True, do_record=False, dtype=tf.float32):
   """Preprocess the data to generate the generalized coords and its derivatives,
   and store them, together with coords, and label as tfRecord binary.
 
@@ -147,7 +114,26 @@ def convert_to_tfrecords(configs, descriptor, name, do_generate=True,
 
   descriptor, object of Descriptor class.
 
-  directory, path to store the tfRecords data.
+  name and directory
+    The TFRecords file is written to `directory/name.tfrecords'.
+    The centering and normalizing mean and standard deviation data is written
+    to `directory/mean_and_std_for_kim_ann'.
+
+  do_generate, bool
+    Whether to compute the generalized coords and its derivatives or not.
+
+  do_normalize, bool
+    Whether to center and normalize the data or not through:
+      zeta_new = (zeta - mean(zeta)) / std(zeta)
+    Effective only when `do_generate' is set to `True'.
+
+  do_record, bool
+    Whether to store the generalized coords `zeta' obtained when computing
+    the mean and standard deviation in memory for later use. Effective
+    only when `do_normalize' is set to `True'. This flag only affects the
+    running speed, but not the results. Enabling it results in faster running
+    speed but more memory consumption. For large dataset and limited memory,
+    set it to `False'.
   """
 
   fname = os.path.join(directory, name+'.tfrecords')
@@ -159,7 +145,7 @@ def convert_to_tfrecords(configs, descriptor, name, do_generate=True,
     if not os.path.exists(directory):
       os.mkdir(directory)
 
-    print('Wrining tfRecords of "{}" data as: {}'.format(name, fname))
+    print('\nWrining tfRecords of "{}" data as: {}'.format(name, fname))
     writer = tf.python_io.TFRecordWriter(fname)
 
     # determine the data type
@@ -168,12 +154,71 @@ def convert_to_tfrecords(configs, descriptor, name, do_generate=True,
     elif dtype == tf.float64:
       np_dtype = np.float64
 
+    # compute mean and standard deviation of input data
+    if do_normalize:
+      print('\nCentering and normalizing the data...')
+      # We use the online algorithm proposed by Welford to compute the variance.
+      # see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+      # The naive method suffers from numerical instability for large dataset.
+
+      # number of features
+      conf = configs[0]
+      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+      size = zeta.shape[1]
+
+      # starting Welford's method
+      n = 0
+      mean = np.zeros(size)
+      M2 = np.zeros(size)
+      if do_record:
+        all_zeta = []
+        all_dzetadr = []
+      for i,conf in enumerate(configs):
+        print('Processing configuration:', i)
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+        for row in zeta:
+          n += 1
+          delta =  row - mean
+          mean += delta/n
+          delta2 = row - mean
+          M2 += delta*delta2
+        if do_record:
+          all_zeta.append(zeta)
+          all_dzetadr.append(dzetadr)
+      std = np.sqrt(M2/(n-1))
+      std_3d = np.atleast_3d(std)
+
+      # write mean and std to file, such that it can be used in the KIM ANN model
+      with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
+        fout.write('{}  # number of descriptors.\n'.format(len(mean)))
+        fout.write('# mean\n')
+        for i in mean:
+          fout.write('{:24.16e}\n'.format(i))
+        fout.write('# standard derivation\n')
+        for i in std:
+          fout.write('{:24.16e}\n'.format(i))
+    else:
+      # we write empty info to this file
+      with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
+        fout.write('False\n')
+
+
+    # write data to TFRecords
+    print('\nGenerating TFRecords data...')
     for i,conf in enumerate(configs):
-      print('Preprocessing configuration:', i)
-      zeta,dzetadr = descriptor.generate_generalized_coords(conf)
+      print('Processing configuration:', i)
+      if do_normalize and do_record:
+        zeta = all_zeta[i]
+        dzetadr = all_dzetadr[i]
+      else:
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
 
       num_atoms = conf.get_num_atoms()
       num_descriptors = descriptor.get_num_descriptors()
+      # do the actual centering and normalization if needed
+      if do_normalize:
+        zeta = (zeta - mean) / std
+        dzetadr = dzetadr / std_3d
       zeta_raw = zeta.astype(np_dtype).tostring()
       dzetadr_raw = dzetadr.astype(np_dtype).tostring()
       coords_raw = conf.get_coords().astype(np_dtype).tostring()
@@ -262,8 +307,63 @@ def read_from_tfrecords(fname, dtype=tf.float32):
   HACKED_DTYPE=dtype
   dataset = dataset.map(_parse_function)
 
+  # copy mean_and_std_for_kim_ann to current directoy
+  fname2 = os.path.join(os.path.dirname(fname), 'mean_and_std_for_kim_ann')
+  shutil.copy(fname2, os.getcwd())
+
   return dataset
 
+
+# for feed_dictionary, probably ok
+def input_layer_given_data(coords, zeta, dzetadr, layer_name='input_layer'):
+  """Reusable code for making an input layer for a configuration."""
+
+  with tf.name_scope(layer_name):
+    input, dummy = int_pot(coords=coords, zeta=zeta, dzetadr=dzetadr)
+    return input
+
+
+#  The following three methods. to built data into graphDef, OK and fast for small data set
+def preprocess(configs, descriptor):
+  """Preprocess the data to generate the generalized coords and its derivatives.
+
+  Parameter
+  ---------
+
+  configs, list of Config objects.
+
+  descriptor, object of Descriptor class.
+  """
+
+  all_zeta = []
+  all_dzetadr = []
+  for i,conf in enumerate(configs):
+    print('Preprocessing configuration:', i)
+    zeta,dzetadr = descriptor.generate_generalized_coords(conf)
+    all_zeta.append(zeta)
+    all_dzetadr.append(dzetadr)
+  all_zeta_concatenated = np.concatenate(all_zeta)
+  mean = np.mean(all_zeta_concatenated, axis=0)
+  std = np.std(all_zeta_concatenated, axis=0)
+
+  print ('flag-mean')
+  for i in mean:
+    print(i)
+  print ('flag-std')
+  for i in std:
+    print(i)
+
+
+
+  # centering and normalization
+  all_zeta_processed = []
+  all_dzetadr_processed = []
+  for zeta in all_zeta:
+    all_zeta_processed.append( (zeta - mean) / std )
+  for dzetadr in all_dzetadr:
+    all_dzetadr_processed.append( dzetadr / np.atleast_3d(std))
+
+  return all_zeta_processed, all_dzetadr_processed
 
 
 def input_layer_using_preprocessed(zeta, dzetadr, layer_name='input_layer',
@@ -292,14 +392,6 @@ def input_layer(config, descriptor, dtype=tf.float32):
     input, dummy = int_pot(coords = coords, zeta=tf.constant(zeta, dtype),
         dzetadr=tf.constant(dzetadr, dtype))
     return input, coords
-
-
-def input_layer_given_data(coords, zeta, dzetadr, layer_name='input_layer'):
-  """Reusable code for making an input layer for a configuration."""
-
-  with tf.name_scope(layer_name):
-    input, dummy = int_pot(coords=coords, zeta=zeta, dzetadr=dzetadr)
-    return input
 
 
 def write_kim_ann(descriptor, weights, biases, activation, mode='float',
@@ -406,7 +498,18 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
       fout.write('{}  '.format(b.size))
     fout.write('  # size of each layer (last must be 1)\n')
     # activation function
-    fout.write('{}    # activation function\n\n'.format(activation))
+    if activation == tf.nn.sigmoid:
+      act_name = 'sigmoid'
+    elif activation == tf.nn.tanh:
+      act_name = 'tanh'
+    elif activation == tf.nn.relu:
+      act_name = 'relu'
+    elif activation == tf.nn.elu:
+      act_name = 'elu'
+    else:
+      raise ValueError('unsupported activation function for KIM ANN model.')
+
+    fout.write('{}    # activation function\n\n'.format(act_name))
 
     # weights and biases
     for i, (w, b) in enumerate(zip(weights, biases)):
@@ -438,8 +541,20 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
       fout.write('\n\n')
 
 
+    # data centering and normalization
+    fout.write('#' + '='*80 + '\n')
+    fout.write('# Preprocessing data to center and normalize\n')
+    fout.write('#' + '='*80 + '\n')
 
-
+    fname = 'mean_and_std_for_kim_ann'
+    with open(fname, 'r') as fin:
+      lines = fin.readlines()
+      if 'False' in lines[0]:
+        fout.write('center_and_normalize  False\n')
+      else:
+        fout.write('center_and_normalize  True\n\n')
+        for l in lines:
+          fout.write(l)
 
 
 
