@@ -296,7 +296,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
     size_train = size_dataset - size_validation
     indices = np.arange(size_dataset)
     if do_shuffle:
-      indices = np.random.shuffle(index_configs)
+      np.random.shuffle(indices)
     tr_indices = indices[:size_train].tolist()
     va_indices = indices[size_train:].tolist()
   else:  # only need training set, not validation set
@@ -340,9 +340,9 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
       if do_record:
         all_zeta = []
         all_dzetadr = []
-      for i in (tr_indices):
-        conf = configs[i]
+      for i,idx in enumerate(tr_indices):
         print('Processing training example:', i)
+        conf = configs[idx]
         zeta, dzetadr = descriptor.generate_generalized_coords(conf)
         for row in zeta:
           n += 1

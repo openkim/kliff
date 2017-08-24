@@ -7,6 +7,9 @@ from descriptor import get_descriptor
 from openkim_fit.training import TrainingSet
 import openkim_fit.ann as ann
 import random
+import time
+
+start = time.time()
 
 # set a global random seed
 tf.set_random_seed(1)
@@ -34,7 +37,8 @@ configs = tset.get_configs()
 
 # preprocess data to generate tfrecords
 train_name, validation_name = ann.convert_raw_to_tfrecords(configs, desc,
-    size_validation = 2, directory='./dataset_tfrecords', do_generate=True, do_record=True)
+    size_validation = 2, directory='./dataset_tfrecords', do_generate=True,
+    do_shuffle=True)
 # read data from tfrecords into tensors
 dataset = ann.read_from_tfrecords(train_name)
 # number of epoches
@@ -111,6 +115,11 @@ with tf.Session() as sess:
           out, summary = sess.run([loss, merged])
           save_path = saver.save(sess, "/tmp/tensorflow/ckpt/model.ckpt", global_step=i)
           train_writer.add_summary(summary, i)
+
+          # output results to a KIM model
+          w,b = sess.run([weights, biases])
+          ann.write_kim_ann(desc, w, b, tf.nn.tanh, fname='ann.params-{}'.format(i))
+
           print ('i =',i, 'loss =', out)
 
         i += 1
@@ -122,5 +131,5 @@ with tf.Session() as sess:
     # output results to a KIM model
     w,b = sess.run([weights, biases])
     ann.write_kim_ann(desc, w, b, tf.nn.tanh)
-
+    print('total running time:', time.time() - start)
 
