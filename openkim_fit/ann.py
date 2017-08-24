@@ -244,6 +244,216 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
   return fname
 
 
+def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
+    directory='/tmp/data', do_generate=True, do_normalize=True, do_record=False,
+    do_shuffle=False, dtype=tf.float32):
+  """Preprocess the data to generate the generalized coords and its derivatives,
+  and store them, together with coords, and label as tfRecord binary.
+
+  Parameter
+  ---------
+
+  configs, list of Config objects.
+
+  descriptor, object of Descriptor class.
+
+  size_validation, int
+    Validation set size.
+
+  directory
+    The TFRecords file is written to `directory/.tfrecords'.
+    The centering and normalizing mean and standard deviation data is written
+    to `directory/mean_and_std_for_kim_ann'.
+
+  do_generate, bool
+    Whether to compute the generalized coords and its derivatives or not.
+
+  do_normalize, bool
+    Whether to center and normalize the data or not through:
+      zeta_new = (zeta - mean(zeta)) / std(zeta)
+    Effective only when `do_generate' is set to `True'.
+
+  do_record, bool
+    Whether to store the generalized coords `zeta' obtained when computing
+    the mean and standard deviation in memory for later use. Effective
+    only when `do_normalize' is set to `True'. This flag only affects the
+    running speed, but not the results. Enabling it results in faster running
+    speed but more memory consumption. For large dataset and limited memory,
+    set it to `False'.
+
+  do_shuffle, bool
+    Whether to shuffle the dataset before dividing into training set and
+    validation set.
+
+  """
+
+  # split dataset into training set and validation set if necessary
+  size_dataset = len(configs)
+  if size_validation is not None:
+    if size_validation > size_dataset:
+      raise ValueError('Validation set size "{}" larger than dataset size "{}".'
+        .format(size_validation, size_dataset))
+    size_train = size_dataset - size_validation
+    indices = np.arange(size_dataset)
+    if do_shuffle:
+      indices = np.random.shuffle(index_configs)
+    tr_indices = indices[:size_train].tolist()
+    va_indices = indices[size_train:].tolist()
+  else:  # only need training set, not validation set
+    tr_indices = range(size_dataset)
+    va_indices = []
+
+  tr_name = os.path.join(directory, 'train.tfrecords')
+  va_name = os.path.join(directory, 'validation.tfrecords')
+  # if cannot find the tfrecords data, we need to generate it
+  if not os.path.exists(tr_name):
+    do_generate = True
+
+
+  if do_generate:
+
+    if not os.path.exists(directory):
+      os.mkdir(directory)
+
+    # determine the data type
+    if dtype == tf.float32:
+      np_dtype = np.float32
+    elif dtype == tf.float64:
+      np_dtype = np.float64
+
+    # compute mean and standard deviation of training set
+    if do_normalize:
+      print('\nCentering and normalizing the data...')
+      # We use the online algorithm proposed by Welford to compute the variance.
+      # see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+      # The naive method suffers from numerical instability for large dataset.
+
+      # number of features
+      conf = configs[0]
+      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+      size = zeta.shape[1]
+
+      # starting Welford's method
+      n = 0
+      mean = np.zeros(size)
+      M2 = np.zeros(size)
+      if do_record:
+        all_zeta = []
+        all_dzetadr = []
+      for i in (tr_indices):
+        conf = configs[i]
+        print('Processing training example:', i)
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+        for row in zeta:
+          n += 1
+          delta =  row - mean
+          mean += delta/n
+          delta2 = row - mean
+          M2 += delta*delta2
+        if do_record:
+          all_zeta.append(zeta)
+          all_dzetadr.append(dzetadr)
+      std = np.sqrt(M2/(n-1))
+      std_3d = np.atleast_3d(std)
+
+      # write mean and std to file, such that it can be used in the KIM ANN model
+      with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
+        fout.write('{}  # number of descriptors.\n'.format(len(mean)))
+        fout.write('# mean\n')
+        for i in mean:
+          fout.write('{:24.16e}\n'.format(i))
+        fout.write('# standard derivation\n')
+        for i in std:
+          fout.write('{:24.16e}\n'.format(i))
+    else:
+      # we write empty info to this file
+      with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
+        fout.write('False\n')
+
+
+    # write training data to TFRecords
+    print('\nWrining training tfRecords data as: {}'.format(tr_name))
+    tr_writer = tf.python_io.TFRecordWriter(tr_name)
+    for i,idx in enumerate(tr_indices):
+      print('Processing configuration:', i)
+      conf = configs[idx]
+
+      if do_normalize and do_record:
+        zeta = all_zeta[i]
+        dzetadr = all_dzetadr[i]
+      else:
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+
+      num_atoms = conf.get_num_atoms()
+      num_descriptors = descriptor.get_num_descriptors()
+      # do the actual centering and normalization if needed
+      if do_normalize:
+        zeta = (zeta - mean) / std
+        dzetadr = dzetadr / std_3d
+      zeta_raw = zeta.astype(np_dtype).tostring()
+      dzetadr_raw = dzetadr.astype(np_dtype).tostring()
+      coords_raw = conf.get_coords().astype(np_dtype).tostring()
+      energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
+      forces_raw = conf.get_forces().astype(np_dtype).tostring()
+
+      example = tf.train.Example(features=tf.train.Features(feature={
+        # meta data
+        'num_atoms': _int64_feature(num_atoms),
+        'num_descriptors': _int64_feature(num_descriptors),
+        # input data
+        'atomic_coords': _bytes_feature(coords_raw),
+        'gen_coords': _bytes_feature(zeta_raw),
+        'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
+        # labels
+        'energy': _bytes_feature(energy),
+        'forces': _bytes_feature(forces_raw)
+      }))
+
+      tr_writer.write(example.SerializeToString())
+    tr_writer.close()
+
+
+    # write validation data to TFRecords
+    if va_indices:
+      print('\nWrining validation tfRecords data as: {}'.format(va_name))
+      va_writer = tf.python_io.TFRecordWriter(va_name)
+      for i,idx in enumerate(va_indices):
+        print('Processing configuration:', i)
+        conf = configs[idx]
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+
+        num_atoms = conf.get_num_atoms()
+        num_descriptors = descriptor.get_num_descriptors()
+        # do the actual centering and normalization if needed
+        if do_normalize:
+          zeta = (zeta - mean) / std
+          dzetadr = dzetadr / std_3d
+        zeta_raw = zeta.astype(np_dtype).tostring()
+        dzetadr_raw = dzetadr.astype(np_dtype).tostring()
+        coords_raw = conf.get_coords().astype(np_dtype).tostring()
+        energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
+        forces_raw = conf.get_forces().astype(np_dtype).tostring()
+
+        example = tf.train.Example(features=tf.train.Features(feature={
+          # meta data
+          'num_atoms': _int64_feature(num_atoms),
+          'num_descriptors': _int64_feature(num_descriptors),
+          # input data
+          'atomic_coords': _bytes_feature(coords_raw),
+          'gen_coords': _bytes_feature(zeta_raw),
+          'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
+          # labels
+          'energy': _bytes_feature(energy),
+          'forces': _bytes_feature(forces_raw)
+        }))
+
+        va_writer.write(example.SerializeToString())
+      va_writer.close()
+
+  return tr_name, va_name
+
+
+
 def _parse_function(example_proto):
   """Transforms a scalar string `example_proto' (corresponding to an atomic
   configuration) into usable data.

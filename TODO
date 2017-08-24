@@ -110,3 +110,6 @@
   np.reshape can be used as np.reshape(array, (-1:3)), where the dimension
   of -1 is inferred. Check and do the replacement.                               Not yet
 
+13. 08/23/2017:
+  Change class TrainingSet to DataSet. It can contain validation, test
+  data as well.                                                                  Not yet
