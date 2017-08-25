@@ -143,7 +143,7 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
   if do_generate:
 
     if not os.path.exists(directory):
-      os.mkdir(directory)
+      os.makedirs(directory)
 
     print('\nWrining tfRecords of "{}" data as: {}'.format(name, fname))
     writer = tf.python_io.TFRecordWriter(fname)
@@ -313,7 +313,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
   if do_generate:
 
     if not os.path.exists(directory):
-      os.mkdir(directory)
+      os.makedirs(directory)
 
     # determine the data type
     if dtype == tf.float32:
@@ -686,6 +686,23 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
           fout.write('\n')
 
 
+    # data centering and normalization
+    # header
+    fout.write('#' + '='*80 + '\n')
+    fout.write('# Preprocessing data to center and normalize\n')
+    fout.write('#' + '='*80 + '\n')
+    # data
+    fname = 'mean_and_std_for_kim_ann'
+    with open(fname, 'r') as fin:
+      lines = fin.readlines()
+      if 'False' in lines[0]:
+        fout.write('center_and_normalize  False\n')
+      else:
+        fout.write('center_and_normalize  True\n\n')
+        for l in lines:
+          fout.write(l)
+    fout.write('\n')
+
     # ann structure and parameters
     # header
     fout.write('#' + '='*80 + '\n')
@@ -749,25 +766,6 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
         else:
           fout.write('{:15.7e}'.format(item))
       fout.write('\n\n')
-
-
-    # data centering and normalization
-    fout.write('#' + '='*80 + '\n')
-    fout.write('# Preprocessing data to center and normalize\n')
-    fout.write('#' + '='*80 + '\n')
-
-    fname = 'mean_and_std_for_kim_ann'
-    with open(fname, 'r') as fin:
-      lines = fin.readlines()
-      if 'False' in lines[0]:
-        fout.write('center_and_normalize  False\n')
-      else:
-        fout.write('center_and_normalize  True\n\n')
-        for l in lines:
-          fout.write(l)
-
-
-
 
 
 
