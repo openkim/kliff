@@ -556,14 +556,15 @@ def preprocess(configs, descriptor):
   mean = np.mean(all_zeta_concatenated, axis=0)
   std = np.std(all_zeta_concatenated, axis=0)
 
-  print ('flag-mean')
-  for i in mean:
-    print(i)
-  print ('flag-std')
-  for i in std:
-    print(i)
-
-
+  # write mean and std to file, such that it can be used in the KIM ANN model
+  with open('mean_and_std_for_kim_ann', 'w') as fout:
+    fout.write('{}  # number of descriptors.\n'.format(len(mean)))
+    fout.write('# mean\n')
+    for i in mean:
+      fout.write('{:24.16e}\n'.format(i))
+    fout.write('# standard derivation\n')
+    for i in std:
+      fout.write('{:24.16e}\n'.format(i))
 
   # centering and normalization
   all_zeta_processed = []
@@ -593,6 +594,10 @@ def input_layer_using_preprocessed(zeta, dzetadr, layer_name='input_layer',
 def input_layer(config, descriptor, dtype=tf.float32):
   """Reusable code for making an input layer for a configuration."""
 
+  # write a file to inform that no centering and normaling is used
+  with open('mean_and_std_for_kim_ann', 'w') as fout:
+    fout.write('False\n')
+
   layer_name = os.path.splitext(os.path.basename(config.id))[0]
   # need to return a tensor of coords since we want to take derivaives w.r.t it
   coords = tf.constant(config.get_coords(), dtype)
@@ -604,7 +609,7 @@ def input_layer(config, descriptor, dtype=tf.float32):
     return input, coords
 
 
-def write_kim_ann(descriptor, weights, biases, activation, mode='float',
+def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
     fname='ann_kim.params'):
   """Output ANN structure, parameters etc. in the format of the KIM ANN model.
 
@@ -621,7 +626,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
     cutname, rcut = descriptor.get_cutoff()
     maxrcut = max(rcut.values())
     fout.write('# cutoff    rcut\n')
-    if mode == 'double':
+    if dtype == tf.float64:
       fout.write('{}    {:.15g}\n\n'.format(cutname, maxrcut))
     else:
       fout.write('{}    {:.7g}\n\n'.format(cutname, maxrcut))
@@ -648,7 +653,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
         fout.write('{}    {}    {}\n'.format(name, rows, cols))
         if name == 'g2':
           for val in values:
-            if mode == 'double':
+            if dtype == tf.float64:
               fout.write('{:.15g} {:.15g}'.format(val[0], val[1]))
             else:
               fout.write('{:.7g} {:.7g}'.format(val[0], val[1]))
@@ -656,7 +661,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
           fout.write('\n')
         elif name =='g3':
           for val in values:
-            if mode == 'double':
+            if dtype == tf.float64:
               fout.write('{:.15g}'.format(val[0]))
             else:
               fout.write('{:.7g}'.format(val[0]))
@@ -667,7 +672,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
             zeta = val[0]
             lam = val[1]
             eta = val[2]
-            if mode == 'double':
+            if dtype == tf.float64:
               fout.write('{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta))
             else:
               fout.write('{:.7g} {:.7g} {:.7g}'.format(zeta, lam, eta))
@@ -678,7 +683,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
             zeta = val[0]
             lam = val[1]
             eta = val[2]
-            if mode == 'double':
+            if dtype == tf.float64:
               fout.write('{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta))
             else:
               fout.write('{:.7g} {:.7g} {:.7g}'.format(zeta, lam, eta))
@@ -749,7 +754,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
         fout.write('# weight of output layer (shape({}, {}))\n'.format(rows,cols))
       for line in w:
         for item in line:
-          if mode == 'double':
+          if dtype == tf.float64:
             fout.write('{:23.15e}'.format(item))
           else:
             fout.write('{:15.7e}'.format(item))
@@ -761,7 +766,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mode='float',
       else:
         fout.write('# bias of output layer (shape({}, {}))\n'.format(rows,cols))
       for item in b:
-        if mode == 'double':
+        if dtype == tf.float64:
           fout.write('{:23.15e}'.format(item))
         else:
           fout.write('{:15.7e}'.format(item))
