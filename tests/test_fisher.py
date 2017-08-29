@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 import sys
 sys.path.append('../openkim_fit')
-from training import TrainingSet
+from dataset import DataSet
 from modelparams import ModelParams
 from kimcalculator import KIMcalculator
 from fisher import Fisher
@@ -23,7 +23,7 @@ def test_fisher(relative_variance = False):
     params.echo_params()
 
     # read config and reference data
-    tset = TrainingSet()
+    tset = DataSet()
     fname = 'training_set/training_set_multi_small'
     #fname = 'training_set/training_set_multi_large'
     #fname = '/media/sf_share/xyz_interval4/'

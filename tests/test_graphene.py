@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../openkim_fit')
-from training import TrainingSet
+from dataset import DataSet
 from modelparams import ModelParams
 from kimcalculator import KIMcalculator
 
@@ -14,7 +14,7 @@ def test_kimcalculator():
     #optparams.read(fname)
 
     # training set
-    tset = TrainingSet()
+    tset = DataSet()
     tset.read('training_set/graphene.xyz')
     configs = tset.get_configs()
 

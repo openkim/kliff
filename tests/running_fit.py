@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../openkim_fit')
 sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
-from training import TrainingSet
+from dataset import DataSet
 from keywords import InputKeywords
 from modelparams import ModelParams
 from kimcalculator import KIMcalculator
@@ -41,7 +41,7 @@ print 'x0', x0
 
 
 # read config and reference data
-tset = TrainingSet()
+tset = DataSet()
 #tset.read('../tests/config.txt_20x20')
 #tset.read('../tests/T150_training_1000.xyz')
 tset.read('training_set/training_set_multi_small/')

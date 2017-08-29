@@ -11,8 +11,10 @@ def generate_kimstr(modelname, cell, species):
     ----------
     modelname: KIM Model name
 
-    Tset: TrainingSet object
-        the training set object from which we get the atom species
+    cell: supercell
+
+    species: string list
+      species of all atoms
 
     Returns
     -------

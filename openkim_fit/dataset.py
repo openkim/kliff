@@ -4,7 +4,7 @@ import glob
 import numpy as np
 from error import InputError
 
-class Config:
+class Configuration:
     """
     Class to read and store the information in one configuraiton in extented xyz format.
     """
@@ -155,9 +155,9 @@ class Config:
 
 
 
-class TrainingSet():
+class DataSet():
     '''
-    Training set class, to deal with multiple configurations.
+    Data set class, to deal with multiple configurations.
     '''
     def __init__(self):
         self.size = 0
@@ -175,7 +175,7 @@ class TrainingSet():
             dirpath = os.path.dirname(fname)
             all_files = [fname]
         for f in all_files:
-            conf = Config(f)
+            conf = Configuration(f)
             conf.read_extxyz(f)
             self.configs.append(conf)
         self.size = len(self.configs)

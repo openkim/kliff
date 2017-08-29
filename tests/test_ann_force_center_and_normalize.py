@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
-from openkim_fit.training import TrainingSet
+from openkim_fit.dataset import DataSet
 from openkim_fit.descriptor import Descriptor
 import openkim_fit.ann as ann
 
@@ -43,7 +43,7 @@ desc = Descriptor(cutfunc, cutvalue, desc_params)
 
 
 # read config and reference data
-tset = TrainingSet()
+tset = DataSet()
 tset.read('./training_set/training_set_mos2_small_config_4/')
 configs = tset.get_configs()
 

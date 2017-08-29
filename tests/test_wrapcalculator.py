@@ -2,7 +2,7 @@ import sys
 sys.path.append('../openkim_fit')
 from wrapcalculator import WrapCalculator
 from lmplatconst import lmp_lat_const
-from training import TrainingSet
+from dataset import DataSet
 from keywords import InputKeywords
 from modelparams import ModelParams
 from kimcalculator import KIMcalculator
@@ -58,7 +58,7 @@ def test_run_fitting():
     print 'x0', x0
 
     # read config and reference data
-    tset = TrainingSet()
+    tset = DataSet()
     tset.read('training_set/training_set_MoS2.xyz')
     configs = tset.get_configs()
 

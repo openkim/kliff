@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../openkim_fit')
 sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
-from training import TrainingSet
+from dataset import DataSet
 from modelparams import ModelParams
 from kimcalculator import KIMcalculator
 from cost import Cost
@@ -31,7 +31,7 @@ def test_fixparams():
     x0 = params.get_x0()
 
     # read config and referene data
-    tset = TrainingSet()
+    tset = DataSet()
     tset.read('training_set/training_set_graphene/')
     configs = tset.get_configs()
 

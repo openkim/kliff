@@ -1,17 +1,18 @@
 import sys
 sys.path.append('../openkim_fit')
-from training import Config, TrainingSet
+from dataset import Configuration, DataSet
+
 
 
 def test_training():
     # one configuration
-    configs = Config()
+    configs = Configuration()
     configs.read_extxyz('training_set/training_set_MoS2.xyz')
     configs.write_extxyz('./echo.xyz')
     print 'training config written to: echo.xyz'
 
     # multiple configuration
-    Tset = TrainingSet()
+    Tset = DataSet()
     Tset.read('training_set/training_set_multi_small')
     #Tset.read('training_set/training_set_multi_large')
     #Tset.read('/media/sf_share/xyz_interval4/')

@@ -1,4 +1,4 @@
-from training import TrainingSet
+from dataset import DataSet
 from keywords import InputKeywords
 from modelparams import ModelParams
 #from kimobject import init_KIMobjects
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     x0 = params.get_x0()
 
     # read config and reference data
-    tset = TrainingSet()
+    tset = DataSet()
     #tset.read('../tests/config.txt_20x20')
     #tset.read('../tests/T150_training_1000.xyz')
     #tset.read('../tests/training_set-T300/')

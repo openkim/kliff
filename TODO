@@ -49,9 +49,9 @@
   explicit call from traincost.                                                  Done
 
 5. 10/19/2016:
-   n modelparams.py, the format set_params() should be changed. Instead
-   f using list, its more natural to use dictionary with the parameter name
-   s the key. i.e. instead of using
+  In modelparams.py, the format set_params() should be changed. Instead
+  of using list, its more natural to use dictionary with the parameter name
+  as the key. i.e. instead of using
                param_A = ['PARAM_FREE_A',
                           ['kim', 0, 20],
                           [2.0, 'fix'],
@@ -112,4 +112,4 @@
 
 13. 08/23/2017:
   Change class TrainingSet to DataSet. It can contain validation, test
-  data as well.                                                                  Not yet
+  data as well.                                                                  Done

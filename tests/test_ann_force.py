@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
-from openkim_fit.training import TrainingSet
+from openkim_fit.dataset import DataSet
 from openkim_fit.descriptor import Descriptor
 import openkim_fit.ann as ann
 
@@ -22,7 +22,7 @@ tf.set_random_seed(1)
 
 
 # read config and reference data
-tset = TrainingSet()
+tset = DataSet()
 #tset.read('./training_set/graphene_bilayer_1x1.xyz')
 tset.read('./training_set/training_set_mos2_small_config_4/mos2_2x2_a3.0.xyz')
 configs = tset.get_configs()

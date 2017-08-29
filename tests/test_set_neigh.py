@@ -1,14 +1,14 @@
 from __future__ import division
 import sys
 sys.path.append('../openkim_fit')
-from training import TrainingSet
+from dataset import DataSet
 from neighbor import NeighborList
 from utils import write_extxyz
 import numpy as np
 
 def test_neigh():
     # read config and reference data
-    tset = TrainingSet()
+    tset = DataSet()
     tset.read('training_set/training_set_graphene/bilayer_sep3.36_i0_j0.xyz')
     configs = tset.get_configs()
 

@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
-from openkim_fit.training import TrainingSet
+from openkim_fit.dataset import DataSet
 from openkim_fit.descriptor import Descriptor
 import os
 import inspect
@@ -15,7 +15,7 @@ int_pot = int_pot_module.int_pot
 
 
 # read config and reference data
-tset = TrainingSet()
+tset = DataSet()
 tset.read('./training_set/training_set_graphene/bilayer_sep3.36_i2_j3.xyz')
 configs = tset.get_configs()
 conf = configs[0]
