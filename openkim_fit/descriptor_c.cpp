@@ -302,13 +302,28 @@ void Descriptor::sym_g4(double zeta, double lambda, double eta,
   double riksq = rik*rik;
   double rjksq = rjk*rjk;
 
-  // i is the apex atom
-  double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
-  double costerm = pow(1+lambda*cos_ijk, zeta);
-  double eterm = exp(-eta*(rijsq + riksq + rjksq));
+  if (rij > rcutij || rik > rcutik || rjk > rcutjk) {
+    phi = 0.0;
+  }
+  else {
+    // i is the apex atom
+    double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
 
-  phi = pow(2, 1-zeta) * costerm * eterm * cutoff_(rij, rcutij)
-      *cutoff_(rik, rcutik) * cutoff_(rjk, rcutjk);
+    double costerm;
+    double base = 1+lambda*cos_ijk;
+    if (base <= 0) { // prevent numerical unstability (when lambd=-1 and cos_ijk=1)
+      costerm = 0;
+    }
+    else {
+      costerm = pow(base, zeta);
+    }
+
+
+    double eterm = exp(-eta*(rijsq + riksq + rjksq));
+
+    phi = pow(2, 1-zeta) * costerm * eterm * cutoff_(rij, rcutij)
+        *cutoff_(rik, rcutik) * cutoff_(rjk, rcutjk);
+  }
 }
 
 void Descriptor::sym_d_g4(double zeta, double lambda, double eta,
@@ -324,47 +339,64 @@ void Descriptor::sym_d_g4(double zeta, double lambda, double eta,
   double riksq = rik*rik;
   double rjksq = rjk*rjk;
 
+  if (rij > rcutij || rik > rcutik || rjk > rcutjk) {
+    phi = 0.0;
+    dphi[0] = 0.0;
+    dphi[1] = 0.0;
+    dphi[2] = 0.0;
+  }
+  else {
+    // cosine term, i is the apex atom
+    double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
+    double dcos_dij = (rijsq - riksq + rjksq)/(2*rijsq*rik);
+    double dcos_dik = (riksq - rijsq + rjksq)/(2*rij*riksq);
+    double dcos_djk = -rjk/(rij*rik);
 
-  // cosine term, i is the apex atom
-  double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
-  double costerm = pow(1+lambda*cos_ijk, zeta);
-  double dcos_dij = (rijsq - riksq + rjksq)/(2*rijsq*rik);
-  double dcos_dik = (riksq - rijsq + rjksq)/(2*rij*riksq);
-  double dcos_djk = -rjk/(rij*rik);
-  double dcosterm_dcos = zeta * pow(1+lambda*cos_ijk, zeta-1) * lambda;
-  double dcosterm_dij = dcosterm_dcos * dcos_dij;
-  double dcosterm_dik = dcosterm_dcos * dcos_dik;
-  double dcosterm_djk = dcosterm_dcos * dcos_djk;
+    double costerm;
+    double dcosterm_dcos;
+    double base = 1+lambda*cos_ijk;
+    if (base <= 0) { // prevent numerical unstability (when lambd=-1 and cos_ijk=1)
+      costerm = 0.0;
+      dcosterm_dcos = 0.0;
+    }
+    else {
+      costerm = pow(base, zeta);
+      dcosterm_dcos = zeta * pow(base, zeta-1) * lambda;
+    }
+    double dcosterm_dij = dcosterm_dcos * dcos_dij;
+    double dcosterm_dik = dcosterm_dcos * dcos_dik;
+    double dcosterm_djk = dcosterm_dcos * dcos_djk;
 
-  // exponential term
-  double eterm = exp(-eta*(rijsq + riksq + rjksq));
-  double determ_dij = -2*eterm*eta*rij;
-  double determ_dik = -2*eterm*eta*rik;
-  double determ_djk = -2*eterm*eta*rjk;
+    // exponential term
+    double eterm = exp(-eta*(rijsq + riksq + rjksq));
+    double determ_dij = -2*eterm*eta*rij;
+    double determ_dik = -2*eterm*eta*rik;
+    double determ_djk = -2*eterm*eta*rjk;
 
-  // power 2 term
-  double p2 = pow(2, 1-zeta);
+    // power 2 term
+    double p2 = pow(2, 1-zeta);
 
-  // cutoff
-  double fcij = cutoff_(rij, rcutij);
-  double fcik = cutoff_(rik, rcutik);
-  double fcjk = cutoff_(rjk, rcutjk);
-  double fcprod = fcij*fcik*fcjk;
-  double dfcprod_dij = d_cutoff_(rij, rcutij)*fcik*fcjk;
-  double dfcprod_dik = d_cutoff_(rik, rcutik)*fcij*fcjk;
-  double dfcprod_djk = d_cutoff_(rjk, rcutjk)*fcij*fcik;
+    // cutoff
+    double fcij = cutoff_(rij, rcutij);
+    double fcik = cutoff_(rik, rcutik);
+    double fcjk = cutoff_(rjk, rcutjk);
+    double fcprod = fcij*fcik*fcjk;
+    double dfcprod_dij = d_cutoff_(rij, rcutij)*fcik*fcjk;
+    double dfcprod_dik = d_cutoff_(rik, rcutik)*fcij*fcjk;
+    double dfcprod_djk = d_cutoff_(rjk, rcutjk)*fcij*fcik;
 
-  // phi
-  phi =  p2 * costerm * eterm * fcprod;
-  // dphi_dij
-  dphi[0] = p2 * (dcosterm_dij*eterm*fcprod + costerm*determ_dij*fcprod
-      + costerm*eterm*dfcprod_dij);
-  // dphi_dik
-  dphi[1] = p2 * (dcosterm_dik*eterm*fcprod + costerm*determ_dik*fcprod
-      + costerm*eterm*dfcprod_dik);
-  // dphi_djk
-  dphi[2] = p2 * (dcosterm_djk*eterm*fcprod + costerm*determ_djk*fcprod
-      + costerm*eterm*dfcprod_djk);
+    // phi
+    phi =  p2 * costerm * eterm * fcprod;
+    // dphi_dij
+    dphi[0] = p2 * (dcosterm_dij*eterm*fcprod + costerm*determ_dij*fcprod
+        + costerm*eterm*dfcprod_dij);
+    // dphi_dik
+    dphi[1] = p2 * (dcosterm_dik*eterm*fcprod + costerm*determ_dik*fcprod
+        + costerm*eterm*dfcprod_dik);
+    // dphi_djk
+    dphi[2] = p2 * (dcosterm_djk*eterm*fcprod + costerm*determ_djk*fcprod
+        + costerm*eterm*dfcprod_djk);
+  }
 }
 
 void Descriptor::sym_g5(double zeta, double lambda, double eta,
@@ -379,12 +411,27 @@ void Descriptor::sym_g5(double zeta, double lambda, double eta,
   double riksq = rik*rik;
   double rjksq = rjk*rjk;
 
-  // i is the apex atom
-  double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
-  double costerm = pow(1+lambda*cos_ijk, zeta);
-  double eterm = exp(-eta*(rijsq + riksq));
+  if (rij > rcutij || rik > rcutik) {
+    phi = 0.0;
+  }
+  else {
+    // i is the apex atom
+    double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
 
-  phi = pow(2, 1-zeta)*costerm*eterm*cutoff_(rij, rcutij)*cutoff_(rik, rcutik);
+    double costerm;
+    double base = 1+lambda*cos_ijk;
+    if (base <= 0) { // prevent numerical unstability (when lambd=-1 and cos_ijk=1)
+      costerm = 0;
+    }
+    else {
+      costerm = pow(base, zeta);
+    }
+
+
+    double eterm = exp(-eta*(rijsq + riksq));
+
+    phi = pow(2, 1-zeta)*costerm*eterm*cutoff_(rij, rcutij)*cutoff_(rik, rcutik);
+  }
 }
 
 void Descriptor::sym_d_g5(double zeta, double lambda, double eta,
@@ -399,42 +446,60 @@ void Descriptor::sym_d_g5(double zeta, double lambda, double eta,
   double riksq = rik*rik;
   double rjksq = rjk*rjk;
 
-  // cosine term, i is the apex atom
-  double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
-  double costerm = pow(1+lambda*cos_ijk, zeta);
-  double dcos_dij = (rijsq - riksq + rjksq)/(2*rijsq*rik);
-  double dcos_dik = (riksq - rijsq + rjksq)/(2*rij*riksq);
-  double dcos_djk = -rjk/(rij*rik);
-  double dcosterm_dcos = zeta * pow(1+lambda*cos_ijk, zeta-1) * lambda;
-  double dcosterm_dij = dcosterm_dcos * dcos_dij;
-  double dcosterm_dik = dcosterm_dcos * dcos_dik;
-  double dcosterm_djk = dcosterm_dcos * dcos_djk;
+  if (rij > rcutij || rik > rcutik) {
+    phi = 0.0;
+    dphi[0] = 0.0;
+    dphi[1] = 0.0;
+    dphi[2] = 0.0;
+  }
+  else {
+    // cosine term, i is the apex atom
+    double cos_ijk = (rijsq + riksq - rjksq)/(2*rij*rik);
+    double dcos_dij = (rijsq - riksq + rjksq)/(2*rijsq*rik);
+    double dcos_dik = (riksq - rijsq + rjksq)/(2*rij*riksq);
+    double dcos_djk = -rjk/(rij*rik);
 
-  // exponential term
-  double eterm = exp(-eta*(rijsq + riksq));
-  double determ_dij = -2*eterm*eta*rij;
-  double determ_dik = -2*eterm*eta*rik;
+    double costerm;
+    double dcosterm_dcos;
+    double base = 1+lambda*cos_ijk;
+    if (base <= 0) { // prevent numerical unstability (when lambda=-1 and cos_ijk=1)
+      costerm = 0.0;
+      dcosterm_dcos = 0.0;
+    }
+    else {
+      costerm = pow(base, zeta);
+      dcosterm_dcos = zeta * pow(base, zeta-1) * lambda;
+    }
+    double dcosterm_dij = dcosterm_dcos * dcos_dij;
+    double dcosterm_dik = dcosterm_dcos * dcos_dik;
+    double dcosterm_djk = dcosterm_dcos * dcos_djk;
 
-  // power 2 term
-  double p2 = pow(2, 1-zeta);
+    // exponential term
+    double eterm = exp(-eta*(rijsq + riksq));
+    double determ_dij = -2*eterm*eta*rij;
+    double determ_dik = -2*eterm*eta*rik;
 
-  // cutoff
-  double fcij = cutoff_(rij, rcutij);
-  double fcik = cutoff_(rik, rcutik);
-  double fcprod = fcij*fcik;
-  double dfcprod_dij = d_cutoff_(rij, rcutij)*fcik;
-  double dfcprod_dik = d_cutoff_(rik, rcutik)*fcij;
+    // power 2 term
+    double p2 = pow(2, 1-zeta);
 
-  // phi
-  phi =  p2 * costerm * eterm * fcprod;
-  // dphi_dij
-  dphi[0] = p2 * (dcosterm_dij*eterm*fcprod + costerm*determ_dij*fcprod
-      + costerm*eterm*dfcprod_dij);
-  // dphi_dik
-  dphi[1] = p2 * (dcosterm_dik*eterm*fcprod + costerm*determ_dik*fcprod
-      + costerm*eterm*dfcprod_dik);
-  // dphi_djk
-  dphi[2] = p2*dcosterm_djk*eterm*fcprod;
+    // cutoff
+    double fcij = cutoff_(rij, rcutij);
+    double fcik = cutoff_(rik, rcutik);
+    double fcprod = fcij*fcik;
+    double dfcprod_dij = d_cutoff_(rij, rcutij)*fcik;
+    double dfcprod_dik = d_cutoff_(rik, rcutik)*fcij;
+
+    // phi
+    phi =  p2 * costerm * eterm * fcprod;
+    // dphi_dij
+    dphi[0] = p2 * (dcosterm_dij*eterm*fcprod + costerm*determ_dij*fcprod
+        + costerm*eterm*dfcprod_dij);
+    // dphi_dik
+    dphi[1] = p2 * (dcosterm_dik*eterm*fcprod + costerm*determ_dik*fcprod
+        + costerm*eterm*dfcprod_dik);
+    // dphi_djk
+    dphi[2] = p2*dcosterm_djk*eterm*fcprod;
+  }
 }
 
 
