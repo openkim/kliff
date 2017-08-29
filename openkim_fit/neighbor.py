@@ -102,7 +102,7 @@ def create_neigh(coords, rcut, need_neigh):
     """
 
     natoms = len(coords)//3
-    coords = np.array(coords).reshape(natoms, 3)
+    coords = np.reshape(coords, (-1, 3))
 
     neighlist = []
     numneigh = []
@@ -163,10 +163,9 @@ def set_padding(cell, PBC, species, coords, rcut):
         atom number, of which the padding atom is an image
 
     """
-    natoms = len(species)
 
     # transform coords into fractional coords
-    coords = np.reshape(coords, (natoms, 3))
+    coords = np.reshape(coords, (-1, 3))
     tcell = np.transpose(cell)
     fcell = np.linalg.inv(tcell)
     frac_coords = np.dot(coords, fcell.T)

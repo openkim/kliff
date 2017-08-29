@@ -198,7 +198,7 @@ class KIMcalculator:
             forces on contributing atoms
         """
 
-        forces = np.reshape(forces, (len(forces)//3, 3))
+        forces = np.reshape(forces, (-1, 3))
         pad_forces = forces[self.ncontrib:]
         for i in range(self.ncontrib):
             # idx: the indices of padding atoms that are images of contributing atom i

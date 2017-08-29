@@ -30,7 +30,7 @@ class Configuration:
             # lattice vector, PBC, and energy
             line = lines[1]
             self.cell = self.parse_key_value(line, 'Lattice', 'float', 9, fname)
-            self.cell = np.array(self.cell).reshape((3, 3))
+            self.cell = np.reshape(self.cell, (3, 3))
             self.PBC = self.parse_key_value(line, 'PBC', 'int', 3, fname)
             self.energy = self.parse_key_value(line, 'Energy', 'float', 1, fname)[0]
             # species symbol and x, y, z fx, fy, fz
