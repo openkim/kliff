@@ -4,43 +4,20 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 from descriptor import get_descriptor
-from openkim_fit.training import TrainingSet
 import openkim_fit.ann as ann
 import random
-import time
-
-start = time.time()
 
 # set a global random seed
 tf.set_random_seed(1)
 DTYPE = tf.float32
-NUM_EPOCHS = 10
-BATCH_SIZE = 4
-
+NUM_EPOCHS = 100
+BATCH_SIZE = 2
 
 # create all descriptors
 desc = get_descriptor()
 
-
-#######################################
 # read data
-#######################################
-# read config and reference data
-tset = TrainingSet()
-#tset.read('./training_set/T300_xyz_tiny')
-tset.read('./training_set/T300_xyz_small')
-#tset.read('./training_set/T300_xyz_medium')
-#tset.read('./training_set/T300_xyz_100')
-#tset.read('./training_set/T300_xyz')
-configs = tset.get_configs()
-
-
-# preprocess data to generate tfrecords
-train_name, validation_name = ann.convert_raw_to_tfrecords(configs, desc,
-    size_validation = 2, directory='./dataset_tfrecords', do_generate=True,
-    do_shuffle=True)
-# read data from tfrecords into tensors
-dataset = ann.read_from_tfrecords(train_name)
+dataset = ann.read_from_tfrecords('./dataset_tfrecords/validation.tfrecords')
 # number of epoches
 dataset = dataset.repeat(NUM_EPOCHS)
 # batch size
@@ -83,13 +60,8 @@ loss = tf.reduce_mean(subloss)
 # log loss
 tf.summary.scalar('loss_value', loss)
 
-# optimization
-with tf.name_scope('train_node'):
-  optimizer = tf.train.AdamOptimizer(0.01)
-  train = optimizer.minimize(loss)
-
 # checkpoint saver
-saver = tf.train.Saver(max_to_keep=100)
+saver = tf.train.Saver()
 
 #######################################
 # execting graph
@@ -98,38 +70,11 @@ with tf.Session() as sess:
 
   # Merge all the summaries and write them out to /tmp/tensorflow/potential
   merged = tf.summary.merge_all()
-  train_writer = tf.summary.FileWriter('/tmp/tensorflow/train', sess.graph)
+  train_writer = tf.summary.FileWriter('/tmp/tensorflow/validation', sess.graph)
 
-  # init global vars
-  init_op = tf.global_variables_initializer()
-  sess.run(init_op)
-
-  try:
-
-    i = 0
-    while True:
-      try:
-        sess.run(train)
-
-        if i%10 == 0:
-          out, summary = sess.run([loss, merged])
-          save_path = saver.save(sess, "/tmp/tensorflow/ckpt/model.ckpt", global_step=i)
-          train_writer.add_summary(summary, i)
-
-          # output results to a KIM model
-          w,b = sess.run([weights, biases])
-          ann.write_kim_ann(desc, w, b, tf.nn.tanh, fname='ann.params-{}'.format(i))
-
-          print ('i =',i, 'loss =', out)
-
-        i += 1
-      except tf.errors.OutOfRangeError:
-        break
-    #NOTE, we may need to run the last batch of data here
-
-  finally:
-    # output results to a KIM model
-    w,b = sess.run([weights, biases])
-    ann.write_kim_ann(desc, w, b, tf.nn.tanh)
-    print('total running time:', time.time() - start)
+  for i in range(0, 20, 10):
+    saver.restore(sess, "/tmp/tensorflow/ckpt/model.ckpt-{}".format(i))
+    out, summary = sess.run([loss, merged])
+    train_writer.add_summary(summary, i)
+    print('eval error, i =', i, 'loss =', out)
 
