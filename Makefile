@@ -1,4 +1,12 @@
+build:
+	python setup.py build
+develop:
+	python setup.py develop
+inplace:
+	python setup.py build_ext --inplace
 install:
 	python setup.py install
 clean:
-	rm -r build openkim_fit/*.pyc openkim_fit/*.so
+	python setup.py clean
+clean_all:
+	rm -rf build/ dist/ *.egg-info/ *.so */*.so */*.pyc openkim_fit/desc.cpp

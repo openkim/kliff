@@ -1,37 +1,61 @@
-from distutils.core import setup, Extension
-from Cython.Distutils import build_ext
-from Cython.Build import cythonize
+from setuptools import setup, Extension
+from distutils.sysconfig import get_config_vars
+import os
 import numpy
 
 
+# remove `-Wstrict-prototypes' that is for C not C++
+cfg_vars = get_config_vars()
+for key, value in cfg_vars.items():
+  if type(value) == str and '-Wstrict-prototypes' in value:
+     cfg_vars[key] = value.replace('-Wstrict-prototypes', '')
 
-# to use geodesiclm add the following:
-# from geolm.geodesiclm import geodesiclm
-# to use openkim modules, such as kimcalculator.py, add
-# from openkim_kim.kimcalculator import KIMcalculator
+
+def tf_includes():
+  try:
+    import tensorflow as tf
+    return tf.sysconfig.get_include()
+  except ImportError:
+    raise ImportError('tensorflow is not found. install it first.')
+
+
+def tf_extra_compile_args():
+  args = ['-std=c++11', '-Wall', '-O2', '-fPIC']
+  # gcc 5 needs the following
+  args_gcc5 = ['-D_GLIBCXX_USE_CXX11_ABI=0']
+  return args + args_gcc5
+
+
+tf_module = Extension('tensorflow_op.int_pot_op',
+   sources = ['tensorflow_op/int_pot_op.cpp'],
+   include_dirs = [tf_includes()],
+   #library_dirs = [],
+   libraries = ['m'],
+   extra_compile_args = tf_extra_compile_args(),
+   #extra_link_args = [],
+   language = 'c++',
+    )
+
+
+desc_module = Extension('desc',
+    sources=['openkim_fit/desc.pyx', 'openkim_fit/descriptor_c.cpp'],
+    include_dirs = [numpy.get_include()],
+    language = 'c++',
+    )
+
+
 setup(name='openkim_fit',
-      version='0.0.1',
-      description='OpenKIM based interatomic potential fitting program.',
-      author='Mingjian Wen',
-      url='https://openkim.org',
-      packages=['openkim_fit','geolm','tfop'],
-      package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface',
-                   'tfop':'libs/tensorflowOp'},
-      package_data={'geolm':['_geodesiclm.so'],
-                    'tfop':['int_pot_op.so']},
-      ext_modules=cythonize([Extension('desc',
-      sources=['openkim_fit/desc.pyx', 'openkim_fit/descriptor_c.cpp'],
-      language = 'c++',
-      include_dirs=[numpy.get_include()] )]),
-     )
-
-# NOTE
-# It seems not easy to not install geodesiclm in a package.
-
-#from setuptools import setup,find_packages
-
-# if we use setuptools, _geodesiclm.so will be egged, then it is not each to
-# import it. People who write code need to use pkg_resources to get access to
-# it. It is not easy to do.
+    version='0.0.1',
+    description='OpenKIM based interatomic potential fitting program.',
+    author='Mingjian Wen',
+    url='https://openkim.org',
+    packages=['openkim_fit','tensorflow_op', 'geolm'],
+    package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
+    package_data={'geolm':['_geodesiclm.so']},
+    ext_modules=[tf_module, desc_module],
+    install_requires = ['scipy'],
+    setup_requires = ['numpy'],
+    zip_safe = False,
+    )
 
 

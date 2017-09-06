@@ -7,8 +7,8 @@ from openkim_fit.dataset import DataSet
 from openkim_fit.descriptor import Descriptor
 import os
 import inspect
-import tfop._int_pot_grad
-path = os.path.dirname(inspect.getfile(tfop._int_pot_grad))
+import tensorflow_op._int_pot_grad
+path = os.path.dirname(inspect.getfile(tensorflow_op._int_pot_grad))
 int_pot_module = tf.load_op_library(path+os.path.sep+'int_pot_op.so')
 int_pot = int_pot_module.int_pot
 
