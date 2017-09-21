@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 import numpy as np
+import functools
 import os
 import shutil
 import inspect
@@ -91,6 +92,27 @@ def output_layer(input_tensor, weights, biases, layer_name='output_layer'):
       preactivate = tf.matmul(input_tensor, weights) + biases
       tf.summary.histogram('linear_output', preactivate)
     return preactivate
+
+
+def weight_decorator(func):
+  """A decorator for weight initializer to output summaries."""
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    weights = func(*args, **kwargs)
+    variable_summaries(weights)
+    return weights
+  return wrapper
+
+
+def layer_decorator(func):
+  """A decorator for layer to output activations histogram."""
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    activations = func(*args, **kwargs)
+    tf.summary.histogram('activations', activations)
+    return activations
+  return wrapper
+
 
 
 def _bytes_feature(value):
@@ -478,9 +500,9 @@ def _parse_function(example_proto):
 
   # shape of tensors
   DIM = 3
-  shape1 = tf.stack([num_atoms*DIM])
-  shape2 = tf.stack([num_atoms, num_descriptors])
-  shape3 = tf.stack([num_atoms, num_descriptors, num_atoms*DIM])
+  shape1 = [num_atoms*DIM]
+  shape2 = [num_atoms, num_descriptors]
+  shape3 = [num_atoms, num_descriptors, num_atoms*DIM]
 
   # input
   atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
@@ -525,11 +547,16 @@ def read_from_tfrecords(fname, dtype=tf.float32):
 
 
 # for feed_dictionary, probably ok
-def input_layer_given_data(coords, zeta, dzetadr, layer_name='input_layer'):
+def input_layer_given_data(coords, zeta, dzetadr, num_descriptor=None,
+  layer_name='input_layer'):
   """Reusable code for making an input layer for a configuration."""
 
   with tf.name_scope(layer_name):
     input, dummy = int_pot(coords=coords, zeta=zeta, dzetadr=dzetadr)
+    # set the static shape is needed to use high level api like
+    # tf.contrib.layers.fully_connected
+    if num_descriptor is not None:
+      input.set_shape((None, int(num_descriptor)))
     return input
 
 
