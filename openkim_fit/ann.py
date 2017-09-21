@@ -636,6 +636,53 @@ def input_layer(config, descriptor, dtype=tf.float32):
     return input, coords
 
 
+def get_weights_and_biases(layer_names):
+  """Get the weights and biases of all layers.
+
+    If variable_scope is used, is should be prepended to the name.
+    The element order matters of layer_names, since the returned weights and
+    biases have the same order as layer_names.
+
+
+  Parameter
+  ---------
+
+  layer_names: list of str
+    The names of the layers (e.g. the scope of fully_connected()).
+
+  Return
+  ------
+    weights: list of tensors
+    biases: lsit of tensors
+
+  """
+  weight_names = [lm.rstrip('/')+'/weights' for lm in layer_names]
+  bias_names = [lm.rstrip('/')+'/biases' for lm in layer_names]
+  weights = []
+  biases = []
+
+  all_vars = tf.global_variables()
+  for name in weight_names:
+    for v in all_vars:
+      if v.name.startswith(name):
+        weights.append(v)
+        break
+  for name in bias_names:
+    for v in all_vars:
+      if v.name.startswith(name):
+        biases.append(v)
+        break
+
+  if len(weight_names) != len(weights):
+    name = weight_names[len(weights)+1]
+    raise KeyError('{} cannot be found in global variables', name)
+  if len(bias_names) != len(biases):
+    name = bias_names[len(biases)+1]
+    raise KeyError('{} cannot be found in global variables', name)
+
+  return weights, biases
+
+
 def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
     fname='ann_kim.params'):
   """Output ANN structure, parameters etc. in the format of the KIM ANN model.
