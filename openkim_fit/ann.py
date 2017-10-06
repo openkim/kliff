@@ -319,18 +319,18 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
     indices = np.arange(size_dataset)
     if do_shuffle:
       np.random.shuffle(indices)
-    tr_indices = indices[:size_train].tolist()
-    va_indices = indices[size_train:].tolist()
+    tr_indices = indices[:size_train]
+    va_indices = indices[size_train:]
   else:  # only need training set, not validation set
-    tr_indices = range(size_dataset)
-    va_indices = []
+    tr_indices = np.arange(size_dataset)
+    va_indices = np.array([])
 
   tr_name = os.path.join(directory, 'train.tfrecords')
   va_name = os.path.join(directory, 'validation.tfrecords')
+
   # if cannot find the tfrecords data, we need to generate it
   if not os.path.exists(tr_name):
     do_generate = True
-
 
   if do_generate:
 
@@ -342,6 +342,8 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
       np_dtype = np.float32
     elif dtype == tf.float64:
       np_dtype = np.float64
+    else:
+      raise ValueError('Unsupported data type "{}".'.format(dtype))
 
     # compute mean and standard deviation of training set
     if do_normalize:
@@ -436,7 +438,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
 
 
     # write validation data to TFRecords
-    if va_indices:
+    if va_indices.size != 0:
       print('\nWrining validation tfRecords data as: {}'.format(va_name))
       va_writer = tf.python_io.TFRecordWriter(va_name)
       for i,idx in enumerate(va_indices):
@@ -516,7 +518,7 @@ def _parse_function(example_proto):
   forces = tf.decode_raw(parsed_features['forces'], dtype)
   forces = tf.reshape(forces, shape1)
 
-  return atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
+  return num_atoms, atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
 
 
 def read_from_tfrecords(fname, dtype=tf.float32):
@@ -534,7 +536,6 @@ def read_from_tfrecords(fname, dtype=tf.float32):
   """
 
   dataset = tf.contrib.data.TFRecordDataset(fname)
-#TODO not sure whether this global variable is efficient
   global HACKED_DTYPE
   HACKED_DTYPE=dtype
   dataset = dataset.map(_parse_function)

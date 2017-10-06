@@ -39,7 +39,7 @@ configs = tset.get_configs()
 
 # preprocess data to generate tfrecords
 train_name, validation_name = ann.convert_raw_to_tfrecords(configs, desc,
-    size_validation = 2, directory='./dataset_tfrecords', do_generate=True,
+    size_validation = 2, directory='./dataset_tfrecords', do_generate=False,
     do_shuffle=True)
 # read data from tfrecords into tensors
 dataset = ann.read_from_tfrecords(train_name)
@@ -54,11 +54,12 @@ next_batch = iterator.get_next()
 #######################################
 # create graph
 #######################################
-atomic_coords = next_batch[0]
-gen_coords = next_batch[1]
-dgen_datomic_coords = next_batch[2]
-energy_label = next_batch[3]
-forces_label = next_batch[4]
+num_atoms = next_batch[0]
+atomic_coords = next_batch[1]
+gen_coords = next_batch[2]
+dgen_datomic_coords = next_batch[3]
+energy_label = next_batch[4]
+forces_label = next_batch[5]
 
 
 # decorator to output statistics of variables
@@ -87,6 +88,7 @@ for i in range(BATCH_SIZE):
   else: # reuse weights and biases
     output = layer(hidden2, 1, activation_fn=None, weights_initializer=initializer, reuse=True, scope='output')
 
+  # keep record of output
   energy = tf.reduce_sum(output)
   subloss.append(tf.square(energy - energy_label[i]))
 
