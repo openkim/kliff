@@ -1,6 +1,5 @@
 from __future__ import print_function
 import os
-import glob
 import numpy as np
 from error import InputError
 
@@ -163,14 +162,27 @@ class DataSet():
     self.size = 0
     self.configs = []
 
+#NOTE this could be moved to init
   def read(self, fname):
     """
-    Read training set, where each file stores a configuration. If given a directory,
-    all the files end with 'xyz' will be treated as valid.
+    Read atomistic configuration stored in the extend xyz format.
+
+    Parameter
+    ---------
+    fname: str
+      file name or directory name where the configurations are stored. If given
+      a directory, all the files in this directory and subdirectories with 'xyz'
+      extension will be read.
     """
+
     if os.path.isdir(fname):
       dirpath = fname
-      all_files = sorted(glob.glob(dirpath+os.path.sep+'*xyz'))
+      all_files = []
+      for root, dirs, files in os.walk(dirpath):
+        for f in files:
+          if f.endswith('.xyz'):
+            all_files.append(os.path.join(root, f))
+      all_files = sorted(all_files)
     else:
       dirpath = os.path.dirname(fname)
       all_files = [fname]
@@ -180,26 +192,16 @@ class DataSet():
       self.configs.append(conf)
     self.size = len(self.configs)
     if self.size <= 0:
-      raise InputError('No training set files (ended with .xyz) found '
+      raise InputError('No training set files (ends with .xyz) found '
                'in directory: {}/'.format(dirpath))
 
-    print('Number of configurations in traning set:', self.size)
+    print('Number of configurations in dataset:', self.size)
 
-#NOTE not needed
-#  def get_unique_species(self):
-#    '''
-#    Get all the species that appear in the training set.
-#    '''
-#    unique_species = []
-#    for conf in self.configs:
-#      unique_species += conf.get_unique_species()
-#    return list(set(unique_species))
-#
+
   def get_size(self):
     return self.size
+
   def get_configs(self):
     return self.configs
-
-
 
 
