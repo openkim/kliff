@@ -20,13 +20,10 @@ num_desc = desc.get_num_descriptors()
 #######################################
 # read data
 #######################################
-dataset0 = ann.read_from_tfrecords('./dataset_tfrecords/validation.tfrecords')
-dataset = []
-for _ in range(EVAL_SIZE):
-  dataset.append(dataset0)
-dataset = tf.contrib.data.Dataset.zip(dataset)
+dataset = ann.read_from_tfrecords('./dataset_tfrecords/validation.tfrecords')
 iterator = dataset.make_one_shot_iterator()
-next_zipped = iterator.get_next()
+next_element = iterator.get_next()
+num_atoms,atomic_coords,gen_coords,dgen_datomic_coords,energy_label,forces_label = next_element
 
 
 #######################################
@@ -42,8 +39,6 @@ keep_ratio = 0.9
 all_energy = []
 
 for i in range(EVAL_SIZE):
-
-  num_atoms,atomic_coords,gen_coords,dgen_datomic_coords,energy_label,forces_label = next_zipped[i]
 
   # input layer
   in_layer = ann.input_layer_given_data(atomic_coords, gen_coords,
@@ -63,11 +58,11 @@ for i in range(EVAL_SIZE):
   if i == 0:  # create weights and biases
     hidden2 = layer(hidden1_drop, size, activation_fn=tf.nn.tanh,
         weights_initializer=initializer, scope='hidden2')
-    hidden2_drop = tf.nn.dropout(hidden2, keep_ratio, seed=123)
+    hidden2_drop = tf.nn.dropout(hidden2, keep_ratio, seed=i)
   else: # reuse weights and biases
     hidden2 = layer(hidden1_drop, size, activation_fn=tf.nn.tanh,
         weights_initializer=initializer, reuse=True, scope='hidden2')
-    hidden2_drop = tf.nn.dropout(hidden2, keep_ratio, seed=123)
+    hidden2_drop = tf.nn.dropout(hidden2, keep_ratio, seed=i)
 
   if i == 0:  # create weights and biases
     output = layer(hidden2_drop, 1, activation_fn=None,
