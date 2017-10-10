@@ -195,34 +195,34 @@ def set_padding(cell, PBC, species, coords, rcut):
   pad_image = []
   for i in range(-size0, size0+1):
     for j in range(-size1, size1+1):
-    for k in range(-size2, size2+1):
-      if i==0 and j==0 and k==0:  # do not create contributing atoms
-        continue
-      if not PBC[0] and i != 0: # apply BC
-        continue
-      if not PBC[1] and j != 0:
-        continue
-      if not PBC[2] and k != 0:
-        continue
-      for at,(x,y,z) in enumerate(frac_coords):
+      for k in range(-size2, size2+1):
+        if i==0 and j==0 and k==0:  # do not create contributing atoms
+          continue
+        if not PBC[0] and i != 0: # apply BC
+          continue
+        if not PBC[1] and j != 0:
+          continue
+        if not PBC[2] and k != 0:
+          continue
+        for at,(x,y,z) in enumerate(frac_coords):
 
-        # select the necessary atoms to repeate for the most outside bin
-        if i == -size0 and x - xmin < size0 - ratio0:
-          continue
-        if i == size0  and xmax - x < size0 - ratio0:
-          continue
-        if j == -size1 and y - ymin < size1 - ratio1:
-          continue
-        if j == size1  and ymax - y < size1 - ratio1:
-          continue
-        if k == -size2 and z - zmin < size2 - ratio2:
-          continue
-        if k == size2  and zmax - z < size2 - ratio2:
-          continue
+          # select the necessary atoms to repeate for the most outside bin
+          if i == -size0 and x - xmin < size0 - ratio0:
+            continue
+          if i == size0  and xmax - x < size0 - ratio0:
+            continue
+          if j == -size1 and y - ymin < size1 - ratio1:
+            continue
+          if j == size1  and ymax - y < size1 - ratio1:
+            continue
+          if k == -size2 and z - zmin < size2 - ratio2:
+            continue
+          if k == size2  and zmax - z < size2 - ratio2:
+            continue
 
-        pad_coords.append([i+x,j+y,k+z])
-        pad_spec.append(species[at])
-        pad_image.append(at)
+          pad_coords.append([i+x,j+y,k+z])
+          pad_spec.append(species[at])
+          pad_image.append(at)
 
   # transform fractional coords to abs coords
   if not pad_coords:
