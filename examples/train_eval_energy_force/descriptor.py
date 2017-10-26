@@ -1,40 +1,46 @@
 from openkim_fit.descriptor import Descriptor
+from collections import OrderedDict
 
 def get_descriptor():
 
   cutfunc = 'cos'
   cutvalue = {'Mo-Mo': 6.4, 'Mo-S':6.4, 'S-S': 6.4}
-  desc_params = {'g2': [{'eta':0.0009, 'Rs':0.},
-                        {'eta':0.01, 'Rs':0.},
-                        {'eta':0.02, 'Rs':0.},
-                        {'eta':0.035, 'Rs':0.},
-                        {'eta':0.06, 'Rs':0.},
-                        {'eta':0.1, 'Rs':0.},
-                        {'eta':0.2, 'Rs':0.},
-                        {'eta':0.4, 'Rs':0.} ],
-                 'g4': [{'zeta':0.0001, 'lambda':-1, 'eta':1},
-                        {'zeta':0.0001, 'lambda':1, 'eta':1},
-                        {'zeta':0.0001, 'lambda':-1, 'eta':2},
-                        {'zeta':0.0001, 'lambda':1, 'eta':2},
-                        {'zeta':0.003, 'lambda':-1, 'eta':1},
-                        {'zeta':0.003, 'lambda':1, 'eta':1},
-                        {'zeta':0.003, 'lambda':-1, 'eta':2},
-                        {'zeta':0.003, 'lambda':1, 'eta':2},
-                        {'zeta':0.008, 'lambda':1, 'eta':1},
-                        {'zeta':0.008, 'lambda':1, 'eta':2},
-                        {'zeta':0.015, 'lambda':1, 'eta':1},
-                        {'zeta':0.015, 'lambda':1, 'eta':2},
-                        {'zeta':0.015, 'lambda':1, 'eta':4},
-                        {'zeta':0.015, 'lambda':1, 'eta':16},
-                        {'zeta':0.025, 'lambda':1, 'eta':1},
-                        {'zeta':0.025, 'lambda':1, 'eta':2},
-                        {'zeta':0.025, 'lambda':1, 'eta':4},
-                        {'zeta':0.025, 'lambda':1, 'eta':16},
-                        {'zeta':0.045, 'lambda':1, 'eta':1},
-                        {'zeta':0.045, 'lambda':1, 'eta':2},
-                        {'zeta':0.045, 'lambda':1, 'eta':4},
-                        {'zeta':0.045, 'lambda':1, 'eta':16} ]
-                }
+  desc_params = OrderedDict()
+  desc_params['g2'] = [
+    {'eta':0.0009, 'Rs':0.},
+    {'eta':0.01, 'Rs':0.},
+    {'eta':0.02, 'Rs':0.},
+    {'eta':0.035, 'Rs':0.},
+    {'eta':0.06, 'Rs':0.},
+    {'eta':0.1, 'Rs':0.},
+    {'eta':0.2, 'Rs':0.},
+    {'eta':0.4, 'Rs':0.}
+  ]
+  desc_params['g4'] = [
+    {'zeta':0.0001, 'lambda':-1, 'eta':1},
+    {'zeta':0.0001, 'lambda':1, 'eta':1},
+    {'zeta':0.0001, 'lambda':-1, 'eta':2},
+    {'zeta':0.0001, 'lambda':1, 'eta':2},
+    {'zeta':0.003, 'lambda':-1, 'eta':1},
+    {'zeta':0.003, 'lambda':1, 'eta':1},
+    {'zeta':0.003, 'lambda':-1, 'eta':2},
+    {'zeta':0.003, 'lambda':1, 'eta':2},
+    {'zeta':0.008, 'lambda':1, 'eta':1},
+    {'zeta':0.008, 'lambda':1, 'eta':2},
+    {'zeta':0.015, 'lambda':1, 'eta':1},
+    {'zeta':0.015, 'lambda':1, 'eta':2},
+    {'zeta':0.015, 'lambda':1, 'eta':4},
+    {'zeta':0.015, 'lambda':1, 'eta':16},
+    {'zeta':0.025, 'lambda':1, 'eta':1},
+    {'zeta':0.025, 'lambda':1, 'eta':2},
+    {'zeta':0.025, 'lambda':1, 'eta':4},
+    {'zeta':0.025, 'lambda':1, 'eta':16},
+    {'zeta':0.045, 'lambda':1, 'eta':1},
+    {'zeta':0.045, 'lambda':1, 'eta':2},
+    {'zeta':0.045, 'lambda':1, 'eta':4},
+    {'zeta':0.045, 'lambda':1, 'eta':16}
+  ]
+
 
   # tranfer units from bohr to angstrom
   bhor2ang = 0.529177
