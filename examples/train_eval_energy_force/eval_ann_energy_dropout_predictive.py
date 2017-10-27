@@ -23,7 +23,7 @@ num_desc = desc.get_num_descriptors()
 dataset = ann.read_from_tfrecords('./dataset_tfrecords/validation.tfrecords')
 iterator = dataset.make_one_shot_iterator()
 next_element = iterator.get_next()
-num_atoms,atomic_coords,gen_coords,dgen_datomic_coords,energy_label,forces_label = next_element
+conf_name, num_atoms,atomic_coords,gen_coords,dgen_datomic_coords,energy_label,forces_label = next_element
 
 
 #######################################

@@ -62,7 +62,7 @@ subloss = []
 
 for i in range(BATCH_SIZE):
 
-  num_atoms,atomic_coords,gen_coords,dgen_datomic_coords,energy_label,forces_label = iterator.get_next()
+  conf_name, num_atoms,atomic_coords,gen_coords,dgen_datomic_coords,energy_label,forces_label = iterator.get_next()
 
   # input layer
   in_layer = ann.input_layer_given_data(atomic_coords, gen_coords,

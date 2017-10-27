@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.layers import fully_connected, xavier_initializer, variance_scaling_initializer
 from descriptor import get_descriptor
 from openkim_fit.dataset import DataSet
 import openkim_fit.ann as ann
@@ -21,7 +20,6 @@ BATCH_SIZE = 4
 
 # create all descriptors
 desc = get_descriptor()
-num_desc = desc.get_num_descriptors()
 
 
 #######################################
@@ -38,17 +36,21 @@ configs = tset.get_configs()
 
 
 # preprocess data to generate tfrecords
-train_name, validation_name = ann.convert_raw_to_tfrecords(configs, desc,
-    size_validation = 2, directory='./dataset_tfrecords', do_generate=False,
-    do_shuffle=True)
+test_name = ann.convert_raw_to_tfrecords_testset(configs, desc,
+    directory='./testset_tfrecords', trainset_directory='./dataset_tfrecords',
+    do_generate=False, do_shuffle=True)
 # read data from tfrecords into tensors
-dataset = ann.read_from_tfrecords(train_name)
+dataset = ann.read_from_tfrecords(test_name)
 # number of epoches
 dataset = dataset.repeat(NUM_EPOCHS)
 # batch size
 dataset = dataset.batch(BATCH_SIZE)
 iterator = dataset.make_one_shot_iterator()
 next_batch = iterator.get_next()
+
+# create shared params (we need to share params among different config, so create first)
+num_desc = desc.get_num_descriptors()
+weights, biases = ann.parameters(num_desc, [20, 20, 1], dtype=DTYPE)
 
 
 #######################################
@@ -62,37 +64,17 @@ dgen_datomic_coords = next_batch[4]
 energy_label = next_batch[5]
 forces_label = next_batch[6]
 
-
-
-# decorator to output statistics of variables
-initializer = ann.weight_decorator(xavier_initializer())
-layer = ann.layer_decorator(fully_connected)
-
-size = 20
 subloss = []
 for i in range(BATCH_SIZE):
+  in_layer = ann.input_layer_given_data(atomic_coords[i], gen_coords[i],
+      dgen_datomic_coords[i])
+  dense1 = ann.nn_layer(in_layer, weights[0], biases[0], 'hidden1',act=tf.nn.tanh)
+  dense2 = ann.nn_layer(dense1, weights[1], biases[1], 'hidden2', act=tf.nn.tanh)
+  output = ann.output_layer(dense2, weights[2], biases[2], 'outlayer')
 
-  # input layer
-  in_layer = ann.input_layer_given_data(atomic_coords[i], gen_coords[i], dgen_datomic_coords[i], num_descriptor=num_desc)
-
-  if i == 0:  # create weights and biases
-    hidden1 = layer(in_layer, size, activation_fn=tf.nn.tanh, weights_initializer=initializer, scope='hidden1')
-  else: # reuse weights and biases
-    hidden1 = layer(in_layer, size, activation_fn=tf.nn.tanh, weights_initializer=initializer, reuse=True, scope='hidden1')
-
-  if i == 0:  # create weights and biases
-    hidden2 = layer(hidden1, size, activation_fn=tf.nn.tanh, weights_initializer=initializer, scope='hidden2')
-  else: # reuse weights and biases
-    hidden2 = layer(hidden1, size, activation_fn=tf.nn.tanh, weights_initializer=initializer, reuse=True, scope='hidden2')
-
-  if i == 0:  # create weights and biases
-    output = layer(hidden2, 1, activation_fn=None, weights_initializer=initializer, scope='output')
-  else: # reuse weights and biases
-    output = layer(hidden2, 1, activation_fn=None, weights_initializer=initializer, reuse=True, scope='output')
-
-  # keep record of output
   energy = tf.reduce_sum(output)
   subloss.append(tf.square(energy - energy_label[i]))
+
 
 # loss
 loss = tf.reduce_mean(subloss)
@@ -111,11 +93,6 @@ with tf.name_scope('train_node'):
 
 # checkpoint saver
 saver = tf.train.Saver(max_to_keep=100)
-
-
-# get weights and variables
-weights, biases = ann.get_weights_and_biases(['hidden1', 'hidden2', 'output'])
-
 
 #######################################
 # execting graph
@@ -144,7 +121,7 @@ with tf.Session() as sess:
 
           # output results to a KIM model
           w,b = sess.run([weights, biases])
-          ann.write_kim_ann(desc, w, b, tf.nn.tanh, fname='ann_kim.params-{}'.format(i))
+          ann.write_kim_ann(desc, w, b, tf.nn.tanh, fname='ann.params-{}'.format(i))
 
           print ('i =',i, 'loss =', out)
 

@@ -63,10 +63,14 @@ class Configuration:
 #    Get a set of the species list.
 #    '''
 #    return list(set(self.species))
+  def get_id(self):
+    return self.id
   def get_num_atoms(self):
     return self.natoms
   def get_cell(self):
     return self.cell
+  def get_pbc(self):
+    return self.PBC
   def get_energy(self):
     return self.energy
   def get_species(self):
@@ -75,8 +79,6 @@ class Configuration:
     return self.coords
   def get_forces(self):
     return self.forces
-  def get_pbc(self):
-    return self.PBC
 
   def parse_key_value(self, line, key, dtype, size, fname):
     '''

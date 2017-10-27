@@ -244,7 +244,7 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
       zeta_raw = zeta.astype(np_dtype).tostring()
       dzetadr_raw = dzetadr.astype(np_dtype).tostring()
       coords_raw = conf.get_coords().astype(np_dtype).tostring()
-      energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
+      energy = np.float64(conf.get_energy()[0]).astype(np_dtype).tostring()
       forces_raw = conf.get_forces().astype(np_dtype).tostring()
 
       example = tf.train.Example(features=tf.train.Features(feature={
@@ -264,6 +264,47 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
     writer.close()
 
   return fname
+
+
+def write_tfrecords(writer, conf, descriptor, do_normalize, np_dtype,
+    mean=None, std=None, zeta=None, dzetadr=None):
+  """ Write data to tfrecords format."""
+
+  # descriptor features
+  num_descriptors = descriptor.get_num_descriptors()
+  if zeta is None or dzetadr is None:
+    zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+
+  # do centering and normalization if needed
+  if do_normalize:
+    std_3d = np.atleast_3d(std)
+    zeta = (zeta - mean) / std
+    dzetadr = dzetadr / std_3d
+  zeta_raw = zeta.astype(np_dtype).tostring()
+  dzetadr_raw = dzetadr.astype(np_dtype).tostring()
+
+  # configuration features
+  name = conf.get_id()
+  num_atoms = conf.get_num_atoms()
+  coords_raw = conf.get_coords().astype(np_dtype).tostring()
+  energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
+  forces_raw = conf.get_forces().astype(np_dtype).tostring()
+
+  example = tf.train.Example(features=tf.train.Features(feature={
+    # meta data
+    'num_descriptors': _int64_feature(num_descriptors),
+    # input data
+    'name': _bytes_feature(name),
+    'num_atoms': _int64_feature(num_atoms),
+    'atomic_coords': _bytes_feature(coords_raw),
+    'gen_coords': _bytes_feature(zeta_raw),
+    'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
+    # labels
+    'energy': _bytes_feature(energy),
+    'forces': _bytes_feature(forces_raw)
+  }))
+
+  writer.write(example.SerializeToString())
 
 
 def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
@@ -378,7 +419,6 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
           all_zeta.append(zeta)
           all_dzetadr.append(dzetadr)
       std = np.sqrt(M2/(n-1))
-      std_3d = np.atleast_3d(std)
 
       # write mean and std to file, such that it can be used in the KIM ANN model
       with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
@@ -390,6 +430,9 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
         for i in std:
           fout.write('{:24.16e}\n'.format(i))
     else:
+      mean = None
+      std = None
+
       # we write empty info to this file
       with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
         fout.write('False\n')
@@ -401,39 +444,13 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
     for i,idx in enumerate(tr_indices):
       print('Processing configuration:', i)
       conf = configs[idx]
-
       if do_normalize and do_record:
         zeta = all_zeta[i]
         dzetadr = all_dzetadr[i]
       else:
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
-
-      num_atoms = conf.get_num_atoms()
-      num_descriptors = descriptor.get_num_descriptors()
-      # do the actual centering and normalization if needed
-      if do_normalize:
-        zeta = (zeta - mean) / std
-        dzetadr = dzetadr / std_3d
-      zeta_raw = zeta.astype(np_dtype).tostring()
-      dzetadr_raw = dzetadr.astype(np_dtype).tostring()
-      coords_raw = conf.get_coords().astype(np_dtype).tostring()
-      energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
-      forces_raw = conf.get_forces().astype(np_dtype).tostring()
-
-      example = tf.train.Example(features=tf.train.Features(feature={
-        # meta data
-        'num_atoms': _int64_feature(num_atoms),
-        'num_descriptors': _int64_feature(num_descriptors),
-        # input data
-        'atomic_coords': _bytes_feature(coords_raw),
-        'gen_coords': _bytes_feature(zeta_raw),
-        'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
-        # labels
-        'energy': _bytes_feature(energy),
-        'forces': _bytes_feature(forces_raw)
-      }))
-
-      tr_writer.write(example.SerializeToString())
+        zeta = None
+        dzetadr = None
+      write_tfrecords(tr_writer,conf,descriptor,do_normalize,np_dtype,mean,std,zeta,dzetadr)
     tr_writer.close()
 
 
@@ -444,34 +461,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
       for i,idx in enumerate(va_indices):
         print('Processing configuration:', i)
         conf = configs[idx]
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
-
-        num_atoms = conf.get_num_atoms()
-        num_descriptors = descriptor.get_num_descriptors()
-        # do the actual centering and normalization if needed
-        if do_normalize:
-          zeta = (zeta - mean) / std
-          dzetadr = dzetadr / std_3d
-        zeta_raw = zeta.astype(np_dtype).tostring()
-        dzetadr_raw = dzetadr.astype(np_dtype).tostring()
-        coords_raw = conf.get_coords().astype(np_dtype).tostring()
-        energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
-        forces_raw = conf.get_forces().astype(np_dtype).tostring()
-
-        example = tf.train.Example(features=tf.train.Features(feature={
-          # meta data
-          'num_atoms': _int64_feature(num_atoms),
-          'num_descriptors': _int64_feature(num_descriptors),
-          # input data
-          'atomic_coords': _bytes_feature(coords_raw),
-          'gen_coords': _bytes_feature(zeta_raw),
-          'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
-          # labels
-          'energy': _bytes_feature(energy),
-          'forces': _bytes_feature(forces_raw)
-        }))
-
-        va_writer.write(example.SerializeToString())
+        write_tfrecords(va_writer,conf,descriptor,do_normalize,np_dtype,mean,std,None,None)
       va_writer.close()
 
   return tr_name, va_name
@@ -539,9 +529,9 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
     # compute mean and standard deviation of training set
     if do_normalize:
 
-      # read mean and std from validation data
+      # read mean and std from training data
       if trainset_directory is None:
-        raise Exception("Mean and standard deviation file `train_set_directory' not provided.")
+        raise Exception("Mean and standard deviation file `trainset_directory' not provided.")
       else:
         size = None
         data = []
@@ -560,8 +550,6 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
               data.append(float(line))
           mean = np.array(data[:size])
           std = np.array(data[size:])
-          std_3d = np.atleast_3d(std)
-
 
       # expected number of features
       conf = configs[0]
@@ -573,43 +561,18 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
             "Expected number of descriptors is {1}, while it is {2} from "
             "`{0}/mean_and_standard_for_kim_ann'.".format(trainset_directory,
             size_expected, size))
+    else:
+      mean = None
+      std = None
+
 
     # write test data to TFRecords
     print('\nWrining test tfRecords data as: {}'.format(te_name))
     te_writer = tf.python_io.TFRecordWriter(te_name)
-
     for i,idx in enumerate(te_indices):
       print('Processing configuration:', i)
-
       conf = configs[idx]
-      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
-
-      num_atoms = conf.get_num_atoms()
-      num_descriptors = descriptor.get_num_descriptors()
-      # do the actual centering and normalization if needed
-      if do_normalize:
-        zeta = (zeta - mean) / std
-        dzetadr = dzetadr / std_3d
-      zeta_raw = zeta.astype(np_dtype).tostring()
-      dzetadr_raw = dzetadr.astype(np_dtype).tostring()
-      coords_raw = conf.get_coords().astype(np_dtype).tostring()
-      energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
-      forces_raw = conf.get_forces().astype(np_dtype).tostring()
-
-      example = tf.train.Example(features=tf.train.Features(feature={
-        # meta data
-        'num_atoms': _int64_feature(num_atoms),
-        'num_descriptors': _int64_feature(num_descriptors),
-        # input data
-        'atomic_coords': _bytes_feature(coords_raw),
-        'gen_coords': _bytes_feature(zeta_raw),
-        'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
-        # labels
-        'energy': _bytes_feature(energy),
-        'forces': _bytes_feature(forces_raw)
-      }))
-
-      te_writer.write(example.SerializeToString())
+      write_tfrecords(te_writer,conf,descriptor,do_normalize,np_dtype,mean,std,None,None)
     te_writer.close()
 
   return te_name
@@ -621,9 +584,10 @@ def _parse_function(example_proto):
   """
   features = {
       # meta data
-      'num_atoms': tf.FixedLenFeature((), tf.int64),
       'num_descriptors': tf.FixedLenFeature((), tf.int64),
       # input data
+      'name': tf.FixedLenFeature((), tf.string),
+      'num_atoms': tf.FixedLenFeature((), tf.int64),
       'atomic_coords': tf.FixedLenFeature((), tf.string),
       'gen_coords': tf.FixedLenFeature((), tf.string),
       'dgen_datomic_coords': tf.FixedLenFeature((), tf.string),
@@ -633,9 +597,11 @@ def _parse_function(example_proto):
       }
   parsed_features = tf.parse_single_example(example_proto, features)
 
-  num_atoms = tf.cast(parsed_features['num_atoms'], tf.int32)
+  # meta
   num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int32)
-  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
+  # input
+  num_atoms = tf.cast(parsed_features['num_atoms'], tf.int32)
+  name = parsed_features['name']
 
   # shape of tensors
   DIM = 3
@@ -644,6 +610,7 @@ def _parse_function(example_proto):
   shape3 = [num_atoms, num_descriptors, num_atoms*DIM]
 
   # input
+  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
   atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
   atomic_coords = tf.reshape(atomic_coords, shape1)
   gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
@@ -651,11 +618,11 @@ def _parse_function(example_proto):
   dgen_datomic_coords = tf.decode_raw(parsed_features['dgen_datomic_coords'], dtype)
   dgen_datomic_coords = tf.reshape(dgen_datomic_coords, shape3)
   # labels
-  energy = tf.decode_raw(parsed_features['energy'], dtype)
+  energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
   forces = tf.decode_raw(parsed_features['forces'], dtype)
   forces = tf.reshape(forces, shape1)
 
-  return num_atoms, atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
+  return  name, num_atoms, atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
 
 
 def read_from_tfrecords(fname, dtype=tf.float32):

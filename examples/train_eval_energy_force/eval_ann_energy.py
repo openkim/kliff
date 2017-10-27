@@ -33,11 +33,14 @@ weights, biases = ann.parameters(num_desc, [20, 20, 1], dtype=DTYPE)
 #######################################
 # create graph
 #######################################
-atomic_coords = next_batch[0]
-gen_coords = next_batch[1]
-dgen_datomic_coords = next_batch[2]
-energy_label = next_batch[3]
-forces_label = next_batch[4]
+conf_name = next_batch[0]
+num_atoms = next_batch[1]
+atomic_coords = next_batch[2]
+gen_coords = next_batch[3]
+dgen_datomic_coords = next_batch[4]
+energy_label = next_batch[5]
+forces_label = next_batch[6]
+
 
 subloss = []
 for i in range(BATCH_SIZE):
