@@ -75,9 +75,13 @@ with tf.Session() as sess:
   merged = tf.summary.merge_all()
   train_writer = tf.summary.FileWriter('/tmp/tensorflow/validation', sess.graph)
 
-  for i in range(0, 20, 10):
-    saver.restore(sess, "/tmp/tensorflow/ckpt/model.ckpt-{}".format(i))
+  ckpt_start = 0
+  ckpt_step = 10
+  ckpt_end = 30
+  for ckpt in range(ckpt_start,ckpt_end,ckpt_step):
+    # restore check points data
+    saver.restore(sess, "/tmp/tensorflow/ckpt/model.ckpt-{}".format(ckpt))
     out, summary = sess.run([loss, merged])
     train_writer.add_summary(summary, i)
-    print('eval error, i =', i, 'loss =', out)
+    print('eval error, ckpt =', ckpt, 'loss =', out)
 

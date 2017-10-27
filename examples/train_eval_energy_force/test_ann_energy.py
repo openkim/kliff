@@ -37,8 +37,8 @@ configs = tset.get_configs()
 
 # preprocess data to generate tfrecords
 test_name = ann.convert_raw_to_tfrecords_testset(configs, desc,
-    directory='./testset_tfrecords', trainset_directory='./dataset_tfrecords',
-    do_generate=False, do_shuffle=True)
+    directory='./dataset_tfrecords',
+    do_generate=False, do_normalize=True, do_shuffle=False)
 # read data from tfrecords into tensors
 dataset = ann.read_from_tfrecords(test_name)
 # number of epoches
@@ -63,6 +63,7 @@ gen_coords = next_batch[3]
 dgen_datomic_coords = next_batch[4]
 energy_label = next_batch[5]
 forces_label = next_batch[6]
+
 
 subloss = []
 for i in range(BATCH_SIZE):
@@ -101,38 +102,15 @@ with tf.Session() as sess:
 
   # Merge all the summaries and write them out to /tmp/tensorflow/potential
   merged = tf.summary.merge_all()
-  train_writer = tf.summary.FileWriter('/tmp/tensorflow/train', sess.graph)
+  train_writer = tf.summary.FileWriter('/tmp/tensorflow/test', sess.graph)
 
-  # init global vars
-  init_op = tf.global_variables_initializer()
-  sess.run(init_op)
-
-  try:
-
-    i = 0
-    while True:
-      try:
-        sess.run(train)
-
-        if i%10 == 0:
-          out, summary = sess.run([loss, merged])
-          save_path = saver.save(sess, "/tmp/tensorflow/ckpt/model.ckpt", global_step=i)
-          train_writer.add_summary(summary, i)
-
-          # output results to a KIM model
-          w,b = sess.run([weights, biases])
-          ann.write_kim_ann(desc, w, b, tf.nn.tanh, fname='ann.params-{}'.format(i))
-
-          print ('i =',i, 'loss =', out)
-
-        i += 1
-      except tf.errors.OutOfRangeError:
-        break
-    #NOTE, we may need to run the last batch of data here
-
-  finally:
-    # output results to a KIM model
-    w,b = sess.run([weights, biases])
-    ann.write_kim_ann(desc, w, b, tf.nn.tanh)
-    print('total running time:', time.time() - start)
+  ckpt_start = 0
+  ckpt_step = 10
+  ckpt_end = 30
+  for ckpt in range(ckpt_start,ckpt_end,ckpt_step):
+    # restore check points data
+    saver.restore(sess, "/tmp/tensorflow/ckpt/model.ckpt-{}".format(ckpt))
+    out, summary = sess.run([loss, merged])
+    train_writer.add_summary(summary, i)
+    print('eval error, ckpt =', ckpt, 'loss =', out)
 
