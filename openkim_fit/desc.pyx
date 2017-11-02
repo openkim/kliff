@@ -4,7 +4,7 @@ Cython wrapper of Descriptor cpp class.
 import cython
 import numpy as np
 cimport numpy as np
-
+from libcpp cimport bool
 
 ##############################
 # cpp cython interface
@@ -13,6 +13,7 @@ cimport numpy as np
 cdef extern from "descriptor_c.h":
   cdef cppclass Descriptor:
     Descriptor() except +
+    void set_fit_forces(bool fit_forces);
     void set_cutoff(char* name, int Nspecies, double* rcuts);
     void add_descriptor(char* name, double* values, int row, int col);
     void get_generalized_coords(double* coords, int* species_code,
@@ -30,8 +31,9 @@ cdef class CythonDescriptor:
 
   cdef Descriptor c_desc      # hold a C++ instance which we're wrapping
 
-  def __cinit__(self):
+  def __cinit__(self, bool fit_forces):
     self.c_desc = Descriptor()  # the C++ instance which we'are wrapping
+    self.c_desc.set_fit_forces(fit_forces)
 
   def set_cutoff(self, char* name, int num_species,
       np.ndarray[double, ndim=2, mode="c"] rcuts not None):
@@ -59,6 +61,7 @@ cdef class CythonDescriptor:
     if d_gen_coords is None:
       d_gen_coords = np.zeros((Ncontrib, Ndescriptor, 3*Ncontrib))
 
+    # if not fit_forces, d_gen_coords will not be modified
     self.c_desc.get_generalized_coords( &coords[0], &species_code[0],
         &neighlist[0], &numneigh[0], &image[0],
         Natoms, Ncontrib, Ndescriptor,

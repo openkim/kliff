@@ -21,6 +21,7 @@ class Descriptor
     Descriptor();
 		~Descriptor();
 
+		void set_fit_forces(bool fit_forces);
 		void set_cutoff(char* name, int Nspecies, double* rcuts);
 		void add_descriptor(char* name, double* values, int row, int col);
     int get_num_descriptors();
@@ -37,6 +38,7 @@ class Descriptor
 		std::vector<int> num_param_sets_;  // number of parameter sets of each descriptor
 		std::vector<int> num_params_;      // size of parameters of each descriptor
     bool has_three_body_;
+    bool fit_forces_;
     double** rcuts_;
     double Nspecies_;
 

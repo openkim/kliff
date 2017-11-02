@@ -1,44 +1,46 @@
 from openkim_fit.descriptor import Descriptor
 from collections import OrderedDict
 
+
 def get_descriptor():
 
   cutfunc = 'cos'
-  cutvalue = {'Mo-Mo': 6.4, 'Mo-S':6.4, 'S-S': 6.4}
+  cutvalue = {'C-C': 6.4}
   desc_params = OrderedDict()
   desc_params['g2'] = [
     {'eta':0.0009, 'Rs':0.},
-    {'eta':0.01, 'Rs':0.},
-    {'eta':0.02, 'Rs':0.},
-    {'eta':0.035, 'Rs':0.},
-    {'eta':0.06, 'Rs':0.},
-    {'eta':0.1, 'Rs':0.},
-    {'eta':0.2, 'Rs':0.},
-    {'eta':0.4, 'Rs':0.}
+    {'eta':0.01,   'Rs':0.},
+    {'eta':0.02,   'Rs':0.},
+    {'eta':0.035,  'Rs':0.},
+    {'eta':0.06,   'Rs':0.},
+    {'eta':0.1,    'Rs':0.},
+    {'eta':0.2,    'Rs':0.},
+    {'eta':0.4,    'Rs':0.}
   ]
+
   desc_params['g4'] = [
-    {'zeta':0.0001, 'lambda':-1, 'eta':1},
-    {'zeta':0.0001, 'lambda':1, 'eta':1},
-    {'zeta':0.0001, 'lambda':-1, 'eta':2},
-    {'zeta':0.0001, 'lambda':1, 'eta':2},
-    {'zeta':0.003, 'lambda':-1, 'eta':1},
-    {'zeta':0.003, 'lambda':1, 'eta':1},
-    {'zeta':0.003, 'lambda':-1, 'eta':2},
-    {'zeta':0.003, 'lambda':1, 'eta':2},
-    {'zeta':0.008, 'lambda':1, 'eta':1},
-    {'zeta':0.008, 'lambda':1, 'eta':2},
-    {'zeta':0.015, 'lambda':1, 'eta':1},
-    {'zeta':0.015, 'lambda':1, 'eta':2},
-    {'zeta':0.015, 'lambda':1, 'eta':4},
-    {'zeta':0.015, 'lambda':1, 'eta':16},
-    {'zeta':0.025, 'lambda':1, 'eta':1},
-    {'zeta':0.025, 'lambda':1, 'eta':2},
-    {'zeta':0.025, 'lambda':1, 'eta':4},
-    {'zeta':0.025, 'lambda':1, 'eta':16},
-    {'zeta':0.045, 'lambda':1, 'eta':1},
-    {'zeta':0.045, 'lambda':1, 'eta':2},
-    {'zeta':0.045, 'lambda':1, 'eta':4},
-    {'zeta':0.045, 'lambda':1, 'eta':16}
+    {'zeta':1 ,  'lambda':-1, 'eta':0.0001},
+    {'zeta':1 ,  'lambda':1,  'eta':0.0001},
+    {'zeta':2 ,  'lambda':-1, 'eta':0.0001},
+    {'zeta':2 ,  'lambda':1,  'eta':0.0001},
+    {'zeta':1 ,  'lambda':-1, 'eta':0.003 },
+    {'zeta':1 ,  'lambda':1,  'eta':0.003 },
+    {'zeta':2 ,  'lambda':-1, 'eta':0.003 },
+    {'zeta':2 ,  'lambda':1,  'eta':0.003 },
+    {'zeta':1 ,  'lambda':1,  'eta':0.008 },
+    {'zeta':2 ,  'lambda':1,  'eta':0.008 },
+    {'zeta':1 ,  'lambda':1,  'eta':0.015 },
+    {'zeta':2 ,  'lambda':1,  'eta':0.015 },
+    {'zeta':4 ,  'lambda':1,  'eta':0.015 },
+    {'zeta':16,  'lambda':1,  'eta':0.015 },
+    {'zeta':1 ,  'lambda':1,  'eta':0.025 },
+    {'zeta':2 ,  'lambda':1,  'eta':0.025 },
+    {'zeta':4 ,  'lambda':1,  'eta':0.025 },
+    {'zeta':16,  'lambda':1,  'eta':0.025 },
+    {'zeta':1 ,  'lambda':1,  'eta':0.045 },
+    {'zeta':2 ,  'lambda':1,  'eta':0.045 },
+    {'zeta':4 ,  'lambda':1,  'eta':0.045 },
+    {'zeta':16,  'lambda':1,  'eta':0.045 }
   ]
 
 
@@ -47,9 +49,9 @@ def get_descriptor():
   for key, values in desc_params.iteritems():
     for val in values:
       if key == 'g2':
-        val['eta'] *= bhor2ang**2
+        val['eta'] /= bhor2ang**2       # note eta is with units of Length^-2
       elif key == 'g4':
-        val['eta'] *= bhor2ang**2
+        val['eta'] /= bhor2ang**2
 
   num_g2 = len(desc_params['g2'])
   num_g4 = len(desc_params['g4'])

@@ -167,7 +167,7 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
     if not os.path.exists(directory):
       os.makedirs(directory)
 
-    print('\nWrining tfRecords of "{}" data as: {}'.format(name, fname))
+    print('\nWriting tfRecords of "{}" data as: {}'.format(name, fname))
     writer = tf.python_io.TFRecordWriter(fname)
 
     # determine the data type
@@ -441,7 +441,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
 
 
     # write training data to TFRecords
-    print('\nWrining training tfRecords data as: {}'.format(tr_name))
+    print('\nWriting training tfRecords data as: {}'.format(tr_name))
     tr_writer = tf.python_io.TFRecordWriter(tr_name)
     for i,idx in enumerate(tr_indices):
       print('Processing configuration:', i)
@@ -458,7 +458,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
 
     # write validation data to TFRecords
     if va_indices.size != 0:
-      print('\nWrining validation tfRecords data as: {}'.format(va_name))
+      print('\nWriting validation tfRecords data as: {}'.format(va_name))
       va_writer = tf.python_io.TFRecordWriter(va_name)
       for i,idx in enumerate(va_indices):
         print('Processing configuration:', i)
@@ -549,13 +549,13 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
         raise Exception("Wrong mean and stdandard info file from directoy `{0}'. "
             "Expected number of descriptors is {1}, while it is {2} from "
             "`{0}/mean_and_standard_for_kim_ann'.".format(directory,
-            size_expected, size))
+            expected_size, size))
     else:
       mean = None
       std = None
 
     # write test data to TFRecords
-    print('\nWrining test tfRecords data as: {}'.format(te_name))
+    print('\nWriting test tfRecords data as: {}'.format(te_name))
     te_writer = tf.python_io.TFRecordWriter(te_name)
     for i,idx in enumerate(te_indices):
       print('Processing configuration:', i)

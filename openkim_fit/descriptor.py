@@ -36,13 +36,13 @@ class Descriptor:
       }
   """
 
-  def __init__(self,cutname, cutvalue, hyperparams):
+  def __init__(self,cutname, cutvalue, hyperparams, fit_forces=False):
 
     self._desc = OrderedDict()
     self._cutname = cutname.lower()
     self._rcut = generate_full_cutoff(cutvalue)
     self._species_code = dict()
-    self._cdesc = CythonDescriptor()
+    self._cdesc = CythonDescriptor(fit_forces)
 
     # check cutoff support
     if self._cutname not in ['cos', 'exp']:

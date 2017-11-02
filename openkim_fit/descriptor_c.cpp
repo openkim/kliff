@@ -6,13 +6,18 @@ typedef double VectorOfSizeDIM[3];
 
 
 Descriptor::Descriptor(){
-    has_three_body_ = false;
-  }
+  has_three_body_ = false;
+}
 
 Descriptor::~Descriptor() {
 	for (size_t i=0; i<params_.size(); i++) {
 		Deallocate2DArray(params_.at(i));
 	}
+}
+
+void Descriptor::set_fit_forces(bool fit_forces)
+{
+  fit_forces_ = fit_forces;
 }
 
 void Descriptor::set_cutoff(char* name, int Nspecies, double* rcuts)
@@ -136,25 +141,39 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
           double gc;
           double dgcdr_two;
           if (name_[p] == "g1") {
-            sym_d_g1(rijmag, rcutij, gc, dgcdr_two);
+            if (fit_forces_) {
+              sym_d_g1(rijmag, rcutij, gc, dgcdr_two);
+            } else {
+              sym_g1(rijmag, rcutij, gc);
+            }
           }
           else if (name_[p] == "g2") {
             double eta = params_[p][q][0];
             double Rs = params_[p][q][1];
-            sym_d_g2(eta, Rs, rijmag, rcutij, gc, dgcdr_two);
+            if (fit_forces_) {
+              sym_d_g2(eta, Rs, rijmag, rcutij, gc, dgcdr_two);
+            } else {
+              sym_g2(eta, Rs, rijmag, rcutij, gc);
+            }
           }
           else if (name_[p] == "g3") {
             double kappa = params_[p][q][0];
-            sym_d_g3(kappa, rijmag, rcutij, gc, dgcdr_two);
+            if (fit_forces_) {
+              sym_d_g3(kappa, rijmag, rcutij, gc, dgcdr_two);
+            } else {
+              sym_g3(kappa, rijmag, rcutij, gc);
+            }
           }
 
           // generalzied coords and derivative
           gen_coords[i*Ndescriptor+idx] += gc;
-          for (int kdim = 0; kdim < DIM; ++kdim) {
-            double pair = dgcdr_two*rij[kdim]/rijmag;
-            int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
-            d_gen_coords[page + i*DIM+kdim] += pair;
-            d_gen_coords[page + image[j]*DIM+kdim] -= pair;
+          if (fit_forces_) {
+            for (int kdim = 0; kdim < DIM; ++kdim) {
+              double pair = dgcdr_two*rij[kdim]/rijmag;
+              int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
+              d_gen_coords[page + i*DIM+kdim] += pair;
+              d_gen_coords[page + image[j]*DIM+kdim] -= pair;
+            }
           }
           idx += 1;
 
@@ -204,25 +223,35 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
               double zeta = params_[p][q][0];
               double lambda = params_[p][q][1];
               double eta = params_[p][q][2];
-              sym_d_g4(zeta, lambda, eta, rvec, rcutvec, gc, dgcdr_three);
+              if (fit_forces_) {
+                sym_d_g4(zeta, lambda, eta, rvec, rcutvec, gc, dgcdr_three);
+              } else {
+                sym_g4(zeta, lambda, eta, rvec, rcutvec, gc);
+              }
             }
             else if (name_[p] == "g5") {
               double zeta = params_[p][q][0];
               double lambda = params_[p][q][1];
               double eta = params_[p][q][2];
-              sym_d_g5(zeta, lambda, eta, rvec, rcutvec, gc, dgcdr_three);
+              if (fit_forces_) {
+                sym_d_g5(zeta, lambda, eta, rvec, rcutvec, gc, dgcdr_three);
+              } else {
+                sym_g5(zeta, lambda, eta, rvec, rcutvec, gc);
+              }
             }
 
             // generalzied coords and derivatives
             gen_coords[i*Ndescriptor+idx] += gc;
-            int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
-            for (int kdim = 0; kdim < DIM; ++kdim) {
-              double pair_ij = dgcdr_three[0]*rij[kdim]/rijmag;
-              double pair_ik = dgcdr_three[1]*rik[kdim]/rikmag;
-              double pair_jk = dgcdr_three[2]*rjk[kdim]/rjkmag;
-              d_gen_coords[page + i*DIM+kdim] += pair_ij + pair_ik;
-              d_gen_coords[page + image[j]*DIM+kdim] += -pair_ij + pair_jk;
-              d_gen_coords[page + image[k]*DIM+kdim] += -pair_ik - pair_jk;
+            if (fit_forces_) {
+              int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
+              for (int kdim = 0; kdim < DIM; ++kdim) {
+                double pair_ij = dgcdr_three[0]*rij[kdim]/rijmag;
+                double pair_ik = dgcdr_three[1]*rik[kdim]/rikmag;
+                double pair_jk = dgcdr_three[2]*rjk[kdim]/rjkmag;
+                d_gen_coords[page + i*DIM+kdim] += pair_ij + pair_ik;
+                d_gen_coords[page + image[j]*DIM+kdim] += -pair_ij + pair_jk;
+                d_gen_coords[page + image[k]*DIM+kdim] += -pair_ik - pair_jk;
+              }
             }
             idx += 1;
 
