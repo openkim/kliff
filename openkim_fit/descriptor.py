@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 from neighbor import NeighborList
 from error import UnsupportedError
-from desc import CythonDescriptor
+import desc
 
 
 class Descriptor:
@@ -36,13 +36,13 @@ class Descriptor:
       }
   """
 
-  def __init__(self,cutname, cutvalue, hyperparams, fit_forces=False):
+  def __init__(self, cutname, cutvalue, hyperparams, fit_forces=False):
 
     self._desc = OrderedDict()
     self._cutname = cutname.lower()
     self._rcut = generate_full_cutoff(cutvalue)
     self._species_code = dict()
-    self._cdesc = CythonDescriptor(fit_forces)
+    self._cdesc = desc.Descriptor(fit_forces)
 
     # check cutoff support
     if self._cutname not in ['cos', 'exp']:
@@ -56,14 +56,14 @@ class Descriptor:
     num_species = len(species)
 
     # create integer code for each species type and cutoff values based on species code
-    rcutsym = np.zeros([num_species, num_species])
+    rcutsym = np.zeros([num_species, num_species], dtype=np.double)
     for i,si in enumerate(species):
       self._species_code[si] = i
       for j,sj in enumerate(species):
         rcutsym[i][j] = self._rcut[si+'-'+sj]
 
     # store cutoff values in cpp class
-    self._cdesc.set_cutoff('cos', num_species, rcutsym)
+    self._cdesc.set_cutoff('cos', rcutsym)
 
     # hyperparams of descriptors
     for key, values in hyperparams.iteritems():
@@ -75,11 +75,11 @@ class Descriptor:
       if name == 'g1':
         rows = 1
         cols = 1
-        params = np.zeros([1,1])  # it has no hyperparams, zeros([1,1]) for placeholder
+        params = np.zeros([1,1], dtype=np.double)  # it has no hyperparams, zeros([1,1]) for placeholder
       else:
         rows = len(values)
         cols = len(values[0])
-        params = np.zeros([rows,cols])
+        params = np.zeros([rows,cols], dtype=np.double)
         for i,line in enumerate(values):
           if name == 'g2':
             params[i][0] = line['eta']
@@ -97,7 +97,7 @@ class Descriptor:
 
       # store cutoff values in both this python and cpp class
       self._desc[name] = params
-      self._cdesc.add_descriptor(name, params, rows, cols)
+      self._cdesc.add_descriptor(name, params)
 
 
   def generate_generalized_coords(self, conf):
@@ -132,9 +132,9 @@ class Descriptor:
     # loop to set up generalized coords
     Ndesc = self.get_num_descriptors()
 
-    gen_coords, d_gen_coords = self._cdesc.generate_generalized_coords(coords,
-        species_code.astype('int32'), neighlist.astype('int32'),
-        numneigh.astype('int32'), image.astype('int32'),
+    gen_coords, d_gen_coords = self._cdesc.get_generalized_coords(coords.astype(np.double),
+        species_code.astype(np.intc), neighlist.astype(np.intc),
+        numneigh.astype(np.intc), image.astype(np.intc),
         Natoms, Ncontrib, Ndesc)
 
     return gen_coords, d_gen_coords

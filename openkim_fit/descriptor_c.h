@@ -18,10 +18,9 @@ typedef double (*dCutoffFunction)(double r, double rcut);
 class Descriptor
 {
   public:
-    Descriptor();
+    Descriptor(bool fit_forces);
 		~Descriptor();
 
-		void set_fit_forces(bool fit_forces);
 		void set_cutoff(char* name, int Nspecies, double* rcuts);
 		void add_descriptor(char* name, double* values, int row, int col);
     int get_num_descriptors();

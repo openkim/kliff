@@ -5,7 +5,8 @@
 typedef double VectorOfSizeDIM[3];
 
 
-Descriptor::Descriptor(){
+Descriptor::Descriptor(bool fit_forces){
+  fit_forces_ = fit_forces;
   has_three_body_ = false;
 }
 
@@ -13,11 +14,6 @@ Descriptor::~Descriptor() {
 	for (size_t i=0; i<params_.size(); i++) {
 		Deallocate2DArray(params_.at(i));
 	}
-}
-
-void Descriptor::set_fit_forces(bool fit_forces)
-{
-  fit_forces_ = fit_forces;
 }
 
 void Descriptor::set_cutoff(char* name, int Nspecies, double* rcuts)

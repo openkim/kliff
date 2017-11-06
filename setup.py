@@ -26,6 +26,27 @@ def tf_extra_compile_args():
   return args + args_gcc5
 
 
+def get_extra_compile_args():
+  return ['-std=c++11']
+
+
+class get_pybind11_includes(object):
+  """Helper class to determine the pybind11 include path
+
+  The purpose of this class is to postpone importing pybind11 until it is actually
+  installed, so that the ``get_include()`` method can be invoked.
+
+  Borrowd from: https://github.com/pybind/python_example/blob/master/setup.py
+  """
+
+  def __init__(self, user=False):
+    self.user = user
+
+  def __str__(self):
+    import pybind11
+    return pybind11.get_include(self.user)
+
+
 tf_module = Extension('tensorflow_op.int_pot_op',
    sources = ['tensorflow_op/int_pot_op.cpp'],
    include_dirs = [tf_includes()],
@@ -38,8 +59,9 @@ tf_module = Extension('tensorflow_op.int_pot_op',
 
 
 desc_module = Extension('desc',
-    sources=['openkim_fit/desc.pyx', 'openkim_fit/descriptor_c.cpp'],
-    include_dirs = [numpy.get_include()],
+    sources = ['openkim_fit/descriptor_bind.cpp', 'openkim_fit/descriptor_c.cpp'],
+    include_dirs = [get_pybind11_includes(), get_pybind11_includes(user=True)],
+    extra_compile_args = get_extra_compile_args(),
     language = 'c++',
     )
 
@@ -54,7 +76,7 @@ setup(name='openkim_fit',
     package_data={'geolm':['_geodesiclm.so']},
     ext_modules=[tf_module, desc_module],
     install_requires = ['scipy'],
-    setup_requires = ['numpy'],
+    setup_requires = ['numpy', 'pybind11>=2.2'],
     zip_safe = False,
     )
 
