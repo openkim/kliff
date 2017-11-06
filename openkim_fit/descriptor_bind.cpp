@@ -11,7 +11,6 @@ PYBIND11_MODULE(desc, m) {
 
   py::class_<Descriptor>(m, "Descriptor")
     .def(py::init<bool>())
-    .def("set_fit_forces", &Descriptor::set_fit_forces)
     .def("get_num_descriptors", &Descriptor::get_num_descriptors)
     .def("set_cutoff",
       [](Descriptor &d, char* name, py::array_t<double> rcuts) {
