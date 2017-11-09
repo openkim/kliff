@@ -18,7 +18,7 @@ typedef double (*dCutoffFunction)(double r, double rcut);
 class Descriptor
 {
   public:
-    Descriptor(bool fit_forces);
+    Descriptor();
 		~Descriptor();
 
 		void set_cutoff(char* name, int Nspecies, double* rcuts);
@@ -26,7 +26,7 @@ class Descriptor
     int get_num_descriptors();
     void get_generalized_coords(double* coords, int* species_code, int* neighlist,
         int* numneigh, int* image, int Natoms, int Ncontrib, int Ndescriptor,
-        double* gen_coords, double* d_gen_coords);
+        double* gen_coords, double* d_gen_coords = nullptr);
 
 
 	private:
@@ -37,7 +37,6 @@ class Descriptor
 		std::vector<int> num_param_sets_;  // number of parameter sets of each descriptor
 		std::vector<int> num_params_;      // size of parameters of each descriptor
     bool has_three_body_;
-    bool fit_forces_;
     double** rcuts_;
     double Nspecies_;
 

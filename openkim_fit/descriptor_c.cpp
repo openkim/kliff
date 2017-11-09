@@ -5,8 +5,7 @@
 typedef double VectorOfSizeDIM[3];
 
 
-Descriptor::Descriptor(bool fit_forces){
-  fit_forces_ = fit_forces;
+Descriptor::Descriptor(){
   has_three_body_ = false;
 }
 
@@ -91,6 +90,8 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
     int* neighlist, int* numneigh, int* image, int Natoms, int Ncontrib,
     int Ndescriptor, double* gen_coords, double* d_gen_coords) {
 
+  bool fit_forces = (d_gen_coords != nullptr);
+
   // prepare data
   VectorOfSizeDIM* coordinates = (VectorOfSizeDIM*) coords;
 
@@ -137,7 +138,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
           double gc;
           double dgcdr_two;
           if (name_[p] == "g1") {
-            if (fit_forces_) {
+            if (fit_forces) {
               sym_d_g1(rijmag, rcutij, gc, dgcdr_two);
             } else {
               sym_g1(rijmag, rcutij, gc);
@@ -146,7 +147,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
           else if (name_[p] == "g2") {
             double eta = params_[p][q][0];
             double Rs = params_[p][q][1];
-            if (fit_forces_) {
+            if (fit_forces) {
               sym_d_g2(eta, Rs, rijmag, rcutij, gc, dgcdr_two);
             } else {
               sym_g2(eta, Rs, rijmag, rcutij, gc);
@@ -154,7 +155,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
           }
           else if (name_[p] == "g3") {
             double kappa = params_[p][q][0];
-            if (fit_forces_) {
+            if (fit_forces) {
               sym_d_g3(kappa, rijmag, rcutij, gc, dgcdr_two);
             } else {
               sym_g3(kappa, rijmag, rcutij, gc);
@@ -163,7 +164,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
 
           // generalzied coords and derivative
           gen_coords[i*Ndescriptor+idx] += gc;
-          if (fit_forces_) {
+          if (fit_forces) {
             for (int kdim = 0; kdim < DIM; ++kdim) {
               double pair = dgcdr_two*rij[kdim]/rijmag;
               int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
@@ -219,7 +220,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
               double zeta = params_[p][q][0];
               double lambda = params_[p][q][1];
               double eta = params_[p][q][2];
-              if (fit_forces_) {
+              if (fit_forces) {
                 sym_d_g4(zeta, lambda, eta, rvec, rcutvec, gc, dgcdr_three);
               } else {
                 sym_g4(zeta, lambda, eta, rvec, rcutvec, gc);
@@ -229,7 +230,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
               double zeta = params_[p][q][0];
               double lambda = params_[p][q][1];
               double eta = params_[p][q][2];
-              if (fit_forces_) {
+              if (fit_forces) {
                 sym_d_g5(zeta, lambda, eta, rvec, rcutvec, gc, dgcdr_three);
               } else {
                 sym_g5(zeta, lambda, eta, rvec, rcutvec, gc);
@@ -238,7 +239,7 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
 
             // generalzied coords and derivatives
             gen_coords[i*Ndescriptor+idx] += gc;
-            if (fit_forces_) {
+            if (fit_forces) {
               int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
               for (int kdim = 0; kdim < DIM; ++kdim) {
                 double pair_ij = dgcdr_three[0]*rij[kdim]/rijmag;

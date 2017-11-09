@@ -126,7 +126,7 @@ def _float_feature(value):
   return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
 def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
-    do_generate=True, do_normalize=True, do_record=False, dtype=tf.float32):
+    do_generate=True, do_normalize=True, do_record=False, fit_forces=True, dtype=tf.float32):
   """Preprocess the data to generate the generalized coords and its derivatives,
   and store them, together with coords, and label as tfRecord binary.
 
@@ -186,7 +186,7 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
 
       # number of features
       conf = configs[0]
-      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+      zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
       size = zeta.shape[1]
 
       # starting Welford's method
@@ -198,7 +198,7 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
         all_dzetadr = []
       for i,conf in enumerate(configs):
         print('Processing configuration:', i)
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
         for row in zeta:
           n += 1
           delta =  row - mean
@@ -234,7 +234,7 @@ def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
         zeta = all_zeta[i]
         dzetadr = all_dzetadr[i]
       else:
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+        zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
 
       num_atoms = conf.get_num_atoms()
       num_descriptors = descriptor.get_num_descriptors()
@@ -274,7 +274,7 @@ def write_tfrecords(writer, conf, descriptor, do_normalize, np_dtype,
   # descriptor features
   num_descriptors = descriptor.get_num_descriptors()
   if zeta is None or dzetadr is None:
-    zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+    zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
 
   # do centering and normalization if needed
   if do_normalize:
@@ -308,7 +308,7 @@ def write_tfrecords(writer, conf, descriptor, do_normalize, np_dtype,
   writer.write(example.SerializeToString())
 
 
-def welford_mean_and_std(configs, descriptor):
+def welford_mean_and_std(configs, descriptor, fit_forces):
   """Compute the mean and standard deviation of generalized coords.
 
   This running mean and standard method proposed by Welford is memory-efficient.
@@ -321,7 +321,7 @@ def welford_mean_and_std(configs, descriptor):
 
   # number of features
   conf = configs[0]
-  zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+  zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
   size = zeta.shape[1]
 
   # starting Welford's method
@@ -329,7 +329,7 @@ def welford_mean_and_std(configs, descriptor):
   mean = np.zeros(size)
   M2 = np.zeros(size)
   for i,conf in enumerate(configs):
-    zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+    zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
     for row in zeta:
       n += 1
       delta =  row - mean
@@ -345,11 +345,11 @@ def welford_mean_and_std(configs, descriptor):
   return mean, std
 
 
-def numpy_mean_and_std(configs, descriptor, nprocs=mp.cpu_count()):
+def numpy_mean_and_std(configs, descriptor, fit_forces, nprocs=mp.cpu_count()):
   """Compute the mean and standard deviation of generalized coords."""
 
   try:
-    rslt = parallel.parmap(descriptor.generate_generalized_coords, configs, nprocs=nprocs)
+    rslt = parallel.parmap(descriptor.generate_generalized_coords, configs, nprocs, fit_forces)
     all_zeta = np.array([pair[0] for pair in rslt])
     all_dzetadr = np.array([pair[1] for pair in rslt])
     stacked = np.concatenate(all_zeta)
@@ -364,7 +364,7 @@ def numpy_mean_and_std(configs, descriptor, nprocs=mp.cpu_count()):
 #    all_zeta = []
 #    all_dzetadr = []
 #    for conf in configs:
-#      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+#      zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
 #      all_zeta.append(zeta)
 #      all_dzetadr.append(dzetadr)
 #    stacked = np.concatenate(all_zeta)
@@ -379,7 +379,7 @@ def numpy_mean_and_std(configs, descriptor, nprocs=mp.cpu_count()):
 
 def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
     directory='/tmp/data', do_generate=False, do_normalize=True, do_shuffle=True,
-    use_welford=False, nprocs=mp.cpu_count(), dtype=tf.float32):
+    use_welford=False, fit_forces=True, nprocs=mp.cpu_count(), dtype=tf.float32):
   """Preprocess the data to generate the generalized coords and its derivatives,
   and store them, together with coords, and label as tfRecord binary.
 
@@ -466,9 +466,9 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
 
       # compute mean and standard deviation of each feature of training set
       if use_welford:
-        mean,std = welford_mean_and_std(tr_configs, descriptor)
+        mean,std = welford_mean_and_std(tr_configs, descriptor, fit_forces)
       else:
-        mean,std,all_zeta,all_dzetadr = numpy_mean_and_std(tr_configs, descriptor, nprocs)
+        mean,std,all_zeta,all_dzetadr = numpy_mean_and_std(tr_configs, descriptor, nprocs, fit_forces)
 
       # write mean and std to file, such that it can be used in the KIM ANN model
       with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
@@ -522,7 +522,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
 
 
 def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
-    do_generate=True, do_normalize=True, do_shuffle=False, dtype=tf.float32):
+    do_generate=True, do_normalize=True, do_shuffle=False, fit_forces=True, dtype=tf.float32):
   """Preprocess the testset data to generate the generalized coords and its
   derivatives, and store them, together with coords and label as tfRecord binary.
 
@@ -594,7 +594,7 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
 
       # expected number of features
       conf = configs[0]
-      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+      zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
       expected_size = zeta.shape[1]
 
       if size != expected_size:
@@ -707,7 +707,7 @@ def input_layer_given_data(coords, zeta, dzetadr, num_descriptor=None,
 
 
 #  The following three methods. to built data into graphDef, OK and fast for small data set
-def preprocess(configs, descriptor):
+def preprocess(configs, descriptor, fit_forces=True):
   """Preprocess the data to generate the generalized coords and its derivatives.
 
   Parameter
@@ -722,7 +722,7 @@ def preprocess(configs, descriptor):
   all_dzetadr = []
   for i,conf in enumerate(configs):
     print('Preprocessing configuration:', i)
-    zeta,dzetadr = descriptor.generate_generalized_coords(conf)
+    zeta,dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
     all_zeta.append(zeta)
     all_dzetadr.append(dzetadr)
   all_zeta_concatenated = np.concatenate(all_zeta)
@@ -764,7 +764,7 @@ def input_layer_using_preprocessed(zeta, dzetadr, layer_name='input_layer',
     return input,coords
 
 
-def input_layer(config, descriptor, dtype=tf.float32):
+def input_layer(config, descriptor, fit_forces=True, dtype=tf.float32):
   """Reusable code for making an input layer for a configuration."""
 
   # write a file to inform that no centering and normaling is used
@@ -774,7 +774,7 @@ def input_layer(config, descriptor, dtype=tf.float32):
   layer_name = os.path.splitext(os.path.basename(config.id))[0]
   # need to return a tensor of coords since we want to take derivaives w.r.t it
   coords = tf.constant(config.get_coords(), dtype)
-  zeta,dzetadr = descriptor.generate_generalized_coords(config)
+  zeta,dzetadr = descriptor.generate_generalized_coords(config, fit_forces)
 
   with tf.name_scope(layer_name):
     input, dummy = int_pot(coords = coords, zeta=tf.constant(zeta, dtype),

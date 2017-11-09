@@ -8,12 +8,12 @@ import multiprocessing as mp
 
 def fun(f, q_in, q_out):
   while True:
-    i, x = q_in.get()
+    i, x, args = q_in.get()
     if i is None:
       break
-    q_out.put((i, f(x)))
+    q_out.put((i, f(x, args[0])))
 
-def parmap(f, X, nprocs=mp.cpu_count()):
+def parmap(f, X, nprocs, *args):
   q_in = mp.Queue(1)
   q_out = mp.Queue()
 
@@ -22,8 +22,8 @@ def parmap(f, X, nprocs=mp.cpu_count()):
     p.daemon = True
     p.start()
 
-  sent = [q_in.put((i, x)) for i, x in enumerate(X)]
-  [q_in.put((None, None)) for _ in range(nprocs)]
+  sent = [q_in.put((i, x, args)) for i, x in enumerate(X)]
+  [q_in.put((None, None, None)) for _ in range(nprocs)]
   res = [q_out.get() for _ in range(len(sent))]
 
   [p.join() for p in proc]
@@ -33,8 +33,9 @@ def parmap(f, X, nprocs=mp.cpu_count()):
 
 if __name__ == '__main__':
 
-  def sq_cub(i):
-    return i**2, i**3
+  def sq_cub(i, plus):
+    return i**2+plus, i**3+plus
 
-  rslt = parmap(sq_cub, [1, 2, 3, 4, 6, 7, 8], nprocs=2)
+
+  rslt = parmap(sq_cub, [1, 2, 3, 4, 6, 7, 8], 2, 4)
   print rslt

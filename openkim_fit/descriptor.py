@@ -36,13 +36,13 @@ class Descriptor:
       }
   """
 
-  def __init__(self, cutname, cutvalue, hyperparams, fit_forces=False):
+  def __init__(self, cutname, cutvalue, hyperparams):
 
     self._desc = OrderedDict()
     self._cutname = cutname.lower()
     self._rcut = generate_full_cutoff(cutvalue)
     self._species_code = dict()
-    self._cdesc = desc.Descriptor(fit_forces)
+    self._cdesc = desc.Descriptor()
 
     # check cutoff support
     if self._cutname not in ['cos', 'exp']:
@@ -100,7 +100,7 @@ class Descriptor:
       self._cdesc.add_descriptor(name, params)
 
 
-  def generate_generalized_coords(self, conf):
+  def generate_generalized_coords(self, conf, fit_forces=False):
     """Transform atomic coords to generalized coords.
 
     Parameter
@@ -108,12 +108,15 @@ class Descriptor:
 
     conf: Configuration object in which the atoms information are stored
 
+    fit_forces: bool
+      Whether to fit to forces.
+
     Returns
     -------
     gen_coords, 2D float array
       generalized coordinates of size [Ncontrib, Ndescriptors]
 
-    d_gen_coords, 3D float array
+    d_gen_coords, 3D float array (only when fit_forces is True)
       derivative of generalized coordinates w.r.t atomic coords of size
       [Ncontrib, Ndescriptors, 3*Ncontrib]
 
@@ -132,12 +135,19 @@ class Descriptor:
     # loop to set up generalized coords
     Ndesc = self.get_num_descriptors()
 
-    gen_coords, d_gen_coords = self._cdesc.get_generalized_coords(coords.astype(np.double),
-        species_code.astype(np.intc), neighlist.astype(np.intc),
-        numneigh.astype(np.intc), image.astype(np.intc),
-        Natoms, Ncontrib, Ndesc)
+    if fit_forces:
+      gen_coords, d_gen_coords = self._cdesc.get_gen_coords_and_deri(coords.astype(np.double),
+          species_code.astype(np.intc), neighlist.astype(np.intc),
+          numneigh.astype(np.intc), image.astype(np.intc),
+          Natoms, Ncontrib, Ndesc)
 
-    return gen_coords, d_gen_coords
+      return gen_coords, d_gen_coords
+    else:
+      gen_coords = self._cdesc.get_gen_coords(coords.astype(np.double),
+          species_code.astype(np.intc), neighlist.astype(np.intc),
+          numneigh.astype(np.intc), image.astype(np.intc),
+          Natoms, Ncontrib, Ndesc)
+      return gen_coords
 
 
   def get_num_descriptors(self):
