@@ -1,12 +1,13 @@
-from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import functools
-import os
+import os, sys
 import shutil
 import inspect
+import multiprocessing as mp
+import parallel
 import tensorflow_op._int_pot_grad
 path = os.path.dirname(inspect.getfile(tensorflow_op._int_pot_grad))
 int_pot_module = tf.load_op_library(path+os.path.sep+'int_pot_op.so')
@@ -307,9 +308,78 @@ def write_tfrecords(writer, conf, descriptor, do_normalize, np_dtype,
   writer.write(example.SerializeToString())
 
 
-def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
-    directory='/tmp/data', do_generate=True, do_normalize=True, do_shuffle=False,
-    do_record=False, dtype=tf.float32):
+def welford_mean_and_std(configs, descriptor):
+  """Compute the mean and standard deviation of generalized coords.
+
+  This running mean and standard method proposed by Welford is memory-efficient.
+  Besides, it outperforms the naive method from suffering numerical instability
+  for large dataset.
+
+  see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+  """
+#TODO parallelize this (Chan's algorithm is criticized to be unstable)
+
+  # number of features
+  conf = configs[0]
+  zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+  size = zeta.shape[1]
+
+  # starting Welford's method
+  n = 0
+  mean = np.zeros(size)
+  M2 = np.zeros(size)
+  for i,conf in enumerate(configs):
+    zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+    for row in zeta:
+      n += 1
+      delta =  row - mean
+      mean += delta/n
+      delta2 = row - mean
+      M2 += delta*delta2
+    if i%100 == 0:
+      print('Processing training example:', i)
+      sys.stdout.flush()
+  std = np.sqrt(M2/(n-1))
+  print('Processing {} configurations finished.\n'.format(i+1))
+
+  return mean, std
+
+
+def numpy_mean_and_std(configs, descriptor, nprocs=mp.cpu_count()):
+  """Compute the mean and standard deviation of generalized coords."""
+
+  try:
+    rslt = parallel.parmap(descriptor.generate_generalized_coords, configs, nprocs=nprocs)
+    all_zeta = np.array([pair[0] for pair in rslt])
+    all_dzetadr = np.array([pair[1] for pair in rslt])
+    stacked = np.concatenate(all_zeta)
+    mean = np.mean(stacked, axis=0)
+    std = np.std(stacked, axis=0)
+  except MemoryError:
+    raise MemoryError('Out of memory while computing mean and standard deviation. '
+        'Try the memory-efficient welford method instead.')
+
+## unparallelized one
+#  try:
+#    all_zeta = []
+#    all_dzetadr = []
+#    for conf in configs:
+#      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
+#      all_zeta.append(zeta)
+#      all_dzetadr.append(dzetadr)
+#    stacked = np.concatenate(all_zeta)
+#    mean = np.mean(stacked, axis=0)
+#    std = np.std(stacked, axis=0)
+#  except MemoryError:
+#    raise MemoryError('Out of memory while computing mean and standard deviation. '
+#        'Try the memory-efficient welford method instead.')
+
+  return mean, std, all_zeta, all_dzetadr
+
+
+def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
+    directory='/tmp/data', do_generate=False, do_normalize=True, do_shuffle=True,
+    use_welford=False, nprocs=mp.cpu_count(), dtype=tf.float32):
   """Preprocess the data to generate the generalized coords and its derivatives,
   and store them, together with coords, and label as tfRecord binary.
 
@@ -325,7 +395,7 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
 
   directory
     The TFRecords file for training set is written to `directory/train.tfrecords'.
-    If `size_validation' is not None, the validation set is written to
+    If `size_validation' is not 0, the validation set is written to
     `directory/train.tfrecords'.
     The centering and normalizing mean and standard deviation data is written
     to `directory/mean_and_std_for_kim_ann'.
@@ -338,35 +408,36 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
       zeta_new = (zeta - mean(zeta)) / std(zeta)
     Effective only when `do_generate' is set to `True'.
 
-  do_record, bool
-    Whether to store the generalized coords `zeta' obtained when computing
-    the mean and standard deviation in memory for later use. Effective
-    only when `do_normalize' is set to `True'. This flag only affects the
-    running speed, but not the results. Enabling it results in faster running
-    speed but more memory consumption. For large dataset and limited memory,
-    set it to `False'.
-
   do_shuffle, bool
     Whether to shuffle the dataset before dividing into training set and
     validation set.
 
+  use_welford, bool
+    Wehther to use Welford's online method to compute mean and standard (if
+    do_normalize == True).
+
   """
 
   # split dataset into training set and validation set if necessary
-  size_dataset = len(configs)
-  if size_validation is not None:
+  configs = np.array(configs)
+  size_dataset = configs.size
+
+  indices = np.arange(size_dataset)
+  if do_shuffle:
+    np.random.shuffle(indices)
+
+  if size_validation != 0:
     if size_validation > size_dataset:
       raise ValueError('Validation set size "{}" larger than dataset size "{}".'
         .format(size_validation, size_dataset))
     size_train = size_dataset - size_validation
-    indices = np.arange(size_dataset)
-    if do_shuffle:
-      np.random.shuffle(indices)
     tr_indices = indices[:size_train]
     va_indices = indices[size_train:]
+    tr_configs = configs[tr_indices]
+    va_configs = configs[va_indices]
   else:  # only need training set, not validation set
-    tr_indices = np.arange(size_dataset)
-    va_indices = np.array([])
+    tr_configs = configs[indices]
+    va_configs = np.array([])
 
   tr_name = os.path.join(directory, 'train.tfrecords')
   va_name = os.path.join(directory, 'validation.tfrecords')
@@ -391,36 +462,13 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
     # compute mean and standard deviation of training set
     if do_normalize:
       print('\nCentering and normalizing the data...')
-      # We use the online algorithm proposed by Welford to compute the variance.
-      # see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-      # The naive method suffers from numerical instability for large dataset.
+      print('Size of training: {}, size of validation {}.'.format(tr_configs.size, va_configs.size))
 
-      # number of features
-      conf = configs[0]
-      zeta, dzetadr = descriptor.generate_generalized_coords(conf)
-      size = zeta.shape[1]
-
-      # starting Welford's method
-      n = 0
-      mean = np.zeros(size)
-      M2 = np.zeros(size)
-      if do_record:
-        all_zeta = []
-        all_dzetadr = []
-      for i,idx in enumerate(tr_indices):
-        print('Processing training example:', i)
-        conf = configs[idx]
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf)
-        for row in zeta:
-          n += 1
-          delta =  row - mean
-          mean += delta/n
-          delta2 = row - mean
-          M2 += delta*delta2
-        if do_record:
-          all_zeta.append(zeta)
-          all_dzetadr.append(dzetadr)
-      std = np.sqrt(M2/(n-1))
+      # compute mean and standard deviation of each feature of training set
+      if use_welford:
+        mean,std = welford_mean_and_std(tr_configs, descriptor)
+      else:
+        mean,std,all_zeta,all_dzetadr = numpy_mean_and_std(tr_configs, descriptor, nprocs)
 
       # write mean and std to file, such that it can be used in the KIM ANN model
       with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
@@ -443,10 +491,11 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
     # write training data to TFRecords
     print('\nWriting training tfRecords data as: {}'.format(tr_name))
     tr_writer = tf.python_io.TFRecordWriter(tr_name)
-    for i,idx in enumerate(tr_indices):
-      print('Processing configuration:', i)
-      conf = configs[idx]
-      if do_normalize and do_record:
+    for i,conf in enumerate(tr_configs):
+      if i%100 == 0:
+        print('Processing configuration:', i)
+        sys.stdout.flush()
+      if do_normalize and not use_welford:
         zeta = all_zeta[i]
         dzetadr = all_dzetadr[i]
       else:
@@ -454,17 +503,20 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=None,
         dzetadr = None
       write_tfrecords(tr_writer,conf,descriptor,do_normalize,np_dtype,mean,std,zeta,dzetadr)
     tr_writer.close()
+    print('Processing {} configurations finished.\n'.format(tr_configs.size))
 
 
     # write validation data to TFRecords
-    if va_indices.size != 0:
+    if va_configs.size != 0:
       print('\nWriting validation tfRecords data as: {}'.format(va_name))
       va_writer = tf.python_io.TFRecordWriter(va_name)
-      for i,idx in enumerate(va_indices):
-        print('Processing configuration:', i)
-        conf = configs[idx]
+      for i,conf in enumerate(va_configs):
+        if i%100 == 0:
+          print('Processing configuration:', i)
+          sys.stdout.flush()
         write_tfrecords(va_writer,conf,descriptor,do_normalize,np_dtype,mean,std,None,None)
       va_writer.close()
+      print('Processing {} configurations finished.\n'.format(va_configs.size))
 
   return tr_name, va_name
 
@@ -496,10 +548,10 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
     where mean and std are read from `mean_and_std_for_kim_ann' in `directory'.
   """
 
-  size_dataset = len(configs)
-  te_indices = np.arange(size_dataset)
+  te_configs = np.array(configs)
+  size_dataset = te_configs.size
   if do_shuffle:
-    np.random.shuffle(te_indices)
+    np.random.shuffle(te_configs)
 
   te_name = os.path.join(directory, 'test.tfrecords')
 
@@ -520,7 +572,7 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
     else:
       raise ValueError('Unsupported data type "{}".'.format(dtype))
 
-    # compute mean and standard deviation of training set
+    # read mean and standard deviation of training set
     if do_normalize:
 
       size = None
@@ -557,10 +609,11 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
     # write test data to TFRecords
     print('\nWriting test tfRecords data as: {}'.format(te_name))
     te_writer = tf.python_io.TFRecordWriter(te_name)
-    for i,idx in enumerate(te_indices):
-      print('Processing configuration:', i)
-      conf = configs[idx]
+    for i,conf in enumerate(te_configs):
       write_tfrecords(te_writer,conf,descriptor,do_normalize,np_dtype,mean,std,None,None)
+      if i%100 == 0:
+        print('Processing configuration:', i)
+    print('Processing {} configurations finished.\n'.format(te_configs.size))
     te_writer.close()
 
   return te_name

@@ -9,4 +9,4 @@ install:
 clean:
 	python setup.py clean
 clean_all:
-	rm -rf build/ dist/ *.egg-info/ *.so */*.so */*.pyc openkim_fit/desc.cpp
+	rm -rf build/ dist/ *.egg-info/ *.so */*.so */*.pyc
