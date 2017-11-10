@@ -142,7 +142,6 @@ def _write_tfrecord_energy(writer, conf, descriptor, do_normalize, np_dtype,
   # configuration features
   name = conf.get_id()
   num_atoms = conf.get_num_atoms()
-  coords_raw = conf.get_coords().astype(np_dtype).tostring()
   energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
 
   example = tf.train.Example(features=tf.train.Features(feature={
@@ -151,7 +150,6 @@ def _write_tfrecord_energy(writer, conf, descriptor, do_normalize, np_dtype,
     # input data
     'name': _bytes_feature(name),
     'num_atoms': _int64_feature(num_atoms),
-    'atomic_coords': _bytes_feature(coords_raw),
     'gen_coords': _bytes_feature(zeta_raw),
     # labels
     'energy': _bytes_feature(energy),
@@ -535,7 +533,6 @@ def _parse_energy(example_proto):
       # input data
       'name': tf.FixedLenFeature((), tf.string),
       'num_atoms': tf.FixedLenFeature((), tf.int64),
-      'atomic_coords': tf.FixedLenFeature((), tf.string),
       'gen_coords': tf.FixedLenFeature((), tf.string),
       # labels
       'energy': tf.FixedLenFeature((), tf.string),
@@ -555,14 +552,12 @@ def _parse_energy(example_proto):
 
   # input
   dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
-  atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
-  atomic_coords = tf.reshape(atomic_coords, shape1)
   gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
   gen_coords = tf.reshape(gen_coords, shape2)
   # labels
   energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
 
-  return  name, num_atoms, atomic_coords, gen_coords, energy
+  return  name, num_atoms, gen_coords, energy
 
 
 def _parse_energy_and_force(example_proto):
@@ -609,7 +604,7 @@ def _parse_energy_and_force(example_proto):
   forces = tf.decode_raw(parsed_features['forces'], dtype)
   forces = tf.reshape(forces, shape1)
 
-  return  name, num_atoms, atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
+  return  name, num_atoms, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
 
 
 def read_tfrecord(fname, fit_forces=False, dtype=tf.float32):
