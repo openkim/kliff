@@ -75,8 +75,7 @@ setup(name='openkim_fit',
     package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
     package_data={'geolm':['_geodesiclm.so']},
     ext_modules=[tf_module, desc_module],
-    install_requires = ['scipy'],
-    setup_requires = ['numpy', 'pybind11>=2.2'],
+    install_requires = ['numpy', 'pybind11>=2.2'],
     zip_safe = False,
     )
 
