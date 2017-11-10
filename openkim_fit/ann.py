@@ -125,156 +125,49 @@ def _int64_feature(value):
 def _float_feature(value):
   return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
-def convert_to_tfrecords(configs, descriptor, name, directory='/tmp/data',
-    do_generate=True, do_normalize=True, do_record=False, fit_forces=True, dtype=tf.float32):
-  """Preprocess the data to generate the generalized coords and its derivatives,
-  and store them, together with coords, and label as tfRecord binary.
+def _write_tfrecord_energy(writer, conf, descriptor, do_normalize, np_dtype,
+    mean=None, std=None, zeta=None):
+  """ Write data to tfrecord format."""
 
-  Parameter
-  ---------
+  # descriptor features
+  num_descriptors = descriptor.get_num_descriptors()
+  if zeta is None:
+    zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False)
 
-  configs, list of Config objects.
+  # do centering and normalization if needed
+  if do_normalize:
+    zeta = (zeta - mean) / std
+  zeta_raw = zeta.astype(np_dtype).tostring()
 
-  descriptor, object of Descriptor class.
+  # configuration features
+  name = conf.get_id()
+  num_atoms = conf.get_num_atoms()
+  coords_raw = conf.get_coords().astype(np_dtype).tostring()
+  energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
 
-  name and directory
-    The TFRecords file is written to `directory/name.tfrecords'.
-    The centering and normalizing mean and standard deviation data is written
-    to `directory/mean_and_std_for_kim_ann'.
+  example = tf.train.Example(features=tf.train.Features(feature={
+    # meta data
+    'num_descriptors': _int64_feature(num_descriptors),
+    # input data
+    'name': _bytes_feature(name),
+    'num_atoms': _int64_feature(num_atoms),
+    'atomic_coords': _bytes_feature(coords_raw),
+    'gen_coords': _bytes_feature(zeta_raw),
+    # labels
+    'energy': _bytes_feature(energy),
+  }))
 
-  do_generate, bool
-    Whether to compute the generalized coords and its derivatives or not.
-
-  do_normalize, bool
-    Whether to center and normalize the data or not through:
-      zeta_new = (zeta - mean(zeta)) / std(zeta)
-    Effective only when `do_generate' is set to `True'.
-
-  do_record, bool
-    Whether to store the generalized coords `zeta' obtained when computing
-    the mean and standard deviation in memory for later use. Effective
-    only when `do_normalize' is set to `True'. This flag only affects the
-    running speed, but not the results. Enabling it results in faster running
-    speed but more memory consumption. For large dataset and limited memory,
-    set it to `False'.
-  """
-
-  fname = os.path.join(directory, name+'.tfrecords')
-  if not os.path.exists(fname):
-    do_generate = True
-
-  if do_generate:
-
-    if not os.path.exists(directory):
-      os.makedirs(directory)
-
-    print('\nWriting tfRecords of "{}" data as: {}'.format(name, fname))
-    writer = tf.python_io.TFRecordWriter(fname)
-
-    # determine the data type
-    if dtype == tf.float32:
-      np_dtype = np.float32
-    elif dtype == tf.float64:
-      np_dtype = np.float64
-
-    # compute mean and standard deviation of input data
-    if do_normalize:
-      print('\nCentering and normalizing the data...')
-      # We use the online algorithm proposed by Welford to compute the variance.
-      # see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-      # The naive method suffers from numerical instability for large dataset.
-
-      # number of features
-      conf = configs[0]
-      zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
-      size = zeta.shape[1]
-
-      # starting Welford's method
-      n = 0
-      mean = np.zeros(size)
-      M2 = np.zeros(size)
-      if do_record:
-        all_zeta = []
-        all_dzetadr = []
-      for i,conf in enumerate(configs):
-        print('Processing configuration:', i)
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
-        for row in zeta:
-          n += 1
-          delta =  row - mean
-          mean += delta/n
-          delta2 = row - mean
-          M2 += delta*delta2
-        if do_record:
-          all_zeta.append(zeta)
-          all_dzetadr.append(dzetadr)
-      std = np.sqrt(M2/(n-1))
-      std_3d = np.atleast_3d(std)
-
-      # write mean and std to file, such that it can be used in the KIM ANN model
-      with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
-        fout.write('{}  # number of descriptors.\n'.format(len(mean)))
-        fout.write('# mean\n')
-        for i in mean:
-          fout.write('{:24.16e}\n'.format(i))
-        fout.write('# standard derivation\n')
-        for i in std:
-          fout.write('{:24.16e}\n'.format(i))
-    else:
-      # we write empty info to this file
-      with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
-        fout.write('False\n')
+  writer.write(example.SerializeToString())
 
 
-    # write data to TFRecords
-    print('\nGenerating TFRecords data...')
-    for i,conf in enumerate(configs):
-      print('Processing configuration:', i)
-      if do_normalize and do_record:
-        zeta = all_zeta[i]
-        dzetadr = all_dzetadr[i]
-      else:
-        zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
-
-      num_atoms = conf.get_num_atoms()
-      num_descriptors = descriptor.get_num_descriptors()
-      # do the actual centering and normalization if needed
-      if do_normalize:
-        zeta = (zeta - mean) / std
-        dzetadr = dzetadr / std_3d
-      zeta_raw = zeta.astype(np_dtype).tostring()
-      dzetadr_raw = dzetadr.astype(np_dtype).tostring()
-      coords_raw = conf.get_coords().astype(np_dtype).tostring()
-      energy = np.float64(conf.get_energy()[0]).astype(np_dtype).tostring()
-      forces_raw = conf.get_forces().astype(np_dtype).tostring()
-
-      example = tf.train.Example(features=tf.train.Features(feature={
-        # meta data
-        'num_atoms': _int64_feature(num_atoms),
-        'num_descriptors': _int64_feature(num_descriptors),
-        # input data
-        'atomic_coords': _bytes_feature(coords_raw),
-        'gen_coords': _bytes_feature(zeta_raw),
-        'dgen_datomic_coords': _bytes_feature(dzetadr_raw),
-        # labels
-        'energy': _bytes_feature(energy),
-        'forces': _bytes_feature(forces_raw)
-      }))
-
-      writer.write(example.SerializeToString())
-    writer.close()
-
-  return fname
-
-
-def write_tfrecords(writer, conf, descriptor, do_normalize, np_dtype,
+def _write_tfrecord_energy_and_force(writer, conf, descriptor, do_normalize, np_dtype,
     mean=None, std=None, zeta=None, dzetadr=None):
-  """ Write data to tfrecords format."""
+  """ Write data to tfrecord format."""
 
   # descriptor features
   num_descriptors = descriptor.get_num_descriptors()
   if zeta is None or dzetadr is None:
-    zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
+    zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces=True)
 
   # do centering and normalization if needed
   if do_normalize:
@@ -308,7 +201,7 @@ def write_tfrecords(writer, conf, descriptor, do_normalize, np_dtype,
   writer.write(example.SerializeToString())
 
 
-def welford_mean_and_std(configs, descriptor, fit_forces):
+def welford_mean_and_std(configs, descriptor):
   """Compute the mean and standard deviation of generalized coords.
 
   This running mean and standard method proposed by Welford is memory-efficient.
@@ -321,7 +214,7 @@ def welford_mean_and_std(configs, descriptor, fit_forces):
 
   # number of features
   conf = configs[0]
-  zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
+  zeta,_ = descriptor.generate_generalized_coords(conf, fit_forces=False)
   size = zeta.shape[1]
 
   # starting Welford's method
@@ -329,7 +222,7 @@ def welford_mean_and_std(configs, descriptor, fit_forces):
   mean = np.zeros(size)
   M2 = np.zeros(size)
   for i,conf in enumerate(configs):
-    zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
+    zeta,_ = descriptor.generate_generalized_coords(conf, fit_forces=False)
     for row in zeta:
       n += 1
       delta =  row - mean
@@ -359,27 +252,12 @@ def numpy_mean_and_std(configs, descriptor, fit_forces, nprocs=mp.cpu_count()):
     raise MemoryError('Out of memory while computing mean and standard deviation. '
         'Try the memory-efficient welford method instead.')
 
-## unparallelized one
-#  try:
-#    all_zeta = []
-#    all_dzetadr = []
-#    for conf in configs:
-#      zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces)
-#      all_zeta.append(zeta)
-#      all_dzetadr.append(dzetadr)
-#    stacked = np.concatenate(all_zeta)
-#    mean = np.mean(stacked, axis=0)
-#    std = np.std(stacked, axis=0)
-#  except MemoryError:
-#    raise MemoryError('Out of memory while computing mean and standard deviation. '
-#        'Try the memory-efficient welford method instead.')
-
   return mean, std, all_zeta, all_dzetadr
 
 
-def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
+def convert_to_tfrecord(configs, descriptor, size_validation=0,
     directory='/tmp/data', do_generate=False, do_normalize=True, do_shuffle=True,
-    use_welford=False, fit_forces=True, nprocs=mp.cpu_count(), dtype=tf.float32):
+    use_welford=False, fit_forces=False, nprocs=mp.cpu_count(), dtype=tf.float32):
   """Preprocess the data to generate the generalized coords and its derivatives,
   and store them, together with coords, and label as tfRecord binary.
 
@@ -394,9 +272,9 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
     Validation set size.
 
   directory
-    The TFRecords file for training set is written to `directory/train.tfrecords'.
+    The TFRecords file for training set is written to `directory/train.tfrecord'.
     If `size_validation' is not 0, the validation set is written to
-    `directory/train.tfrecords'.
+    `directory/validation.tfrecord'.
     The centering and normalizing mean and standard deviation data is written
     to `directory/mean_and_std_for_kim_ann'.
 
@@ -416,6 +294,8 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
     Wehther to use Welford's online method to compute mean and standard (if
     do_normalize == True).
 
+  fit_forces, bool
+    Wheter to fit to forces.
   """
 
   # split dataset into training set and validation set if necessary
@@ -439,8 +319,8 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
     tr_configs = configs[indices]
     va_configs = np.array([])
 
-  tr_name = os.path.join(directory, 'train.tfrecords')
-  va_name = os.path.join(directory, 'validation.tfrecords')
+  tr_name = os.path.join(directory, 'train.tfrecord')
+  va_name = os.path.join(directory, 'validation.tfrecord')
 
   # if cannot find the tfrecords data, we need to generate it
   if not os.path.exists(tr_name):
@@ -466,9 +346,10 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
 
       # compute mean and standard deviation of each feature of training set
       if use_welford:
-        mean,std = welford_mean_and_std(tr_configs, descriptor, fit_forces)
+        mean,std = welford_mean_and_std(tr_configs, descriptor)
       else:
-        mean,std,all_zeta,all_dzetadr = numpy_mean_and_std(tr_configs, descriptor, nprocs, fit_forces)
+        mean,std,all_zeta,all_dzetadr = numpy_mean_and_std(tr_configs, descriptor,
+            fit_forces, nprocs)
 
       # write mean and std to file, such that it can be used in the KIM ANN model
       with open(os.path.join(directory, 'mean_and_std_for_kim_ann'), 'w') as fout:
@@ -497,11 +378,18 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
         sys.stdout.flush()
       if do_normalize and not use_welford:
         zeta = all_zeta[i]
-        dzetadr = all_dzetadr[i]
+        if fit_forces:
+          dzetadr = all_dzetadr[i]
       else:
         zeta = None
         dzetadr = None
-      write_tfrecords(tr_writer,conf,descriptor,do_normalize,np_dtype,mean,std,zeta,dzetadr)
+      if fit_forces:
+        _write_tfrecord_energy_and_force(tr_writer,conf,descriptor,do_normalize,
+            np_dtype,mean,std,zeta,dzetadr)
+      else:
+        _write_tfrecord_energy(tr_writer,conf,descriptor,do_normalize,
+            np_dtype,mean,std,zeta)
+
     tr_writer.close()
     print('Processing {} configurations finished.\n'.format(tr_configs.size))
 
@@ -514,20 +402,26 @@ def convert_raw_to_tfrecords(configs, descriptor, size_validation=0,
         if i%100 == 0:
           print('Processing configuration:', i)
           sys.stdout.flush()
-        write_tfrecords(va_writer,conf,descriptor,do_normalize,np_dtype,mean,std,None,None)
+        if fit_forces:
+          _write_tfrecord_energy_and_force(va_writer,conf,descriptor,
+              do_normalize,np_dtype,mean,std,None,None)
+        else:
+          _write_tfrecord_energy(va_writer,conf,descriptor,
+              do_normalize,np_dtype,mean,std,None)
       va_writer.close()
       print('Processing {} configurations finished.\n'.format(va_configs.size))
 
   return tr_name, va_name
 
 
-def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
-    do_generate=True, do_normalize=True, do_shuffle=False, fit_forces=True, dtype=tf.float32):
+def convert_to_tfrecord_testset(configs, descriptor, directory='/tmp/data',
+    do_generate=True, do_normalize=True, do_shuffle=False, fit_forces=False,
+    dtype=tf.float32):
   """Preprocess the testset data to generate the generalized coords and its
   derivatives, and store them, together with coords and label as tfRecord binary.
 
   This is for testset, so if do_normalize = True, the `mean_and_std_for_kim_ann'
-  file should be in `directory', which is generated by `convert_raw_to_tfrecords'.
+  file should be in `directory', which is generated by `convert_to_tfrecords'.
 
   Parameter
   ---------
@@ -537,7 +431,7 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
   descriptor: object of Descriptor class.
 
   directory
-    The TFRecords file is written to `directory/test.tfrecords'.
+    The TFRecords file is written to `directory/test.tfrecord'.
 
   do_generate: bool
     Whether to compute the generalized coords and its derivatives or not.
@@ -546,6 +440,12 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
     Whether to center and normalize the data or not through:
       zeta_new = (zeta - mean) / std
     where mean and std are read from `mean_and_std_for_kim_ann' in `directory'.
+
+  do_shuffle, bool
+    Wheter to shuffle data.
+
+  fit_forces, bool
+   Wheter to fit forces.
   """
 
   te_configs = np.array(configs)
@@ -553,7 +453,7 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
   if do_shuffle:
     np.random.shuffle(te_configs)
 
-  te_name = os.path.join(directory, 'test.tfrecords')
+  te_name = os.path.join(directory, 'test.tfrecord')
 
   # if cannot find the tfrecords data, we need to generate it
   if not os.path.exists(te_name):
@@ -589,8 +489,8 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
             size = int(line)
           else:
             data.append(float(line))
-        mean = np.array(data[:size])
-        std = np.array(data[size:])
+      mean = np.array(data[:size])
+      std = np.array(data[size:])
 
       # expected number of features
       conf = configs[0]
@@ -610,7 +510,13 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
     print('\nWriting test tfRecords data as: {}'.format(te_name))
     te_writer = tf.python_io.TFRecordWriter(te_name)
     for i,conf in enumerate(te_configs):
-      write_tfrecords(te_writer,conf,descriptor,do_normalize,np_dtype,mean,std,None,None)
+      if fit_forces:
+        _write_tfrecord_energy_and_force(te_writer,conf,descriptor,
+            do_normalize,np_dtype,mean,std,None,None)
+      else:
+        _write_tfrecord_energy(te_writer,conf,descriptor,
+            do_normalize,np_dtype,mean,std,None)
+
       if i%100 == 0:
         print('Processing configuration:', i)
     print('Processing {} configurations finished.\n'.format(te_configs.size))
@@ -619,7 +525,47 @@ def convert_raw_to_tfrecords_testset(configs, descriptor, directory='/tmp/data',
   return te_name
 
 
-def _parse_function(example_proto):
+def _parse_energy(example_proto):
+  """Transforms a scalar string `example_proto' (corresponding to an atomic
+  configuration) into usable data.
+  """
+  features = {
+      # meta data
+      'num_descriptors': tf.FixedLenFeature((), tf.int64),
+      # input data
+      'name': tf.FixedLenFeature((), tf.string),
+      'num_atoms': tf.FixedLenFeature((), tf.int64),
+      'atomic_coords': tf.FixedLenFeature((), tf.string),
+      'gen_coords': tf.FixedLenFeature((), tf.string),
+      # labels
+      'energy': tf.FixedLenFeature((), tf.string),
+      }
+  parsed_features = tf.parse_single_example(example_proto, features)
+
+  # meta
+  num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int32)
+  # input
+  num_atoms = tf.cast(parsed_features['num_atoms'], tf.int32)
+  name = parsed_features['name']
+
+  # shape of tensors
+  DIM = 3
+  shape1 = [num_atoms*DIM]
+  shape2 = [num_atoms, num_descriptors]
+
+  # input
+  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
+  atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
+  atomic_coords = tf.reshape(atomic_coords, shape1)
+  gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
+  gen_coords = tf.reshape(gen_coords, shape2)
+  # labels
+  energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
+
+  return  name, num_atoms, atomic_coords, gen_coords, energy
+
+
+def _parse_energy_and_force(example_proto):
   """Transforms a scalar string `example_proto' (corresponding to an atomic
   configuration) into usable data.
   """
@@ -666,13 +612,17 @@ def _parse_function(example_proto):
   return  name, num_atoms, atomic_coords, gen_coords, dgen_datomic_coords, energy, forces
 
 
-def read_from_tfrecords(fname, dtype=tf.float32):
-  """Read preprocessed TFRecords data from `fname'.
+def read_tfrecord(fname, fit_forces=False, dtype=tf.float32):
+  """Read preprocessed TFRecord data from `fname'.
 
   Parameter
   ---------
 
-  fname, name of the TFRecords data file.
+  fname, str
+    name of the TFRecords data file.
+
+  fit_forces, bool
+    wheter to fit to forces.
 
   Return
   ------
@@ -683,7 +633,10 @@ def read_from_tfrecords(fname, dtype=tf.float32):
   dataset = tf.contrib.data.TFRecordDataset(fname)
   global HACKED_DTYPE
   HACKED_DTYPE=dtype
-  dataset = dataset.map(_parse_function)
+  if fit_forces:
+    dataset = dataset.map(_parse_energy_and_force)
+  else:
+    dataset = dataset.map(_parse_energy)
 
   # copy mean_and_std_for_kim_ann to current directoy
   fname2 = os.path.join(os.path.dirname(fname), 'mean_and_std_for_kim_ann')
@@ -693,16 +646,17 @@ def read_from_tfrecords(fname, dtype=tf.float32):
 
 
 # for feed_dictionary, probably ok
-def input_layer_given_data(coords, zeta, dzetadr, num_descriptor=None,
+def input_layer_given_data(coords, zeta, dzetadr, num_descriptor,
   layer_name='input_layer'):
   """Reusable code for making an input layer for a configuration."""
 
   with tf.name_scope(layer_name):
     input, dummy = int_pot(coords=coords, zeta=zeta, dzetadr=dzetadr)
+
     # set the static shape is needed to use high level api like
     # tf.contrib.layers.fully_connected
-    if num_descriptor is not None:
-      input.set_shape((None, int(num_descriptor)))
+    input.set_shape((None, int(num_descriptor)))
+
     return input
 
 

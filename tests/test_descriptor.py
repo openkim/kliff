@@ -86,7 +86,7 @@ def get_descriptor():
   print('Total number of descriptors:', total)
 
   # create all descriptors
-  desc = Descriptor(cutfunc, cutvalue, desc_params, fit_forces=False)
+  desc = Descriptor(cutfunc, cutvalue, desc_params)
 
   return desc
 
@@ -96,14 +96,20 @@ def test_desc():
   tset = DataSet()
   tset.read('./training_set/training_set_Si.xyz')
   configs = tset.get_configs()
-
   desc = get_descriptor()
-  zeta, _ = desc.generate_generalized_coords(configs[0])
 
+  zeta, _ = desc.generate_generalized_coords(configs[0], fit_forces=True)
+  tol = 1e-6
+  assert np.array(zeta) == pytest.approx(zeta_ref, tol)
+  print('generalized coords with fit_forces=True')
+  print(zeta)
+
+  zeta, _ = desc.generate_generalized_coords(configs[0], fit_forces=False)
   tol = 1e-6
   assert np.array(zeta) == pytest.approx(zeta_ref, tol)
 
-  print('generalized coords')
+  print()
+  print('generalized coords with fit_forces=False')
   print(zeta)
 
 

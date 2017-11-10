@@ -147,7 +147,7 @@ class Descriptor:
           species_code.astype(np.intc), neighlist.astype(np.intc),
           numneigh.astype(np.intc), image.astype(np.intc),
           Natoms, Ncontrib, Ndesc)
-      return gen_coords
+      return gen_coords, None
 
 
   def get_num_descriptors(self):
