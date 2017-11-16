@@ -8,55 +8,88 @@ class Configuration:
   Class to read and store the information in one configuraiton in extented xyz format.
   """
 
-  def __init__(self, identifier='id_name'):
+  def __init__(self, identifier='id_not_provided', order_by_species=True):
     self.id = identifier
-    self.natoms = None    # int
-    self.cell = None    # 3 by 3 np.array
-    self.PBC = None     # 1 by 3 int
-    self.energy = None    # float
-    self.species = []   # 1 by N str list (N: number of atoms)
-    self.coords = []    # 1 by 3N np.array (N: number of atoms)
-    self.forces = []    # 1 by 3N np.array (N: number of atoms)
+    self.do_order = order_by_species
+    self.natoms = None   # int
+    self.cell = None     # 3 by 3 ndarray
+    self.PBC = None      # 1 by 3 int
+    self.energy = None   # float
+    self.species = None  # 1 by N  ndarray (N: number of atoms)
+    self.coords = None   # 1 by 3N ndarray (N: number of atoms)
+    self.forces = None   # 1 by 3N ndarray (N: number of atoms)
 
   def read_extxyz(self, fname):
     with open(fname, 'r') as fin:
       lines = fin.readlines()
+
       # number of atoms
       try:
         self.natoms = int(lines[0].split()[0])
       except ValueError as err:
-        raise InputError('{}.\nCorrupted data at line 1 in file: {}.'.format(err, fname))
+        raise InputError('{}.\nCorrupted data at line 1 in xyz '
+            'file: {}.'.format(err, fname))
+
       # lattice vector, PBC, and energy
       line = lines[1]
       self.cell = self.parse_key_value(line, 'Lattice', 'float', 9, fname)
       self.cell = np.reshape(self.cell, (3, 3))
       self.PBC = self.parse_key_value(line, 'PBC', 'int', 3, fname)
       self.energy = self.parse_key_value(line, 'Energy', 'float', 1, fname)[0]
-      # species symbol and x, y, z fx, fy, fz
+
+      # body, species symbol, x, y, z (and fx, fy, fz if provided)
+      species = []
+      coords = []
+      forces = []
+      # is forces provided
+      line = lines[2].strip().split()
+      if len(line) == 4:
+        has_forces = False
+      elif len(line) == 7:
+        has_forces = True
+      else:
+        raise InputError('\nCorrupted xyz file {} at line 3.'.format(fname))
+
       try:
         num_lines = 0
         for line in lines[2:]:
-          line = line.strip()
-          if line:
-            symbol, x, y, z, fx, fy, fz = line.split()
-            self.species.append(symbol.lower().capitalize())
-            self.coords.append(float(x))
-            self.coords.append(float(y))
-            self.coords.append(float(z))
-            self.forces.append(float(fx))
-            self.forces.append(float(fy))
-            self.forces.append(float(fz))
-            num_lines += 1
-            if num_lines == self.natoms:
-              break
-        self.coords = np.array(self.coords)
-        self.forces = np.array(self.forces)
+          num_lines += 1
+          line = line.strip().split()
+          if len(line) != 4 and len(line) != 7:
+            raise InputError('\nCorrupted data at line {} in xyz '
+                 'file: {}.'.format(num_lines+3, fname))
+          if has_forces:
+            symbol, x, y, z, fx, fy, fz = line
+            species.append(symbol.lower().capitalize())
+            coords.append([float(x), float(y), float(z)])
+            forces.append([float(fx), float(fy), float(fz)])
+          else:
+            symbol, x, y, z = line
+            species.append(symbol.lower().capitalize())
+            coords.append([float(x), float(y), float(z)])
       except ValueError as err:
-        raise InputError('{}.\nCorrupted data at line {} in '
-                 'file {}.'.format(err, num_lines+2+1, fname))
-      if num_lines < self.natoms:
-        raise InputError('Not enough data lines in file: {}. Number of atoms = {}, while '
+        raise InputError('{}.\nCorrupted data at line {} in xyz'
+            'file {}.'.format(err, num_lines+3, fname))
+
+      if num_lines != self.natoms:
+        raise InputError('Corrupted xyz file: {}. Listed number of atoms = {}, while '
                  'number of data lines = {}.'.format(fname, self.natoms, num_lines))
+
+      # order according to species
+      if self.do_order:
+        if has_forces:
+          species,coords,forces = zip(*sorted(zip(species,coords,forces),
+              key=lambda pair: pair[0]))
+        else:
+          species,coords = zip(*sorted(zip(species,coords), key=lambda pair: pair[0]))
+
+      # make it numpy array
+      self.species = np.array(species)
+      self.coords = np.array(coords).ravel()
+      if has_forces:
+        self.forces = np.array(forces).ravel()
+
+
 #NOTE not needed
 #  def get_unique_species(self):
 #    '''
@@ -130,7 +163,7 @@ class Configuration:
       fout.write('Lattice="')
       for line in self.cell:
         for item in line:
-          fout.write('{:10.6f}'.format(item))
+          fout.write('{:.16g} '.format(item))
       fout.write('" ')
       # PBC
       fout.write('PBC="')
@@ -140,12 +173,10 @@ class Configuration:
       # properties
       fout.write('Properties="species:S:1:pos:R:3:vel:R:3" ')
       # energy
-      fout.write('Energy="{:10.6f}"\n'.format(self.energy))
+      fout.write('Energy="{:.16g}"\n'.format(self.energy))
       # species, coords, and forces
       for i in range(self.natoms):
-        symbol = self.species[i]+ '    '
-        symbol = symbol[:4]  # such that symbol has the same length
-        fout.write(symbol)
+        fout.write('{:3s}'.format(self.species[i]))
         fout.write('{:14.6e}'.format(self.coords[3*i+0]))
         fout.write('{:14.6e}'.format(self.coords[3*i+1]))
         fout.write('{:14.6e}'.format(self.coords[3*i+2]))
@@ -160,7 +191,8 @@ class DataSet():
   '''
   Data set class, to deal with multiple configurations.
   '''
-  def __init__(self):
+  def __init__(self, order_by_species=True):
+    self.do_order = order_by_species
     self.size = 0
     self.configs = []
 
@@ -189,7 +221,7 @@ class DataSet():
       dirpath = os.path.dirname(fname)
       all_files = [fname]
     for f in all_files:
-      conf = Configuration(f)
+      conf = Configuration(f, self.do_order)
       conf.read_extxyz(f)
       self.configs.append(conf)
     self.size = len(self.configs)
