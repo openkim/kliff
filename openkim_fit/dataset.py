@@ -1,11 +1,20 @@
 from __future__ import print_function
 import os
 import numpy as np
+from collections import OrderedDict
 from error import InputError
 
 class Configuration:
-  """
-  Class to read and store the information in one configuraiton in extented xyz format.
+  """ Class for one atomistic configuration.
+
+  Parameters
+  ----------
+
+  identifer: str
+    name of the configuration
+
+  order_by_species: bool
+    whether to order coords (, and forces if provided) by species
   """
 
   def __init__(self, identifier='id_not_provided', order_by_species=True):
@@ -18,8 +27,17 @@ class Configuration:
     self.species = None  # 1 by N  ndarray (N: number of atoms)
     self.coords = None   # 1 by 3N ndarray (N: number of atoms)
     self.forces = None   # 1 by 3N ndarray (N: number of atoms)
+    self.num_atoms_by_species = None   # dict
 
   def read_extxyz(self, fname):
+    """Read atomic configuration stored in extended xyz format.
+
+    Parameter
+    ---------
+
+    fname: str
+      name of the extended xyz file
+    """
     with open(fname, 'r') as fin:
       lines = fin.readlines()
 
@@ -32,10 +50,10 @@ class Configuration:
 
       # lattice vector, PBC, and energy
       line = lines[1]
-      self.cell = self.parse_key_value(line, 'Lattice', 'float', 9, fname)
+      self.cell = self._parse_key_value(line, 'Lattice', 'float', 9, fname)
       self.cell = np.reshape(self.cell, (3, 3))
-      self.PBC = self.parse_key_value(line, 'PBC', 'int', 3, fname)
-      self.energy = self.parse_key_value(line, 'Energy', 'float', 1, fname)[0]
+      self.PBC = self._parse_key_value(line, 'PBC', 'int', 3, fname)
+      self.energy = self._parse_key_value(line, 'Energy', 'float', 1, fname)[0]
 
       # body, species symbol, x, y, z (and fx, fy, fz if provided)
       species = []
@@ -88,52 +106,40 @@ class Configuration:
       self.coords = np.array(coords).ravel()
       if has_forces:
         self.forces = np.array(forces).ravel()
+      else:
+        self.forces = None
+      # count atoms
+      self.num_atoms_by_species = self.count_atoms_by_species()
 
 
-#NOTE not needed
-#  def get_unique_species(self):
-#    '''
-#    Get a set of the species list.
-#    '''
-#    return list(set(self.species))
-  def get_id(self):
-    return self.id
-  def get_num_atoms(self):
-    return self.natoms
-  def get_cell(self):
-    return self.cell
-  def get_pbc(self):
-    return self.PBC
-  def get_energy(self):
-    return self.energy
-  def get_species(self):
-    return self.species
-  def get_coords(self):
-    return self.coords
-  def get_forces(self):
-    return self.forces
-
-  def parse_key_value(self, line, key, dtype, size, fname):
-    '''
-    Given key, parse a string like 'other stuff key = "value" other stuff'
+  def _parse_key_value(self, line, key, dtype, size, fname):
+    """Given key, parse a string like 'other stuff key = "value" other stuff'
     to get value.
 
-    Parameters:
+    Parameters
+    ----------
 
-    line: The sting line
+    line: str
+      The sting line
 
-    key: keyword we want to parse
+    key: str
+      keyword we want to parse
 
-    dtype: expected data type of value
+    dtype: str: {'int', 'float'}
+      expected data type of value
 
-    size: expected size of value
+    size: int
+      expected size of value
 
-    fname: file name where the line comes from
+    fname: str
+      file name where the line comes from
 
-    Returns:
+    Return
+    ------
 
-    A list of valves assocaited with key
-    '''
+    A list of values assocaited with key
+    """
+
     if key not in line:
       raise InputError('"{}" not found at line 2 in file: {}.'.format(key, fname))
     value = line[line.index(key):]
@@ -154,10 +160,45 @@ class Configuration:
     return value
 
 
+  def count_atoms_by_species(self, symbols=None):
+    """Count the number of atoms with species `symbols' in the configuration.
+
+    Parameter
+    ---------
+
+    symbols: list of str
+      species of atoms to count
+      If `None', the species already in the configuration are used.
+
+    Return
+    ------
+
+    num_atoms_by_species: OrderedDict
+      number of atoms for each species
+    """
+
+    unique, counts = np.unique(self.species, return_counts=True) # unique is sorted
+
+    if symbols is None:
+      symbols = unique
+
+    num_atoms_by_species = OrderedDict()
+    for s in symbols:
+      if s in unique:
+        num_atoms_by_species[s] = counts[list(unique).index(s)]
+      else:
+        num_atoms_by_species[s] = 0
+
+    return num_atoms_by_species
+
+
   def write_extxyz(self, fname='./echo_config.xyz'):
+
     with open (fname, 'w') as fout:
+
       # first line (num of atoms)
       fout.write('{}\n'.format(self.natoms))
+
       # second line
       # lattice
       fout.write('Lattice="')
@@ -174,35 +215,66 @@ class Configuration:
       fout.write('Properties="species:S:1:pos:R:3:vel:R:3" ')
       # energy
       fout.write('Energy="{:.16g}"\n'.format(self.energy))
+
+      # body
       # species, coords, and forces
       for i in range(self.natoms):
         fout.write('{:3s}'.format(self.species[i]))
         fout.write('{:14.6e}'.format(self.coords[3*i+0]))
         fout.write('{:14.6e}'.format(self.coords[3*i+1]))
         fout.write('{:14.6e}'.format(self.coords[3*i+2]))
-        fout.write('{:14.6e}'.format(self.forces[3*i+0]))
-        fout.write('{:14.6e}'.format(self.forces[3*i+1]))
-        fout.write('{:14.6e}'.format(self.forces[3*i+2]))
+        if self.forces is not None:
+          fout.write('{:14.6e}'.format(self.forces[3*i+0]))
+          fout.write('{:14.6e}'.format(self.forces[3*i+1]))
+          fout.write('{:14.6e}'.format(self.forces[3*i+2]))
         fout.write('\n')
 
+  def get_id(self):
+    return self.id
+
+  def get_num_atoms(self):
+    return self.natoms
+
+  def get_cell(self):
+    return self.cell
+
+  def get_pbc(self):
+    return self.PBC
+
+  def get_energy(self):
+    return self.energy
+
+  def get_species(self):
+    return self.species
+
+  def get_coords(self):
+    return self.coords
+
+  def get_forces(self):
+    return self.forces
 
 
-class DataSet():
-  '''
-  Data set class, to deal with multiple configurations.
-  '''
+class DataSet:
+  """Data set class, to deal with multiple configurations.
+
+  Argument
+  --------
+
+  order_by_species: bool
+    whether to order coords (, and forces if provided) by species
+  """
+
   def __init__(self, order_by_species=True):
     self.do_order = order_by_species
-    self.size = 0
     self.configs = []
 
 #NOTE this could be moved to init
   def read(self, fname):
-    """
-    Read atomistic configuration stored in the extend xyz format.
+    """Read atomistic configurations stored in the extend xyz format.
 
     Parameter
     ---------
+
     fname: str
       file name or directory name where the configurations are stored. If given
       a directory, all the files in this directory and subdirectories with 'xyz'
@@ -220,22 +292,40 @@ class DataSet():
     else:
       dirpath = os.path.dirname(fname)
       all_files = [fname]
+
     for f in all_files:
       conf = Configuration(f, self.do_order)
       conf.read_extxyz(f)
       self.configs.append(conf)
-    self.size = len(self.configs)
-    if self.size <= 0:
+
+    size = len(self.configs)
+    if size <= 0:
       raise InputError('No training set files (ends with .xyz) found '
                'in directory: {}/'.format(dirpath))
 
-    print('Number of configurations in dataset:', self.size)
+    print('Number of configurations in dataset:', size)
 
+    if self.do_order:
+      # find species present in all configurations
+      all_species = []
+      for conf in self.configs:
+        conf_species = set(conf.get_species())
+        all_species.extend(conf_species)
+      all_species = set(all_species)
 
-  def get_size(self):
-    return self.size
+      # find occurence of species in each configuration
+      for conf in self.configs:
+        conf.num_atoms_by_species = conf.count_atoms_by_species(all_species)
+
 
   def get_configs(self):
+    """Get the configurations.
+
+    Return
+    ------
+    a list of Configuration instance.
+    """
+
     return self.configs
 
 
