@@ -19,6 +19,14 @@ def tf_includes():
     raise ImportError('tensorflow is not found. install it first.')
 
 
+def tf_lib_path():
+  try:
+    import tensorflow as tf
+    return tf.sysconfig.get_lib()
+  except ImportError:
+    raise ImportError('tensorflow is not found. install it first.')
+
+
 def tf_extra_compile_args():
   args = ['-std=c++11', '-Wall', '-O2', '-fPIC']
   # gcc 5 needs the following
@@ -49,9 +57,9 @@ class get_pybind11_includes(object):
 
 tf_module = Extension('tensorflow_op.int_pot_op',
    sources = ['tensorflow_op/int_pot_op.cpp'],
-   include_dirs = [tf_includes()],
-   #library_dirs = [],
-   libraries = ['m'],
+   include_dirs = [tf_includes(), os.path.join(tf_includes(), 'external/nsync/public')],
+   library_dirs = [tf_lib_path()],
+   libraries = ['m', 'tensorflow_framework'],
    extra_compile_args = tf_extra_compile_args(),
    #extra_link_args = [],
    language = 'c++',
