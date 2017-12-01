@@ -17,6 +17,7 @@ maybe_needed
 tests/echo*
 FINAL_FITTED_PARAMS
 libs/geodesicLMv1.1
+openkim_fit.egg-info/
 
 # special for docs
 docs/*

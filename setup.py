@@ -67,7 +67,9 @@ tf_module = Extension('tensorflow_op.int_pot_op',
 
 
 desc_module = Extension('desc',
-    sources = ['openkim_fit/descriptor_bind.cpp', 'openkim_fit/descriptor_c.cpp'],
+    sources = ['openkim_fit/descriptor_bind.cpp',
+               'openkim_fit/descriptor_c.cpp',
+               'openkim_fit/layers.cpp'],
     include_dirs = [get_pybind11_includes(), get_pybind11_includes(user=True)],
     extra_compile_args = get_extra_compile_args(),
     language = 'c++',

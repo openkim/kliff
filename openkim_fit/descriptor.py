@@ -123,7 +123,7 @@ class Descriptor:
     """
 
     # create neighbor list
-    nei = NeighborList(conf, self._rcut)
+    nei = NeighborList(conf, self._rcut, padding_need_neigh=True)
     coords = nei.coords
     species_code = np.array([self._species_code[i] for i in nei.species])
     Ncontrib = nei.ncontrib
