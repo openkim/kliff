@@ -14,9 +14,12 @@ class NeighborList:
     the cutoffs for all types of interactions.
 
     e.g. rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}
+
+  padding_need_neigh: bool
+    whether to generate neighbors for padding atoms
   """
 
-  def __init__(self, conf, rcut):
+  def __init__(self, conf, rcut, padding_need_neigh=False):
     self.conf = conf
     self.rcut = rcut
 
@@ -45,10 +48,10 @@ class NeighborList:
     self.numneigh = None
     self.neighlist = None
 
-    self.setup_neigh()
+    self.setup_neigh(padding_need_neigh)
 
 
-  def setup_neigh(self):
+  def setup_neigh(self, padding_need_neigh=False):
 
     # inquire information from the conf
     cell = self.conf.get_cell()
@@ -69,7 +72,10 @@ class NeighborList:
       self.image = np.arange(self.ncontrib)
 
     # generate neighbor list for contributing atoms
-    need_neigh = [1 for _ in range(self.ncontrib)] + [0 for _ in range(npad)]
+    if padding_need_neigh:
+      need_neigh = [1 for _ in range(self.ncontrib + npad)]
+    else:
+      need_neigh = [1 for _ in range(self.ncontrib)] + [0 for _ in range(npad)]
     self.numneigh, self.neighlist = create_neigh(self.coords, maxrcut, need_neigh)
 
 
@@ -107,26 +113,24 @@ def create_neigh(coords, rcut, need_neigh):
   neighlist = []
   numneigh = []
   for i in xrange(natoms):
-    if not need_neigh[i]:
-      continue
-    xyzi = coords[i]
-    k = 0
-    tmplist = []
-    for j in xrange(natoms):
-      if j == i:
-        continue
-      xyzj = coords[j]
-      rijmag = np.linalg.norm(np.subtract(xyzi, xyzj))
-      if rijmag < rcut:
-        tmplist.append(j)
-        k += 1
-    neighlist.append(tmplist)
-    numneigh.append(k)
+    if need_neigh[i]:
+      xyzi = coords[i]
+      k = 0
+      tmplist = []
+      for j in xrange(natoms):
+        if j == i:
+          continue
+        xyzj = coords[j]
+        rijmag = np.linalg.norm(np.subtract(xyzi, xyzj))
+        if rijmag < rcut:
+          tmplist.append(j)
+          k += 1
+      neighlist.append(tmplist)
+      numneigh.append(k)
+    else:
+      numneigh.append(0)
 
   return np.array(numneigh), np.array(neighlist)
-
-
-
 
 
 def set_padding(cell, PBC, species, coords, rcut):
