@@ -265,7 +265,7 @@ void Descriptor::get_generalized_coords(const double* coordinates,
         double const rjkmag = sqrt(rjk[0]*rjk[0] + rjk[1]*rjk[1] + rjk[2]*rjk[2]);
 
         if (rikmag >= rcutik) continue; // three-dody not interacting
-        if (rjkmag >= rcutjk) continue; // three-dody not interacting
+        //if (rjkmag >= rcutjk) continue; // shoud not use this since g5 has no cutoff for rjk
 
         double const rvec[3] = {rijmag, rikmag, rjkmag};
         double const rcutvec[3] = {rcutij, rcutik, rcutjk};
