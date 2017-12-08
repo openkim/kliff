@@ -11,15 +11,29 @@ PYBIND11_MODULE(desc, m) {
 
   py::class_<Descriptor>(m, "Descriptor")
     .def(py::init<>())
+
     .def("get_num_descriptors", &Descriptor::get_num_descriptors)
-    .def("set_cutoff",
+
+    .def("set_cutoff_bulk",
       [](Descriptor &d, char* name, py::array_t<double> rcuts) {
-        d.set_cutoff(name, rcuts.shape(0), rcuts.mutable_data(0));
+        d.set_cutoff(name, rcuts.shape(0), rcuts.mutable_data(0), nullptr);
         return;
       },
       py::arg("name"),
       py::arg("rcuts").noconvert()
     )
+
+    .def("set_cutoff_bulk_and_samelayer",
+      [](Descriptor &d, char* name, py::array_t<double> rcuts,
+        py::array_t<double> rcuts_samelayer) {
+        d.set_cutoff(name, rcuts.shape(0), rcuts.mutable_data(0), rcuts_samelayer.mutable_data(0));
+        return;
+      },
+      py::arg("name"),
+      py::arg("rcuts").noconvert(),
+      py::arg("rcuts_samelayer").noconvert()
+    )
+
     .def("add_descriptor",
       [](Descriptor &d, char* name, py::array_t<double> values) {
         auto rows = values.shape(0);
@@ -30,10 +44,11 @@ PYBIND11_MODULE(desc, m) {
       py::arg("name"),
       py::arg("values").noconvert()
     )
+
     .def("get_gen_coords",
       [](Descriptor &d, py::array_t<double> coords, py::array_t<int> particleSpecies,
          py::array_t<int> neighlist, py::array_t<int> numneigh,
-         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor) {
+         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int mode) {
 
         // create empty vectors to hold return data
         std::vector<double> gen_coords(Ncontrib*Ndescriptor);
@@ -42,7 +57,7 @@ PYBIND11_MODULE(desc, m) {
             particleSpecies.mutable_data(0), neighlist.mutable_data(0),
             numneigh.mutable_data(0), image.mutable_data(0),
             Natoms, Ncontrib, Ndescriptor,
-            gen_coords.data(), nullptr);
+            gen_coords.data(), nullptr, mode);
 
         // pack gen_coords into a buffer that numpy array can understand
         auto gen_coords_2D = py::array (py::buffer_info (
@@ -63,12 +78,14 @@ PYBIND11_MODULE(desc, m) {
       py::arg("image").noconvert(),
       py::arg("Natoms"),
       py::arg("Ncontrib"),
-      py::arg("Ndescriptor")
+      py::arg("Ndescriptor"),
+      py::arg("mode") = 0
     )
+
     .def("get_gen_coords_and_deri",
       [](Descriptor &d, py::array_t<double> coords, py::array_t<int> particleSpecies,
          py::array_t<int> neighlist, py::array_t<int> numneigh,
-         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor) {
+         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int mode) {
 
         // create empty vectors to hold return data
         std::vector<double> gen_coords(Ncontrib*Ndescriptor);
@@ -78,7 +95,7 @@ PYBIND11_MODULE(desc, m) {
             particleSpecies.mutable_data(0), neighlist.mutable_data(0),
             numneigh.mutable_data(0), image.mutable_data(0),
             Natoms, Ncontrib, Ndescriptor,
-            gen_coords.data(), d_gen_coords.data());
+            gen_coords.data(), d_gen_coords.data(), mode);
 
         // pack gen_coords into a buffer that numpy array can understand
         auto gen_coords_2D = py::array (py::buffer_info (
@@ -113,6 +130,7 @@ PYBIND11_MODULE(desc, m) {
       py::arg("Natoms"),
       py::arg("Ncontrib"),
       py::arg("Ndescriptor"),
+      py::arg("mode") = 0,
       "Return (gen_coords, d_gen_coords)"
     );
 

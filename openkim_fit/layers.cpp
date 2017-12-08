@@ -15,7 +15,7 @@ typedef double vectorOfSizeDIM[DIM];
 // since it runs through the neighborlist once.
 //
 
-int create_layers(const int Natoms, double* coordinates,
+int create_layers(const int Natoms, const double* coordinates,
     const int* neighlist, const int* numneigh, const double rcut_layer,
     std::vector<int>& in_layer)
 {
@@ -149,13 +149,13 @@ int create_layers(const int Natoms, double* coordinates,
 
 
   //TODO delete debug
-  std::cout<<"Cutoff for layer "<<sqrt(cutsq_layer)<<std::endl;
+/*  std::cout<<"Cutoff for layer "<<sqrt(cutsq_layer)<<std::endl;
   std::cout <<"Number of layers: " <<nlayers <<std::endl;
   std::cout <<"#atom id     layer"<<std::endl;
   for (int i=0; i<Natoms; i++) {
     std::cout <<i <<"         "<<in_layer[i]<<std::endl;
   }
-
+*/
 
   return 0;
 }

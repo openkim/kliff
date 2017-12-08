@@ -1,21 +1,29 @@
-#include "descriptor_c.h"
 #include <iostream>
+#include "descriptor_c.h"
+#include "layers.h"
 
 #define DIM 3
-typedef double VectorOfSizeDIM[3];
+typedef double VectorOfSizeDIM[DIM];
 
 
 Descriptor::Descriptor(){
   has_three_body_ = false;
+  rcuts_ = nullptr;
+  rcuts_samelayer_ = nullptr;
 }
 
 Descriptor::~Descriptor() {
-	for (size_t i=0; i<params_.size(); i++) {
+
+  Deallocate2DArray(rcuts_);
+  Deallocate2DArray(rcuts_samelayer_);
+
+  for (size_t i=0; i<params_.size(); i++) {
 		Deallocate2DArray(params_.at(i));
 	}
 }
 
-void Descriptor::set_cutoff(char* name, int Nspecies, double* rcuts)
+void Descriptor::set_cutoff(const char* name, const int Nspecies,
+    const double* rcuts, const double* rcuts_samelayer)
 {
 	if (strcmp(name, "cos") == 0) {
 		cutoff_ = &cut_cos;
@@ -36,9 +44,23 @@ void Descriptor::set_cutoff(char* name, int Nspecies, double* rcuts)
       idx++;
     }
   }
+
+  // store number of species and cutoff values
+  if (rcuts_samelayer != nullptr) {
+    AllocateAndInitialize2DArray(rcuts_samelayer_, Nspecies, Nspecies);
+    int idx = 0;
+    for (int i=0; i<Nspecies; i++) {
+      for (int j=0; j<Nspecies; j++) {
+        rcuts_samelayer_[i][j] = rcuts_samelayer[idx];
+        idx++;
+      }
+    }
+  }
+
 }
 
-void Descriptor::add_descriptor(char* name, double* values, int row, int col)
+void Descriptor::add_descriptor(const char* name, const double* values,
+    const int row, const int col)
 {
 	double ** params = 0;
 	AllocateAndInitialize2DArray(params, row, col);
@@ -86,42 +108,67 @@ int Descriptor::get_num_descriptors() {
 }
  */
 
-void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
-    int* neighlist, int* numneigh, int* image, int Natoms, int Ncontrib,
-    int Ndescriptor, double* gen_coords, double* d_gen_coords) {
+void Descriptor::get_generalized_coords(const double* coordinates,
+    const int* particleSpecies,
+    const int* neighlist, const int* numneigh, const int* image,
+    const int Natoms, const int Ncontrib, const int Ndescriptor,
+    double* const gen_coords, double* const d_gen_coords,
+    const int mode) {
 
   bool fit_forces = (d_gen_coords != nullptr);
 
+  // assign atoms to layers if required
+  std::vector<int> in_layer;
+  bool use_layer = false;
+  if (mode == 1 || mode ==2) {  // 0: bulk   1: bilayer   2: trilayer
+    create_layers(Natoms, coordinates, neighlist, numneigh, -1, in_layer);
+    use_layer = true;
+  }
+
   // prepare data
-  VectorOfSizeDIM* coordinates = (VectorOfSizeDIM*) coords;
+  VectorOfSizeDIM* coords = (VectorOfSizeDIM*) coordinates;
 
   int start = 0;
   for (int i=0; i<Ncontrib; i++) {
 
     int const numNei = numneigh[i];
-    int const * const n1Atom = &neighlist[start];
+    int const * const ilist = &neighlist[start];
     start += numNei;
     int const iSpecies = particleSpecies[i];
+    int ilayer;
+    if (use_layer) {
+      ilayer = in_layer[i];
+    }
 
     // Setup loop over neighbors of current particle
     for (int jj = 0; jj < numNei; ++jj)
     {
       // adjust index of particle neighbor
-      int const j = n1Atom[jj];
+      int const j = ilist[jj];
       int const jSpecies = particleSpecies[j];
       double rij[DIM];
 
-      // Compute rij
-      for (int dim = 0; dim < DIM; ++dim) {
-        rij[dim] = coordinates[j][dim] - coordinates[i][dim];
+      // cutoff between ij
+      int jlayer;
+      if (use_layer) {
+        jlayer = in_layer[j];
+      }
+      double rcutij;
+      if (use_layer && jlayer == ilayer) {
+        rcutij = rcuts_samelayer_[iSpecies][jSpecies];
+      }
+      else {
+        rcutij = rcuts_[iSpecies][jSpecies];
       }
 
-      // compute distance squared
+      // rij vec and rij mag
+      for (int dim = 0; dim < DIM; ++dim) {
+        rij[dim] = coords[j][dim] - coords[i][dim];
+      }
       double const rijmag = sqrt(rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2]);
-      double const rcutij = rcuts_[iSpecies][jSpecies];
 
       // if particles i and j not interact
-      if (rijmag > rcutij) continue;
+      if (rijmag >= rcutij) continue;
 
       // two-body descriptors
       for (size_t p=0; p<name_.size(); p++) {
@@ -184,25 +231,44 @@ void Descriptor::get_generalized_coords(double* coords, int* particleSpecies,
       for (int kk = jj+1; kk < numNei; ++kk) {
 
         // adjust index of particle neighbor
-        int const k = n1Atom[kk];
+        int const k = ilist[kk];
         int const kSpecies = particleSpecies[k];
+
+        // cutoff between ik and jk
+        int klayer;
+        if (use_layer) {
+          klayer = in_layer[k];
+        }
+        double rcutik;
+        if (use_layer && klayer == ilayer) {
+          rcutik = rcuts_samelayer_[iSpecies][kSpecies];
+        }
+        else {
+          rcutik = rcuts_[iSpecies][kSpecies];
+        }
+        double rcutjk;
+        if (use_layer && jlayer == ilayer && klayer == ilayer) {
+          rcutjk = rcuts_samelayer_[jSpecies][kSpecies];
+        }
+        else {
+          rcutjk = rcuts_[jSpecies][kSpecies];
+        }
 
         // Compute rik, rjk and their squares
         double rik[DIM];
         double rjk[DIM];
         for (int dim = 0; dim < DIM; ++dim) {
-          rik[dim] = coordinates[k][dim] - coordinates[i][dim];
-          rjk[dim] = coordinates[k][dim] - coordinates[j][dim];
+          rik[dim] = coords[k][dim] - coords[i][dim];
+          rjk[dim] = coords[k][dim] - coords[j][dim];
         }
         double const rikmag = sqrt(rik[0]*rik[0] + rik[1]*rik[1] + rik[2]*rik[2]);
         double const rjkmag = sqrt(rjk[0]*rjk[0] + rjk[1]*rjk[1] + rjk[2]*rjk[2]);
-        double const rcutik = rcuts_[iSpecies][kSpecies];
-        double const rcutjk = rcuts_[jSpecies][kSpecies];
+
+        if (rikmag >= rcutik) continue; // three-dody not interacting
+        if (rjkmag >= rcutjk) continue; // three-dody not interacting
 
         double const rvec[3] = {rijmag, rikmag, rjkmag};
         double const rcutvec[3] = {rcutij, rcutik, rcutjk};
-
-        if (rikmag > rcutik) continue; // three-dody not interacting
 
         for (size_t p=0; p<name_.size(); p++) {
 
@@ -549,11 +615,11 @@ void AllocateAndInitialize2DArray(double**& arrayPtr, int const extentZero,
 
 // deallocate memory
 void Deallocate2DArray(double**& arrayPtr) {
-  if (arrayPtr != 0) delete [] arrayPtr[0];
+  if (arrayPtr != nullptr) delete [] arrayPtr[0];
   delete [] arrayPtr;
 
   // nullify pointer
-  arrayPtr = 0;
+  arrayPtr = nullptr;
 }
 
 

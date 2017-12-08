@@ -21,12 +21,16 @@ class Descriptor
     Descriptor();
 		~Descriptor();
 
-		void set_cutoff(char* name, int Nspecies, double* rcuts);
-		void add_descriptor(char* name, double* values, int row, int col);
+		void set_cutoff(const char* name, const int Nspecies, const double* rcuts,
+    const double* rcuts_samelayer=nullptr);
+		void add_descriptor(const char* name, const double* values,
+        const int row, const int col);
     int get_num_descriptors();
-    void get_generalized_coords(double* coords, int* species_code, int* neighlist,
-        int* numneigh, int* image, int Natoms, int Ncontrib, int Ndescriptor,
-        double* gen_coords, double* d_gen_coords = nullptr);
+    void get_generalized_coords(const double* coords, const int* species_code,
+        const int* neighlist, const int* numneigh, const int* image,
+        const int Natoms, const int Ncontrib, const int Ndescriptor,
+        double* const gen_coords, double* const d_gen_coords = nullptr,
+        const int mode=0);
 
 
 	private:
@@ -38,6 +42,7 @@ class Descriptor
 		std::vector<int> num_params_;      // size of parameters of each descriptor
     bool has_three_body_;
     double** rcuts_;
+    double** rcuts_samelayer_;  // cutoffs atoms in the same layer
     double Nspecies_;
 
 		// symmetry functions

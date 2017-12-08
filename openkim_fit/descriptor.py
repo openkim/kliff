@@ -5,7 +5,7 @@ import sys
 from collections import OrderedDict
 
 from neighbor import NeighborList
-from error import UnsupportedError
+from error import InputError, UnsupportedError
 import desc
 
 
@@ -15,17 +15,7 @@ class Descriptor:
   Parameters
   ----------
 
-  cutname, string
-    cutoff function name
-
-  cutvalue, dict
-    cutoff values based on species.
-
-    Example
-    -------
-    cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
-
-  hyperparams, dict
+  hyperparams: dict
     hyperparameters of descriptors
 
     Example
@@ -34,19 +24,63 @@ class Descriptor:
        'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
        'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
       }
+
+  cutname: string
+    cutoff function name
+
+  cutvalue: dict
+    cutoff values based on species.
+
+    Example
+    -------
+    cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+
+  cutvalue_samelayer, dict
+    cutoff values to include atoms in the same layer when considering interlayer
+    interactions for layered materials.
+
+  debug: bool
+    True to enable debug mode where descriptor information will be printed to
+    file named `debug_descriptor.txt'.
+
   """
 
-  def __init__(self, cutname, cutvalue, hyperparams):
+  def __init__(self, hyperparams, cutname, cutvalue, cutvalue_samelayer=None,
+      debug=False):
 
+    self._hyperparams = hyperparams
     self._desc = OrderedDict()
     self._cutname = cutname.lower()
     self._rcut = generate_full_cutoff(cutvalue)
+    if cutvalue_samelayer is not None:
+      self._rcut_samelayer = generate_full_cutoff(cutvalue_samelayer)
+    else:
+      self._rcut_samelayer = None
+    self.debug = debug
+    if debug:
+      with open('debug_descriptor.txt', 'w') as fout:
+        fout.write('# descritor values for atoms in each configuration\n')
     self._species_code = dict()
     self._cdesc = desc.Descriptor()
 
+    # set cutoff
+    self.set_cutoff()
+
+    # set hyper params
+    self.set_hyperparams()
+
+
+  def set_cutoff(self):
+
     # check cutoff support
     if self._cutname not in ['cos', 'exp']:
-      raise UnsupportedError("Cutoff `{}' unsupported.".format(cutname))
+      raise UnsupportedError("Cutoff type `{}' unsupported.".format(cutname))
+
+    # check cutvalue_samelayer and cutvalue include the same species info
+    if self._rcut_samelayer is not None:
+      if set(self._rcut.keys()) != set(self._rcut_samelayer.keys()):
+        raise InputError("bulk cutoff `cutvalue' and same-layer cutoff "
+            "`cutvalue_samelayer' is incompatible w.r.t. species.")
 
     species = set()
     for key, value in self._rcut.iteritems():
@@ -57,25 +91,38 @@ class Descriptor:
 
     # create integer code for each species type and cutoff values based on species code
     rcutsym = np.zeros([num_species, num_species], dtype=np.double)
-    for i,si in enumerate(species):
-      self._species_code[si] = i
-      for j,sj in enumerate(species):
-        rcutsym[i][j] = self._rcut[si+'-'+sj]
+    if self._rcut_samelayer is not None:
+      rcutsym_samelayer = np.zeros([num_species, num_species], dtype=np.double)
+
+    try:
+      for i,si in enumerate(species):
+        self._species_code[si] = i
+        for j,sj in enumerate(species):
+          rcutsym[i][j] = self._rcut[si+'-'+sj]
+          if self._rcut_samelayer is not None:
+            rcutsym_samelayer[i][j] = self._rcut_samelayer[si+'-'+sj]
+    except KeyError as e:
+      raise InputError('Cutoff for {} not provided.'.format(e))
 
     # store cutoff values in cpp class
-    self._cdesc.set_cutoff('cos', rcutsym)
+    if self._rcut_samelayer is not None:
+      self._cdesc.set_cutoff_bulk_and_samelayer(self._cutname, rcutsym, rcutsym_samelayer)
+    else:
+      self._cdesc.set_cutoff_bulk(self._cutname, rcutsym)
+
+
+  def set_hyperparams(self):
 
     # hyperparams of descriptors
-    for key, values in hyperparams.iteritems():
+    for key, values in self._hyperparams.iteritems():
       if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
         raise UnsupportedError("Symmetry function `{}' unsupported.".format(key))
 
       # g1 needs no hyperparams, put a placeholder
       name = key.lower()
       if name == 'g1':
-        rows = 1
-        cols = 1
-        params = np.zeros([1,1], dtype=np.double)  # it has no hyperparams, zeros([1,1]) for placeholder
+        # it has no hyperparams, zeros([1,1]) for placeholder
+        params = np.zeros([1,1], dtype=np.double)
       else:
         rows = len(values)
         cols = len(values[0])
@@ -100,7 +147,7 @@ class Descriptor:
       self._cdesc.add_descriptor(name, params)
 
 
-  def generate_generalized_coords(self, conf, fit_forces=False):
+  def generate_generalized_coords(self, conf, fit_forces=False, mode='bulk'):
     """Transform atomic coords to generalized coords.
 
     Parameter
@@ -110,6 +157,11 @@ class Descriptor:
 
     fit_forces: bool
       Whether to fit to forces.
+
+    mode: str
+      The type of materials to generate generalized coords for. Available
+      vales are {'bulk', 'bilayer', 'trilayer'}. Only the first two letters
+      matter and it is case insensitive.
 
     Returns
     -------
@@ -121,6 +173,25 @@ class Descriptor:
       [Ncontrib, Ndescriptors, 3*Ncontrib]
 
     """
+
+    # determine mode
+    mode_2letter = mode.lower()[:2]
+    if mode_2letter == 'bu':
+      int_mode = 0
+    elif mode_2letter == 'bi':
+      int_mode = 1
+    elif mode_2letter == 'tr':
+      int_mode = 2
+    else:
+      raise UnsupportedError("Material type (mode) `{}' unsupported. "
+          "Available options are ('bulk', 'bilayer', 'trilayer').".format(mode))
+
+    # check whether cutvalue_samelayer is set
+    if mode_2letter == 'bi' or mode_2letter == 'tr':
+      if self._rcut_samelayer is None:
+        raise InputError("Material type (mode) `{}' cannot be used when "
+            "`cutvalue_samelayer' is not provided to initialize the `Descriptor' "
+            "class.".format(mode))
 
     # create neighbor list
     nei = NeighborList(conf, self._rcut, padding_need_neigh=True)
@@ -139,14 +210,27 @@ class Descriptor:
       gen_coords, d_gen_coords = self._cdesc.get_gen_coords_and_deri(coords.astype(np.double),
           species_code.astype(np.intc), neighlist.astype(np.intc),
           numneigh.astype(np.intc), image.astype(np.intc),
-          Natoms, Ncontrib, Ndesc)
-
-      return gen_coords, d_gen_coords
+          Natoms, Ncontrib, Ndesc, int_mode)
     else:
       gen_coords = self._cdesc.get_gen_coords(coords.astype(np.double),
           species_code.astype(np.intc), neighlist.astype(np.intc),
           numneigh.astype(np.intc), image.astype(np.intc),
-          Natoms, Ncontrib, Ndesc)
+          Natoms, Ncontrib, Ndesc, int_mode)
+
+    if self.debug:
+      with open('debug_descriptor.txt', 'a') as fout:
+        fout.write('\n\n'+'='*80+'\n')
+        fout.write('# configure name: {}\n'.format(conf.id))
+        fout.write('# atom id    descriptor values ...\n\n')
+        for i,line in enumerate(gen_coords):
+          fout.write('{}    '.format(i))
+          for j in line:
+            fout.write('{} '.format(j))
+          fout.write('\n')
+
+    if fit_forces:
+      return gen_coords, d_gen_coords
+    else:
       return gen_coords, None
 
 
