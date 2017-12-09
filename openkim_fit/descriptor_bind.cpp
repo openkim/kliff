@@ -48,7 +48,7 @@ PYBIND11_MODULE(desc, m) {
     .def("get_gen_coords",
       [](Descriptor &d, py::array_t<double> coords, py::array_t<int> particleSpecies,
          py::array_t<int> neighlist, py::array_t<int> numneigh,
-         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int mode) {
+         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int structure) {
 
         // create empty vectors to hold return data
         std::vector<double> gen_coords(Ncontrib*Ndescriptor);
@@ -57,7 +57,7 @@ PYBIND11_MODULE(desc, m) {
             particleSpecies.mutable_data(0), neighlist.mutable_data(0),
             numneigh.mutable_data(0), image.mutable_data(0),
             Natoms, Ncontrib, Ndescriptor,
-            gen_coords.data(), nullptr, mode);
+            gen_coords.data(), nullptr, structure);
 
         // pack gen_coords into a buffer that numpy array can understand
         auto gen_coords_2D = py::array (py::buffer_info (
@@ -79,13 +79,13 @@ PYBIND11_MODULE(desc, m) {
       py::arg("Natoms"),
       py::arg("Ncontrib"),
       py::arg("Ndescriptor"),
-      py::arg("mode") = 0
+      py::arg("structure") = 0
     )
 
     .def("get_gen_coords_and_deri",
       [](Descriptor &d, py::array_t<double> coords, py::array_t<int> particleSpecies,
          py::array_t<int> neighlist, py::array_t<int> numneigh,
-         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int mode) {
+         py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int structure) {
 
         // create empty vectors to hold return data
         std::vector<double> gen_coords(Ncontrib*Ndescriptor);
@@ -95,7 +95,7 @@ PYBIND11_MODULE(desc, m) {
             particleSpecies.mutable_data(0), neighlist.mutable_data(0),
             numneigh.mutable_data(0), image.mutable_data(0),
             Natoms, Ncontrib, Ndescriptor,
-            gen_coords.data(), d_gen_coords.data(), mode);
+            gen_coords.data(), d_gen_coords.data(), structure);
 
         // pack gen_coords into a buffer that numpy array can understand
         auto gen_coords_2D = py::array (py::buffer_info (
@@ -130,7 +130,7 @@ PYBIND11_MODULE(desc, m) {
       py::arg("Natoms"),
       py::arg("Ncontrib"),
       py::arg("Ndescriptor"),
-      py::arg("mode") = 0,
+      py::arg("structure") = 0,
       "Return (gen_coords, d_gen_coords)"
     );
 

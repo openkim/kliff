@@ -147,7 +147,7 @@ class Descriptor:
       self._cdesc.add_descriptor(name, params)
 
 
-  def generate_generalized_coords(self, conf, fit_forces=False, mode='bulk'):
+  def generate_generalized_coords(self, conf, fit_forces=False, structure='bulk'):
     """Transform atomic coords to generalized coords.
 
     Parameter
@@ -158,7 +158,7 @@ class Descriptor:
     fit_forces: bool
       Whether to fit to forces.
 
-    mode: str
+    structure: str
       The type of materials to generate generalized coords for. Available
       vales are {'bulk', 'bilayer', 'trilayer'}. Only the first two letters
       matter and it is case insensitive.
@@ -174,24 +174,24 @@ class Descriptor:
 
     """
 
-    # determine mode
-    mode_2letter = mode.lower()[:2]
-    if mode_2letter == 'bu':
-      int_mode = 0
-    elif mode_2letter == 'bi':
-      int_mode = 1
-    elif mode_2letter == 'tr':
-      int_mode = 2
+    # determine structure
+    structure_2letter = structure.lower()[:2]
+    if structure_2letter == 'bu':
+      int_structure = 0
+    elif structure_2letter == 'bi':
+      int_structure = 1
+    elif structure_2letter == 'tr':
+      int_structure = 2
     else:
-      raise UnsupportedError("Material type (mode) `{}' unsupported. "
-          "Available options are ('bulk', 'bilayer', 'trilayer').".format(mode))
+      raise UnsupportedError("Material type (structure) `{}' unsupported. "
+          "Available options are ('bulk', 'bilayer', 'trilayer').".format(structure))
 
     # check whether cutvalue_samelayer is set
-    if mode_2letter == 'bi' or mode_2letter == 'tr':
+    if structure_2letter == 'bi' or structure_2letter == 'tr':
       if self._rcut_samelayer is None:
-        raise InputError("Material type (mode) `{}' cannot be used when "
+        raise InputError("Material type (structure) `{}' cannot be used when "
             "`cutvalue_samelayer' is not provided to initialize the `Descriptor' "
-            "class.".format(mode))
+            "class.".format(structure))
 
     # create neighbor list
     nei = NeighborList(conf, self._rcut, padding_need_neigh=True)
@@ -210,12 +210,12 @@ class Descriptor:
       gen_coords, d_gen_coords = self._cdesc.get_gen_coords_and_deri(coords.astype(np.double),
           species_code.astype(np.intc), neighlist.astype(np.intc),
           numneigh.astype(np.intc), image.astype(np.intc),
-          Natoms, Ncontrib, Ndesc, int_mode)
+          Natoms, Ncontrib, Ndesc, int_structure)
     else:
       gen_coords = self._cdesc.get_gen_coords(coords.astype(np.double),
           species_code.astype(np.intc), neighlist.astype(np.intc),
           numneigh.astype(np.intc), image.astype(np.intc),
-          Natoms, Ncontrib, Ndesc, int_mode)
+          Natoms, Ncontrib, Ndesc, int_structure)
 
     if self.debug:
       with open('debug_descriptor.txt', 'a') as fout:

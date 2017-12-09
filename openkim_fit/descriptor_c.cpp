@@ -113,14 +113,14 @@ void Descriptor::get_generalized_coords(const double* coordinates,
     const int* neighlist, const int* numneigh, const int* image,
     const int Natoms, const int Ncontrib, const int Ndescriptor,
     double* const gen_coords, double* const d_gen_coords,
-    const int mode) {
+    const int structure) {
 
   bool fit_forces = (d_gen_coords != nullptr);
 
   // assign atoms to layers if required
   std::vector<int> in_layer;
   bool use_layer = false;
-  if (mode == 1 || mode ==2) {  // 0: bulk   1: bilayer   2: trilayer
+  if (structure == 1 || structure ==2) {  // 0: bulk   1: bilayer   2: trilayer
     create_layers(Natoms, coordinates, neighlist, numneigh, -1, in_layer);
     use_layer = true;
   }

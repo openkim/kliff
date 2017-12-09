@@ -11,7 +11,7 @@ def fun(f, q_in, q_out):
     i, x, args = q_in.get()
     if i is None:
       break
-    q_out.put((i, f(x, args[0])))
+    q_out.put((i, f(x, *args)))
 
 def parmap(f, X, nprocs, *args):
   q_in = mp.Queue(1)

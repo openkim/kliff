@@ -30,7 +30,7 @@ class Descriptor
         const int* neighlist, const int* numneigh, const int* image,
         const int Natoms, const int Ncontrib, const int Ndescriptor,
         double* const gen_coords, double* const d_gen_coords = nullptr,
-        const int mode=0);
+        const int structure=0);
 
 
 	private:
