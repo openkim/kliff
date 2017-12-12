@@ -145,6 +145,7 @@ def _write_tfrecord_energy(writer, conf, descriptor, do_normalize, np_dtype,
   num_atoms_by_species = [d[k] for k in d]
   num_species = len(num_atoms_by_species)
   num_atoms_by_species = np.array(num_atoms_by_species, np.int64).tostring()
+  weight = np.array(conf.get_weight(), np_dtype).tostring()
   energy = np.array(conf.get_energy(), np_dtype).tostring()
 
   example = tf.train.Example(features=tf.train.Features(feature={
@@ -154,6 +155,7 @@ def _write_tfrecord_energy(writer, conf, descriptor, do_normalize, np_dtype,
     # input data
     'name': _bytes_feature(name),
     'num_atoms_by_species': _bytes_feature(num_atoms_by_species),
+    'weight': _bytes_feature(weight),
     'gen_coords': _bytes_feature(zeta),
     # labels
     'energy': _bytes_feature(energy),
@@ -186,6 +188,7 @@ def _write_tfrecord_energy_and_force(writer, conf, descriptor, do_normalize, np_
   num_species = len(num_atoms_by_species)
   num_atoms_by_species = np.array(num_atoms_by_species, np.int64).tostring()
   coords = conf.get_coords().astype(np_dtype).tostring()
+  weight = np.array(conf.get_weight(), np_dtype).tostring()
   energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
   forces = conf.get_forces().astype(np_dtype).tostring()
 
@@ -196,6 +199,7 @@ def _write_tfrecord_energy_and_force(writer, conf, descriptor, do_normalize, np_
     # input data
     'name': _bytes_feature(name),
     'num_atoms_by_species': _bytes_feature(num_atoms_by_species),
+    'weight': _bytes_feature(weight),
     'atomic_coords': _bytes_feature(coords),
     'gen_coords': _bytes_feature(zeta),
     'dgen_datomic_coords': _bytes_feature(dzetadr),
@@ -544,6 +548,7 @@ def _parse_energy(example_proto):
       # input data
       'name': tf.FixedLenFeature((), tf.string),
       'num_atoms_by_species': tf.FixedLenFeature((), tf.string),
+      'weight': tf.FixedLenFeature((), tf.string),
       'gen_coords': tf.FixedLenFeature((), tf.string),
       # labels
       'energy': tf.FixedLenFeature((), tf.string),
@@ -554,14 +559,20 @@ def _parse_energy(example_proto):
   num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int64)
   num_species = tf.cast(parsed_features['num_species'], tf.int64)
 
+  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
+
   ## input
   name = parsed_features['name']
-  num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
-  shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
-  num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
-  num_atoms = tf.reduce_sum(num_atoms_by_species)
 
-  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
+  num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
+
+  shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
+                                            # or else, can use num_species as tf.int32
+  num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
+
+  weight = tf.decode_raw(parsed_features['weight'], dtype)[0]
+
+  num_atoms = tf.reduce_sum(num_atoms_by_species)
   shape = tf.cast([num_atoms, num_descriptors], tf.int64)
   gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
   gen_coords = tf.reshape(gen_coords, shape)
@@ -569,7 +580,7 @@ def _parse_energy(example_proto):
   # labels
   energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
 
-  return  name, num_atoms_by_species, gen_coords, energy
+  return  name, num_atoms_by_species, weight, gen_coords, energy
 
 
 def _parse_energy_and_force(example_proto):
@@ -584,6 +595,7 @@ def _parse_energy_and_force(example_proto):
       # input data
       'name': tf.FixedLenFeature((), tf.string),
       'num_atoms_by_species': tf.FixedLenFeature((), tf.string),
+      'weight': tf.FixedLenFeature((), tf.string),
       'atomic_coords': tf.FixedLenFeature((), tf.string),
       'gen_coords': tf.FixedLenFeature((), tf.string),
       'dgen_datomic_coords': tf.FixedLenFeature((), tf.string),
@@ -598,21 +610,22 @@ def _parse_energy_and_force(example_proto):
   num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int64)
   num_species = tf.cast(parsed_features['num_species'], tf.int64)
 
+  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
+
   # input
   name = parsed_features['name']
   num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
   shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
   num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
-  num_atoms = tf.reduce_sum(num_atoms_by_species)
+  weight = tf.decode_raw(parsed_features['weight'], dtype)[0]
 
-  # shape of tensors
+  # shapes
+  num_atoms = tf.reduce_sum(num_atoms_by_species)
   DIM = 3
   shape1 = tf.cast([num_atoms*DIM], tf.int64)
   shape2 = tf.cast([num_atoms, num_descriptors], tf.int64)
   shape3 = tf.cast([num_atoms, num_descriptors, num_atoms*DIM], tf.int64)
 
-  # input
-  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
   atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
   atomic_coords = tf.reshape(atomic_coords, shape1)
   gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
@@ -625,7 +638,7 @@ def _parse_energy_and_force(example_proto):
   forces = tf.decode_raw(parsed_features['forces'], dtype)
   forces = tf.reshape(forces, shape1)
 
-  return  name, num_atoms_by_species, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
+  return  name, num_atoms_by_species, weight, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
 
 
 def read_tfrecord(fname, fit_forces=False, dtype=tf.float32):

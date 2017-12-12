@@ -4,6 +4,8 @@ import numpy as np
 from collections import OrderedDict
 from error import InputError
 
+#TODO weight can be allowed to be read in from dataset
+#TODO  if energy is to be fitted, allow read only coords, not forces
 class Configuration:
   """ Class for one atomistic configuration.
 
@@ -19,6 +21,7 @@ class Configuration:
 
   def __init__(self, identifier='id_not_provided', order_by_species=True):
     self.id = identifier
+    self.weight = 1.0
     self.do_order = order_by_species
     self.natoms = None   # int
     self.cell = None     # 3 by 3 ndarray
@@ -252,6 +255,12 @@ class Configuration:
 
   def get_forces(self):
     return self.forces
+
+  def get_weight(self):
+    return self.weight
+
+  def set_weight(self, weight):
+    self.weight = weight
 
 
 class DataSet:
