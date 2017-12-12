@@ -244,7 +244,7 @@ class Descriptor:
 
   def get_cutoff(self):
     """ Return the name and values of cutoff. """
-    return self._cutname, self._rcut
+    return self._cutname, self._rcut, self._rcut_samelayer
 
 
   def get_hyperparams(self):

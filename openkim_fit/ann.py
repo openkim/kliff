@@ -422,9 +422,9 @@ def convert_to_tfrecord(configs, descriptor, size_validation=0,
   return tr_name, va_name
 
 
-def convert_to_tfrecord_testset(configs, descriptor, directory='/tmp/data',
-    do_generate=True, do_normalize=True, do_shuffle=False, fit_forces=False,
-    structure='bulk', dtype=tf.float32):
+def convert_to_tfrecord_testset(configs, descriptor,
+    directory='/tmp/data', do_generate=True, do_normalize=True, do_shuffle=False,
+    fit_forces=False, structure='bulk', dtype=tf.float32):
   """Preprocess the testset data to generate the generalized coords and its
   derivatives, and store them, together with coords and label as tfRecord binary.
 
@@ -813,13 +813,14 @@ def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
   with open(fname,'w') as fout:
 
     # cutoff
-    cutname, rcut = descriptor.get_cutoff()
+    cutname, rcut, rcut_samelayer = descriptor.get_cutoff()
     maxrcut = max(rcut.values())
+    maxrcut_samelayer = max(rcut_samelayer.values())
     fout.write('# cutoff    rcut\n')
     if dtype == tf.float64:
-      fout.write('{}    {:.15g}\n\n'.format(cutname, maxrcut))
+      fout.write('{}  {:.15g}  {:.15g}\n\n'.format(cutname, maxrcut, maxrcut_samelayer))
     else:
-      fout.write('{}    {:.7g}\n\n'.format(cutname, maxrcut))
+      fout.write('{}  {:.7g}  {:.7g}\n\n'.format(cutname, maxrcut, maxrcut_samelayer))
 
     # symmetry functions
     # header
