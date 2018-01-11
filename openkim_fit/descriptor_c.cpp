@@ -132,7 +132,7 @@ void Descriptor::get_generalized_coords(const double* coordinates,
   for (int i=0; i<Ncontrib; i++) {
 
     int const numNei = numneigh[i];
-    int const * const ilist = &neighlist[start];
+    int const * const ilist = neighlist+start;
     start += numNei;
     int const iSpecies = particleSpecies[i];
     int ilayer;
@@ -146,7 +146,6 @@ void Descriptor::get_generalized_coords(const double* coordinates,
       // adjust index of particle neighbor
       int const j = ilist[jj];
       int const jSpecies = particleSpecies[j];
-      double rij[DIM];
 
       // cutoff between ij
       int jlayer;
@@ -162,6 +161,7 @@ void Descriptor::get_generalized_coords(const double* coordinates,
       }
 
       // rij vec and rij mag
+      double rij[DIM];
       for (int dim = 0; dim < DIM; ++dim) {
         rij[dim] = coords[j][dim] - coords[i][dim];
       }
@@ -169,6 +169,9 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
       // if particles i and j not interact
       if (rijmag >= rcutij) continue;
+
+     // allow bulk or interlayer interaction
+      if (!use_layer || (use_layer && jlayer != ilayer)) {
 
       // two-body descriptors
       for (size_t p=0; p<name_.size(); p++) {
@@ -223,6 +226,7 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
         } // loop over same descriptor but different parameter set
       } // loop over descriptors
+      } // bulk or interlayer interaction
 
 
       // three-body descriptors
@@ -266,6 +270,8 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
         if (rikmag >= rcutik) continue; // three-dody not interacting
         //if (rjkmag >= rcutjk) continue; // shoud not use this since g5 has no cutoff for rjk
+        if (use_layer && klayer == jlayer ) continue;  // only when j and k are in different layer
+
 
         double const rvec[3] = {rijmag, rikmag, rjkmag};
         double const rcutvec[3] = {rcutij, rcutik, rcutjk};

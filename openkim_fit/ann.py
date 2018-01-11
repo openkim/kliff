@@ -116,6 +116,15 @@ def layer_decorator(func):
 
 
 
+
+
+
+
+
+
+
+
+
 def _bytes_feature(value):
   return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
@@ -262,6 +271,22 @@ def numpy_mean_and_std(configs, descriptor, fit_forces, structure='bulk', nprocs
   except MemoryError:
     raise MemoryError('Out of memory while computing mean and standard deviation. '
         'Try the memory-efficient welford method instead.')
+
+
+  #TODO delete debug
+  zeta_norm = (all_zeta - mean) / std
+  with open('debug_descriptor_after_normalization.txt', 'w') as fout:
+    for gen_coords,conf in zip(zeta_norm, configs):
+      fout.write('\n\n'+'#'+'='*80+'\n')
+      fout.write('# configure name: {}\n'.format(conf.id))
+      fout.write('# atom id    descriptor values ...\n\n')
+      for i,line in enumerate(gen_coords):
+        fout.write('{}    '.format(i))
+        for j in line:
+          fout.write('{:.15g} '.format(j))
+        fout.write('\n')
+
+
 
   return mean, std, all_zeta, all_dzetadr
 
@@ -687,6 +712,23 @@ def input_layer_given_data(coords, zeta, dzetadr, num_descriptor,
     input.set_shape((None, int(num_descriptor)))
 
     return input
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #  The following three methods. to built data into graphDef, OK and fast for small data set

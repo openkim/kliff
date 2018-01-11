@@ -148,6 +148,8 @@ int create_layers(const int Natoms, const double* coordinates,
   } // finding atoms in all layers
 
 
+  std::cout <<"\nINFO: number of layers: " <<nlayers <<std::endl<<std::endl;
+
   //TODO delete debug
 /*  std::cout<<"Cutoff for layer "<<sqrt(cutsq_layer)<<std::endl;
   std::cout <<"Number of layers: " <<nlayers <<std::endl;

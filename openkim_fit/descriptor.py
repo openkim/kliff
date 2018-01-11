@@ -59,7 +59,7 @@ class Descriptor:
     self.debug = debug
     if debug:
       with open('debug_descriptor.txt', 'w') as fout:
-        fout.write('# descritor values for atoms in each configuration\n')
+        fout.write('# descritor values (without normalization) for atoms in each configuration\n')
     self._species_code = dict()
     self._cdesc = desc.Descriptor()
 
@@ -219,13 +219,13 @@ class Descriptor:
 
     if self.debug:
       with open('debug_descriptor.txt', 'a') as fout:
-        fout.write('\n\n'+'='*80+'\n')
+        fout.write('\n\n#'+'='*80+'\n')
         fout.write('# configure name: {}\n'.format(conf.id))
         fout.write('# atom id    descriptor values ...\n\n')
         for i,line in enumerate(gen_coords):
           fout.write('{}    '.format(i))
           for j in line:
-            fout.write('{} '.format(j))
+            fout.write('{:.15g} '.format(j))
           fout.write('\n')
 
     if fit_forces:
