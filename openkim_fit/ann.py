@@ -263,8 +263,8 @@ def numpy_mean_and_std(configs, descriptor, fit_forces, structure='bulk', nprocs
   try:
     rslt = parallel.parmap(descriptor.generate_generalized_coords, configs,
         nprocs, fit_forces, structure)
-    all_zeta = np.array([pair[0] for pair in rslt])
-    all_dzetadr = np.array([pair[1] for pair in rslt])
+    all_zeta = [pair[0] for pair in rslt]
+    all_dzetadr = [pair[1] for pair in rslt]
     stacked = np.concatenate(all_zeta)
     mean = np.mean(stacked, axis=0)
     std = np.std(stacked, axis=0)
@@ -272,21 +272,18 @@ def numpy_mean_and_std(configs, descriptor, fit_forces, structure='bulk', nprocs
     raise MemoryError('Out of memory while computing mean and standard deviation. '
         'Try the memory-efficient welford method instead.')
 
-
   #TODO delete debug
-  zeta_norm = (all_zeta - mean) / std
   with open('debug_descriptor_after_normalization.txt', 'w') as fout:
-    for gen_coords,conf in zip(zeta_norm, configs):
+    for zeta,conf in zip(all_zeta, configs):
+      zeta_norm = (zeta - mean) / std
       fout.write('\n\n'+'#'+'='*80+'\n')
       fout.write('# configure name: {}\n'.format(conf.id))
       fout.write('# atom id    descriptor values ...\n\n')
-      for i,line in enumerate(gen_coords):
+      for i,line in enumerate(zeta_norm):
         fout.write('{}    '.format(i))
         for j in line:
           fout.write('{:.15g} '.format(j))
         fout.write('\n')
-
-
 
   return mean, std, all_zeta, all_dzetadr
 
