@@ -273,17 +273,17 @@ def numpy_mean_and_std(configs, descriptor, fit_forces, structure='bulk', nprocs
         'Try the memory-efficient welford method instead.')
 
   #TODO delete debug
-  with open('debug_descriptor_after_normalization.txt', 'w') as fout:
-    for zeta,conf in zip(all_zeta, configs):
-      zeta_norm = (zeta - mean) / std
-      fout.write('\n\n'+'#'+'='*80+'\n')
-      fout.write('# configure name: {}\n'.format(conf.id))
-      fout.write('# atom id    descriptor values ...\n\n')
-      for i,line in enumerate(zeta_norm):
-        fout.write('{}    '.format(i))
-        for j in line:
-          fout.write('{:.15g} '.format(j))
-        fout.write('\n')
+#  with open('debug_descriptor_after_normalization.txt', 'w') as fout:
+#    for zeta,conf in zip(all_zeta, configs):
+#      zeta_norm = (zeta - mean) / std
+#      fout.write('\n\n'+'#'+'='*80+'\n')
+#      fout.write('# configure name: {}\n'.format(conf.id))
+#      fout.write('# atom id    descriptor values ...\n\n')
+#      for i,line in enumerate(zeta_norm):
+#        fout.write('{}    '.format(i))
+#        for j in line:
+#          fout.write('{:.15g} '.format(j))
+#        fout.write('\n')
 
   return mean, std, all_zeta, all_dzetadr
 

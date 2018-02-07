@@ -209,18 +209,18 @@ def set_padding(cell, PBC, species, coords, rcut):
         for at,(x,y,z) in enumerate(frac_coords):
 
           # select the necessary atoms to repeate for the most outside bin
-#          if i == -size0 and x - xmin < size0 - ratio0:
-#            continue
-#          if i == size0  and xmax - x < size0 - ratio0:
-#            continue
-#          if j == -size1 and y - ymin < size1 - ratio1:
-#            continue
-#          if j == size1  and ymax - y < size1 - ratio1:
-#            continue
-#          if k == -size2 and z - zmin < size2 - ratio2:
-#            continue
-#          if k == size2  and zmax - z < size2 - ratio2:
-#            continue
+          if i == -size0 and x - xmin < size0 - ratio0:
+            continue
+          if i == size0  and xmax - x < size0 - ratio0:
+            continue
+          if j == -size1 and y - ymin < size1 - ratio1:
+            continue
+          if j == size1  and ymax - y < size1 - ratio1:
+            continue
+          if k == -size2 and z - zmin < size2 - ratio2:
+            continue
+          if k == size2  and zmax - z < size2 - ratio2:
+            continue
 
 # TODO attention needed, this is temporary
 # Note, the above code select fewer atoms as padding as necessary. But it may lead to
@@ -229,11 +229,11 @@ def set_padding(cell, PBC, species, coords, rcut):
 # some atoms in the same layer may be assigned to different layer membership.
 # the following only considers truncate the z direction
 
-          # select the necessary atoms to repeate for the most outside bin
-          if k == -size2 and z - zmin < size2 - ratio2:
-            continue
-          if k == size2  and zmax - z < size2 - ratio2:
-            continue
+#          # select the necessary atoms to repeate for the most outside bin
+#          if k == -size2 and z - zmin < size2 - ratio2:
+#            continue
+#          if k == size2  and zmax - z < size2 - ratio2:
+#            continue
 
 
           pad_coords.append([i+x,j+y,k+z])

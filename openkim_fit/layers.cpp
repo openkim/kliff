@@ -32,7 +32,7 @@ int create_layers(const int Natoms, const double* coordinates,
 
   // cutoff used to find atoms in the same layer
 
-  double cutsq_layer;
+//  double cutsq_layer;
 
 // The code snippet in else is incorrect, we cannot use max(min(rij)) to find the value.
 // Think that there are four atoms, 1 and 2 are tightly bonded, 3 and 4 are tightly
@@ -69,12 +69,12 @@ int create_layers(const int Natoms, const double* coordinates,
     double max_min_rsq = *(std::max_element(min_rsq.begin(), min_rsq.end()));
     cutsq_layer = max_min_rsq * 1.01;  // *1.01 to get over edge case
   }
-*/
 
   // we can set it manually to speed up
    cutsq_layer = 2.0*2.0;
+*/
 
-
+/*
   // layers
   int nremain; // number of atoms not included in any layer
   int nlayers;
@@ -155,16 +155,39 @@ int create_layers(const int Natoms, const double* coordinates,
     if (nremain == 0) break;
     nlayers += 1;
   } // finding atoms in all layers
+*/
 
 
+
+  // TODO change this is only temporary, we know that there is only two layers
+  double average_z = 0.0;
+  for (int i=0; i<Natoms; i++) {
+    average_z += coords[i][2];
+  }
+  average_z /= Natoms;
+
+  in_layer.assign(Natoms, -1); // -1 means atoms not in any layer
+  for (int i=0; i<Natoms; i++) {
+    if (coords[i][2] > average_z) {
+      in_layer[i] = 1;
+    }
+    else {
+      in_layer[i] = 0;
+    }
+  }
+
+
+/*
   std::cout <<"\nINFO: number of layers: " <<nlayers <<std::endl<<std::endl;
 
-  //TODO delete debug
-/*  std::cout<<"Cutoff for layer "<<sqrt(cutsq_layer)<<std::endl;
-  std::cout <<"Number of layers: " <<nlayers <<std::endl;
-  std::cout <<"#atom id   layer   coords"<<std::endl;
-  for (int i=0; i<Natoms; i++) {
-    std::cout <<i<<" "<<in_layer[i] <<" "<<coords[i][0]<<" "<<coords[i][1]<<" "<<coords[i][2]<<std::endl;
+ //TODO delete debug
+  if (nlayers != 2) {
+    std::cout<<"Cutoff for layer "<<sqrt(cutsq_layer)<<std::endl;
+    std::cout <<"Number of layers: " <<nlayers <<std::endl;
+    std::cout <<"#atom id   layer   coords"<<std::endl;
+    for (int i=0; i<Natoms; i++) {
+      std::cout <<i<<" "<<in_layer[i] <<" "<<coords[i][0]<<" "<<coords[i][1]<<" "<<coords[i][2]<<std::endl;
+    }
   }
 */
 

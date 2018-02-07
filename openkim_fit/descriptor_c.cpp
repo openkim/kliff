@@ -149,12 +149,10 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
       // cutoff between ij
       int jlayer;
+      double rcutij;
       if (use_layer) {
         jlayer = in_layer[j];
-      }
-      double rcutij;
-      if (use_layer && jlayer == ilayer) {
-        rcutij = rcuts_samelayer_[iSpecies][jSpecies];
+        rcutij = rcuts_[iSpecies][jSpecies];
       }
       else {
         rcutij = rcuts_[iSpecies][jSpecies];
@@ -240,21 +238,17 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
         // cutoff between ik and jk
         int klayer;
+        double rcutik;
+        double rcutjk;
         if (use_layer) {
           klayer = in_layer[k];
-        }
-        double rcutik;
-        if (use_layer && klayer == ilayer) {
+          rcutij = rcuts_samelayer_[iSpecies][jSpecies];
           rcutik = rcuts_samelayer_[iSpecies][kSpecies];
-        }
-        else {
-          rcutik = rcuts_[iSpecies][kSpecies];
-        }
-        double rcutjk;
-        if (use_layer && jlayer == ilayer && klayer == ilayer) {
           rcutjk = rcuts_samelayer_[jSpecies][kSpecies];
         }
         else {
+          rcutij = rcuts_[iSpecies][jSpecies];
+          rcutik = rcuts_[iSpecies][kSpecies];
           rcutjk = rcuts_[jSpecies][kSpecies];
         }
 

@@ -51,7 +51,7 @@ PYBIND11_MODULE(desc, m) {
          py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int structure) {
 
         // create empty vectors to hold return data
-        std::vector<double> gen_coords(Ncontrib*Ndescriptor);
+        std::vector<double> gen_coords(Ncontrib*Ndescriptor, 0.0);
 
         d.get_generalized_coords(coords.mutable_data(0),
             particleSpecies.mutable_data(0), neighlist.mutable_data(0),
@@ -88,8 +88,8 @@ PYBIND11_MODULE(desc, m) {
          py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor, int structure) {
 
         // create empty vectors to hold return data
-        std::vector<double> gen_coords(Ncontrib*Ndescriptor);
-        std::vector<double> d_gen_coords(Ncontrib*Ndescriptor*3*Ncontrib);
+        std::vector<double> gen_coords(Ncontrib*Ndescriptor, 0.0);
+        std::vector<double> d_gen_coords(Ncontrib*Ndescriptor*3*Ncontrib, 0.0);
 
         d.get_generalized_coords(coords.mutable_data(0),
             particleSpecies.mutable_data(0), neighlist.mutable_data(0),
