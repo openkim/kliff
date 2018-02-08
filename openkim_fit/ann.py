@@ -851,8 +851,8 @@ def get_weights_and_biases(layer_names):
   return weights, biases
 
 
-def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
-    fname='ann_kim.params'):
+def write_kim_ann(descriptor, weights, biases, activation, keep_prob=None,
+    dtype=tf.float32, fname='ann_kim.params'):
   """Output ANN structure, parameters etc. in the format of the KIM ANN model.
 
   Parameter
@@ -861,6 +861,9 @@ def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
   descriptor, object of Descriptor class
 
   """
+
+  if keep_prob is None:
+    keep_prob = np.ones(len(weights))
 
   with open(fname,'w') as fout:
 
@@ -968,10 +971,12 @@ def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
     num_layers = len(weights)
     fout.write('{}    # number of layers (excluding input layer, including'
         'output layer)\n'.format(num_layers))
+
     # size of layers
     for b in biases:
       fout.write('{}  '.format(b.size))
     fout.write('  # size of each layer (last must be 1)\n')
+
     # activation function
     if activation == tf.nn.sigmoid:
       act_name = 'sigmoid'
@@ -984,7 +989,12 @@ def write_kim_ann(descriptor, weights, biases, activation, dtype=tf.float32,
     else:
       raise ValueError('unsupported activation function for KIM ANN model.')
 
-    fout.write('{}    # activation function\n\n'.format(act_name))
+    fout.write('{}    # activation function\n'.format(act_name))
+
+    # keep probability
+    for i in keep_prob:
+      fout.write('{:.15g}  '.format(i))
+    fout.write('  # keep probability of input for each layer\n\n')
 
     # weights and biases
     for i, (w, b) in enumerate(zip(weights, biases)):
