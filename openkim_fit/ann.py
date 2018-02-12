@@ -851,6 +851,56 @@ def get_weights_and_biases(layer_names):
   return weights, biases
 
 
+
+def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, dtype=tf.float32):
+  """ convert tfrecord data file to text file.
+
+  Parameters
+  ----------
+
+  tfrecord_name: str
+    File name of the tfrecord data file.
+
+  text_name: str
+    File name of the outout text data file.
+
+  fit_forces: bool
+    Is forces included in the tfrecord data.
+  """
+
+  dataset = read_tfrecord(tfrecord_name, fit_forces, dtype)
+  iterator = dataset.make_one_shot_iterator()
+
+  if fit_forces:
+    name,num_atoms_by_species,weight,gen_coords,energy_label,atomic_coords, \
+        dgen_datomic_coords,forces_label = iterator.get_next()
+  else:
+    name,num_atoms_by_species,weight,gen_coords,energy_label = iterator.get_next()
+
+  with open(text_name, 'w') as fout:
+    fout.write('# Generalized coordinates for all configurations.\n')
+    nconf = 0
+
+    with tf.Session() as sess:
+      while True:
+        try:
+          nm, gc = sess.run([name, gen_coords])
+
+          fout.write('\n\n#'+'='*80+'\n')
+          fout.write('# configuration: {}\n'.format(nm))
+          fout.write('# atom id    descriptor values ...\n\n')
+          for i,line in enumerate(gc):
+            fout.write('{}    '.format(i))
+            for j in line:
+              fout.write('{:.15g} '.format(j))
+            fout.write('\n')
+          nconf += 1
+        except tf.errors.OutOfRangeError:
+          break
+
+    fout.write('\n\nTotal number of configurations: {}.'.format(nconf))
+
+
 def write_kim_ann(descriptor, weights, biases, activation, keep_prob=None,
     dtype=tf.float32, fname='ann_kim.params'):
   """Output ANN structure, parameters etc. in the format of the KIM ANN model.
