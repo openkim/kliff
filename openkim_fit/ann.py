@@ -898,7 +898,7 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, dtype=tf.float3
         except tf.errors.OutOfRangeError:
           break
 
-    fout.write('\n\nTotal number of configurations: {}.'.format(nconf))
+    fout.write('\n\n# Total number of configurations: {}.'.format(nconf))
 
 
 def write_kim_ann(descriptor, weights, biases, activation, keep_prob=None,

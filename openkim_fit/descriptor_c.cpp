@@ -214,7 +214,7 @@ void Descriptor::get_generalized_coords(const double* coordinates,
           gen_coords[i*Ndescriptor+idx] += gc;
           if (fit_forces) {
             for (int kdim = 0; kdim < DIM; ++kdim) {
-              double pair = dgcdr_two*rij[kdim]/rijmag;
+              double pair = - dgcdr_two*rij[kdim]/rijmag;
               int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
               d_gen_coords[page + i*DIM+kdim] += pair;
               d_gen_coords[page + image[j]*DIM+kdim] -= pair;
@@ -308,9 +308,9 @@ void Descriptor::get_generalized_coords(const double* coordinates,
             if (fit_forces) {
               int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
               for (int kdim = 0; kdim < DIM; ++kdim) {
-                double pair_ij = dgcdr_three[0]*rij[kdim]/rijmag;
-                double pair_ik = dgcdr_three[1]*rik[kdim]/rikmag;
-                double pair_jk = dgcdr_three[2]*rjk[kdim]/rjkmag;
+                double pair_ij = - dgcdr_three[0]*rij[kdim]/rijmag;
+                double pair_ik = - dgcdr_three[1]*rik[kdim]/rikmag;
+                double pair_jk = - dgcdr_three[2]*rjk[kdim]/rjkmag;
                 d_gen_coords[page + i*DIM+kdim] += pair_ij + pair_ik;
                 d_gen_coords[page + image[j]*DIM+kdim] += -pair_ij + pair_jk;
                 d_gen_coords[page + image[k]*DIM+kdim] += -pair_ik - pair_jk;
