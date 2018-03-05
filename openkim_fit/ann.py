@@ -919,8 +919,11 @@ def write_kim_ann(descriptor, weights, biases, activation, keep_prob=None,
 
     # cutoff
     cutname, rcut, rcut_samelayer = descriptor.get_cutoff()
+    if rcut_samelayer is None:
+      rcut_samelayer  = rcut
     maxrcut = max(rcut.values())
     maxrcut_samelayer = max(rcut_samelayer.values())
+
     fout.write('# cutoff    rcut\n')
     if dtype == tf.float64:
       fout.write('{}  {:.15g}  {:.15g}\n\n'.format(cutname, maxrcut, maxrcut_samelayer))
