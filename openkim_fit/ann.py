@@ -663,7 +663,7 @@ def _parse_energy_and_force(example_proto):
   return  name, num_atoms_by_species, weight, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
 
 
-def read_tfrecord(fname, fit_forces=False, dtype=tf.float32):
+def read_tfrecord(fname, fit_forces=False, num_parallel_calls=None, dtype=tf.float32):
   """Read preprocessed TFRecord data from `fname'.
 
   Parameter
@@ -685,9 +685,9 @@ def read_tfrecord(fname, fit_forces=False, dtype=tf.float32):
   global HACKED_DTYPE
   HACKED_DTYPE=dtype
   if fit_forces:
-    dataset = dataset.map(_parse_energy_and_force)
+    dataset = dataset.map(_parse_energy_and_force, num_parallel_calls=num_parallel_calls)
   else:
-    dataset = dataset.map(_parse_energy)
+    dataset = dataset.map(_parse_energy, num_parallel_calls=num_parallel_calls)
 
   # copy mean_and_std_for_kim_ann to current directoy
   fname2 = os.path.join(os.path.dirname(fname), 'mean_and_std_for_kim_ann')
