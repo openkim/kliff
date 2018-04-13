@@ -852,8 +852,8 @@ def get_weights_and_biases(layer_names):
 
 
 
-def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, dtype=tf.float32):
-  """ convert tfrecord data file to text file.
+def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=False, dtype=tf.float32):
+  """ convert tfrecord data file of generalized coords (gc) to text file.
 
   Parameters
   ----------
@@ -866,9 +866,15 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, dtype=tf.float3
 
   fit_forces: bool
     Is forces included in the tfrecord data.
+
+  do_grad_gc: bool
+    Wheter to write out gradient of gc w.r.t. atomic coords.
   """
 
-  dataset = read_tfrecord(tfrecord_name, fit_forces, dtype)
+  if do_grad_gc and not fit_forces:
+    raise Exception("Set `fit_forces` to `True` to use `do_grad_gc`.")
+
+  dataset = read_tfrecord(tfrecord_name, fit_forces, dtype=dtype)
   iterator = dataset.make_one_shot_iterator()
 
   if fit_forces:
@@ -884,7 +890,10 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, dtype=tf.float3
     with tf.Session() as sess:
       while True:
         try:
-          nm, gc = sess.run([name, gen_coords])
+          if do_grad_gc:
+            nm, gc, grad_gc = sess.run([name, gen_coords, dgen_datomic_coords])
+          else:
+            nm, gc = sess.run([name, gen_coords])
 
           fout.write('\n\n#'+'='*80+'\n')
           fout.write('# configuration: {}\n'.format(nm))
@@ -894,7 +903,21 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, dtype=tf.float3
             for j in line:
               fout.write('{:.15g} '.format(j))
             fout.write('\n')
+
+          if do_grad_gc:
+            fout.write('\n')
+            fout.write('#'+'='*40+'\n')
+            fout.write('# atom id\n# gc id    atom 3i+0, 3i+1, 3i+2 ...\n\n')
+            for at,page in enumerate(grad_gc):
+              fout.write('{}\n'.format(at))
+              for i,line in enumerate(page):
+                fout.write('{:4d} '.format(i))
+                for j in line:
+                  fout.write('{:23.15e} '.format(j))
+                fout.write('\n')
+
           nconf += 1
+
         except tf.errors.OutOfRangeError:
           break
 
