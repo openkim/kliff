@@ -663,14 +663,14 @@ def _parse_energy_and_force(example_proto):
   return  name, num_atoms_by_species, weight, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
 
 
-def read_tfrecord(fname, fit_forces=False, num_parallel_calls=None, dtype=tf.float32):
+def read_tfrecord(fnames, fit_forces=False, num_parallel_calls=None, dtype=tf.float32):
   """Read preprocessed TFRecord data from `fname'.
 
   Parameter
   ---------
 
-  fname, str
-    name of the TFRecords data file.
+  fnames, str or list of str
+    names of the TFRecords data file.
 
   fit_forces, bool
     wheter to fit to forces.
@@ -681,17 +681,13 @@ def read_tfrecord(fname, fit_forces=False, num_parallel_calls=None, dtype=tf.flo
   Instance of tf.data.
   """
 
-  dataset = tf.data.TFRecordDataset(fname)
+  dataset = tf.data.TFRecordDataset(fnames)
   global HACKED_DTYPE
   HACKED_DTYPE=dtype
   if fit_forces:
     dataset = dataset.map(_parse_energy_and_force, num_parallel_calls=num_parallel_calls)
   else:
     dataset = dataset.map(_parse_energy, num_parallel_calls=num_parallel_calls)
-
-  # copy mean_and_std_for_kim_ann to current directoy
-  fname2 = os.path.join(os.path.dirname(fname), 'mean_and_std_for_kim_ann')
-  shutil.copy(fname2, os.getcwd())
 
   return dataset
 
@@ -924,8 +920,8 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=Fals
     fout.write('\n\n# Total number of configurations: {}.'.format(nconf))
 
 
-def write_kim_ann(descriptor, weights, biases, activation, keep_prob=None,
-    dtype=tf.float32, fname='ann_kim.params'):
+def write_kim_ann(descriptor, weights, biases, activation, mean_and_std_name,
+    keep_prob=None, dtype=tf.float32, fname='ann_kim.params'):
   """Output ANN structure, parameters etc. in the format of the KIM ANN model.
 
   Parameter
@@ -1018,9 +1014,10 @@ def write_kim_ann(descriptor, weights, biases, activation, keep_prob=None,
     fout.write('#' + '='*80 + '\n')
     fout.write('# Preprocessing data to center and normalize\n')
     fout.write('#' + '='*80 + '\n')
+
     # data
-    fname = 'mean_and_std_for_kim_ann'
-    with open(fname, 'r') as fin:
+    shutil.copy(mean_and_std_name, os.getcwd())
+    with open(mean_and_std_name, 'r') as fin:
       lines = fin.readlines()
       if 'False' in lines[0]:
         fout.write('center_and_normalize  False\n')
