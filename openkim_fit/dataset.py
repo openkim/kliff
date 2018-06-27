@@ -235,7 +235,7 @@ class Configuration:
   def get_id(self):
     return self.id
 
-  def get_num_atoms(self):
+  def get_number_of_atoms(self):
     return self.natoms
 
   def get_cell(self):
@@ -250,7 +250,7 @@ class Configuration:
   def get_species(self):
     return self.species
 
-  def get_coords(self):
+  def get_coordinates(self):
     return self.coords
 
   def get_forces(self):
@@ -327,7 +327,7 @@ class DataSet:
         conf.num_atoms_by_species = conf.count_atoms_by_species(all_species)
 
 
-  def get_configs(self):
+  def get_configurations(self):
     """Get the configurations.
 
     Return

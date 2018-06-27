@@ -222,20 +222,6 @@ def set_padding(cell, PBC, species, coords, rcut):
           if k == size2  and zmax - z < size2 - ratio2:
             continue
 
-# TODO attention needed, this is temporary
-# Note, the above code select fewer atoms as padding as necessary. But it may lead to
-# problems for bilayer potentials where we use a layer_cutoff to determine the layer
-# membership of each atom (i.e. max(min(dist(rij))) ). If we use the above snippet,
-# some atoms in the same layer may be assigned to different layer membership.
-# the following only considers truncate the z direction
-
-#          # select the necessary atoms to repeate for the most outside bin
-#          if k == -size2 and z - zmin < size2 - ratio2:
-#            continue
-#          if k == size2  and zmax - z < size2 - ratio2:
-#            continue
-
-
           pad_coords.append([i+x,j+y,k+z])
           pad_spec.append(species[at])
           pad_image.append(at)
