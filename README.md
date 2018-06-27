@@ -1,8 +1,8 @@
-#The Interatomic Potential Package (TIPP)
+# The Interatomic Potential Package (TIPP)
 
 TIPP is an interatomic potential fitting library that can be used to fit physics-motivated (PM) models and machine learning potentials such as the Aritifical Neural Network (ANN) models. 
 
-##Why you want to use TIPP (or don't use it)
+## Why you want to use TIPP (or don't use it)
 
 - Interacting seamlessly with[ KIM](https://openkim.org), the fitted model can be readily used in simulation codes such as LAMMPS and ASE via the `KIM API`
 - Creating mixed PM and ANN models 
@@ -11,7 +11,7 @@ TIPP is an interatomic potential fitting library that can be used to fit physics
 - Parallel execution
 - [TensorFlow](https://www.tensorflow.org) backend for ANN 
 
-##Installation
+## Installation
 
 (optional) Create a python virtual environment 
 
