@@ -27,9 +27,9 @@ class Configuration:
     self.cell = None     # 3 by 3 ndarray
     self.PBC = None      # 1 by 3 int
     self.energy = None   # float
-    self.species = None  # 1 by N  ndarray (N: number of atoms)
-    self.coords = None   # 1 by 3N ndarray (N: number of atoms)
-    self.forces = None   # 1 by 3N ndarray (N: number of atoms)
+    self.species = None  # ndarray of shape(N,)
+    self.coords = None   # ndarray of shape(N, 3)
+    self.forces = None   # ndarray of shape(N, 3)
     self.num_atoms_by_species = None   # dict
 
   def read_extxyz(self, fname):
@@ -106,9 +106,9 @@ class Configuration:
 
       # make it numpy array
       self.species = np.array(species)
-      self.coords = np.array(coords).ravel()
+      self.coords = np.array(coords)
       if has_forces:
-        self.forces = np.array(forces).ravel()
+        self.forces = np.array(forces)
       else:
         self.forces = None
       # count atoms
