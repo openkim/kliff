@@ -1,7 +1,7 @@
 import sys
 import os
 import pytest
-from openkim_fit.modelparameters import ModelParameters
+from tipp.modelparameters import ModelParameters
 
 
 def test_main():

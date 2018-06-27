@@ -9,4 +9,6 @@ install:
 clean:
 	python setup.py clean
 clean_all:
-	rm -rf build/ dist/ *.egg-info/ *.so */*.so */*.pyc
+	rm -rf build/ dist/ *.egg-info/ *.so */*.so */*.pyc\
+  tests/__pycache__/
+

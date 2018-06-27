@@ -55,38 +55,39 @@ class get_pybind11_includes(object):
     return pybind11.get_include(self.user)
 
 
-tf_module = Extension('tensorflow_op.int_pot_op',
-   sources = ['tensorflow_op/int_pot_op.cpp'],
-   include_dirs = [tf_includes(), os.path.join(tf_includes(), 'external/nsync/public')],
-   library_dirs = [tf_lib_path()],
-   libraries = ['m', 'tensorflow_framework'],
-   extra_compile_args = tf_extra_compile_args(),
-   #extra_link_args = [],
-   language = 'c++',
-    )
+#tf_module = Extension('tensorflow_op.int_pot_op',
+#    sources = ['tensorflow_op/int_pot_op.cpp'],
+#    include_dirs = [tf_includes(), os.path.join(tf_includes(), 'external/nsync/public')],
+#    library_dirs = [tf_lib_path()],
+#    libraries = ['m', 'tensorflow_framework'],
+#    extra_compile_args = tf_extra_compile_args(),
+#    extra_link_args = [],
+#    language = 'c++',
+#)
+
+#
+#desc_module = Extension('desc',
+#    sources = ['openkim_fit/descriptor_bind.cpp',
+#               'openkim_fit/descriptor_c.cpp',
+#               'openkim_fit/layers.cpp'],
+#    include_dirs = [get_pybind11_includes(), get_pybind11_includes(user=True)],
+#    extra_compile_args = get_extra_compile_args(),
+#    language = 'c++',
+#)
 
 
-desc_module = Extension('desc',
-    sources = ['openkim_fit/descriptor_bind.cpp',
-               'openkim_fit/descriptor_c.cpp',
-               'openkim_fit/layers.cpp'],
-    include_dirs = [get_pybind11_includes(), get_pybind11_includes(user=True)],
-    extra_compile_args = get_extra_compile_args(),
-    language = 'c++',
-    )
-
-
-setup(name='openkim_fit',
+setup(name='tipp',
     version='0.0.1',
-    description='OpenKIM based interatomic potential fitting program.',
+    description='Interatomic potential fitting package',
     author='Mingjian Wen',
-    url='https://openkim.org',
-    packages=['openkim_fit','tensorflow_op', 'geolm'],
-    package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
-    package_data={'geolm':['_geodesiclm.so']},
-    ext_modules=[tf_module, desc_module],
-    install_requires = ['numpy', 'pybind11>=2.2'],
+    url='https://github.com/mjwen/TIPP',
+    packages=['tipp'],
+    #packages=['tipp','tensorflow_op', 'geolm'],
+    #package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
+    #package_data={'geolm':['_geodesiclm.so']},
+    #ext_modules=[tf_module, desc_module],
+    install_requires = ['numpy', 'pybind11'],
     zip_safe = False,
-    )
+)
 
 

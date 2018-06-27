@@ -2,7 +2,7 @@
 build/
 dist/
 .cache/
-openkim_fit.egg-info/
+*.egg-info/
 *.o
 *.so
 *.pyc

@@ -4,9 +4,9 @@ from __future__ import print_function
 import sys
 import numpy as np
 import pytest
-from openkim_fit.dataset import DataSet
-from openkim_fit.modelparameters import ModelParameters
-from openkim_fit.kimcalculator import KIMCalculator
+from tipp.dataset import DataSet
+from tipp.modelparameters import ModelParameters
+from tipp.kimcalculator import KIMCalculator
 
 ref_energies = [
   -277.409737571,
