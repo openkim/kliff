@@ -1,23 +1,20 @@
 #ignore the following files
-*.in
-*.log
-*.pyc
-*.out
+build/
+dist/
+.cache/
+openkim_fit.egg-info/
 *.o
 *.so
-desc.cpp
-.cache
-screen*
-*bkp
-build
+*.pyc
+*.in
+*.log
+*.out
 KIM_MODEL_PARAMS*
 *.edn
 *.lammps
 maybe_needed
 tests/echo*
-FINAL_FITTED_PARAMS
 libs/geodesicLMv1.1
-openkim_fit.egg-info/
 
 # special for docs
 docs/*

@@ -10,3 +10,18 @@ class UnsupportedError(Exception):
     self.value = value
   def __str__(self):
     return self.value
+
+
+class KIMCalculatorError(Exception):
+  def __init__(self, msg):
+    self.msg = msg
+  def __str__(self):
+    return self.msg
+
+def check_error(error, msg):
+  if error != 0 and error is not None:
+    raise KIMCalculatorError('Calling "{}" failed.\n'.format(msg))
+
+def report_error(msg):
+  raise KIMCalculatorError(msg)
+

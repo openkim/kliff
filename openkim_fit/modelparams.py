@@ -1,15 +1,15 @@
-from __future__ import print_function
+from __future__ import print_function, division
 import sys
+import os
 import numpy as np
 from collections import OrderedDict
-import kimservice as ks
-from error import InputError
-from utils import generate_dummy_kimstr
+import kimpy
+from error import InputError, check_error, report_error
 from utils import remove_comments
-import os
+
 
 class ModelParams():
-  """Class of the potential model parameters.
+  """Class of model parameters of the potential.
   It will interact with optimizer to provide initial guesses of parameters and
   receive updated paramters from the optimizer. Besides, predictors will inqure
   updated parameters from this class.
@@ -21,8 +21,10 @@ class ModelParams():
     KIM model name
   """
 
-  def __init__(self, modelname):
+  def __init__(self, modelname, debug=False):
     self._modelname = modelname
+    self._debug = debug
+
     self._avail_params = OrderedDict()
     self._params = OrderedDict()
     self._params_index = [] # index (name and slot) of optimizing params in _params
@@ -32,12 +34,13 @@ class ModelParams():
     self._get_avail_params()
 
 
-  def read(self,fname):
-    """Read the initial values of parameters. An alternative is set_param().
+  def read(self, fname):
+    """Read the initial values of parameters.
+    An alternative is set_param().
     For a given model parameter, one or multiple initial values may be required,
     and each must be given in a new line. For each line, the initial guess value
-    is mandatory, where 'KIM' (case insensitive) can be given to use the value
-    from the KIM model. Optionally, 'fix' can be followed not to optimize this
+    is mandatory, where `KIM` (case insensitive) can be given to use the value
+    from the KIM model. Optionally, `fix` can be followed not to optimize this
     parameters, or lower and upper bounds can be given to limit the parameter
     value in the range. Note that lower or upper bounds may not be effective if
     the optimizer does not support it. The following are valid input examples.
@@ -51,15 +54,15 @@ class ModelParams():
     Examples
     --------
 
-    PARAM_FREE_A
+    A
     KIM
     1.1
 
-    PARAM_FREE_B
+    B
     KIM  fix
     1.1  fix
 
-    PARAM_FREE_C
+    C
     KIM  0.1  2.1
     1.0  0.1  2.1
     2.0  fix
@@ -70,18 +73,16 @@ class ModelParams():
       lines = remove_comments(lines)
     num_line = 0
     while num_line < len(lines):
-      line = lines[num_line].strip(); num_line+=1
+      line = lines[num_line].strip()
+      num_line += 1
       if line in self._params:
         raise InputError('line: {} file: {}. Parameter {} already '
-                 'set.'.format(num_line, fname, line))
+            'set.'.format(num_line, fname, line))
       if line not in self._avail_params:
-        if 'PARAM_FREE' in line:
-          raise InputError('line: {} file: {}. Parameter {} not supported by '
-                   'the potential model.'.format(num_line,fname,line))
-        else:
-          continue
+        raise InputError('line: {} file: {}. Parameter {} not supported by '
+            'the potential model.'.format(num_line,fname,line))
       name = line
-      size = self._avail_params[name]['size']
+      size = len(self._avail_params[name])
       param_lines = [name]
       for j in range(size):
         param_lines.append(lines[num_line].split())
@@ -90,7 +91,8 @@ class ModelParams():
 
 
   def set_param(self, lines):
-    """Set parameters that will be optimized. An alternative is Read().
+    """Set the parameters that will be optimized.
+    An alternative is Read().
     The name of the parameter should be given as the first entry of a list
     (or tuple), and then each data line should be given in in a list.
 
@@ -117,14 +119,14 @@ class ModelParams():
 #    if name in self._params:
 #      raise InputError('Parameter {} already set.'.format(name))
     if name not in self._avail_params:
-      raise InputError('Parameter {} not supported by the potential model.'.format(name))
-    size = self._avail_params[name]['size']
+      raise InputError('Parameter "{}" not supported by the potential model.'.format(name))
+    size = len(self._avail_params[name])
     if len(lines)-1 != size:
-      raise InputError('Incorrect number of data lines for paramter {}.'.format(name))
-    tmp_dict = {'size':      size,
-          'value':     np.array([None for i in range(size)]),
-          'use-kim':     np.array([False for i in range(size)]),
-          'fix':       np.array([False for i in range(size)]),
+      raise InputError('Incorrect number of data lines for paramter "{}".'.format(name))
+    tmp_dict = {'size': size,
+          'value': np.array([None for i in range(size)]),
+          'use-kim': np.array([False for i in range(size)]),
+          'fix': np.array([False for i in range(size)]),
           'lower_bound': np.array([None for i in range(size)]),
           'upper_bound': np.array([None for i in range(size)])}
     self._params[name] = tmp_dict
@@ -158,10 +160,7 @@ class ModelParams():
     print()
     for name,attr in self._avail_params.iteritems():
       print('name: ', name)
-#      print('rank: ', attr['rank'])
-#      print('shape:', attr['shape'])
-      print('size: ', attr['size'])
-      print('data: ', attr['value'])
+      print('data: ', attr)
       print()
 
 
@@ -245,12 +244,8 @@ class ModelParams():
 
   def get_names(self):
     return np.array(self._params.keys()).copy()
-#  def get_rank(self, name):
-#    return self._params[name]['rank']
-#  def get_shape(self, name):
-#    return self._params[name]['shape']
   def get_size(self, name):
-    return self._params[name]['size'].copy()
+    return self._params[name]['size']
   def get_value(self, name):
     return self._params[name]['value'].copy()
 #  def get_lower_bound(self, name):
@@ -264,29 +259,49 @@ class ModelParams():
 
 
   def _get_avail_params(self):
-    """Inqure KIM model to get all the optimizable parameters. Namely, the
-    paramters with a prefactor 'PARAM_FREE_' in the model's descriptor file.
-    """
-    kimstr = generate_dummy_kimstr(self._modelname)
-    status, self._pkim = ks.KIM_API_init_str(kimstr, self._modelname)
-    if ks.KIM_STATUS_OK != status:
-      ks.KIM_API_report_error('KIM_API_init', status)
-      raise InitializationError(self._modelname)
-    # set dummy numberOfSpeces and numberOfParticles to 1
-    ks.KIM_API_allocate(self._pkim, 1, 1)
-    ks.KIM_API_model_init(self._pkim)
-    N_free_params = ks.KIM_API_get_num_free_params(self._pkim)
-    for i in range(N_free_params):
-      name = ks.KIM_API_get_free_parameter(self._pkim, i)
-      rank = ks.KIM_API_get_rank(self._pkim, name)
-      shape = ks.KIM_API_get_shape(self._pkim, name)
-      value = ks.KIM_API_get_data_double(self._pkim, name)
-      if rank == 0:
-        size = 1
-      else:
-        size = np.prod(shape)
-      self._avail_params[name] = {'rank':rank, 'shape':shape,
-                     'size':size, 'value':value}
+    """Inqure KIM model to get all the optimizable parameters."""
+
+    # create model
+    units_accepted, kim_model, error = kimpy.model.create(
+      kimpy.numbering.zeroBased,
+      kimpy.length_unit.A,
+      kimpy.energy_unit.eV,
+      kimpy.charge_unit.e,
+      kimpy.temperature_unit.K,
+      kimpy.time_unit.ps,
+      self._modelname
+    )
+    check_error(error, 'kimpy.model.create')
+    if not units_accepted:
+      report_error('requested units not accepted in kimpy.model.create')
+    self.kim_model = kim_model
+
+    # parameter
+    num_params = kim_model.get_number_of_parameters()
+
+    for i in range(num_params):
+      out = kim_model.get_parameter_data_type_extent_and_description(i)
+      dtype, extent, description, error = out
+      check_error(error, 'kim_model.get_parameter_data_type_extent_and_description')
+
+      if self._debug:
+        print('Parameter No. {} has data type "{}" with extent {} and description: '
+        '"{}".'.format(i, dtype, extent, description))
+
+      self._avail_params[description] = []
+      for j in range(extent):
+        if str(dtype) == 'Double':
+          value, error = kim_model.get_parameter_double(i,j)
+          check_error(error, 'kim_model.get_parameter_double')
+        elif str(dtype) == 'Int':
+          value, error = kim_model.get_parameter_int(i,j)
+          check_error(error, 'kim_model.get_parameter_int')
+        else:  # should never reach here
+          report_error('get unexpeced parameter data type "{}"'.format(dtype))
+        self._avail_params[description].append(value)
+
+    # destroy the model
+    kimpy.model.destroy(kim_model)
 
 
   def _read_1_item(self, name, j, line):
@@ -310,7 +325,7 @@ class ModelParams():
   def _read_1st_item(self, name, j, first):
     if type(first)==str and first.lower() == 'kim':
       self._params[name]['use-kim'][j] = True
-      model_value = self._avail_params[name]['value']
+      model_value = self._avail_params[name]
       self._params[name]['value'][j] = model_value[j]
     else:
       try:
@@ -359,11 +374,8 @@ class ModelParams():
 
 
   def __del__(self):
-    """Garbage collects the KIM API objects automatically """
-    if self._pkim:
-      ks.KIM_API_model_destroy(self._pkim)
-      ks.KIM_API_free(self._pkim)
-    self._pkim = None
+    """Garbage collection"""
+    pass
 
 
 
