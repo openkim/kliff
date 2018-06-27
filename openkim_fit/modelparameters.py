@@ -8,7 +8,7 @@ from error import InputError, check_error, report_error
 from utils import remove_comments
 
 
-class ModelParams():
+class ModelParameters():
   """Class of model parameters of the potential.
   It will interact with optimizer to provide initial guesses of parameters and
   receive updated paramters from the optimizer. Besides, predictors will inqure
@@ -22,11 +22,15 @@ class ModelParams():
   """
 
   def __init__(self, modelname, debug=False):
-    self._modelname = modelname
+    self.modelname = modelname
     self._debug = debug
 
     self._avail_params = OrderedDict()
-    self._params = OrderedDict()
+
+    # NOTE size could be deleted
+    self._params = OrderedDict() # key: 'size', 'value', 'use-kim', 'fix'
+                                 # 'lower_bound' 'upper_bound'
+
     self._params_index = [] # index (name and slot) of optimizing params in _params
     self._opt_x0 = None
     self._pkim = None
@@ -123,12 +127,14 @@ class ModelParams():
     size = len(self._avail_params[name])
     if len(lines)-1 != size:
       raise InputError('Incorrect number of data lines for paramter "{}".'.format(name))
-    tmp_dict = {'size': size,
-          'value': np.array([None for i in range(size)]),
-          'use-kim': np.array([False for i in range(size)]),
-          'fix': np.array([False for i in range(size)]),
-          'lower_bound': np.array([None for i in range(size)]),
-          'upper_bound': np.array([None for i in range(size)])}
+    tmp_dict = {
+       'size': size,
+       'value': np.array([None for i in range(size)]),
+       'use-kim': np.array([False for i in range(size)]),
+       'fix': np.array([False for i in range(size)]),
+       'lower_bound': np.array([None for i in range(size)]),
+       'upper_bound': np.array([None for i in range(size)])
+    }
     self._params[name] = tmp_dict
     for j in range(size):
       line = lines[j+1]
@@ -152,7 +158,7 @@ class ModelParams():
     """
     print()
     print('='*80)
-    print('Model: ', self._modelname)
+    print('Model: ', self.modelname)
     print ()
     print('The following potential model parameters are available to fit. Include')
     print('the names and the initial guesses (optionally, lower and upper bounds)')
@@ -243,7 +249,7 @@ class ModelParams():
 
 
   def get_names(self):
-    return np.array(self._params.keys()).copy()
+    return self._params.keys()
   def get_size(self, name):
     return self._params[name]['size']
   def get_value(self, name):
@@ -269,7 +275,7 @@ class ModelParams():
       kimpy.charge_unit.e,
       kimpy.temperature_unit.K,
       kimpy.time_unit.ps,
-      self._modelname
+      self.modelname
     )
     check_error(error, 'kimpy.model.create')
     if not units_accepted:
@@ -372,6 +378,10 @@ class ModelParams():
         tmp_idx = {'name':name, 'value_slot':i}
         self._params_index.append(tmp_idx)
 
+  def get_modelname(self):
+    return self.modelname
+
+
 
   def __del__(self):
     """Garbage collection"""
@@ -430,5 +440,4 @@ class WrapperModelParams():
       end = self._index[i]['end']
       x0 = opt_x[start:end]
       obj.update_params(x0)
-
 

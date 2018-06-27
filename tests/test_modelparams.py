@@ -1,7 +1,7 @@
 import sys
 import os
 import pytest
-from openkim_fit.modelparams import ModelParams
+from openkim_fit.modelparameters import ModelParameters
 
 
 def test_main():
@@ -17,23 +17,23 @@ def test_main():
       fout.write('p\n')
       fout.write('2.0  1.0  3.0\n')
 
-    att_params = ModelParams(modelname, debug=True)
-    att_params.echo_avail_params()
-    att_params.read(fname)
+    params = ModelParameters(modelname, debug=True)
+    params.echo_avail_params()
+    params.read(fname)
 
 
     # change param values
     param_A = ['A', [2.0, 'fix']]
-    att_params.set_param(param_A)
+    params.set_param(param_A)
 
     param_B = ('B', (2.0, 'fix'))
-    att_params.set_param(param_B)
-    att_params.echo_params()
+    params.set_param(param_B)
+    params.echo_params()
 
-    print att_params.get_value('A')
-    print att_params.get_size('A')
+    print params.get_value('A')
+    print params.get_size('A')
 
-    assert att_params.get_value('A')[0] == 2.0
+    assert params.get_value('A')[0] == 2.0
 
 
     # remove the file we generate
