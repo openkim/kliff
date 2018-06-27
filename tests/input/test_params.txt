@@ -1,8 +1,0 @@
-PARAM_FREE_A
-kim 0 20
-2.0 fix
-2.0 fix
-PARAM_FREE_p
-kim 0 20
-2.0  1.0  3.0
-2.0 fix
