@@ -48,12 +48,13 @@ class KIMInputAndOutput(object):
     self.energy = None
     self.forces = None
 
+
     self._check_support_status()
     self._init_neigh()
 
 
-  def create_neigh(self, cutoff):
-    """Create neighbor list and model input.
+  def update_neigh(self, cutoff):
+    """Update neighbor list and model input.
 
     Parameter
     ---------
@@ -111,12 +112,8 @@ class KIMInputAndOutput(object):
     check_error(error, 'nl.build')
 
 
-  def register_data(self):
+  def register_data(self, use_energy=True, use_forces=True):
     """ Register model input and output data in KIM API."""
-
-    # model output
-    self.energy = np.array([0.], dtype=np.double)
-    self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
 
     # register argument
     error = self.compute_arguments.set_argument_pointer(
@@ -135,13 +132,27 @@ class KIMInputAndOutput(object):
         kimpy.compute_argument_name.coordinates, self.coords)
     check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
 
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.partialEnergy, self.energy)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+    if use_energy:
+      self.energy = np.array([0.], dtype=np.double)
+      error = self.compute_arguments.set_argument_pointer(
+          kimpy.compute_argument_name.partialEnergy, self.energy)
+      check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+    else:
+      self.energy = None
+      error = self.compute_arguments.set_argument_null_pointer(
+          kimpy.compute_argument_name.partialEnergy)
+      check_error(error, 'kimpy.compute_argument_name.set_argument_null_pointer')
 
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.partialForces, self.forces)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+    if use_forces:
+      self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
+      error = self.compute_arguments.set_argument_pointer(
+          kimpy.compute_argument_name.partialForces, self.forces)
+      check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+    else:
+      self.forces = None
+      error = self.compute_arguments.set_argument_null_pointer(
+          kimpy.compute_argument_name.partialForces)
+      check_error(error, 'kimpy.compute_argument_name.set_argument_null_pointer')
 
 
   def get_energy(self):
@@ -150,12 +161,14 @@ class KIMInputAndOutput(object):
     else:
       raise SupportError("energy")
 
+
   def get_forces(self):
     if self.forces is not None:
-      return _assemble_padding_forces(
-          self.forces, self.num_contributing_particles,  self.padding_image_of)
+      return _assemble_padding_forces(self.forces, self.num_contributing_particles,
+          self.padding_image_of)
     else:
-      raise SupportError("force")
+      raise SupportError("forces")
+
 
   def get_compute_arguments(self):
     return self.compute_arguments
@@ -177,7 +190,7 @@ class KIMInputAndOutput(object):
       support_status, error = self.compute_arguments.get_argument_support_status(name)
       check_error(error, 'compute_arguments.get_argument_support_status')
 
-      # can only handle energy and force
+      # can only handle energy and forces
       if support_status == kimpy.support_status.required:
         if (name != kimpy.compute_argument_name.partialEnergy or
             name != kimpy.compute_argument_name.partialForces):
@@ -294,8 +307,9 @@ class KIMCalculator(object):
       check_error(error, 'kim_model.compute_arguments_create')
       self.compute_arguments.append(compute_arguments)
       in_out = KIMInputAndOutput(compute_arguments, conf, supported_species)
-      in_out.create_neigh(cutoff)
-      in_out.register_data()
+      in_out.update_neigh(cutoff)
+      #in_out.register_data()
+      in_out.register_data(use_energy=True, use_forces=True)
       self.kim_input_and_output.append(in_out)
 
     return self.kim_input_and_output
