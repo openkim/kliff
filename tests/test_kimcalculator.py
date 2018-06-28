@@ -59,14 +59,13 @@ def test_main():
   configs = tset.get_configurations()
 
   # calculator
-  calc = KIMCalculator(params)
-
+  calc = KIMCalculator(modelname)
   kim_in_out_data = calc.create(configs)
-  for i,data in enumerate(kim_in_out_data):
-    compute_arguments = data.get_compute_arguments()
-    calc.compute(compute_arguments)
-    energy = data.get_energy()
-    forces = data.get_forces()[:3]
+
+  for i,in_out in enumerate(kim_in_out_data):
+    calc.compute(in_out)
+    energy = calc.get_energy(in_out)
+    forces = calc.get_forces(in_out)[:3]
 
     tol = 1e-6
     assert energy == pytest.approx(ref_energies[i], tol)

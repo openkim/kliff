@@ -27,10 +27,9 @@ class KIMInputAndOutput(object):
 
   """
 
-  def __init__(self, compute_arguments, conf, cutoff, supported_species):
+  def __init__(self, compute_arguments, conf, supported_species):
     self.compute_arguments = compute_arguments
     self.conf = conf
-    self.cutoff = cutoff
     self.supported_species = supported_species
 
     # neighbor list
@@ -50,28 +49,100 @@ class KIMInputAndOutput(object):
     self.forces = None
 
     self._check_support_status()
-    self._create_neigh()
-    self._register_data()
+    self._init_neigh()
 
 
-  # NOTE delete this
-  def get_prediction(self):
-    # need to be moved elsewhere
-    self._update_params()
-    self.compute()
+  def create_neigh(self, cutoff):
+    """Create neighbor list and model input.
 
-    if self.km_energy is not None:
-      energy = self.energy[0]
-    else:
-      raise SupportError("energy")
+    Parameter
+    ---------
 
-    if self.km_forces is not None:
-      forces = _assemble_padding_forces(
-          self.forces, self.num_contributing_particles,  self.padding_image_of)
-    else:
-      raise SupportError("force")
+    cutoff: float
+    """
 
-    return forces
+    # inquire information from conf
+    cell = self.conf.get_cell()
+    pbc = self.conf.get_pbc()
+    contributing_coords = self.conf.get_coordinates()
+    contributing_species = self.conf.get_species()
+    num_contributing = self.conf.get_number_of_atoms()
+    self.num_contributing_particles = num_contributing
+
+
+    # species support and code
+    unique_species = list(set(contributing_species))
+    species_map = dict()
+    for s in unique_species:
+      if s in self.supported_species:
+        species_map[s] = self.supported_species[s]
+      else:
+        report_error('species "{}" not supported by model'.format(s))
+    contributing_species_code = np.array(
+        [species_map[s] for s in contributing_species], dtype=np.intc)
+
+
+    if any(pbc):  # need padding atoms
+      # create padding atoms
+      padding_coords,padding_species_code,self.padding_image_of,error = nl.create_paddings(
+          cutoff, cell, pbc, contributing_coords, contributing_species_code)
+      check_error(error, 'nl.create_paddings')
+      num_padding = padding_species_code.size
+
+      self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
+      tmp = np.concatenate((contributing_coords, padding_coords))
+      self.coords = np.asarray(tmp, dtype=np.double)
+      tmp = np.concatenate((contributing_species_code, padding_species_code))
+      self.species_code = np.asarray(tmp, dtype=np.intc)
+      self.particle_contributing = np.ones(self.num_particles[0], dtype=np.intc)
+      self.particle_contributing[num_contributing:] = 0
+      # create neigh for all atoms, including paddings
+      need_neigh = np.ones(self.num_particles[0], dtype=np.intc)
+
+    else:  # do not need padding atoms
+      self.padding_image_of = np.array([])
+      self.num_particles = np.array([num_contributing], dtype=np.intc)
+      self.coords = np.array(contributing_coords, dtype=np.double)
+      self.species_code = np.array(contributing_species_code, dtype=np.intc)
+      self.particle_contributing = np.ones(num_contributing, dtype=np.intc)
+      need_neigh = self.particle_contributing
+
+    error = nl.build(self.neigh, cutoff, self.coords, need_neigh)
+    check_error(error, 'nl.build')
+
+
+  def register_data(self):
+    """ Register model input and output data in KIM API."""
+
+    # model output
+    self.energy = np.array([0.], dtype=np.double)
+    self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
+
+    # register argument
+    error = self.compute_arguments.set_argument_pointer(
+        kimpy.compute_argument_name.numberOfParticles, self.num_particles)
+    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+
+    error = self.compute_arguments.set_argument_pointer(
+        kimpy.compute_argument_name.particleSpeciesCodes, self.species_code)
+    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+
+    error = self.compute_arguments.set_argument_pointer(
+        kimpy.compute_argument_name.particleContributing, self.particle_contributing)
+    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+
+    error = self.compute_arguments.set_argument_pointer(
+        kimpy.compute_argument_name.coordinates, self.coords)
+    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+
+    error = self.compute_arguments.set_argument_pointer(
+        kimpy.compute_argument_name.partialEnergy, self.energy)
+    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+
+    error = self.compute_arguments.set_argument_pointer(
+        kimpy.compute_argument_name.partialForces, self.forces)
+    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
+
 
   def get_energy(self):
     if self.energy is not None:
@@ -128,61 +199,11 @@ class KIMInputAndOutput(object):
         report_error('Unsupported required ComputeCallback: {}'.format(name))
 
 
-  def _create_neigh(self):
-    """Create neighbor list and model input."""
-
-    # inquire information from conf
-    cell = self.conf.get_cell()
-    pbc = self.conf.get_pbc()
-    contributing_coords = self.conf.get_coordinates()
-    contributing_species = self.conf.get_species()
-    num_contributing = self.conf.get_number_of_atoms()
-    self.num_contributing_particles = num_contributing
-
-    # species support and code
-    unique_species = list(set(contributing_species))
-    species_map = dict()
-    for s in unique_species:
-      if s in self.supported_species:
-        species_map[s] = self.supported_species[s]
-      else:
-        report_error('species "{}" not supported by model'.format(s))
-    contributing_species_code = np.array(
-        [species_map[s] for s in contributing_species], dtype=np.intc)
-
-
-    if any(pbc):  # need padding atoms
-      # create padding atoms
-      padding_coords,padding_species_code,self.padding_image_of,error = nl.create_paddings(
-          self.cutoff, cell, pbc, contributing_coords, contributing_species_code)
-      check_error(error, 'nl.create_paddings')
-      num_padding = padding_species_code.size
-
-      self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
-      tmp = np.concatenate((contributing_coords, padding_coords))
-      self.coords = np.asarray(tmp, dtype=np.double)
-      tmp = np.concatenate((contributing_species_code, padding_species_code))
-      self.species_code = np.asarray(tmp, dtype=np.intc)
-      self.particle_contributing = np.ones(self.num_particles[0], dtype=np.intc)
-      self.particle_contributing[num_contributing:] = 0
-      # create neigh for all atoms, including paddings
-      need_neigh = np.ones(self.num_particles[0], dtype=np.intc)
-
-    else:  # do not need padding atoms
-      self.padding_image_of = np.array([])
-      self.num_particles = np.array([num_contributing], dtype=np.intc)
-      self.coords = np.array(contributing_coords, dtype=np.double)
-      self.species_code = np.array(contributing_species_code, dtype=np.intc)
-      self.particle_contributing = np.ones(num_contributing, dtype=np.intc)
-      need_neigh = self.particle_contributing
-
+  def _init_neigh(self):
 
     # create neighborlist
     neigh = nl.initialize()
     self.neigh = neigh
-
-    error = nl.build(neigh, self.cutoff, self.coords, need_neigh)
-    check_error(error, 'nl.build')
 
     # register get neigh callback
     error = self.compute_arguments.set_callback_pointer(
@@ -191,40 +212,6 @@ class KIMInputAndOutput(object):
         neigh
     )
     check_error(error, 'compute_arguments.set_callback_pointer')
-
-
-
-  def _register_data(self):
-    """ Register model input and output data in KIM API."""
-
-    # model output
-    self.energy = np.array([0.], dtype=np.double)
-    self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
-
-    # register argument
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.numberOfParticles, self.num_particles)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
-
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.particleSpeciesCodes, self.species_code)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
-
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.particleContributing, self.particle_contributing)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
-
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.coordinates, self.coords)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
-
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.partialEnergy, self.energy)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
-
-    error = self.compute_arguments.set_argument_pointer(
-        kimpy.compute_argument_name.partialForces, self.forces)
-    check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
 
 
   def __del__(self):
@@ -240,24 +227,22 @@ class KIMCalculator(object):
   Parameters
   ----------
 
-  model_params: ModelParameters object
+  modelname: str
+    KIM model name
 
   use_energy: bool
     whether to include energy in the prediction output
 
   """
 
-  def __init__(self, model_params, use_energy=False, debug=False):
+  def __init__(self, modelname, use_energy=False, debug=False):
     # input data
-    self.model_params = model_params
+    self.modelname = modelname
     self.use_energy = use_energy
     self.debug = debug
 
     # model data
-    self.modelname = model_params.get_modelname()
     self.kim_model = None
-    self.supported_species = None
-    self.cutoff= None
 
     # input and outout data associated with each compute arguments
     self.compute_arguments = []
@@ -287,15 +272,6 @@ class KIMCalculator(object):
     self.kim_model = kim_model
 
 
-    # This needs to be called before setting up neighbor list, since possibly
-    # the cutoff may be changed through parameters.
-    self._update_params()
-
-    # initialize data that will be needed by all compute arguments
-    self.supported_species = self.get_model_supported_species()
-    self.cutoff = self.get_cutoff()
-
-
 
   def create(self, configs):
     """Create compute arguments for configurations.
@@ -306,6 +282,8 @@ class KIMCalculator(object):
     configs: Configuration object or a list of Configuration object
     """
 
+    supported_species = self.get_model_supported_species()
+    cutoff = self.get_cutoff()
 
     # a single configuration
     if isinstance(configs, Configuration):
@@ -315,13 +293,22 @@ class KIMCalculator(object):
       compute_arguments, error = self.kim_model.compute_arguments_create()
       check_error(error, 'kim_model.compute_arguments_create')
       self.compute_arguments.append(compute_arguments)
-      in_out = KIMInputAndOutput(compute_arguments, conf, self.cutoff, self.supported_species)
+      in_out = KIMInputAndOutput(compute_arguments, conf, supported_species)
+      in_out.create_neigh(cutoff)
+      in_out.register_data()
       self.kim_input_and_output.append(in_out)
 
     return self.kim_input_and_output
 
 
-  def compute(self, compute_arguments):
+  def compute(self, in_out):
+    """
+    Parameters
+    ----------
+
+    in_out: KIMInputAndOutput object
+    """
+    compute_arguments = in_out.get_compute_arguments()
     error = self.kim_model.compute(compute_arguments)
     check_error(error, 'kim_model.compute')
 
@@ -362,21 +349,50 @@ class KIMCalculator(object):
     return cutoff
 
 
-  def _update_params(self):
-    """Update parameters from ModelParameters class to KIM object."""
+  def update_params(self, model_params):
+    """Update parameters from ModelParameters class to KIM object.
+
+    Parameters
+    ----------
+    model_params: ModelParameters object
+    """
 
     # update values to KIM object
     # The ordered of parameters is guarauted since the get_names() function
     # of ModelParameters with return names with the same order as in KIM object
-    param_names = self.model_params.get_names()
+    param_names = model_params.get_names()
     for i, name in enumerate(param_names):
-      new_value = self.model_params.get_value(name)
+      new_value = model_params.get_value(name)
       for j, v in enumerate(new_value):
         self.kim_model.set_parameter(i, j, v)
 
     # refresh model
     self.kim_model.clean_influence_distance_and_cutoffs_then_refresh_model()
 
+
+  def get_energy(self, in_out):
+    """
+    Parameters
+    ----------
+
+    in_out: KIMInputAndOutput object
+
+    Return: float
+      energy of configuration
+    """
+    return in_out.get_energy()
+
+  def get_forces(self, in_out):
+    """
+    Parameters
+    ----------
+
+    in_out: KIMInputAndOutput object
+
+    Return: 2D array
+      forces on atoms
+    """
+    return in_out.get_forces()
 
 
   def __del__(self):
