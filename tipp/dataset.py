@@ -232,7 +232,7 @@ class Configuration:
           fout.write('{:14.6e}'.format(self.forces[3*i+2]))
         fout.write('\n')
 
-  def get_id(self):
+  def get_identifier(self):
     return self.id
 
   def get_number_of_atoms(self):
@@ -312,7 +312,7 @@ class DataSet:
       raise InputError('No training set files (ends with .xyz) found '
                'in directory: {}/'.format(dirpath))
 
-    print('Number of configurations in dataset:', size)
+    #print('Number of configurations in dataset:', size)
 
     if self.do_order:
       # find species present in all configurations

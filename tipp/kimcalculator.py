@@ -28,10 +28,12 @@ class KIMInputAndOutput(object):
 
   """
 
-  def __init__(self, compute_arguments, conf, supported_species):
+  def __init__(self, compute_arguments, conf, supported_species, debug=False):
+
     self.compute_arguments = compute_arguments
     self.conf = conf
     self.supported_species = supported_species
+    self.debug = debug
 
     # neighbor list
     self.neigh = None
@@ -48,7 +50,6 @@ class KIMInputAndOutput(object):
     # model output
     self.energy = None
     self.forces = None
-
 
     self._check_support_status()
     self._init_neigh()
@@ -113,11 +114,11 @@ class KIMInputAndOutput(object):
     check_error(error, 'nl.build')
 
 
-  def register_data(self, need_energy=True, need_forces=True):
+  def register_data(self, compute_energy=True, compute_forces=True):
     """ Register model input and output data in KIM API."""
 
     # check whether model support energy and forces
-    if need_energy:
+    if compute_energy:
       name = kimpy.compute_argument_name.partialEnergy
       support_status, error = self.compute_arguments.get_argument_support_status(name)
       check_error(error, 'compute_arguments.get_argument_support_status')
@@ -125,7 +126,7 @@ class KIMInputAndOutput(object):
                support_status == kimpy.support_status.optional)):
         report_error('Energy not supported by model')
 
-    if need_forces:
+    if compute_forces:
       name = kimpy.compute_argument_name.partialForces
       support_status, error = self.compute_arguments.get_argument_support_status(name)
       check_error(error, 'compute_arguments.get_argument_support_status')
@@ -150,7 +151,7 @@ class KIMInputAndOutput(object):
         kimpy.compute_argument_name.coordinates, self.coords)
     check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
 
-    if need_energy:
+    if compute_energy:
       self.energy = np.array([0.], dtype=np.double)
       error = self.compute_arguments.set_argument_pointer(
           kimpy.compute_argument_name.partialEnergy, self.energy)
@@ -161,7 +162,7 @@ class KIMInputAndOutput(object):
           kimpy.compute_argument_name.partialEnergy)
       check_error(error, 'kimpy.compute_argument_name.set_argument_null_pointer')
 
-    if need_forces:
+    if compute_forces:
       self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
       error = self.compute_arguments.set_argument_pointer(
           kimpy.compute_argument_name.partialForces, self.forces)
@@ -191,21 +192,18 @@ class KIMInputAndOutput(object):
   def get_prediction(self):
     if self.energy is not None:
       energy = self.get_energy()
-    else:
-      energy = None
 
     if self.forces is not None:
       forces = self.get_forces()
-    else:
-      forces = None
 
-    if energy is not None:
-      if forces is not None:
+    # pack prediction data
+    if self.energy is not None:
+      if self.forces is not None:
         return np.concatenate(([energy], forces.ravel()))
       else:
         return np.asarray([energy])
     else:
-      if forces is not None:
+      if self.forces is not None:
         return forces.ravel()
       else:
         raise SupportError("both energy and forces")
@@ -233,12 +231,20 @@ class KIMInputAndOutput(object):
       else:
         raise SupportError("both energy and forces")
 
+  def get_compute_energy(self):
+    if self.energy is None:
+      return False
+    else:
+      return True
 
-
+  def get_compute_forces(self):
+    if self.forces is None:
+      return False
+    else:
+      return True
 
   def get_compute_arguments(self):
     return self.compute_arguments
-
 
 
   def _check_support_status(self):
@@ -310,15 +316,14 @@ class KIMCalculator(object):
   modelname: str
     KIM model name
 
-  use_energy: bool
+  compute_energy: bool
     whether to include energy in the prediction output
 
   """
 
-  def __init__(self, modelname, use_energy=False, debug=False):
+  def __init__(self, modelname, debug=False):
     # input data
     self.modelname = modelname
-    self.use_energy = use_energy
     self.debug = debug
 
     # model data
@@ -360,10 +365,13 @@ class KIMCalculator(object):
     ----------
 
     configs: Configuration object or a list of Configuration object
-    """
 
-    supported_species = self.get_model_supported_species()
-    cutoff = self.get_cutoff()
+    use_energy: bool
+      Whether to require the model compute energy.
+
+    use_forces: bool
+      Whether to require the model compute forces.
+    """
 
     # a single configuration
     if isinstance(configs, Configuration):
@@ -378,12 +386,15 @@ class KIMCalculator(object):
     except TypeError:
       use_forces = [use_forces for _ in range(len(configs))]
 
+    supported_species = self.get_model_supported_species()
+    cutoff = self.get_cutoff()
+
     for i,conf in enumerate(configs):
       compute_arguments, error = self.kim_model.compute_arguments_create()
       check_error(error, 'kim_model.compute_arguments_create')
       self.compute_arguments.append(compute_arguments)
       in_out = KIMInputAndOutput(compute_arguments, conf, supported_species)
-      in_out.update_neigh(cutoff)
+      in_out.update_neigh(cutoff*1.001)
       in_out.register_data(use_energy[i], use_forces[i])
       self.kim_input_and_output.append(in_out)
 
@@ -447,16 +458,38 @@ class KIMCalculator(object):
     """
 
     # update values to KIM object
-    # The ordered of parameters is guarauted since the get_names() function
-    # of ModelParameters with return names with the same order as in KIM object
     param_names = model_params.get_names()
-    for i, name in enumerate(param_names):
+    for name in param_names:
+      i = model_params.get_index(name)
       new_value = model_params.get_value(name)
       for j, v in enumerate(new_value):
         self.kim_model.set_parameter(i, j, v)
 
     # refresh model
     self.kim_model.clean_influence_distance_and_cutoffs_then_refresh_model()
+
+    # print parameters in KIM object
+    if self.debug:
+      num_params = self.kim_model.get_number_of_parameters()
+      print('='*80)
+      for i in range(num_params):
+        out = self.kim_model.get_parameter_data_type_extent_and_description(i)
+        dtype, extent, description, error = out
+        check_error(error, 'kim_model.get_parameter_data_type_extent_and_description')
+
+        print('\nParameter No.: {} \ndata type: "{}" \nextent {}: \ndescription: '
+            '"{}", \nvalues:'.format(i, dtype, extent, description), end='')
+
+        for j in range(extent):
+          if str(dtype) == 'Double':
+            value, error = self.kim_model.get_parameter_double(i,j)
+            check_error(error, 'kim_model.get_parameter_double')
+          elif str(dtype) == 'Int':
+            value, error = self.kim_model.get_parameter_int(i,j)
+            check_error(error, 'kim_model.get_parameter_int')
+          else:  # should never reach here
+            report_error('get unexpeced parameter data type "{}"'.format(dtype))
+          print(value)
 
 
   def get_energy(self, in_out):

@@ -8,7 +8,7 @@ from tipp.dataset import DataSet
 from tipp.modelparameters import ModelParameters
 from tipp.kimcalculator import KIMCalculator
 from tipp.loss import Loss
-from tipp.loss import force_energy_residual
+from tipp.loss import energy_forces_residual
 
 
 start_time = time.time()
@@ -34,7 +34,7 @@ calc.create(configs)
 
 
 # loss
-loss = Loss(params, calc, residual_fn=force_energy_residual)
+loss = Loss(params, calc, residual_fn=energy_forces_residual)
 #result = loss.minimize(method='lm')
 result = loss.minimize(method='L-BFGS-B', options={'disp':True, 'maxiter':100 })
 #print(result)

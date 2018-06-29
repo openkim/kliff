@@ -10,8 +10,9 @@ from utils import remove_comments
 
 class ModelParameters():
   """Class of model parameters of the potential.
-  It will interact with optimizer to provide initial guesses of parameters and
-  receive updated paramters from the optimizer. Besides, predictors will inqure
+
+  It interacts with optimizer to provide initial guesses of parameters and
+  receive updated paramters from the optimizer. Besides, predictors inquries
   updated parameters from this class.
 
   Parameters
@@ -22,24 +23,33 @@ class ModelParameters():
   """
 
   def __init__(self, modelname, debug=False):
+
     self.modelname = modelname
     self._debug = debug
 
+    # key: parameter name
+    # value: parameter values (1D array)
     self._avail_params = OrderedDict()
 
-    # NOTE size could be deleted
-    self._params = OrderedDict() # key: 'size', 'value', 'use-kim', 'fix'
-                                 # 'lower_bound' 'upper_bound'
+    # key: parameter name
+    # values: {'value', 'use-kim', 'fix', 'lower_bound', 'upper_bound'}
+    self._params = OrderedDict()
 
-    self._params_index = [] # index (name and slot) of optimizing params in _params
-    self._opt_x0 = None
-    self._pkim = None
+    # index of optimizing sub-parameter (recall that a parameter is a 1D array,
+    # and a sub-parameter is a component in the array.)
+    # a list of dictionary with keys:
+    # name: parameter name
+    # i_index: index of parameter in avail_params (which is the same as in KIM object)
+    # j_index: index of sub-parameter in its value array
+    self._index = []
+
     # inquire KIM for the available parameters
     self._get_avail_params()
 
 
   def read(self, fname):
     """Read the initial values of parameters.
+
     An alternative is set_param().
     For a given model parameter, one or multiple initial values may be required,
     and each must be given in a new line. For each line, the initial guess value
@@ -96,6 +106,7 @@ class ModelParameters():
 
   def set_param(self, lines):
     """Set the parameters that will be optimized.
+
     An alternative is Read().
     The name of the parameter should be given as the first entry of a list
     (or tuple), and then each data line should be given in in a list.
@@ -110,16 +121,17 @@ class ModelParameters():
     -------
 
       param_A = ['PARAM_FREE_A',
-             ['kim', 0, 20],
-             [2.0, 'fix'],
-             [2.2, 1.1, 3.3]
-            ]
+                 ['kim', 0, 20],
+                 [2.0, 'fix'],
+                 [2.2, 1.1, 3.3]
+                ]
       instance_of_this_class.set_param(param_A)
     """
 
     name = lines[0].strip()
 #NOTE we want to use set_param to perturbe params so as to compute Fisher information
 #matrix, where the following two lines are annoying
+# Maybe issue an warning
 #    if name in self._params:
 #      raise InputError('Parameter {} already set.'.format(name))
     if name not in self._avail_params:
@@ -127,8 +139,17 @@ class ModelParameters():
     size = len(self._avail_params[name])
     if len(lines)-1 != size:
       raise InputError('Incorrect number of data lines for paramter "{}".'.format(name))
+
+    # index of parameter in avail_params (which is the same as in KIM object)
+    #for i,nm in enumerate(self._avail_params):
+    #  if nm == name:
+    #    index = i
+    index = self._avail_params.keys().index(name)
+
+
     tmp_dict = {
        'size': size,
+       'index': index,
        'value': np.array([None for i in range(size)]),
        'use-kim': np.array([False for i in range(size)]),
        'fix': np.array([False for i in range(size)]),
@@ -136,6 +157,7 @@ class ModelParameters():
        'upper_bound': np.array([None for i in range(size)])
     }
     self._params[name] = tmp_dict
+
     for j in range(size):
       line = lines[j+1]
       num_items = len(line)
@@ -149,7 +171,8 @@ class ModelParameters():
         raise InputError('More than 3 iterms listed at data line '
                  '{} for parameter {}.'.format(j+1, name))
       self._check_bounds(name)
-    self._set_param_index(name)
+
+    self._set_index(name)
 
 
 
@@ -189,15 +212,20 @@ class ModelParameters():
       fout = open(fname, 'w')
     else:
       fout = sys.stdout
-    #print(file=fout)
+
+    print(file=fout)
     print('='*80, file=fout)
     print('Potential model parameters that are optimzied:',file=fout)
     print(file=fout)
+
     for name,attr in self._params.iteritems():
       if print_size:
-        print (name, attr['size'], file=fout)
+        print(name, attr['size'], file=fout)
       else:
-        print (name, file=fout)
+        print(name, file=fout)
+
+      print ('index:', attr['index'], file=fout)
+
       for i in range(attr['size']):
         print('{:24.16e}'.format(attr['value'][i]), end=' ', file=fout)
         if not attr['fix'][i] and attr['lower_bound'][i] == None:
@@ -208,13 +236,16 @@ class ModelParameters():
           print('{:24.16e}'.format(attr['lower_bound'][i]), end=' ', file=fout)
         if attr['upper_bound'][i]:
           print('{:24.16e}'.format(attr['upper_bound'][i]), file=fout)
+
       print(file=fout)
+
     if fname:
       fout.close()
 
 
   def update_params(self, opt_x):
     """ Update parameter values from optimzier.
+
     This is the opposite operation of get_x0().
 
     Parameters
@@ -224,14 +255,15 @@ class ModelParameters():
       parameter values from the optimizer.
 
     """
-    for i,val in enumerate(opt_x):
-      name = self._params_index[i]['name']
-      value_slot = self._params_index[i]['value_slot']
-      self._params[name]['value'][value_slot] = val
+    for k,val in enumerate(opt_x):
+      name = self._index[k]['name']
+      j_index = self._index[k]['j_index']
+      self._params[name]['value'][j_index] = val
 
 
   def get_x0(self):
     """Nest all parameter values (except the fix ones) to a list.
+
     This is the opposite operation of update_params(). This can be fed to the
     optimizer as the starting parameters.
 
@@ -239,29 +271,48 @@ class ModelParameters():
     ------
       A list of nested optimizing parameter values.
     """
-    self.opt_x0 = []
-    for idx in self._params_index:
+    opt_x0 = []
+    for idx in self._index:
       name = idx['name']
-      value_slot = idx['value_slot']
-      self.opt_x0.append(self._params[name]['value'][value_slot])
-    self.opt_x0 = np.array(self.opt_x0)
-    return self.opt_x0
+      j_index = idx['j_index']
+      opt_x0.append(self._params[name]['value'][j_index])
+    return np.asarray(opt_x0)
 
 
   def get_names(self):
     return self._params.keys()
+
   def get_size(self, name):
     return self._params[name]['size']
+
   def get_value(self, name):
     return self._params[name]['value'].copy()
-#  def get_lower_bound(self, name):
-#    return self._params[name]['lower_bound'].copy()
-#  def get_upper_bound(self, name):
-#    return self._params[name]['upper_bound'].copy()
-#  def get_fix(self, name):
-#    return self._params[name]['fix'].copy()
+
+  def get_index(self, name):
+    return self._params[name]['index']
+
+  def get_lower_bound(self, name):
+    return self._params[name]['lower_bound'].copy()
+
+  def get_upper_bound(self, name):
+    return self._params[name]['upper_bound'].copy()
+
+  def get_fix(self, name):
+    return self._params[name]['fix'].copy()
+
   def set_value(self, name, value):
     self._params[name]['value'] = value
+
+
+  def get_number_of_opt_params(self):
+    return len(self._index)
+
+  def get_opt_param_value_and_i_j_indices(self, k):
+    name = self._index[k]['name']
+    i_index = self._index[k]['i_index']
+    j_index = self._index[k]['j_index']
+    value = self._params[name]['value'][j_index]
+    return value, i_index, j_index
 
 
   def _get_avail_params(self):
@@ -287,14 +338,14 @@ class ModelParameters():
 
     for i in range(num_params):
       out = kim_model.get_parameter_data_type_extent_and_description(i)
-      dtype, extent, description, error = out
+      dtype, extent, name, error = out
       check_error(error, 'kim_model.get_parameter_data_type_extent_and_description')
 
       if self._debug:
         print('Parameter No. {} has data type "{}" with extent {} and description: '
-        '"{}".'.format(i, dtype, extent, description))
+        '"{}".'.format(i, dtype, extent, name))
 
-      self._avail_params[description] = []
+      self._avail_params[name] = []
       for j in range(extent):
         if str(dtype) == 'Double':
           value, error = kim_model.get_parameter_double(i,j)
@@ -304,7 +355,7 @@ class ModelParameters():
           check_error(error, 'kim_model.get_parameter_int')
         else:  # should never reach here
           report_error('get unexpeced parameter data type "{}"'.format(dtype))
-        self._avail_params[description].append(value)
+        self._avail_params[name].append(value)
 
     # destroy the model
     kimpy.model.destroy(kim_model)
@@ -355,7 +406,7 @@ class ModelParameters():
                    'out of bounds.\n'.format(i+1, name))
 
 
-  def _set_param_index(self, name):
+  def _set_index(self, name):
     """Check whether a specific data value of a parameter will be optimized or
     not (by checking its 'fix' attribute). If yes, include it in the index
     list.
@@ -367,20 +418,20 @@ class ModelParameters():
     2.2  fix
     4.4  3.3  5.5
 
-    the first slot (1.1) and the third slot (4.4) will be included in the
-    _params_index, and later be optimized.
+    the first slot (1.1) and the third slot (4.4) will be included in self._index,
+    and later be optimized.
     """
 
+    #for i,nm in enumerate(self._avail_params):
+    #  if nm == name:
+    #    i_index = i
+    i_index = self._avail_params.keys().index(name)
     size = self._params[name]['size']
     fix  = self._params[name]['fix']
-    for i in range(size):
-      if not fix[i]:
-        tmp_idx = {'name':name, 'value_slot':i}
-        self._params_index.append(tmp_idx)
-
-  def get_modelname(self):
-    return self.modelname
-
+    for j in range(size):
+      if not fix[j]:
+        idx = {'name':name, 'i_index':i_index, 'j_index':j}
+        self._index.append(idx)
 
 
   def __del__(self):
@@ -390,25 +441,22 @@ class ModelParameters():
 
 
 class WrapperModelParams():
-  """Wrapper of ModelParams to deal with multiple models used in cost.
+  """Wrapper of ModelParameters to deal with multiple models used in cost.
 
   Parameters
   ----------
 
   modelparams
-    list of ModelParam objects
+    list of ModelParameters objects
   """
 
   def __init__(self, modelparams):
     self.modelparams = modelparams
-    self.opt_x0 = None
     self._index = []
     self._set_index()
 
   def _set_index(self):
-    """Compute the start and end indices of the x0 from each ModelParams object
-    in self.opt_x0.
-    """
+    """Compute the start and end indices of x0 from each ModelParameters object."""
     i = 0
     for obj in self.modelparams:
       x0 = obj.get_x0()
@@ -418,22 +466,20 @@ class WrapperModelParams():
       i += num
 
   def get_x0(self):
-    """Nest optimizing parameter values from all ModelParams objects.
-    This can be fed to the optimizer as the starting parameter values.
+    """Nest optimizing parameter values from all ModelParameters objects.
 
     Return
     ------
-      A list of nested optimizing parameter values.
+      A 1D array of nested optimizing parameter values.
     """
-    self.opt_x0 = []
+    opt_x0 = []
     for obj in self.modelparams:
       x0 = obj.get_x0()
-      self.opt_x0.append(x0)
-    self.opt_x0 = np.array(self.opt_x0).flatten()
-    return self.opt_x0
+      opt_x0 = np.append(opt_x0, x0)
+    return opt_x0
 
   def update_params(self, opt_x):
-    """Wrapper to call 'update_params()' of each ModelParam object.
+    """Wrapper to call 'update_params()' of each ModelParameters object.
     """
     for i,obj in enumerate(self.modelparams):
       start = self._index[i]['start']
