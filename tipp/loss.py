@@ -7,7 +7,7 @@ import multiprocessing as mp
 import collections
 
 
-def force_energy_residual(identifier, natoms, prediction, reference, data):
+def energy_forces_residual(identifier, natoms, prediction, reference, data):
   """
   Parameters
   ----------
@@ -25,53 +25,81 @@ def force_energy_residual(identifier, natoms, prediction, reference, data):
 
   data: dict
     user provided callback data
+    aviailable keys:
+
+    energy_weight: float (default: 1)
+
+    forces_weight: float (default: 1)
+
+    normalize_by_number_of_atoms: bool (default: False)
+      Whether to normalize the residual by the number of atoms
+
+
+  Return
+  ------
+
+  residual: 1D array
+
 
   The length of `prediction` and `reference` (call it `S`) are the same, and it
-  depends on `use_energy` and `use_force` in KIMCalculator. Assume `N` the
+  depends on `use_energy` and `use_forces` in KIMCalculator. Assume the
   configuration contains of `N` atoms.
 
-  1) If use_energy == False and use_force == True
-    S = 3N
-  prediction[3*i+0], prediction[3*i+1], and prediction[3*i+2] are the x, y, and z
-  component of the forces on atom i in the configuration. Correspondingly,
-  reference the 3N concatenated reference force.
-
-  2) If use_energy == True and use_force == False
+  1) If use_energy == True and use_forces == False
     S = 1
-  prediction[0] is the potential energy computed by the calculator, and reference[0]
-  is the reference energy.
+  `prediction[0]` is the potential energy computed by the calculator, and
+  `reference[0]` is the reference energy.
 
-  3) If use_energy == True and use_force == True
+  2) If use_energy == False and use_forces == True
+    S = 3N
+  `prediction[3*i+0]`, `prediction[3*i+1]`, and `prediction[3*i+2]` are the
+  x, y, and z component of the forces on atom i in the configuration, respecrively.
+  Correspondingly, `reference` is the 3N concatenated reference forces.
+
+
+  3) If use_energy == True and use_forces == True
     S = 3N + 1
-  First 3N components are the forces as described in 1), and the last componment
-  is the energy.
+
+  `prediction[0]` is the potential energy computed by the calculator, and
+  `reference[0]` is the reference energy.
+  `prediction[3*i+1]`, `prediction[3*i+2]`, and `prediction[3*i+3]` are the
+  x, y, and z component of the forces on atom i in the configuration, respecrively.
+  Correspondingly, `reference` is the 3N concatenated reference forces.
   """
 
   if len(prediction) != 3*natoms + 1:
-    raise ValueError()
+    raise ValueError("len(prediction) != 3N+1, where N is the number of atoms.")
 
-  if data is not None and 'force_weight' in data:
-    force_weight = data['force_weight']
-  else:
-    force_weight = 1
-
-  if data is not None and 'energy_weight' in data:
+  try:
     energy_weight = data['energy_weight']
-  else:
+  except KeyError:
     energy_weight = 1
+  try:
+    forces_weight = data['forces_weight']
+  except KeyError:
+    forces_weight = 1
+  try:
+    do_normalize = data['normalize_by_number_of_atoms']
+    if do_normalize:
+      normalizer = natoms
+    else:
+      normalizer = 1
+  except KeyError:
+    normalizer = 1
+
 
   residual = np.subtract(prediction, reference)
-  residual[:-1] *= force_weight
-  residual[-1] *= energy_weight
+  residual[0] *= np.sqrt(energy_weight)
+  residual[1:] *= np.sqrt(forces_weight)
   return residual
 
 
-def force_residual(conf_id, natoms, prediction, reference, data):
+def forces_residual(conf_id, natoms, prediction, reference, data):
   if data is not None:
     data['energy_weight'] = 0
   else:
     data = {'energy_weight': 0}
-  return energy_force_residual(conf_id, natoms, prediction, reference, data)
+  return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
 def energy_residual(conf_id, natoms, prediction, reference, data):
@@ -79,9 +107,7 @@ def energy_residual(conf_id, natoms, prediction, reference, data):
     data['forces_weight'] = 0
   else:
     data = {'forces_weight': 0}
-  return energy_force_residual(conf_id, natoms, prediction, reference, data)
-
-
+  return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
 
@@ -93,13 +119,17 @@ class Loss(object):
 
   model_params: ModelParameters object
 
+  calculator: Calculator object
+
   nprocs: int
     Number of processors to parallel to run the predictors.
 
-  verbose: int
-    Integer code to denote to whether echo running cost to screen.
-    0, do not echo anything
-    1, echo running cost
+  residual_fn: function
+    function to compute residual, see `energy_forces_residual` for an example
+
+  residual_data: dict
+    data passed to residual function
+
   """
 
   scipy_minimize_methods = [
@@ -126,65 +156,75 @@ class Loss(object):
   ]
 
   def __init__(self, model_params, calculator, nprocs=1,
-     # minimizer='lm',
-     # minimizer_args=None, minimizer_kwargs=None,
-      residual_fn=force_energy_residual, residual_data=None,
-      verbose=0):
+      residual_fn=energy_forces_residual, residual_data=None):
 
     self.model_params = model_params
     self.calculator = calculator
     self.nprocs = nprocs
 
-#    self.minimizer = minimizer
-
     self.residual_fn = residual_fn
     self.residual_data = residual_data
 
-    self.verbose = verbose
-
     self.kim_input_and_output = calculator.get_kim_input_and_output()
+
+    # update parameter from ModelParameters to calculator, and compute
+    # neighbor list. This is needed since cutoff can be set in ModelParameters.
+    self.calculator.update_params(self.model_params)
+    cutoff = self.calculator.get_cutoff()
+    kim_in_out_data = self.calculator.get_kim_input_and_output()
+    for in_out in kim_in_out_data:
+      in_out.update_neigh(cutoff*1.001)
+      # use same compute_energy and compute_forces as when the compute arguments
+      # is created
+      compute_energy = in_out.get_compute_energy()
+      compute_forces = in_out.get_compute_forces()
+      in_out.register_data(compute_energy, compute_forces)
 
 
   def set_nprocs(self, nprocs):
+    """ Set the number of processors to be used."""
     self.nprocs = nprocs
 
-
-#  def set_minimizer(self, minimizer, *args, **kwargs):
-#    self.minimizer = minimizer
-#    self.minimizer_args = args
-#    self.minimizer_kwargs = kwargs
-
   def set_residual_fn_and_data(self, fn, data):
+    """ Set residual function and data. """
     self.residual_fn = fn
     self.residual_fn_data = data
 
 
-
   def minimize(self, method, *args, **kwargs):
+    """ Minimize the loss.
+
+    method: str
+      minimization methods as specified at:
+        https://docs.scipy.org/doc/scipy-1.0.0/reference/generated/scipy.optimize.minimize.html
+      and
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
+
+    args: extra arguments that can be used by the scipy optimizer
+    kwargs: extra keyword arguments that can be used by the scipy optimizer
+    """
 
     if method in self.scipy_least_squares_methods:
       result = self._scipy_optimize_least_squares(method, *args, **kwargs)
     elif method in self.scipy_minimize_methods:
-      result = self._scipy_optimize_minimize(method)
+      result = self._scipy_optimize_minimize(method, *args, **kwargs)
 
     # update final optimized paramters to ModelParameters object
     self._update_params(result.x)
     return result
 
 
-  def _scipy_optimize_least_squares(self, method, *args, **kwargs):
-    residual = self.get_residual
-    x0 = self.model_params.get_x0()
-    return scipy.optimize.least_squares(residual, x0, *args, method=method, **kwargs)
-
-
-  def _scipy_optimize_minimize(self, method, *args, **kwargs):
-    cost = self.get_cost
-    x0 = self.model_params.get_x0()
-    return scipy.optimize.minimize(cost, x0, *args, method=method, **kwargs)
-
-
   def get_residual(self, x0):
+    """ Compute the residual for the cost.
+    This is a callable for optimizer (e.g. scipy.optimize.least_squares), which is
+    passed as the first positional argument.
+
+    Parameters
+    ----------
+
+    x0: 1D array
+      optimizing parameter values
+    """
 
     # publish params x0 to predictor
     self._update_params(x0)
@@ -197,18 +237,16 @@ class Loss(object):
 
       # prediction data
       self.calculator.compute(in_out)
-      pred_energy = self.calculator.get_energy(in_out)
-      pred_forces = self.calculator.get_forces(in_out).ravel()
-      pred = np.concatenate((pred_forces, [pred_energy]))
+      pred = self.calculator.get_prediction(in_out)
 
       # reference data
-      ref_energy = conf.get_energy()
-      ref_forces = conf.get_forces().ravel()
-      ref = np.concatenate((ref_forces, [ref_energy]))
+      ref = self.calculator.get_reference(in_out)
 
       identifier = conf.get_identifier()
       natoms = conf.get_number_of_atoms()
       data = self.residual_data
+      if data is None:
+        data = dict()
       current_residual = self.residual_fn(identifier, natoms, pred, ref, data)
 
       # append to total residual
@@ -216,17 +254,15 @@ class Loss(object):
     return residual
 
 
-
-
   def get_cost(self, x0):
     """ Compute the cost.
-    This can be used as the callable for optimizer (e.g. scipy.optimize.minimize
-    method='CG')
+    This is a callable for optimizer (e.g. scipy.optimize.minimize), which is
+    passed as the first positional argument.
 
     Parameters
     ----------
 
-    x0: list
+    x0: 1D array
       optimizing parameter values
     """
     residual = self.get_residual(x0)
@@ -234,29 +270,13 @@ class Loss(object):
     return cost
 
 
-
-
-  def _update_params(self, x0):
-    """Update parameter values from minimizer to KIM calculator.
+  def error_report(self, fname='ERROR_REPORT'):
+    """Write error of each configuration to fname.
 
     Parameters
     ----------
-
-    x0: list
-      optimizing parameter values
-    """
-    # update from minimizer to ModelParameters object
-    self.model_params.update_params(x0)
-
-    # update from ModelParameters to KIM calculator
-    self.calculator.update_params(self.model_params)
-
-# NOTE (we may support print to screen every N steps)
-# print to file while minimizion
-#    self.params.echo_params('params.txt')
-
-  def _error_report(self, fname='ERROR_REPORT'):
-    """Write error of each configuration to fname.
+    fname: str
+      path to the file to write the error report.
     """
     residuals = self.get_residual(self.params.get_x0())
     cost_all = 0.5*residuals**2
@@ -285,7 +305,37 @@ class Loss(object):
           except ZeroDivisionError:
             ratio = np.inf
           error = 0.5*k*diff**2
-          fout.write('  {:14.6e} {:14.6e} {:14.6e} {:14.6e} {:14.6e} {:14.6e}\n'.format(i,j,diff,ratio,k,error))
+          fout.write('  {:14.6e} {:14.6e} {:14.6e} {:14.6e} {:14.6e} '
+              '{:14.6e}\n'.format(i,j,diff,ratio,k,error))
+
+
+  def _scipy_optimize_least_squares(self, method, *args, **kwargs):
+    residual = self.get_residual
+    x0 = self.model_params.get_x0()
+    return scipy.optimize.least_squares(residual, x0, *args, method=method, **kwargs)
+
+
+  def _scipy_optimize_minimize(self, method, *args, **kwargs):
+    cost = self.get_cost
+    x0 = self.model_params.get_x0()
+    return scipy.optimize.minimize(cost, x0, *args, method=method, **kwargs)
+
+
+
+  def _update_params(self, x0):
+    """Update parameter values from minimizer to KIM calculator.
+
+    Parameters
+    ----------
+
+    x0: list
+      optimizing parameter values
+    """
+    # update from minimizer to ModelParameters object
+    self.model_params.update_params(x0)
+
+    # update from ModelParameters to KIM calculator
+    self.calculator.update_params(self.model_params)
 
 
 
@@ -299,7 +349,7 @@ class Loss(object):
       return False # return False will cause Python to re-raise the expection
 
     # write error report
-    self._error_report()
+    self.error_report()
 
     #write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
     self.params.echo_params(fname='FINAL_FITTED_PARAMS')
@@ -594,7 +644,7 @@ class Cost(object):
     send_end.send(residual)
 
 
-  def _error_report(self, fname='ERROR_REPORT'):
+  def error_report(self, fname='ERROR_REPORT'):
     """Write error of each configuration to fname.
     """
     residuals = self.get_residual(self.params.get_x0())
@@ -634,7 +684,7 @@ class Cost(object):
       return False # return False will cause Python to re-raise the expection
 
     # write error report
-    self._error_report()
+    self.error_report()
 
     #write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
     self.params.echo_params(fname='FINAL_FITTED_PARAMS')
