@@ -7,6 +7,7 @@ import kimpy
 import neighlist as nl
 from dataset import Configuration
 from error import SupportError
+from error import InputError
 from error import check_error
 from species_name_map import species_name_map
 
@@ -112,8 +113,25 @@ class KIMInputAndOutput(object):
     check_error(error, 'nl.build')
 
 
-  def register_data(self, use_energy=True, use_forces=True):
+  def register_data(self, need_energy=True, need_forces=True):
     """ Register model input and output data in KIM API."""
+
+    # check whether model support energy and forces
+    if need_energy:
+      name = kimpy.compute_argument_name.partialEnergy
+      support_status, error = self.compute_arguments.get_argument_support_status(name)
+      check_error(error, 'compute_arguments.get_argument_support_status')
+      if (not (support_status == kimpy.support_status.required or
+               support_status == kimpy.support_status.optional)):
+        report_error('Energy not supported by model')
+
+    if need_forces:
+      name = kimpy.compute_argument_name.partialForces
+      support_status, error = self.compute_arguments.get_argument_support_status(name)
+      check_error(error, 'compute_arguments.get_argument_support_status')
+      if (not (support_status == kimpy.support_status.required or
+               support_status == kimpy.support_status.optional)):
+        report_error('Forces not supported by model')
 
     # register argument
     error = self.compute_arguments.set_argument_pointer(
@@ -132,7 +150,7 @@ class KIMInputAndOutput(object):
         kimpy.compute_argument_name.coordinates, self.coords)
     check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
 
-    if use_energy:
+    if need_energy:
       self.energy = np.array([0.], dtype=np.double)
       error = self.compute_arguments.set_argument_pointer(
           kimpy.compute_argument_name.partialEnergy, self.energy)
@@ -143,7 +161,7 @@ class KIMInputAndOutput(object):
           kimpy.compute_argument_name.partialEnergy)
       check_error(error, 'kimpy.compute_argument_name.set_argument_null_pointer')
 
-    if use_forces:
+    if need_forces:
       self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
       error = self.compute_arguments.set_argument_pointer(
           kimpy.compute_argument_name.partialForces, self.forces)
@@ -170,6 +188,54 @@ class KIMInputAndOutput(object):
       raise SupportError("forces")
 
 
+  def get_prediction(self):
+    if self.energy is not None:
+      energy = self.get_energy()
+    else:
+      energy = None
+
+    if self.forces is not None:
+      forces = self.get_forces()
+    else:
+      forces = None
+
+    if energy is not None:
+      if forces is not None:
+        return np.concatenate(([energy], forces.ravel()))
+      else:
+        return np.asarray([energy])
+    else:
+      if forces is not None:
+        return forces.ravel()
+      else:
+        raise SupportError("both energy and forces")
+
+
+  def get_reference(self):
+    energy = self.conf.get_energy()
+    forces = self.conf.get_forces()
+
+    # check we have the reference for required values
+    if self.energy is not None and energy is None:
+        raise InputError('reference "energy" not provided')
+    if self.forces is not None and forces is None:
+        raise InputError('reference "forces" not provided')
+
+    # pack reference data
+    if self.energy is not None:
+      if self.forces is not None:
+        return np.concatenate(([energy], forces.ravel()))
+      else:
+        return np.asarray([energy])
+    else:
+      if self.forces is not None:
+        return forces.ravel()
+      else:
+        raise SupportError("both energy and forces")
+
+
+
+
   def get_compute_arguments(self):
     return self.compute_arguments
 
@@ -190,9 +256,9 @@ class KIMInputAndOutput(object):
       support_status, error = self.compute_arguments.get_argument_support_status(name)
       check_error(error, 'compute_arguments.get_argument_support_status')
 
-      # can only handle energy and forces
+      # calculator can only handle energy and forces
       if support_status == kimpy.support_status.required:
-        if (name != kimpy.compute_argument_name.partialEnergy or
+        if (name != kimpy.compute_argument_name.partialEnergy and
             name != kimpy.compute_argument_name.partialForces):
           report_error('Unsupported required ComputeArgument "{}"'.format(name))
 
@@ -207,9 +273,10 @@ class KIMInputAndOutput(object):
       support_status, error = self.compute_arguments.get_callback_support_status(name)
       check_error(error, 'compute_arguments.get_callback_support_status')
 
-      # cannot handle any "required" callbacks
+      # calculator only provides get_neigh
       if support_status == kimpy.support_status.required:
-        report_error('Unsupported required ComputeCallback: {}'.format(name))
+        if name != kimpy.compute_callback_name.GetNeighborList:
+          report_error('Unsupported required ComputeCallback: {}'.format(name))
 
 
   def _init_neigh(self):
@@ -286,7 +353,7 @@ class KIMCalculator(object):
 
 
 
-  def create(self, configs):
+  def create(self, configs, use_energy=True, use_forces=True):
     """Create compute arguments for configurations.
 
     Parameters
@@ -302,14 +369,22 @@ class KIMCalculator(object):
     if isinstance(configs, Configuration):
       configs = [configs]
 
-    for conf in configs:
+    try:
+      iter(use_energy)
+    except TypeError:
+      use_energy = [use_energy for _ in range(len(configs))]
+    try:
+      iter(use_forces)
+    except TypeError:
+      use_forces = [use_forces for _ in range(len(configs))]
+
+    for i,conf in enumerate(configs):
       compute_arguments, error = self.kim_model.compute_arguments_create()
       check_error(error, 'kim_model.compute_arguments_create')
       self.compute_arguments.append(compute_arguments)
       in_out = KIMInputAndOutput(compute_arguments, conf, supported_species)
       in_out.update_neigh(cutoff)
-      #in_out.register_data()
-      in_out.register_data(use_energy=True, use_forces=True)
+      in_out.register_data(use_energy[i], use_forces[i])
       self.kim_input_and_output.append(in_out)
 
     return self.kim_input_and_output
@@ -407,6 +482,33 @@ class KIMCalculator(object):
       forces on atoms
     """
     return in_out.get_forces()
+
+  def get_prediction(self, in_out):
+    """
+    Parameters
+    ----------
+
+    in_out: KIMInputAndOutput object
+
+    Return: 2D array
+      predictions by model for configuration associated with in_out
+    """
+    return in_out.get_prediction()
+
+  def get_reference(self, in_out):
+    """
+    Parameters
+    ----------
+
+    in_out: KIMInputAndOutput object
+
+    Return: 2D array
+      reference value for configuration associated with in_out
+    """
+    return in_out.get_reference()
+
+
+
 
 
   def __del__(self):
