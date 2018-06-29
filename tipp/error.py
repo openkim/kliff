@@ -23,7 +23,7 @@ class KIMCalculatorError(Exception):
   def __init__(self, msg):
     self.msg = msg
   def __str__(self):
-    return reprself.msg
+    return self.msg
 
 def check_error(error, msg):
   if error != 0 and error is not None:
