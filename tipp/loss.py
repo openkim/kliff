@@ -5,6 +5,7 @@ import numpy as np
 import scipy.optimize
 import multiprocessing as mp
 import collections
+from tipp import parallel
 
 
 def energy_forces_residual(identifier, natoms, prediction, reference, data):
@@ -164,6 +165,8 @@ class Loss(object):
 
     self.residual_fn = residual_fn
     self.residual_data = residual_data
+    if self.residual_data is None:
+      self.residual_data = dict()
 
     self.kim_input_and_output = calculator.get_kim_input_and_output()
 
@@ -229,33 +232,44 @@ class Loss(object):
     # publish params x0 to predictor
     self._update_params(x0)
 
+    # TODO implement parallel
+    # parallel computing of residual
+    #results = parallel.parmap(self.calculator.compute, kim_in_out_data, 1)
+
     # compute residual
     residual = []
     kim_in_out_data = self.calculator.get_kim_input_and_output()
     for in_out in kim_in_out_data:
-      conf = in_out.conf
-
-      # prediction data
-      self.calculator.compute(in_out)
-      pred = self.calculator.get_prediction(in_out)
-
-      # reference data
-      ref = self.calculator.get_reference(in_out)
-
-      identifier = conf.get_identifier()
-      natoms = conf.get_number_of_atoms()
-      data = self.residual_data
-      if data is None:
-        data = dict()
-      current_residual = self.residual_fn(identifier, natoms, pred, ref, data)
-
-      # append to total residual
+      current_residual = self._get_residual_single_config(in_out, self.calculator,
+          self.residual_fn, self.residual_data)
       residual = np.concatenate((residual, current_residual))
+
     return residual
 
 
-  def get_cost(self, x0):
-    """ Compute the cost.
+
+
+
+  def _get_residual_single_config(self, in_out, calculator, residual_fn, residual_data):
+
+    # prediction data
+    calculator.compute(in_out)
+    pred = calculator.get_prediction(in_out)
+
+    # reference data
+    ref = calculator.get_reference(in_out)
+
+    conf = in_out.conf
+    identifier = conf.get_identifier()
+    natoms = conf.get_number_of_atoms()
+
+    residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+
+    return residual
+
+
+  def get_loss(self, x0):
+    """ Compute the loss.
     This is a callable for optimizer (e.g. scipy.optimize.minimize), which is
     passed as the first positional argument.
 
@@ -266,11 +280,11 @@ class Loss(object):
       optimizing parameter values
     """
     residual = self.get_residual(x0)
-    cost = 0.5*np.linalg.norm(residual)**2
-    return cost
+    loss = 0.5*np.linalg.norm(residual)**2
+    return loss
 
 
-  def error_report(self, fname='ERROR_REPORT'):
+  def error_report(self, normalize_by_num_atoms=True, fname='ERROR_REPORT'):
     """Write error of each configuration to fname.
 
     Parameters
@@ -278,35 +292,70 @@ class Loss(object):
     fname: str
       path to the file to write the error report.
     """
-    residuals = self.get_residual(self.params.get_x0())
-    cost_all = 0.5*residuals**2
 
-    # the order of residual is the same as grouped prediction objects
-    pred_objs = np.concatenate(self.pred_obj_group)
-    refs = np.concatenate(self.ref_group)
-    weights = np.concatenate(self.weight_group)
+    loss = self.get_loss(self.model_params.get_x0())
 
-    start = 0
     with open (fname, 'w') as fout:
-      fout.write('Total error: {:18.10e}\n\n'.format(sum(cost_all)))
-      fout.write('Below is error by each configuration.\n')
-      for p_obj, r, w in zip(pred_objs, refs, weights):
-        identifier = p_obj.conf.id
-        p = p_obj.get_prediction()
-        end = start + len(p)
-        cost_config = sum(cost_all[start:end])
-        start = end
-        fout.write('\nconfig: {},    config error:{:18.10e}\n'.format(identifier, cost_config))
-        fout.write('     Prediction    Reference   Difference   Diff./Ref.     Weight     Error\n')
-        for i,j,k in zip(p,r,w):
-          diff = i-j
-          try:
-            ratio = float(diff)/float(j) # change np.float to float to catch error
-          except ZeroDivisionError:
-            ratio = np.inf
-          error = 0.5*k*diff**2
-          fout.write('  {:14.6e} {:14.6e} {:14.6e} {:14.6e} {:14.6e} '
-              '{:14.6e}\n'.format(i,j,diff,ratio,k,error))
+      fout.write('\n'+'='*80+'\n')
+      fout.write('Final loss: {:18.10e}\n\n'.format(loss))
+      fout.write('='*80+'\n')
+      if normalize_by_num_atoms:
+        fout.write('(Loss, energy RMSE, and forces RMSE are normalized by number of atoms: Natoms.)\n\n')
+      fout.write('      Loss       energy RMSE     forces RMSE  Natoms  config. identifier\n\n')
+
+      kim_in_out_data = self.calculator.get_kim_input_and_output()
+      for in_out in kim_in_out_data:
+
+        # prediction data
+        self.calculator.compute(in_out)
+        pred = self.calculator.get_prediction(in_out)
+
+        # reference data
+        ref = self.calculator.get_reference(in_out)
+
+        conf = in_out.conf
+        identifier = conf.get_identifier()
+        natoms = conf.get_number_of_atoms()
+
+        compute_energy = in_out.get_compute_energy()
+        compute_forces = in_out.get_compute_forces()
+        if compute_energy:
+          pred_energy = self.calculator.get_energy(in_out)
+          ref_energy = in_out.conf.get_energy()
+          energy_rmse = pred_energy - ref_energy
+        else:
+          energy_rmse = None
+        if compute_forces:
+          pred_forces = self.calculator.get_forces(in_out)
+          ref_forces = in_out.conf.get_forces()
+          forces_rmse = np.linalg.norm(pred_forces - ref_forces)
+        else:
+          forces_rmse = None
+
+        residual = self.residual_fn(identifier, natoms, pred, ref, self.residual_data)
+        loss = 0.5*np.linalg.norm(residual)**2
+
+        if normalize_by_num_atoms:
+          nz = natoms
+        else:
+          nz = 1
+
+        if energy_rmse is None:
+          if forces_rmse is None:
+            fout.write('{:14.6e} {} {}   {}   {}\n'.format(
+                loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
+          else:
+            fout.write('{:14.6e} {} {:14.6}   {}   {}\n'.format(
+                loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
+        else:
+          if forces_rmse is None:
+            fout.write('{:14.6e} {:14.6e} {}   {}   {}\n'.format(
+                loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
+          else:
+            fout.write('{:14.6e} {:14.6e} {:14.6e}   {}   {}\n'.format(
+                loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
+
+
 
 
   def _scipy_optimize_least_squares(self, method, *args, **kwargs):
@@ -316,9 +365,9 @@ class Loss(object):
 
 
   def _scipy_optimize_minimize(self, method, *args, **kwargs):
-    cost = self.get_cost
+    loss = self.get_loss
     x0 = self.model_params.get_x0()
-    return scipy.optimize.minimize(cost, x0, *args, method=method, **kwargs)
+    return scipy.optimize.minimize(loss, x0, *args, method=method, **kwargs)
 
 
 
@@ -352,8 +401,8 @@ class Loss(object):
     self.error_report()
 
     #write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
-    self.params.echo_params(fname='FINAL_FITTED_PARAMS')
-    self.params.echo_params()
+    self.model_params.echo_params(fname='FINAL_FITTED_PARAMS')
+    self.model_params.echo_params()
 
 
 

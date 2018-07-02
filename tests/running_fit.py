@@ -34,10 +34,10 @@ calc.create(configs)
 
 
 # loss
-loss = Loss(params, calc, residual_fn=energy_forces_residual)
-#result = loss.minimize(method='lm')
-result = loss.minimize(method='L-BFGS-B', options={'disp':True, 'maxiter':100 })
-#print(result)
+with Loss(params, calc, residual_fn=energy_forces_residual) as loss:
+  #result = loss.minimize(method='lm')
+  result = loss.minimize(method='L-BFGS-B', options={'disp':True, 'maxiter':100 })
+  #print(result)
 
 
 # print optimized parameters
