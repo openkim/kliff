@@ -279,6 +279,18 @@ class ModelParameters():
     return np.asarray(opt_x0)
 
 
+  def get_bounds(self):
+    """ Get the lower and upper parameter bounds. """
+    bounds = []
+    for idx in self._index:
+      name = idx['name']
+      j_index = idx['j_index']
+      lower = self._params[name]['lower_bound'][j_index]
+      upper = self._params[name]['upper_bound'][j_index]
+      bounds.append([lower, upper])
+    return bounds
+
+
   def get_names(self):
     return self._params.keys()
 

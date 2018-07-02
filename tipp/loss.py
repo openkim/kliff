@@ -208,9 +208,19 @@ class Loss(object):
     """
 
     if method in self.scipy_least_squares_methods:
+      # change unbounded value to np.inf that least_squares needs
+      try:
+        bounds = kwargs['bounds']
+        for i in range(len(bounds)):
+          bounds[i][0] = -np.inf
+          bounds[i][1] = np.inf
+      except KeyError:
+        pass
       result = self._scipy_optimize_least_squares(method, *args, **kwargs)
     elif method in self.scipy_minimize_methods:
       result = self._scipy_optimize_minimize(method, *args, **kwargs)
+    else:
+      raise Exception('minimization method "{}" not supported.'.format(method))
 
     # update final optimized paramters to ModelParameters object
     self._update_params(result.x)
