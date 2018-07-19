@@ -442,7 +442,7 @@ class KIMCalculator(object):
     cutoff = self.kim_model.get_influence_distance()
 
     # TODO we need to make changes to support multiple cutoffs
-    model_cutoffs = self.kim_model.get_neighbor_list_cutoffs()
+    model_cutoffs,padding_hints,half_hints = self.kim_model.get_neighbor_list_cutoffs_and_hints()
     if model_cutoffs.size != 1:
       report_error('too many cutoffs')
 
@@ -466,7 +466,7 @@ class KIMCalculator(object):
         self.kim_model.set_parameter(i, j, v)
 
     # refresh model
-    self.kim_model.clean_influence_distance_and_cutoffs_then_refresh_model()
+    self.kim_model.clear_then_refresh()
 
     # print parameters in KIM object
     if self.debug:

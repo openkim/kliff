@@ -213,9 +213,10 @@ class ModelParameters():
     else:
       fout = sys.stdout
 
-    print(file=fout)
-    print('='*80, file=fout)
-    print('Potential model parameters that are optimzied:',file=fout)
+    #print(file=fout)
+    print('#'+'='*80, file=fout)
+    print('# Potential model parameters that are optimzied',file=fout)
+    print('#'+'='*80, file=fout)
     print(file=fout)
 
     for name,attr in self._params.iteritems():
@@ -224,7 +225,7 @@ class ModelParameters():
       else:
         print(name, file=fout)
 
-      print ('index:', attr['index'], file=fout)
+      #print ('index:', attr['index'], file=fout)
 
       for i in range(attr['size']):
         print('{:24.16e}'.format(attr['value'][i]), end=' ', file=fout)
