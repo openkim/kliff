@@ -18,6 +18,6 @@ TIPP is an interatomic potential fitting library that can be used to fit physics
 1. Install from source
 
     ```
-    $ pip install git+https://github.com/mjwen/TIPP.git@master
+    $ pip install git+https://github.com/mjwen/kliff.git@master
     ```
 

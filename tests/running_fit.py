@@ -4,17 +4,17 @@ from __future__ import print_function
 import sys
 import numpy as np
 import time
-from tipp.dataset import DataSet
-from tipp.modelparameters import ModelParameters
-from tipp.kimcalculator import KIMCalculator
-from tipp.loss import Loss
-from tipp.loss import energy_forces_residual
+from kliff.dataset import DataSet
+from kliff.modelparameters import ModelParameters
+from kliff.kimcalculator import KIMCalculator
+from kliff.loss import Loss
+from kliff.loss import energy_forces_residual
 
 
 start_time = time.time()
 
 # KIM model parameters
-model = 'Three_Body_Stillinger_Weber_Si__MO_000000111111_000'
+model = 'Three_Body_Stillinger_Weber_Si__MO_405512056662_004'
 params = ModelParameters(model)
 params.echo_avail_params()
 fname = 'input/Si_SW_init_guess.txt'

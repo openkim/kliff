@@ -1,13 +1,12 @@
 import sys
 import os
 import pytest
-from tipp.modelparameters import ModelParameters
+from kliff.modelparameters import ModelParameters
 
 
 def test_main():
 
-    modelname = 'Three_Body_Stillinger_Weber_Si__MO_000000111111_000'
-    #modelname = 'Three_Body_Stillinger_Weber_CdTeZnSeHgS__MO_000000111111_000'
+    modelname = 'Three_Body_Stillinger_Weber_Si__MO_405512056662_004'
 
     # create a tmp input file
     fname = 'test_params.txt'

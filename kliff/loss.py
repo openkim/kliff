@@ -5,7 +5,7 @@ import numpy as np
 import scipy.optimize
 import multiprocessing as mp
 import collections
-from tipp import parallel
+from kliff import parallel
 
 
 def energy_forces_residual(identifier, natoms, prediction, reference, data):

@@ -4,9 +4,9 @@ from __future__ import print_function
 import sys
 import numpy as np
 import pytest
-from tipp.dataset import DataSet
-from tipp.modelparameters import ModelParameters
-from tipp.kimcalculator import KIMCalculator
+from kliff.dataset import DataSet
+from kliff.modelparameters import ModelParameters
+from kliff.kimcalculator import KIMCalculator
 
 ref_energies = [
   -277.409737571,
@@ -47,8 +47,7 @@ def assert_2D_array(a, b, tol=1.e-6):
 def test_main():
 
   # model
-  modelname = 'Three_Body_Stillinger_Weber_Si__MO_000000111111_000'
-
+  modelname = 'Three_Body_Stillinger_Weber_Si__MO_405512056662_004'
   params = ModelParameters(modelname)
   #fname = 'input/Si_SW_init_guess.txt'
   #params.read(fname)

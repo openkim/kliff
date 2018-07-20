@@ -76,13 +76,13 @@ class get_pybind11_includes(object):
 #)
 
 
-setup(name='tipp',
+setup(name='kliff',
     version='0.0.1',
     description='Interatomic potential fitting package',
     author='Mingjian Wen',
     url='https://github.com/mjwen/TIPP',
-    packages=['tipp'],
-    #packages=['tipp','tensorflow_op', 'geolm'],
+    packages=['kliff'],
+    #packages=['kliff','tensorflow_op', 'geolm'],
     #package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
     #package_data={'geolm':['_geodesiclm.so']},
     #ext_modules=[tf_module, desc_module],

@@ -2,15 +2,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from tipp.modelparameters import ModelParameters
-from tipp.kimcalculator import KIMCalculator
-from tipp.loss import Loss
+from kliff.modelparameters import ModelParameters
+from kliff.kimcalculator import KIMCalculator
+from kliff.loss import Loss
 
 
 def test_main():
 
   # KIM model parameters
-  model = 'Three_Body_Stillinger_Weber_Si__MO_000000111111_000'
+  model = 'Three_Body_Stillinger_Weber_Si__MO_405512056662_004'
   params = ModelParameters(model)
   params.echo_avail_params()
   params.set_param(("A", [16.0]))
