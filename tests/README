@@ -5,3 +5,11 @@ $ pytest
 To run a specific test
 $ pytest file_name
 
+
+
+
+The following tests has been rewritten:
+  test_modelparams.py
+  test_set_parameters_and_cutoff.py
+  test_kimcalculator.py
+  running_fit.py

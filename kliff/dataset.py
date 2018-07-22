@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 import os
 import numpy as np
 from collections import OrderedDict
-from error import InputError
+from .error import InputError
 
 #TODO weight can be allowed to be read in from dataset
 #TODO  if energy is to be fitted, allow read only coords, not forces

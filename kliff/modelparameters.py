@@ -1,11 +1,15 @@
-from __future__ import print_function, division
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import sys
 import os
 import numpy as np
 from collections import OrderedDict
 import kimpy
-from error import InputError, check_error, report_error
-from utils import remove_comments
+from .error import InputError
+from .error import check_error
+from .error import report_error
+from .utils import remove_comments
 
 
 class ModelParameters():
@@ -141,11 +145,7 @@ class ModelParameters():
       raise InputError('Incorrect number of data lines for paramter "{}".'.format(name))
 
     # index of parameter in avail_params (which is the same as in KIM object)
-    #for i,nm in enumerate(self._avail_params):
-    #  if nm == name:
-    #    index = i
-    index = self._avail_params.keys().index(name)
-
+    index = list(self._avail_params.keys()).index(name)
 
     tmp_dict = {
        'size': size,
@@ -187,7 +187,7 @@ class ModelParameters():
     print('the names and the initial guesses (optionally, lower and upper bounds)')
     print('of the parameters that you want to optimize in the input file.')
     print()
-    for name,attr in self._avail_params.iteritems():
+    for name,attr in self._avail_params.items():
       print('name: ', name)
       print('data: ', attr)
       print()
@@ -219,7 +219,7 @@ class ModelParameters():
     print('#'+'='*80, file=fout)
     print(file=fout)
 
-    for name,attr in self._params.iteritems():
+    for name,attr in self._params.items():
       if print_size:
         print(name, attr['size'], file=fout)
       else:
@@ -435,10 +435,7 @@ class ModelParameters():
     and later be optimized.
     """
 
-    #for i,nm in enumerate(self._avail_params):
-    #  if nm == name:
-    #    i_index = i
-    i_index = self._avail_params.keys().index(name)
+    i_index = list(self._avail_params.keys()).index(name)
     size = self._params[name]['size']
     fix  = self._params[name]['fix']
     for j in range(size):

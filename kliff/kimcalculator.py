@@ -1,15 +1,15 @@
-#from __future__ import absolute_import
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import sys
 import numpy as np
 import kimpy
 import neighlist as nl
-from dataset import Configuration
-from error import SupportError
-from error import InputError
-from error import check_error
-from species_name_map import species_name_map
+from .dataset import Configuration
+from .error import SupportError
+from .error import InputError
+from .error import check_error
+from .species_name_map import species_name_map
 
 
 class KIMInputAndOutput(object):
@@ -423,7 +423,7 @@ class KIMCalculator(object):
     Return: dictionary key:str, value:int
     """
     species = {}
-    for key, value in species_name_map.iteritems():
+    for key, value in species_name_map.items():
       supported, code, error = self.kim_model.get_species_support_and_code(value)
       check_error(error, 'kim_model.get_species_support_and_code')
       if supported:
@@ -591,12 +591,12 @@ def _assemble_padding_forces(forces, num_contributing, padding_image_of):
     num_padding = pad_forces.shape[0]
 
     if num_contributing < num_padding:
-      for i in xrange(num_contributing):
+      for i in range(num_contributing):
         # indices: the indices of padding atoms that are images of contributing atom i
         indices = np.where(padding_image_of == i)
         total_forces[i] += np.sum(pad_forces[indices], axis=0)
     else:
-      for i in xrange(num_padding):
+      for i in range(num_padding):
         total_forces[padding_image_of[i]] += pad_forces[i]
 
   return total_forces

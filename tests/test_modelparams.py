@@ -29,8 +29,8 @@ def test_main():
     params.set_param(param_B)
     params.echo_params()
 
-    print params.get_value('A')
-    print params.get_size('A')
+    print(params.get_value('A'))
+    print(params.get_size('A'))
 
     assert params.get_value('A')[0] == 2.0
 

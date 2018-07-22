@@ -38,4 +38,4 @@ if __name__ == '__main__':
 
 
   rslt = parmap(sq_cub, [1, 2, 3, 4, 6, 7, 8], 2, 4)
-  print rslt
+  print (rslt)
