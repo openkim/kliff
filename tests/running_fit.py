@@ -34,7 +34,7 @@ calc.create(configs)
 
 
 # loss
-with Loss(params, calc, residual_fn=energy_forces_residual) as loss:
+with Loss(params, calc, nprocs=2, residual_fn=energy_forces_residual) as loss:
   #result = loss.minimize(method='lm')
   result = loss.minimize(method='L-BFGS-B', options={'disp':True, 'maxiter':100 })
   #print(result)
