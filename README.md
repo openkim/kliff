@@ -1,5 +1,7 @@
 # KIM-based Learning Integrated Fitting Framework
 
+[![Build Status](https://travis-ci.com/mjwen/kliff.svg?branch=master)](https://travis-ci.com/mjwen/kliff)
+
 KLIFF is an interatomic potential fitting library that can be used to fit physics-motivated (PM) models and machine learning potentials such as the Aritifical Neural Network (ANN) models.
 
 ## Why you want to use KLIFF (or don't use it)
