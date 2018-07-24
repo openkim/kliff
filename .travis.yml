@@ -1,0 +1,54 @@
+os: linux
+sudo: enabled
+language: python
+
+python:
+  - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+
+
+before_install:
+  # gcc (gfortran is not there by default, we install all gcc suit just in case)
+  - sudo apt-get install gcc
+  - sudo apt-get install gfortran
+
+  # keep record of kliff directory
+  - export KLIFF_DIR=$PWD
+
+
+install:
+  # kim-api
+  - cd $KLIFF_DIR && cd ..
+  - wget http://s3.openkim.org/kim-api/kim-api-v2.0.0-beta.1.txz
+  - tar xJf kim-api-v2.0.0-beta.1.txz
+  - cd kim-api-v2.0.0-beta.1
+  - ./configure
+  - make
+  - sudo make install
+  - which kim-api-v2-build-config
+  #- cd examples
+  #- make all-user
+
+  # kimpy
+  - cd $KLIFF_DIR && cd ..
+  - pip install git+https://github.com/mjwen/kimpy.git@master
+
+  # neighlist
+  - cd $KLIFF_DIR && cd ..
+  - git clone https://github.com/mjwen/neighlist.git
+  - cd neighlist/python
+  - pip install -e .
+
+
+script:
+  - cd $KLIFF_DIR
+  - python setup.py install
+
+
+#after_script:
+#  - pytest tests/test_modelparams.py
+#  - pytest tests/test_set_parameters_and_cutoff.py
+#  - pytest tests/test_kimcalculator.py
+

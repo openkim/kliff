@@ -86,7 +86,7 @@ setup(name='kliff',
     #package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
     #package_data={'geolm':['_geodesiclm.so']},
     #ext_modules=[tf_module, desc_module],
-    install_requires = ['numpy', 'pybind11'],
+    install_requires = ['scipy', 'pybind11'],
     zip_safe = False,
 )
 
