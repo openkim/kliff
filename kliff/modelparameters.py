@@ -24,12 +24,32 @@ class ModelParameters():
 
   modelname: str
     KIM model name
+
+  param_relations_callback: callback function
+    A callback function to set the relations between parameters, which are
+    called each minimization step after the optimizer updates the parameters.
+
+    The function with be given the ModelParameters instance as argument, and
+    it can use get_value() and set_value() to manipulate the relation between
+    parameters.
+
+    Example:
+
+    In the following example, we set the value of B[0] to 2 * A[0].
+
+    def param_relations(params):
+      A = params.get_value('A')
+      B = params.get_value('B')
+      B[0] = 2 * A[0]
+      params.set_value('B', B)
+
   """
 
-  def __init__(self, modelname, debug=False):
+  def __init__(self, modelname, param_relations_callback=None, debug=False):
 
     self.modelname = modelname
     self._debug = debug
+    self.param_relations_callback = param_relations_callback
 
     # key: parameter name
     # value: parameter values (1D array)
@@ -260,6 +280,17 @@ class ModelParameters():
       name = self._index[k]['name']
       j_index = self._index[k]['j_index']
       self._params[name]['value'][j_index] = val
+
+    # user-specified relations between parameters
+    if self.param_relations_callback is not None:
+      self.param_relations_callback(self)
+
+
+  def register_param_relations_callback(self, param_relations_callback):
+    """ Register a function to set the relations between parameters. """
+    self.param_relations_callback = param_relations_callback
+
+
 
 
   def get_x0(self):
