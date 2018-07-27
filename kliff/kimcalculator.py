@@ -9,7 +9,6 @@ from .dataset import Configuration
 from .error import SupportError
 from .error import InputError
 from .error import check_error
-from .species_name_map import species_name_map
 
 
 class KIMInputAndOutput(object):
@@ -423,13 +422,18 @@ class KIMCalculator(object):
     Return: dictionary key:str, value:int
     """
     species = {}
-    for key, value in species_name_map.items():
-      supported, code, error = self.kim_model.get_species_support_and_code(value)
+    num_kim_species = kimpy.species_name.get_number_of_species_names()
+
+    for i in range(num_kim_species):
+      species_name, error = kimpy.species_name.get_species_name(i)
+      check_error(error, 'kimpy.species_name.get_species_name')
+      supported,code,error = self.kim_model.get_species_support_and_code(species_name)
       check_error(error, 'kim_model.get_species_support_and_code')
       if supported:
-        species[key] = code
+        species[str(species_name)] = code
 
     return species
+
 
 
   def get_cutoff(self):
