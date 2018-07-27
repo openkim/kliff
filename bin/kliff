@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+import sys
+import argparse
+from kliff.scripts.dataset_count import dataset_count
+
+
+def parser():
+  parser = argparse.ArgumentParser(description='kliff utility collections.')
+
+  parser.add_argument('-c', '--dataset_count', type = str,
+      metavar = 'directory',
+      help ='count the number of ".xyz" files in a given directory')
+
+  return parser
+
+
+if __name__ == '__main__':
+
+  parser = parser()
+  if len(sys.argv) == 1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
+  args = parser.parse_args()
+
+  directory = args.dataset_count
+  if directory is not None:
+    dataset_count(directory)

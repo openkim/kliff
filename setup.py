@@ -76,12 +76,31 @@ class get_pybind11_includes(object):
 #)
 
 
+def get_version(fname = 'kliff'+os.path.sep+'__init__.py'):
+  with open(fname) as fin:
+    for line in fin:
+      line = line.strip()
+      if '__version__' in line:
+        v = line.split('=')[1]
+        # stripe white space, and ' or " in string
+        if "'" in v:
+          version = v.strip("' ")
+        elif '"' in v:
+          version = v.strip('" ')
+        break
+  return version
+
+
+kliff_scripts = ['bin/kliff']
+
+
 setup(name='kliff',
-    version='0.0.1',
-    description='Interatomic potential fitting package',
-    author='Mingjian Wen',
-    url='https://github.com/mjwen/TIPP',
-    packages=['kliff'],
+    version = get_version(),
+    description = 'Interatomic potential fitting package',
+    author = 'Mingjian Wen',
+    url = 'https://github.com/mjwen/kliff',
+    packages = ['kliff'],
+    scripts = kliff_scripts,
     #packages=['kliff','tensorflow_op', 'geolm'],
     #package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
     #package_data={'geolm':['_geodesiclm.so']},
