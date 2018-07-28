@@ -585,7 +585,8 @@ def _assemble_padding_forces(forces, num_contributing, padding_image_of):
     Total forces on contributing atoms.
   """
 
-  total_forces = forces[:num_contributing]
+  # numpy slicing does not make a copy !!!
+  total_forces = np.array(forces[:num_contributing])
 
   has_padding = True if padding_image_of.size != 0 else False
 
