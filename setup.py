@@ -55,25 +55,25 @@ class get_pybind11_includes(object):
     return pybind11.get_include(self.user)
 
 
-#tf_module = Extension('tensorflow_op.int_pot_op',
-#    sources = ['tensorflow_op/int_pot_op.cpp'],
-#    include_dirs = [tf_includes(), os.path.join(tf_includes(), 'external/nsync/public')],
-#    library_dirs = [tf_lib_path()],
-#    libraries = ['m', 'tensorflow_framework'],
-#    extra_compile_args = tf_extra_compile_args(),
-#    extra_link_args = [],
-#    language = 'c++',
-#)
+tf_module = Extension('tensorflow_op.int_pot_op',
+    sources = ['tensorflow_op/int_pot_op.cpp'],
+    include_dirs = [tf_includes(), os.path.join(tf_includes(), 'external/nsync/public')],
+    library_dirs = [tf_lib_path()],
+    libraries = ['m', 'tensorflow_framework'],
+    extra_compile_args = tf_extra_compile_args(),
+    extra_link_args = [],
+    language = 'c++',
+)
 
-#
-#desc_module = Extension('desc',
-#    sources = ['openkim_fit/descriptor_bind.cpp',
-#               'openkim_fit/descriptor_c.cpp',
-#               'openkim_fit/layers.cpp'],
-#    include_dirs = [get_pybind11_includes(), get_pybind11_includes(user=True)],
-#    extra_compile_args = get_extra_compile_args(),
-#    language = 'c++',
-#)
+
+desc_module = Extension('kliff.descriptor.sym_fn',
+    sources = ['kliff/descriptor/symmetry_function_bind.cpp',
+               'kliff/descriptor/symmetry_function.cpp',
+               'kliff/descriptor/layers.cpp'],
+    include_dirs = [get_pybind11_includes(), get_pybind11_includes(user=True)],
+    extra_compile_args = get_extra_compile_args(),
+    language = 'c++',
+)
 
 
 def get_version(fname = 'kliff'+os.path.sep+'__init__.py'):
@@ -99,12 +99,12 @@ setup(name='kliff',
     description = 'Interatomic potential fitting package',
     author = 'Mingjian Wen',
     url = 'https://github.com/mjwen/kliff',
+    ext_modules=[tf_module, desc_module],
     packages = ['kliff'],
-    scripts = kliff_scripts,
     #packages=['kliff','tensorflow_op', 'geolm'],
     #package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
     #package_data={'geolm':['_geodesiclm.so']},
-    #ext_modules=[tf_module, desc_module],
+    scripts = kliff_scripts,
     install_requires = ['scipy', 'pybind11'],
     zip_safe = False,
 )

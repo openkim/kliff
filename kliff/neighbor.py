@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 
-class NeighborList:
+class NeighborList(object):
   """Transform the cartesian coords to generalized coords that is the input layer.
 
   Parameters
@@ -25,7 +25,7 @@ class NeighborList:
 
     # data from config
     self.spec_contrib = self.conf.get_species()
-    self.coords_contrib = self.conf.get_coords()
+    self.coords_contrib = np.reshape(self.conf.get_coordinates(), (-1,))
     self.ncontrib = len(self.spec_contrib)
     species_set = set(self.spec_contrib)
     self.nspecies = len(species_set)

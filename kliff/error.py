@@ -9,7 +9,7 @@ class SupportError(Exception):
   def __init__(self, value):
      self.value = value
   def __str__(self):
-    return repr(self.value) + ' computation not supported by model'
+    return repr(self.value)
 
 
 class InitializationError(Exception):

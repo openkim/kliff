@@ -113,3 +113,7 @@
 13. 08/23/2017:
   Change class TrainingSet to DataSet. It can contain validation, test
   data as well.                                                                  Done
+
+14. 08/02/2018:                                                                  Not yet
+  For ANN, add check for species that are present in training set also given
+  in descriptor.

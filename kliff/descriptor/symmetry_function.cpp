@@ -1,5 +1,5 @@
 #include <iostream>
-#include "descriptor_c.h"
+#include "symmetry_function.h"
 #include "layers.h"
 
 #define DIM 3
