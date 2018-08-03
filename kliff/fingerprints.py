@@ -77,6 +77,9 @@ class Fingerprints(object):
 
     self._generate_tfrecords(configs, fname, all_zeta, all_dzetadr, nprocs=nprocs)
 
+    mean_std_name = os.path.join(os.path.dirname(fname), 'fingerprints_mean_and_stdev.txt')
+    self.write_mean_and_stdev(mean_std_name)
+
 
   def generate_test_tfrecords(self, configs, fname='fingerprints/train.tfrecords',
       nprocs=mp.cpu_count()):
@@ -126,23 +129,18 @@ class Fingerprints(object):
   def get_dtype(self):
     return self.dtype
 
-  def write_mean_and_stdev(self, fname=None):
+  def write_mean_and_stdev(self, fname='fingerprints/mean_and_stdev.txt'):
     mean = self.mean
     stdev = self.stdev
-
-    if fname is None:
-      fname = 'fingerprints/fingerprints_mean_and_stdev'
-
     with open(fname, 'w') as fout:
       if mean is not None and stdev is not None:
         fout.write('{}  # number of descriptors.\n'.format(len(mean)))
         fout.write('# mean\n')
         for i in mean:
           fout.write('{:24.16e}\n'.format(i))
-        fout.write('# standard derivation\n')
+        fout.write('\n# standard derivation\n')
         for i in stdev:
           fout.write('{:24.16e}\n'.format(i))
-
       else:
         fout.write('False\n')
 
@@ -245,12 +243,12 @@ class Fingerprints(object):
     dzetadr = np.asarray(dzetadr, np_dtype).tostring()
 
     # configuration features
-    name = conf.get_idtifier()
+    name = conf.get_identifier()
     d = conf.num_atoms_by_species
     num_atoms_by_species = [d[k] for k in d]
     num_species = len(num_atoms_by_species)
     num_atoms_by_species = np.asarray(num_atoms_by_species, np.int64).tostring()
-    coords = np.asarray(conf.get_coords(), np_dtype).tostring()
+    coords = np.asarray(conf.get_coordinates(), np_dtype).tostring()
     weight = np.asarray(conf.get_weight(), np_dtype).tostring()
     energy = np.asarray(conf.get_energy(), np_dtype).tostring()
     forces = np.asarray(conf.get_forces(), np_dtype).tostring()
@@ -361,40 +359,59 @@ class Fingerprints(object):
 
 
 
+def read_tfrecords(fnames, fit_forces=False, num_parallel_calls=None, dtype=tf.float32):
+  """Read preprocessed TFRecord data from `fname'.
+
+  Parameter
+  ---------
+
+  fnames, str or list of str
+    names of the TFRecords data file.
+
+  fit_forces, bool
+    wheter to fit to forces.
+
+  Return
+  ------
+
+  Instance of tf.data.
+  """
+
+  dataset = tf.data.TFRecordDataset(fnames)
+  global HACKED_DTYPE
+  HACKED_DTYPE=dtype
+  if fit_forces:
+    dataset = dataset.map(_parse_energy_and_force, num_parallel_calls=num_parallel_calls)
+  else:
+    dataset = dataset.map(_parse_energy, num_parallel_calls=num_parallel_calls)
+  return dataset
 
 
 
-
-
-
-
-
-
-
-
-def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=False, dtype=tf.float32):
-  """ convert tfrecord data file of generalized coords (gc) to text file.
+def tfrecords_to_text(tfrecords_path, text_path, fit_forces=False, gradient=False,
+    nprocs=mp.cpu_count(), dtype=tf.float32):
+  """Convert tfrecords data file of generalized coords (gc) to text file.
 
   Parameters
   ----------
 
-  tfrecord_name: str
-    File name of the tfrecord data file.
+  tfrecords_path: str
+    File name of the tfrecords data file.
 
-  text_name: str
+  text_path: str
     File name of the outout text data file.
 
   fit_forces: bool
-    Is forces included in the tfrecord data.
+    Is forces included in the tfrecords data.
 
-  do_grad_gc: bool
-    Wheter to write out gradient of gc w.r.t. atomic coords.
+  gradient: bool
+    Wheter to write out gradient of fingerprints w.r.t. atomic coords.
   """
 
-  if do_grad_gc and not fit_forces:
-    raise Exception("Set `fit_forces` to `True` to use `do_grad_gc`.")
+  if gradient and not fit_forces:
+    raise Exception("Set `fit_forces` to `True` to use `gradient`.")
 
-  dataset = read_tfrecord(tfrecord_name, fit_forces, dtype=dtype)
+  dataset = read_tfrecords(tfrecords_path, fit_forces, nprocs, dtype)
   iterator = dataset.make_one_shot_iterator()
 
   if fit_forces:
@@ -403,14 +420,14 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=Fals
   else:
     name,num_atoms_by_species,weight,gen_coords,energy_label = iterator.get_next()
 
-  with open(text_name, 'w') as fout:
+  with open(text_path, 'w') as fout:
     fout.write('# Generalized coordinates for all configurations.\n')
     nconf = 0
 
     with tf.Session() as sess:
       while True:
         try:
-          if do_grad_gc:
+          if gradient:
             nm, gc, grad_gc = sess.run([name, gen_coords, dgen_datomic_coords])
           else:
             nm, gc = sess.run([name, gen_coords])
@@ -424,7 +441,7 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=Fals
               fout.write('{:.15g} '.format(j))
             fout.write('\n')
 
-          if do_grad_gc:
+          if gradient:
             fout.write('\n')
             fout.write('#'+'='*40+'\n')
             fout.write('# atom id\n# gc id    atom 3i+0, 3i+1, 3i+2 ...\n\n')
@@ -443,4 +460,108 @@ def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=Fals
 
     fout.write('\n\n# Total number of configurations: {}.'.format(nconf))
 
+
+
+def _parse_energy(example_proto):
+  """Transforms a scalar string `example_proto' (corresponding to an atomic
+  configuration) into usable data.
+  """
+  features = {
+      # meta data
+      'num_descriptors': tf.FixedLenFeature((), tf.int64),
+      'num_species': tf.FixedLenFeature((), tf.int64),
+      # input data
+      'name': tf.FixedLenFeature((), tf.string),
+      'num_atoms_by_species': tf.FixedLenFeature((), tf.string),
+      'weight': tf.FixedLenFeature((), tf.string),
+      'gen_coords': tf.FixedLenFeature((), tf.string),
+      # labels
+      'energy': tf.FixedLenFeature((), tf.string),
+      }
+  parsed_features = tf.parse_single_example(example_proto, features)
+
+  # meta
+  num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int64)
+  num_species = tf.cast(parsed_features['num_species'], tf.int64)
+
+  dtype = HACKED_DTYPE  # should be defined as a global variable by callee
+
+  ## input
+  name = parsed_features['name']
+
+  num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
+
+  shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
+                                            # or else, can use num_species as tf.int32
+  num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
+
+  weight = tf.decode_raw(parsed_features['weight'], dtype)[0]
+
+  num_atoms = tf.reduce_sum(num_atoms_by_species)
+  shape = tf.cast([num_atoms, num_descriptors], tf.int64)
+  gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
+  gen_coords = tf.reshape(gen_coords, shape)
+
+  # labels
+  energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
+
+  return  name, num_atoms_by_species, weight, gen_coords, energy
+
+
+def _parse_energy_and_force(example_proto):
+  """Transforms a scalar string `example_proto' (corresponding to an atomic
+  configuration) into usable data.
+  """
+  features = {
+      # meta data
+      'num_descriptors': tf.FixedLenFeature((), tf.int64),
+      'num_species': tf.FixedLenFeature((), tf.int64),
+
+      # input data
+      'name': tf.FixedLenFeature((), tf.string),
+      'num_atoms_by_species': tf.FixedLenFeature((), tf.string),
+      'weight': tf.FixedLenFeature((), tf.string),
+      'atomic_coords': tf.FixedLenFeature((), tf.string),
+      'gen_coords': tf.FixedLenFeature((), tf.string),
+      'dgen_datomic_coords': tf.FixedLenFeature((), tf.string),
+
+      # labels
+      'energy': tf.FixedLenFeature((), tf.string),
+      'forces': tf.FixedLenFeature((), tf.string)
+      }
+  parsed_features = tf.parse_single_example(example_proto, features)
+
+  # meta
+  num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int64)
+  num_species = tf.cast(parsed_features['num_species'], tf.int64)
+
+  dtype = HACKED_DTYPE  # should be defined as a global variable from callee
+
+  # input
+  name = parsed_features['name']
+  num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
+  shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
+  num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
+  weight = tf.decode_raw(parsed_features['weight'], dtype)[0]
+
+  # shapes
+  num_atoms = tf.reduce_sum(num_atoms_by_species)
+  DIM = 3
+  shape1 = tf.cast([num_atoms*DIM], tf.int64)
+  shape2 = tf.cast([num_atoms, num_descriptors], tf.int64)
+  shape3 = tf.cast([num_atoms, num_descriptors, num_atoms*DIM], tf.int64)
+
+  atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
+  atomic_coords = tf.reshape(atomic_coords, shape1)
+  gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
+  gen_coords = tf.reshape(gen_coords, shape2)
+  dgen_datomic_coords = tf.decode_raw(parsed_features['dgen_datomic_coords'], dtype)
+  dgen_datomic_coords = tf.reshape(dgen_datomic_coords, shape3)
+
+  # labels
+  energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
+  forces = tf.decode_raw(parsed_features['forces'], dtype)
+  forces = tf.reshape(forces, shape1)
+
+  return  name, num_atoms_by_species, weight, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
 

@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
 from tensorflow.contrib.layers import xavier_initializer
 from tensorflow.contrib.layers import variance_scaling_initializer
+from .fingerprints import read_tfrecords
 import numpy as np
 import functools
 import os
@@ -40,7 +41,7 @@ class Input(object):
     self.energy_label = None
     self.atomic_coords = None
     self.deriv_zeta_atomic_coords = None
-    self.force_label = None
+    self.forces_label = None
 
   def build(self):
 
@@ -52,7 +53,7 @@ class Input(object):
        self.energy_label,
        self.atomic_coords,
        self.deriv_zeta_atomic_coords,
-       self.force_label) = self.iterator.get_next()
+       self.forces_label) = self.iterator.get_next()
 
       fingerprint, _ = int_pot(coords=self.atomic_coords, zeta=self.zeta,
           dzetadr=self.deriv_zeta_atomic_coords)
@@ -167,10 +168,6 @@ class Dropout(object):
 
 
 
-
-
-
-
 class NeuralNetwork(object):
   """ Neural Network class build upon tensorflow.
 
@@ -216,16 +213,7 @@ class NeuralNetwork(object):
 
     """
     self.batch_size = batch_size
-
-
-    dataset = tf.data.TFRecordDataset(tfrecords_path)
-    global HACKED_DTYPE
-    HACKED_DTYPE=self.dtype
-    if self.fit_forces:
-      dataset = dataset.map(_parse_energy_and_force, num_parallel_calls=num_parallel_calls)
-    else:
-      dataset = dataset.map(_parse_energy, num_parallel_calls=num_parallel_calls)
-
+    dataset = read_tfrecords(tfrecords_path, self.fit_forces, num_parallel_calls, self.dtype)
     dataset = dataset.repeat(num_epoches)
     dataset = dataset.prefetch(batch_size)
     iterator = dataset.make_one_shot_iterator()
@@ -668,110 +656,6 @@ class NeuralNetwork(object):
     return weights, biases
 
 
-def _parse_energy(example_proto):
-  """Transforms a scalar string `example_proto' (corresponding to an atomic
-  configuration) into usable data.
-  """
-  features = {
-      # meta data
-      'num_descriptors': tf.FixedLenFeature((), tf.int64),
-      'num_species': tf.FixedLenFeature((), tf.int64),
-      # input data
-      'name': tf.FixedLenFeature((), tf.string),
-      'num_atoms_by_species': tf.FixedLenFeature((), tf.string),
-      'weight': tf.FixedLenFeature((), tf.string),
-      'gen_coords': tf.FixedLenFeature((), tf.string),
-      # labels
-      'energy': tf.FixedLenFeature((), tf.string),
-      }
-  parsed_features = tf.parse_single_example(example_proto, features)
-
-  # meta
-  num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int64)
-  num_species = tf.cast(parsed_features['num_species'], tf.int64)
-
-  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
-
-  ## input
-  name = parsed_features['name']
-
-  num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
-
-  shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
-                                            # or else, can use num_species as tf.int32
-  num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
-
-  weight = tf.decode_raw(parsed_features['weight'], dtype)[0]
-
-  num_atoms = tf.reduce_sum(num_atoms_by_species)
-  shape = tf.cast([num_atoms, num_descriptors], tf.int64)
-  gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
-  gen_coords = tf.reshape(gen_coords, shape)
-
-  # labels
-  energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
-
-  return  name, num_atoms_by_species, weight, gen_coords, energy
-
-
-def _parse_energy_and_force(example_proto):
-  """Transforms a scalar string `example_proto' (corresponding to an atomic
-  configuration) into usable data.
-  """
-  features = {
-      # meta data
-      'num_descriptors': tf.FixedLenFeature((), tf.int64),
-      'num_species': tf.FixedLenFeature((), tf.int64),
-
-      # input data
-      'name': tf.FixedLenFeature((), tf.string),
-      'num_atoms_by_species': tf.FixedLenFeature((), tf.string),
-      'weight': tf.FixedLenFeature((), tf.string),
-      'atomic_coords': tf.FixedLenFeature((), tf.string),
-      'gen_coords': tf.FixedLenFeature((), tf.string),
-      'dgen_datomic_coords': tf.FixedLenFeature((), tf.string),
-
-      # labels
-      'energy': tf.FixedLenFeature((), tf.string),
-      'forces': tf.FixedLenFeature((), tf.string)
-      }
-  parsed_features = tf.parse_single_example(example_proto, features)
-
-  # meta
-  num_descriptors = tf.cast(parsed_features['num_descriptors'], tf.int64)
-  num_species = tf.cast(parsed_features['num_species'], tf.int64)
-
-  dtype = HACKED_DTYPE  # defined as a global variable in read_from_trrecords
-
-  # input
-  name = parsed_features['name']
-  num_atoms_by_species = tf.decode_raw(parsed_features['num_atoms_by_species'], tf.int64)
-  shape = tf.cast([num_species], tf.int64)  # tf.cast is necessary, otherwise tf will report error
-  num_atoms_by_species = tf.reshape(num_atoms_by_species, shape)
-  weight = tf.decode_raw(parsed_features['weight'], dtype)[0]
-
-  # shapes
-  num_atoms = tf.reduce_sum(num_atoms_by_species)
-  DIM = 3
-  shape1 = tf.cast([num_atoms*DIM], tf.int64)
-  shape2 = tf.cast([num_atoms, num_descriptors], tf.int64)
-  shape3 = tf.cast([num_atoms, num_descriptors, num_atoms*DIM], tf.int64)
-
-  atomic_coords = tf.decode_raw(parsed_features['atomic_coords'], dtype)
-  atomic_coords = tf.reshape(atomic_coords, shape1)
-  gen_coords = tf.decode_raw(parsed_features['gen_coords'], dtype)
-  gen_coords = tf.reshape(gen_coords, shape2)
-  dgen_datomic_coords = tf.decode_raw(parsed_features['dgen_datomic_coords'], dtype)
-  dgen_datomic_coords = tf.reshape(dgen_datomic_coords, shape3)
-
-  # labels
-  energy = tf.decode_raw(parsed_features['energy'], dtype)[0]
-  forces = tf.decode_raw(parsed_features['forces'], dtype)
-  forces = tf.reshape(forces, shape1)
-
-  return  name, num_atoms_by_species, weight, gen_coords, energy, atomic_coords, dgen_datomic_coords, forces
-
-
 
 
 class ANNCalculator(object):
@@ -793,15 +677,15 @@ class ANNCalculator(object):
     self.use_forces = None
 
 
-  def create(self, configs, use_energy=True, use_forces=True):
-    self.configs = configs
-    self.use_energy = use_energy
-    self.use_forces = use_forces
-
+  def create(self, configs):
     self.model.check_output_layer()
-    self.model.fingerprints.generate_train_tfrecords(self.configs, nprocs=1)
+    self.model.fingerprints.generate_train_tfrecords(configs, nprocs=mp.cpu_count())
     tfrecords_path = self.model.fingerprints.get_train_tfrecords_path()
-    self.model.data_iterator(tfrecords_path, self.num_epoches, self.batch_size, num_parallel_calls=1)
+    self.model.data_iterator(tfrecords_path, self.num_epoches, self.batch_size,
+        num_parallel_calls=mp.cpu_count()//2)
+
 
   def get_loss(self):
     return self.model.get_loss(self.batch_size)
+
+
