@@ -365,7 +365,7 @@ class Set51(Descriptor):
 
 
 
-class Set51(Descriptor):
+class Set30(Descriptor):
   """ Symmetry function descriptor with the hyperparameters from:
   Artrith and Behler, PRB, 85, 045439 (2012)
 
@@ -434,5 +434,5 @@ class Set51(Descriptor):
         elif key == 'g4':
           val['eta'] /= bhor2ang**2
 
-    super(Set51, self).__init__(params, cutname, cutvalue)
+    super(Set30, self).__init__(params, cutname, cutvalue)
 

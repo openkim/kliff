@@ -9,6 +9,7 @@ dist/
 *.in
 *.log
 *.out
+*.tfrecords
 KIM_MODEL_PARAMS*
 *.edn
 *.lammps

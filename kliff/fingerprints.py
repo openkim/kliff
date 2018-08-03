@@ -35,6 +35,8 @@ class Fingerprints(object):
     self.fit_forces = fit_forces
     self.dtype = dtype
 
+    self.train_tfrecords = None
+    self.test_tfrecords = None
     self.mean = None
     self.stdev = None
 
@@ -58,6 +60,7 @@ class Fingerprints(object):
     nprocs: int
       Number of processes to be used.
     """
+    self.train_tfrecords = fname
 
     all_zeta = None
     all_dzetadr = None
@@ -94,17 +97,34 @@ class Fingerprints(object):
     nprocs: int
       Number of processes to be used.
     """
-
     if self.normalize is None:
       raise Exception('"generate_train_trrecords()" should be called before this.')
 
+    self.test_tfrecords = fname
     self._generate_tfrecords(configs, fname, None, None, nprocs=nprocs)
+
+
+
+  def get_train_tfrecords_path(self):
+    return self.train_tfrecords
+
+  def get_test_tfrecords_path(self):
+    return self.test_tfrecords
 
   def get_mean(self):
     return self.mean.copy()
 
   def get_stdev(self):
     return self.stdev.copy()
+
+  def get_descriptor(self):
+    return self.descriptor
+
+  def get_fit_forces(self):
+    return self.fit_forces
+
+  def get_dtype(self):
+    return self.dtype
 
   def write_mean_and_stdev(self, fname=None):
     mean = self.mean
@@ -338,4 +358,89 @@ class Fingerprints(object):
 #        fout.write('\n')
 
     return mean, stdev, all_zeta, all_dzetadr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def tfrecord_to_text(tfrecord_name, text_name, fit_forces=False, do_grad_gc=False, dtype=tf.float32):
+  """ convert tfrecord data file of generalized coords (gc) to text file.
+
+  Parameters
+  ----------
+
+  tfrecord_name: str
+    File name of the tfrecord data file.
+
+  text_name: str
+    File name of the outout text data file.
+
+  fit_forces: bool
+    Is forces included in the tfrecord data.
+
+  do_grad_gc: bool
+    Wheter to write out gradient of gc w.r.t. atomic coords.
+  """
+
+  if do_grad_gc and not fit_forces:
+    raise Exception("Set `fit_forces` to `True` to use `do_grad_gc`.")
+
+  dataset = read_tfrecord(tfrecord_name, fit_forces, dtype=dtype)
+  iterator = dataset.make_one_shot_iterator()
+
+  if fit_forces:
+    name,num_atoms_by_species,weight,gen_coords,energy_label,atomic_coords, \
+        dgen_datomic_coords,forces_label = iterator.get_next()
+  else:
+    name,num_atoms_by_species,weight,gen_coords,energy_label = iterator.get_next()
+
+  with open(text_name, 'w') as fout:
+    fout.write('# Generalized coordinates for all configurations.\n')
+    nconf = 0
+
+    with tf.Session() as sess:
+      while True:
+        try:
+          if do_grad_gc:
+            nm, gc, grad_gc = sess.run([name, gen_coords, dgen_datomic_coords])
+          else:
+            nm, gc = sess.run([name, gen_coords])
+
+          fout.write('\n\n#'+'='*80+'\n')
+          fout.write('# configuration: {}\n'.format(nm))
+          fout.write('# atom id    descriptor values ...\n\n')
+          for i,line in enumerate(gc):
+            fout.write('{}    '.format(i))
+            for j in line:
+              fout.write('{:.15g} '.format(j))
+            fout.write('\n')
+
+          if do_grad_gc:
+            fout.write('\n')
+            fout.write('#'+'='*40+'\n')
+            fout.write('# atom id\n# gc id    atom 3i+0, 3i+1, 3i+2 ...\n\n')
+            for at,page in enumerate(grad_gc):
+              fout.write('{}\n'.format(at))
+              for i,line in enumerate(page):
+                fout.write('{:4d} '.format(i))
+                for j in line:
+                  fout.write('{:23.15e} '.format(j))
+                fout.write('\n')
+
+          nconf += 1
+
+        except tf.errors.OutOfRangeError:
+          break
+
+    fout.write('\n\n# Total number of configurations: {}.'.format(nconf))
+
 
