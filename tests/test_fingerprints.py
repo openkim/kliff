@@ -13,9 +13,9 @@ tset = DataSet()
 tset.read('training_set/Si_T300_4')
 configs = tset.get_configurations()
 
-descriptor = Set51(cutvalue={'Si-Si':6.0})
+descriptor = Set51(cutvalue={'Si-Si': 6.0})
 
-fps = Fingerprints(descriptor, normalize=True, fit_forces=False, dtype=tf.float32)
+fps = Fingerprints(descriptor, normalize=True,
+                   fit_forces=False, dtype=tf.float32)
 
 fps.generate_train_tfrecords(configs, nprocs=1)
-

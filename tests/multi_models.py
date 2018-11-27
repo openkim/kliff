@@ -1,15 +1,15 @@
+import time
+import numpy as np
+from scipy.optimize import least_squares
+from geodesiclm import geodesiclm
+from cost import Cost
+from kimcalculator import KIMcalculator
+from modelparams import ModelParams, WrapperModelParams
+from keywords import InputKeywords
+from dataset import DataSet
 import sys
 sys.path.append('../openkim_fit')
 sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
-from dataset import DataSet
-from keywords import InputKeywords
-from modelparams import ModelParams, WrapperModelParams
-from kimcalculator import KIMcalculator
-from cost import Cost
-from geodesiclm import geodesiclm
-from scipy.optimize import least_squares
-import numpy as np
-import time
 
 # start timing
 start_time = time.time()
@@ -31,7 +31,7 @@ modelnames = ['Three_Body_Stillinger_Weber_MoS__MO_000000111111_000',
               'Three_Body_Stillinger_Weber_MoS__MO_000000111111_001']
 
 params = []
-for j,name in enumerate(modelnames):
+for j, name in enumerate(modelnames):
     params.append(ModelParams(name))
     params[j].echo_avail_params()
     fname = 'input/mos2_init_guess.txt'
@@ -45,7 +45,7 @@ x0 = wrapper_params.get_x0()
 print 'x0', x0
 
 # predictor
-KIMobjs=[]
+KIMobjs = []
 for j in range(len(modelnames)):
     KIMobjs.append([])
     for i in range(len(configs)):
@@ -67,9 +67,9 @@ func = cst.get_residual
 method = 'geodesiclm'
 if method == 'geodesiclm':
     xf = geodesiclm(func, x0, h1=1e-5, h2=0.1, factoraccept=5, factorreject=2,
-                          imethod=2, initialfactor=1, damp_model=0, print_level=2,
-                          maxiters=10000, Cgoal=0.5e-7, artol=1.E-8, gtol=1.5e-8, xtol=1e-6,
-                          xrtol=1.5e-6, ftol=-1, frtol=1.5e-6)
+                    imethod=2, initialfactor=1, damp_model=0, print_level=2,
+                    maxiters=10000, Cgoal=0.5e-7, artol=1.E-8, gtol=1.5e-8, xtol=1e-6,
+                    xrtol=1.5e-6, ftol=-1, frtol=1.5e-6)
     print 'fitted params', xf
 
 elif method == 'scipy-lm':
@@ -81,4 +81,3 @@ elif method == 'scipy-lm':
 params[0].echo_params()
 
 print"--- running time: {} seconds ---".format(time.time() - start_time)
-

@@ -200,7 +200,7 @@ class ModelParameters():
         print()
         print('='*80)
         print('Model: ', self.modelname)
-        print ()
+        print()
         print('The following potential model parameters are available to fit. Include')
         print('the names and the initial guesses (optionally, lower and upper bounds)')
         print('of the parameters that you want to optimize in the input file.')
@@ -251,9 +251,11 @@ class ModelParameters():
                 if attr['fix'][i]:
                     print('fix', file=fout)
                 if attr['lower_bound'][i] != None:
-                    print('{:24.16e}'.format(attr['lower_bound'][i]), end=' ', file=fout)
+                    print('{:24.16e}'.format(
+                        attr['lower_bound'][i]), end=' ', file=fout)
                 if attr['upper_bound'][i]:
-                    print('{:24.16e}'.format(attr['upper_bound'][i]), file=fout)
+                    print('{:24.16e}'.format(
+                        attr['upper_bound'][i]), file=fout)
 
             print(file=fout)
 

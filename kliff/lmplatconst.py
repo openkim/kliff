@@ -1,8 +1,9 @@
 import subprocess
 import os
 
+
 def lmp_lat_const(modelname):
-  lmp_input_str="""# Define unit set and class of atomic model
+    lmp_input_str = """# Define unit set and class of atomic model
   units metal
   atom_style atomic
 
@@ -46,22 +47,22 @@ def lmp_lat_const(modelname):
   print "lat_const = ${mylx}"
   """
 
-  # create lammps input file
-  lmp_input_str = lmp_input_str.replace('rpls_modelname', modelname)
-  with open('lammps.in', 'w') as fout:
-    fout.write(lmp_input_str)
+    # create lammps input file
+    lmp_input_str = lmp_input_str.replace('rpls_modelname', modelname)
+    with open('lammps.in', 'w') as fout:
+        fout.write(lmp_input_str)
 
-  # run lammps
-  subprocess.call('lmp_serial <lammps.in > lammps.out', shell=True)
+    # run lammps
+    subprocess.call('lmp_serial <lammps.in > lammps.out', shell=True)
 
-  # write results to edn format
-  with open('lammps.out', 'r') as fin:
-    for line in fin:
-      if 'lat_const' in line:
-        lat_const = float(line.split('=')[1])
+    # write results to edn format
+    with open('lammps.out', 'r') as fin:
+        for line in fin:
+            if 'lat_const' in line:
+                lat_const = float(line.split('=')[1])
 
-  with open('lattice_const.edn', 'w') as fout:
-    edn_str = '''{
+    with open('lattice_const.edn', 'w') as fout:
+        edn_str = '''{
       "species" {
         "source-value"  ["Mo" "Mo" "S"]
       }
@@ -70,9 +71,10 @@ def lmp_lat_const(modelname):
         "source-unit" "Angstrom"
         "source-value"  %22.15e
       }
-    }'''%(lat_const)
+    }''' % (lat_const)
 
-    fout.write(edn_str)
+        fout.write(edn_str)
+
 
 if __name__ == '__main__':
-  lmp_lat_const()
+    lmp_lat_const()

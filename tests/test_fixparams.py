@@ -1,21 +1,22 @@
+import time
+import numpy as np
+from scipy.optimize import least_squares
+from geodesiclm import geodesiclm
+from fixparams import alternate_fix_params
+from cost import Cost
+from kimcalculator import KIMcalculator
+from modelparams import ModelParams
+from dataset import DataSet
 import sys
 sys.path.append('../openkim_fit')
 sys.path.append('../libs/geodesicLMv1.1/pythonInterface')
-from dataset import DataSet
-from modelparams import ModelParams
-from kimcalculator import KIMcalculator
-from cost import Cost
-from fixparams import alternate_fix_params
-from geodesiclm import geodesiclm
-from scipy.optimize import least_squares
-import numpy as np
-import time
 
 
 modelname = 'RDP_Kolmogorov_Crespi_graphite__MO_000000111111_000'
 fixparamsfiles = ['input/graphene_init_guess.txt',
                   'input/graphene_init_guess_1.txt',
                   'input/graphene_init_guess_2.txt']
+
 
 @alternate_fix_params(modelname, fixparamsfiles)
 def test_fixparams():
@@ -36,7 +37,7 @@ def test_fixparams():
     configs = tset.get_configs()
 
     # prediction
-    KIMobjs=[]
+    KIMobjs = []
     for i in range(len(configs)):
         obj = KIMcalculator(modelname, params, configs[i])
         obj.initialize()
@@ -53,27 +54,24 @@ def test_fixparams():
     for i in range(len(configs)):
         cst.add(KIMobjs[i], refs[i])
 
-
     # optimize
     func = cst.get_residual
     #method = 'scipy-lm'
     method = 'geodesiclm'
     if method == 'geodesiclm':
         xf = geodesiclm(func, x0, h1=1e-5, h2=0.1, factoraccept=5, factorreject=2,
-                              imethod=2, initialfactor=1, damp_model=0, print_level=2,
-                              maxiters=10000, Cgoal=0.5e-7, artol=1.E-8, gtol=1.5e-8, xtol=1e-6,
-                              xrtol=1.5e-6, ftol=-1, frtol=1.5e-6)
+                        imethod=2, initialfactor=1, damp_model=0, print_level=2,
+                        maxiters=10000, Cgoal=0.5e-7, artol=1.E-8, gtol=1.5e-8, xtol=1e-6,
+                        xrtol=1.5e-6, ftol=-1, frtol=1.5e-6)
         print 'fitted params', xf
 
     elif method == 'scipy-lm':
         # test scipy.optimize minimization method
-        res_1 = least_squares(func, x0, method='trf',verbose = 2)
+        res_1 = least_squares(func, x0, method='trf', verbose=2)
         print res_1
 
     params.echo_params()
     params.echo_params(fname='fitted_params.txt')
-
-
 
 
 if __name__ == '__main__':
@@ -83,4 +81,3 @@ if __name__ == '__main__':
 
     # print running time
     print"--- running time: {} seconds ---".format(time.time() - start_time)
-

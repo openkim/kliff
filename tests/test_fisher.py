@@ -1,14 +1,14 @@
+from fisher import Fisher
+from kimcalculator import KIMcalculator
+from modelparams import ModelParams
+from dataset import DataSet
 from __future__ import print_function
 import numpy as np
 import sys
 sys.path.append('../openkim_fit')
-from dataset import DataSet
-from modelparams import ModelParams
-from kimcalculator import KIMcalculator
-from fisher import Fisher
 
 
-def test_fisher(relative_variance = False):
+def test_fisher(relative_variance=False):
 
     # temperature
     T = 150
@@ -33,7 +33,7 @@ def test_fisher(relative_variance = False):
     configs = tset.get_configs()
 
     # prediction
-    KIMobjs=[]
+    KIMobjs = []
     for i in range(len(configs)):
         obj = KIMcalculator(modelname, params, configs[i])
         obj.initialize()
@@ -55,7 +55,8 @@ def test_fisher(relative_variance = False):
     # relative variance
     if relative_variance:
         Fij = np.dot(np.dot(np.diag(param_values), Fij), np.diag(param_values))
-        Fij_std = np.dot(np.dot(np.diag(param_values), Fij_std), np.diag(param_values))
+        Fij_std = np.dot(np.dot(np.diag(param_values),
+                                Fij_std), np.diag(param_values))
 
     with open('Fij', 'w') as fout:
         for line in Fij:
@@ -89,18 +90,18 @@ def test_fisher(relative_variance = False):
             fout.write('{:13.5e}\n'.format(line))
 
     # eiven analysis
-    w,v = np.linalg.eig(Fij)
-    with open('eigenVec','w') as fout:
-      for row in v:
-        for item in row:
-          fout.write('{:13.5e}'.format(float(item)))
-        fout.write('\n')
+    w, v = np.linalg.eig(Fij)
+    with open('eigenVec', 'w') as fout:
+        for row in v:
+            for item in row:
+                fout.write('{:13.5e}'.format(float(item)))
+            fout.write('\n')
 
-    with open('eigenVal','w') as fout:
-      for item in w:
-        fout.write('{:13.5e}\n'.format(float(item)))
+    with open('eigenVal', 'w') as fout:
+        for item in w:
+            fout.write('{:13.5e}\n'.format(float(item)))
 
 
 if __name__ == '__main__':
-    #test_fisher(relative_variance=True)
+    # test_fisher(relative_variance=True)
     test_fisher(relative_variance=False)
