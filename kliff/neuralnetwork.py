@@ -13,10 +13,6 @@ import sys
 import shutil
 import inspect
 import multiprocessing as mp
-import tensorflow_op._int_pot_grad
-path = os.path.dirname(inspect.getfile(tensorflow_op._int_pot_grad))
-int_pot_module = tf.load_op_library(os.path.join(path, 'int_pot_op.so'))
-int_pot = int_pot_module.int_pot
 
 
 # TODO Maybe don't use this, put the content directly in get_loss() of NeuralNetwork
@@ -58,9 +54,7 @@ class Input(object):
              self.atomic_coords,
              self.deriv_zeta_atomic_coords,
              self.forces_label) = self.iterator.get_next()
-
-            fingerprint, _ = int_pot(coords=self.atomic_coords, zeta=self.zeta,
-                                     dzetadr=self.deriv_zeta_atomic_coords)
+            fingerprint = self.zeta
         else:
             (self.config_name,
              self.num_atoms_by_species,
@@ -253,7 +247,8 @@ class NeuralNetwork(object):
                 reuse = True
 
             # input layer
-            output = input_layer.build()
+            inp = input_layer.build()
+            output = inp
             shape2 = input_layer.num_units
 
             # other layers
@@ -276,8 +271,8 @@ class NeuralNetwork(object):
             target_e_all.append(input_layer.energy_label)
 
             if self.fit_forces:
-                # tf.gradients(y,x) computes grad(sum(y))/grad(x), and returns a LIST of tensors
-                forces = - tf.gradients(output, input_layer.atomic_coords)[0]
+                forces = self.compute_forces(
+                    output, inp, input_layer.deriv_zeta_atomic_coords)
                 pred_f_all.append(forces)
                 target_f_all.append(input_layer.forces_label)
 
@@ -288,6 +283,15 @@ class NeuralNetwork(object):
             config_weight_all.append(input_layer.config_weight)
 
         return pred_e_all, target_e_all, pred_f_all, target_f_all, natoms_all, config_weight_all
+
+    @staticmethod
+    def compute_forces(out, inp, dgen_datomic_coords):
+        # tf.gradients(y,x) computes grad(sum(y))/grad(x), and returns a LIST of tensors
+        dout_dinp = tf.gradients(out, inp)[0]
+        forces = - tf.tensordot(dout_dinp,
+                                dgen_datomic_coords,
+                                axes=([0, 1], [0, 1]))
+        return forces
 
     def group_layers(self):
         """Divide all the layers into groups.
