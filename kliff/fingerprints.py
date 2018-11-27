@@ -69,8 +69,8 @@ class Fingerprints(object):
                 self.mean, self.stdev = self.welford_mean_and_stdev(
                     configs, self.descriptor)
             else:
-                self.mean, self.stdev, all_zeta, all_dzetadr = self.numpy_mean_and_stdev(configs,
-                                                                                         self.descriptor, self.fit_forces, nprocs)
+                self.mean, self.stdev, all_zeta, all_dzetadr = self.numpy_mean_and_stdev(
+                    configs, self.descriptor, self.fit_forces, nprocs)
         else:
             self.mean = None
             self.stdev = None
@@ -144,7 +144,7 @@ class Fingerprints(object):
             else:
                 fout.write('False\n')
 
-    def _generate_tfrecords(self, configs, fname, all_zeta, all_dzetadr, structure='bulk',
+    def _generate_tfrecords(self, configs, fname, all_zeta, all_dzetadr,
                             nprocs=mp.cpu_count()):
 
         print('\nWriting tfRecords data to: {}'.format(fname))
@@ -174,27 +174,30 @@ class Fingerprints(object):
             else:
                 dzetadr = None
             if self.fit_forces:
-                self._write_tfrecord_energy_and_force(writer, conf, self.descriptor,
-                                                      self.normalize, np_dtype, self.mean, self.stdev, zeta, dzetadr, structure)
+                self._write_tfrecord_energy_and_force(
+                    writer, conf, self.descriptor,
+                    self.normalize, np_dtype, self.mean, self.stdev, zeta, dzetadr)
             else:
-                self._write_tfrecord_energy(writer, conf, self.descriptor,
-                                            self.normalize, np_dtype, self.mean, self.stdev, zeta, structure)
+                self._write_tfrecord_energy(
+                    writer, conf, self.descriptor,
+                    self.normalize, np_dtype, self.mean,
+                    self.stdev, zeta)
         writer.close()
 
         print('Processing {} configurations finished.\n'.format(len(configs)))
 
     @staticmethod
     def _write_tfrecord_energy(writer, conf, descriptor, normalize, np_dtype,
-                               mean, stdev, zeta=None, structure='bulk'):
+                               mean, stdev, zeta=None):
         """ Write data to tfrecord format."""
 
         # descriptor features
         num_descriptors = descriptor.get_number_of_descriptors()
         if zeta is None:
-            zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False,
-                                                             structure=structure)
+            zeta, _ = descriptor.generate_generalized_coords(
+                conf, fit_forces=False)
 
-        # do centering and normalization if needed
+        # do centering and normalzation if needed
         if normalize:
             zeta = (zeta - mean) / stdev
         zeta = np.asarray(zeta, np_dtype).tostring()
@@ -226,14 +229,14 @@ class Fingerprints(object):
 
     @staticmethod
     def _write_tfrecord_energy_and_force(writer, conf, descriptor, normalize, np_dtype,
-                                         mean, stdev, zeta=None, dzetadr=None, structure='bulk'):
+                                         mean, stdev, zeta=None, dzetadr=None):
         """ Write data to tfrecord format."""
 
         # descriptor features
         num_descriptors = descriptor.get_number_of_descriptors()
         if zeta is None or dzetadr is None:
-            zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces=True,
-                                                                   structure=structure)
+            zeta, dzetadr = descriptor.generate_generalized_coords(
+                conf, fit_forces=True)
 
         # do centering and normalization if needed
         if normalize:
@@ -295,12 +298,11 @@ class Fingerprints(object):
 
         see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         """
-        structure = 'bulk'
 
         # number of features
         conf = configs[0]
-        zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False,
-                                                         structure=structure)
+        zeta, _ = descriptor.generate_generalized_coords(
+            conf, fit_forces=False)
         size = zeta.shape[1]
 
         # starting Welford's method
@@ -308,8 +310,8 @@ class Fingerprints(object):
         mean = np.zeros(size)
         M2 = np.zeros(size)
         for i, conf in enumerate(configs):
-            zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False,
-                                                             structure=structure)
+            zeta, _ = descriptor.generate_generalized_coords(
+                conf, fit_forces=False)
             for row in zeta:
                 n += 1
                 delta = row - mean
@@ -326,10 +328,9 @@ class Fingerprints(object):
     def numpy_mean_and_stdev(configs, descriptor, fit_forces=False, nprocs=mp.cpu_count()):
         """Compute the mean and standard deviation of fingerprints."""
 
-        structure = 'bulk'
         try:
-            rslt = parallel.parmap(descriptor.generate_generalized_coords, configs,
-                                   nprocs, fit_forces, structure)
+            rslt = parallel.parmap(descriptor.generate_generalized_coords,
+                                   configs, nprocs, fit_forces)
             all_zeta = [pair[0] for pair in rslt]
             all_dzetadr = [pair[1] for pair in rslt]
             stacked = np.concatenate(all_zeta)

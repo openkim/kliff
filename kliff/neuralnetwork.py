@@ -402,19 +402,14 @@ class NeuralNetwork(object):
             fout.write('#' + '='*80 + '\n\n')
 
             # cutoff
-            cutname, rcut, rcut_samelayer = descriptor.get_cutoff()
-            if rcut_samelayer is None:
-                rcut_samelayer = rcut
+            cutname, rcut = descriptor.get_cutoff()
             maxrcut = max(rcut.values())
-            maxrcut_samelayer = max(rcut_samelayer.values())
 
             fout.write('# cutoff    rcut\n')
             if dtype == tf.float64:
-                fout.write('{}  {:.15g}  {:.15g}\n\n'.format(
-                    cutname, maxrcut, maxrcut_samelayer))
+                fout.write('{}  {:.15g}\n\n'.format(cutname, maxrcut))
             else:
-                fout.write('{}  {:.7g}  {:.7g}\n\n'.format(
-                    cutname, maxrcut, maxrcut_samelayer))
+                fout.write('{}  {:.7g}\n\n'.format(cutname, maxrcut))
 
             # symmetry functions
             # header
@@ -715,5 +710,4 @@ class ANNCalculator(object):
         else:
             loss = epart/self.batch_size
 
-        print('@@ loss called')
         return loss

@@ -57,8 +57,7 @@ class get_pybind11_includes(object):
 
 desc_module = Extension('kliff.descriptor.sym_fn',
                         sources=['kliff/descriptor/symmetry_function_bind.cpp',
-                                 'kliff/descriptor/symmetry_function.cpp',
-                                 'kliff/descriptor/layers.cpp'],
+                                 'kliff/descriptor/symmetry_function.cpp'],
                         include_dirs=[get_pybind11_includes(
                         ), get_pybind11_includes(user=True)],
                         extra_compile_args=get_extra_compile_args(),

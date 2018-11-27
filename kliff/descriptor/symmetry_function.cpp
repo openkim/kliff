@@ -1,6 +1,5 @@
 #include <iostream>
 #include "symmetry_function.h"
-#include "layers.h"
 
 #define DIM 3
 typedef double VectorOfSizeDIM[DIM];
@@ -9,13 +8,11 @@ typedef double VectorOfSizeDIM[DIM];
 Descriptor::Descriptor(){
   has_three_body_ = false;
   rcuts_ = nullptr;
-  rcuts_samelayer_ = nullptr;
 }
 
 Descriptor::~Descriptor() {
 
   Deallocate2DArray(rcuts_);
-  Deallocate2DArray(rcuts_samelayer_);
 
   for (size_t i=0; i<params_.size(); i++) {
 		Deallocate2DArray(params_.at(i));
@@ -23,7 +20,7 @@ Descriptor::~Descriptor() {
 }
 
 void Descriptor::set_cutoff(const char* name, const int Nspecies,
-    const double* rcuts, const double* rcuts_samelayer)
+    const double* rcuts)
 {
 	if (strcmp(name, "cos") == 0) {
 		cutoff_ = &cut_cos;
@@ -42,18 +39,6 @@ void Descriptor::set_cutoff(const char* name, const int Nspecies,
     for (int j=0; j<Nspecies; j++) {
       rcuts_[i][j] = rcuts[idx];
       idx++;
-    }
-  }
-
-  // store number of species and cutoff values
-  if (rcuts_samelayer != nullptr) {
-    AllocateAndInitialize2DArray(rcuts_samelayer_, Nspecies, Nspecies);
-    int idx = 0;
-    for (int i=0; i<Nspecies; i++) {
-      for (int j=0; j<Nspecies; j++) {
-        rcuts_samelayer_[i][j] = rcuts_samelayer[idx];
-        idx++;
-      }
     }
   }
 
@@ -112,18 +97,10 @@ void Descriptor::get_generalized_coords(const double* coordinates,
     const int* particleSpecies,
     const int* neighlist, const int* numneigh, const int* image,
     const int Natoms, const int Ncontrib, const int Ndescriptor,
-    double* const gen_coords, double* const d_gen_coords,
-    const int structure) {
+    double* const gen_coords, double* const d_gen_coords) {
 
   bool fit_forces = (d_gen_coords != nullptr);
 
-  // assign atoms to layers if required
-  std::vector<int> in_layer;
-  bool use_layer = false;
-  if (structure == 1 || structure ==2) {  // 0: bulk   1: bilayer   2: trilayer
-    create_layers(Natoms, coordinates, neighlist, numneigh, -1, in_layer);
-    use_layer = true;
-  }
 
   // prepare data
   VectorOfSizeDIM* coords = (VectorOfSizeDIM*) coordinates;
@@ -133,12 +110,8 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
     int const numNei = numneigh[i];
     int const * const ilist = neighlist+start;
-    start += numNei;
     int const iSpecies = particleSpecies[i];
-    int ilayer;
-    if (use_layer) {
-      ilayer = in_layer[i];
-    }
+    start += numNei;
 
     // Setup loop over neighbors of current particle
     for (int jj = 0; jj < numNei; ++jj)
@@ -148,15 +121,8 @@ void Descriptor::get_generalized_coords(const double* coordinates,
       int const jSpecies = particleSpecies[j];
 
       // cutoff between ij
-      int jlayer;
       double rcutij;
-      if (use_layer) {
-        jlayer = in_layer[j];
-        rcutij = rcuts_[iSpecies][jSpecies];
-      }
-      else {
-        rcutij = rcuts_[iSpecies][jSpecies];
-      }
+      rcutij = rcuts_[iSpecies][jSpecies];
 
       // rij vec and rij mag
       double rij[DIM];
@@ -167,9 +133,6 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
       // if particles i and j not interact
       if (rijmag >= rcutij) continue;
-
-     // allow bulk or interlayer interaction
-      if (!use_layer || (use_layer && jlayer != ilayer)) {
 
       // two-body descriptors
       for (size_t p=0; p<name_.size(); p++) {
@@ -224,7 +187,6 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
         } // loop over same descriptor but different parameter set
       } // loop over descriptors
-      } // bulk or interlayer interaction
 
 
       // three-body descriptors
@@ -237,20 +199,10 @@ void Descriptor::get_generalized_coords(const double* coordinates,
         int const kSpecies = particleSpecies[k];
 
         // cutoff between ik and jk
-        int klayer;
         double rcutik;
         double rcutjk;
-        if (use_layer) {
-          klayer = in_layer[k];
-          rcutij = rcuts_samelayer_[iSpecies][jSpecies];
-          rcutik = rcuts_samelayer_[iSpecies][kSpecies];
-          rcutjk = rcuts_samelayer_[jSpecies][kSpecies];
-        }
-        else {
-          rcutij = rcuts_[iSpecies][jSpecies];
-          rcutik = rcuts_[iSpecies][kSpecies];
-          rcutjk = rcuts_[jSpecies][kSpecies];
-        }
+        rcutik = rcuts_[iSpecies][kSpecies];
+        rcutjk = rcuts_[jSpecies][kSpecies];
 
         // Compute rik, rjk and their squares
         double rik[DIM];
@@ -263,9 +215,6 @@ void Descriptor::get_generalized_coords(const double* coordinates,
         double const rjkmag = sqrt(rjk[0]*rjk[0] + rjk[1]*rjk[1] + rjk[2]*rjk[2]);
 
         if (rikmag >= rcutik) continue; // three-dody not interacting
-        //if (rjkmag >= rcutjk) continue; // shoud not use this since g5 has no cutoff for rjk
-        if (use_layer && klayer == jlayer ) continue;  // only when j and k are in different layer
-
 
         double const rvec[3] = {rijmag, rikmag, rjkmag};
         double const rcutvec[3] = {rcutij, rcutik, rcutjk};
@@ -326,13 +275,6 @@ void Descriptor::get_generalized_coords(const double* coordinates,
 
 
 }
-
-
-
-
-
-
-
 
 
 

@@ -16,6 +16,8 @@ KIM_MODEL_PARAMS*
 maybe_needed
 tests/echo*
 libs/geodesicLMv1.1
+ann_kim.params
+tests/fingerprints/
 
 # special for docs
 docs/*
