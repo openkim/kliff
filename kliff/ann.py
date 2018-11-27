@@ -7,7 +7,7 @@ import os, sys
 import shutil
 import inspect
 import multiprocessing as mp
-import parallel
+from kliff import parallel
 import tensorflow_op._int_pot_grad
 path = os.path.dirname(inspect.getfile(tensorflow_op._int_pot_grad))
 int_pot_module = tf.load_op_library(path+os.path.sep+'int_pot_op.so')
@@ -139,7 +139,7 @@ def _write_tfrecord_energy(writer, conf, descriptor, do_normalize, np_dtype,
   """ Write data to tfrecord format."""
 
   # descriptor features
-  num_descriptors = descriptor.get_num_descriptors()
+  num_descriptors = descriptor.get_number_of_descriptors()
   if zeta is None:
     zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False, structure=structure)
 
@@ -178,7 +178,7 @@ def _write_tfrecord_energy_and_force(writer, conf, descriptor, do_normalize, np_
   """ Write data to tfrecord format."""
 
   # descriptor features
-  num_descriptors = descriptor.get_num_descriptors()
+  num_descriptors = descriptor.get_number_of_descriptors()
   if zeta is None or dzetadr is None:
     zeta, dzetadr = descriptor.generate_generalized_coords(conf, fit_forces=True,structure=structure)
 
@@ -191,12 +191,12 @@ def _write_tfrecord_energy_and_force(writer, conf, descriptor, do_normalize, np_
   dzetadr = dzetadr.astype(np_dtype).tostring()
 
   # configuration features
-  name = conf.get_id()
+  name = conf.get_identifier()
   d = conf.num_atoms_by_species
   num_atoms_by_species = [d[k] for k in d]
   num_species = len(num_atoms_by_species)
   num_atoms_by_species = np.array(num_atoms_by_species, np.int64).tostring()
-  coords = conf.get_coords().astype(np_dtype).tostring()
+  coords = conf.get_coordinates().astype(np_dtype).tostring()
   weight = np.array(conf.get_weight(), np_dtype).tostring()
   energy = np.array(conf.get_energy()).astype(np_dtype).tostring()
   forces = conf.get_forces().astype(np_dtype).tostring()
@@ -791,7 +791,7 @@ def input_layer(config, descriptor, fit_forces=True, dtype=tf.float32):
 
   layer_name = os.path.splitext(os.path.basename(config.id))[0]
   # need to return a tensor of coords since we want to take derivaives w.r.t it
-  coords = tf.constant(config.get_coords(), dtype)
+  coords = tf.constant(config.get_coordinates(), dtype)
   zeta,dzetadr = descriptor.generate_generalized_coords(config, fit_forces)
 
   with tf.name_scope(layer_name):
@@ -962,7 +962,7 @@ def write_kim_ann(descriptor, weights, biases, activation, mean_and_std_name,
 
     # descriptor values
     fout.write('# sym_function    rows    cols\n')
-    for name, values in desc.iteritems():
+    for name, values in desc.items():
       if name == 'g1':
         fout.write('g1\n\n')
       else:

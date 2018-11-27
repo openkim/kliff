@@ -184,7 +184,7 @@ class Descriptor(object):
               rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}
       """
       rcut2 = dict()
-      for key, val in rcut.iteritems():
+      for key, val in rcut.items():
           spec1,spec2 = key.split('-')
           if spec1 != spec2:
               rcut2[spec2+'-'+spec1] = val
@@ -206,7 +206,7 @@ class Descriptor(object):
             "`cutvalue_samelayer' is incompatible w.r.t. species.")
 
     species = set()
-    for key, value in self._rcut.iteritems():
+    for key, value in self._rcut.items():
       spec1, spec2 = key.split('-')
       species.update([spec1, spec2])
     species = list(species)
@@ -237,7 +237,7 @@ class Descriptor(object):
   def _set_hyperparams(self):
 
     # hyperparams of descriptors
-    for key, values in self._hyperparams.iteritems():
+    for key, values in self._hyperparams.items():
       if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
         raise SupportError("Symmetry function `{}' unsupported.".format(key))
 
@@ -354,7 +354,7 @@ class Set51(Descriptor):
 
     # tranfer units from bohr to angstrom
     bhor2ang = 0.529177
-    for key, values in params.iteritems():
+    for key, values in params.items():
       for val in values:
         if key == 'g2':
           val['eta'] /= bhor2ang**2
@@ -427,7 +427,7 @@ class Set30(Descriptor):
 
     # tranfer units from bohr to angstrom
     bhor2ang = 0.529177
-    for key, values in params.iteritems():
+    for key, values in params.items():
       for val in values:
         if key == 'g2':
           val['eta'] /= bhor2ang**2

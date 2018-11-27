@@ -88,10 +88,10 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
   except KeyError:
     normalizer = 1
 
-
   residual = np.subtract(prediction, reference)
   residual[0] *= np.sqrt(energy_weight)
   residual[1:] *= np.sqrt(forces_weight)
+
   return residual
 
 
@@ -109,6 +109,20 @@ def energy_residual(conf_id, natoms, prediction, reference, data):
   else:
     data = {'forces_weight': 0}
   return energy_forces_residual(conf_id, natoms, prediction, reference, data)
+
+
+#import tensorflow as tf
+#@tf.custom_gradient
+def test_residual(conf_id, natoms, prediction, reference, data):
+
+  print('@@ natoms', natoms)
+
+  def grad(dy):
+    return None, None, None, None, None
+
+  return prediction - reference
+  #return prediction - reference, grad
+
 
 
 
@@ -271,12 +285,12 @@ class Loss(object):
 
 
       with tf.Session() as sess:
-        init_op = tf.global_variables_initializer()
-        sess.run(init_op)
 
         if method in self.tf_minimize_methods:
-          optimizer = tf.train.AdamOptimizer(**kwargs)
+          optimizer = getattr(tf.train, method)(**kwargs)
           train = optimizer.minimize(loss)
+          init_op = tf.global_variables_initializer()
+          sess.run(init_op)
           while True:
             try:
               sess.run(train)
@@ -284,19 +298,20 @@ class Loss(object):
               break
 
         elif method in self.tf_scipy_minimize_methods:
-          # enable giving options as a dictionary as in scipy website
+          # enable giving options as a dictionary as at scipy website
           scipy_interface_options = kwargs.copy()
           options = scipy_interface_options.pop('options', None)
           if options is not None:
             for key,val in options.items():
-              kwargs[key] = val
+              scipy_interface_options[key] = val
           optimizer = tf.contrib.opt.ScipyOptimizerInterface(loss, method=method,
               options = scipy_interface_options)
+          init_op = tf.global_variables_initializer()
+          sess.run(init_op)
           optimizer.minimize(sess)
 
         else:
           raise Exception('minimization method "{}" not supported.'.format(method))
-
 
         self.calculator.model.write_kim_ann(sess, fname='ann_kim.params')
 

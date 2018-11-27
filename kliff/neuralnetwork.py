@@ -34,7 +34,10 @@ class Input(object):
     self.descriptor = descriptor
     self.iterator = iterator
     self.fit_forces = fit_forces
+
     self.num_units = self.descriptor.get_number_of_descriptors()
+
+    self.config_name = None
     self.num_atoms_by_species = None
     self.config_weight = None
     self.zeta = None
@@ -70,6 +73,7 @@ class Input(object):
     fingerprint.set_shape((None, self.num_units))
 
     return fingerprint
+
 
 
 class Dense(object):
@@ -196,32 +200,6 @@ class NeuralNetwork(object):
 
 
 
-  def data_iterator(self, tfrecords_path, num_epoches, batch_size, num_parallel_calls=None):
-    """Create tf.data from fingerprints in tfrecords format.
-
-    Parameter
-    ---------
-
-    num_epoches: int
-      number of interation epoches through the dataset
-
-    batch_size: int
-      size of the batch of data for each minimization step
-
-    num_parallel_calls: int
-      number of cores to be used when doing the map
-
-    """
-    self.batch_size = batch_size
-    dataset = read_tfrecords(tfrecords_path, self.fit_forces, num_parallel_calls, self.dtype)
-    dataset = dataset.repeat(num_epoches)
-    dataset = dataset.prefetch(batch_size)
-    iterator = dataset.make_one_shot_iterator()
-
-    self.iterator = iterator
-    return iterator
-
-
   def add_layer(self, layer):
     """Add a layer to the network.
 
@@ -250,7 +228,7 @@ class NeuralNetwork(object):
         raise Exception('Number of units in the last layer needs to be 1.')
 
 
-  def get_loss(self, batch_size, forces_weight=0.1):
+  def predict(self, iterator, batch_size, forces_weight=0.1):
     """ Create the nueral network based on the added layers and dataset batch size.
 
     Parameters
@@ -259,10 +237,14 @@ class NeuralNetwork(object):
     force_weight:
     """
 
-    input_layer = Input(self.descriptor, self.iterator, self.fit_forces)
+    input_layer = Input(self.descriptor, iterator, self.fit_forces)
 
-    subloss_e = []
-    subloss_f = []
+    pred_e_all = []
+    pred_f_all = []
+    target_e_all = []
+    target_f_all = []
+    natoms_all = []
+    config_weight_all = []
     for i in range(batch_size):
 
       # reuse flag
@@ -290,30 +272,23 @@ class NeuralNetwork(object):
           raise Exception('Layer "{}" not supported.'.format(str(layer)))
 
 
-      natoms = tf.cast(tf.reduce_sum(input_layer.num_atoms_by_species), self.dtype)
-      energy = tf.reduce_sum(output)
+      energy = output  # this is energy of each atom, not total energy
+      pred_e_all.append(energy)
+      target_e_all.append(input_layer.energy_label)
 
-      # energy loss of this configuration
-      epart = input_layer.config_weight * tf.square((energy - input_layer.energy_label)/natoms)
-      subloss_e.append(epart)
-
-      # forces loss of this configuration
       if self.fit_forces:
         # tf.gradients(y,x) computes grad(sum(y))/grad(x), and returns a LIST of tensors
         forces = - tf.gradients(output, input_layer.atomic_coords)[0]
-        fpart = input_layer.config_weight * tf.reduce_sum(tf.square((forces - input_layer.forces_label))) /natoms**2
-        subloss_f.append(fpart)
+        pred_f_all.append(forces)
+        target_f_all.append(input_layer.forces_label)
 
-    # loss function
-    if self.fit_forces:
-      loss_e = tf.reduce_sum(subloss_e)/batch_size
-      loss_f = tf.reduce_sum(subloss_f)/batch_size
-      loss = loss_e + forces_weight * loss_f
-    else:
-      loss_e = tf.reduce_sum(subloss_e)/batch_size
-      loss = loss_e
+      natoms = tf.cast(tf.reduce_sum(input_layer.num_atoms_by_species), self.dtype)
+      natoms_all.append(natoms)
 
-    return loss
+      config_weight_all.append(input_layer.config_weight)
+
+
+    return pred_e_all, target_e_all, pred_f_all, target_f_all, natoms_all, config_weight_all
 
 
 
@@ -676,16 +651,67 @@ class ANNCalculator(object):
     self.use_energy = None
     self.use_forces = None
 
+    self.iterator = None
+
+    #self.descriptor = self.fingerprints.get_descriptor()
+    self.fit_forces = self.model.fingerprints.get_fit_forces()
+    self.dtype = self.model.fingerprints.get_dtype()
+
+
+
 
   def create(self, configs):
     self.model.check_output_layer()
     self.model.fingerprints.generate_train_tfrecords(configs, nprocs=mp.cpu_count())
     tfrecords_path = self.model.fingerprints.get_train_tfrecords_path()
-    self.model.data_iterator(tfrecords_path, self.num_epoches, self.batch_size,
+    self.data_iterator(tfrecords_path, self.num_epoches, self.batch_size,
         num_parallel_calls=mp.cpu_count()//2)
 
 
-  def get_loss(self):
-    return self.model.get_loss(self.batch_size)
+
+  def data_iterator(self, tfrecords_path, num_epoches, batch_size, num_parallel_calls=None):
+    """Create tf.data from fingerprints in tfrecords format.
+
+    Parameter
+    ---------
+
+    num_epoches: int
+      number of interation epoches through the dataset
+
+    batch_size: int
+      size of the batch of data for each minimization step
+
+    num_parallel_calls: int
+      number of cores to be used when doing the map
+
+    """
+    self.batch_size = batch_size
+    dataset = read_tfrecords(tfrecords_path, self.fit_forces, num_parallel_calls, self.dtype)
+    dataset = dataset.repeat(num_epoches)
+    dataset = dataset.prefetch(batch_size)
+    iterator = dataset.make_one_shot_iterator()
+
+    self.iterator = iterator
+    return iterator
 
 
+  def get_loss(self, forces_weight=1):
+    p_e, t_e, p_f, t_f, natoms, config_weight = self.model.predict(self.iterator, self.batch_size)
+
+    factor = tf.truediv(config_weight, natoms)
+
+    # energy loss of this configuration
+    e_config = [tf.reduce_sum(i) for i in p_e]  # energy of configurations
+    epart = tf.reduce_sum(tf.multiply(factor, tf.squared_difference(e_config, t_e)))
+
+    if self.fit_forces:
+        sq_diff = [tf.reduce_sum(tf.squared_difference(i, j)) for i,j in zip(p_f, t_f)] # i, j may be of different size
+        fpart = tf.reduce_sum(tf.multiply(factor, sq_diff))
+
+    if self.fit_forces:
+        loss = (epart + forces_weight * fpart)/self.batch_size
+    else:
+        loss = epart/self.batch_size
+
+    print('@@ loss called')
+    return loss

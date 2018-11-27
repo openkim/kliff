@@ -15,8 +15,8 @@ from kliff.neuralnetwork import NeuralNetwork
 from kliff.neuralnetwork import ANNCalculator
 
 
-descriptor = Set51(cutvalue={'Si-Si':6.0})
-fps = Fingerprints(descriptor, normalize=True, fit_forces=False, dtype=tf.float32)
+descriptor = Set51(cutvalue={'Si-Si': 5.0})
+fps = Fingerprints(descriptor, normalize=True, fit_forces=True, dtype=tf.float32)
 
 model = NeuralNetwork(fingerprints=fps)
 
@@ -35,7 +35,6 @@ model.add_layer(Dropout(keep_ratio=0.9))
 model.add_layer(Output())
 
 
-
 # training set
 tset = DataSet()
 tset.read('training_set/Si_T300_4')
@@ -49,6 +48,10 @@ calc.create(configs)
 
 # loss
 loss = Loss(model, calc)
-result = loss.minimize(method='L-BFGS-B', options={'disp':True, 'maxiter':2})
+#result = loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': 2})
+result = loss.minimize(method='AdamOptimizer', learning_rate=1e-3)
 
 
+
+print('Results:', result)
+print('Fitting done')

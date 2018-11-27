@@ -112,12 +112,12 @@ def create_neigh(coords, rcut, need_neigh):
 
   neighlist = []
   numneigh = []
-  for i in xrange(natoms):
+  for i in range(natoms):
     if need_neigh[i]:
       xyzi = coords[i]
       k = 0
       tmplist = []
-      for j in xrange(natoms):
+      for j in range(natoms):
         if j == i:
           continue
         xyzj = coords[j]

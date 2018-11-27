@@ -169,8 +169,12 @@ class Fingerprints(object):
         sys.stdout.flush()
       if all_zeta is not None:
         zeta = all_zeta[i]
+      else:
+        zeta = None
       if all_dzetadr is not None and self.fit_forces:
         dzetadr = all_dzetadr[i]
+      else:
+        dzetadr = None
       if self.fit_forces:
         self._write_tfrecord_energy_and_force(writer,conf,self.descriptor,
             self.normalize,np_dtype,self.mean,self.stdev,zeta,dzetadr,structure)
@@ -243,7 +247,7 @@ class Fingerprints(object):
     dzetadr = np.asarray(dzetadr, np_dtype).tostring()
 
     # configuration features
-    name = conf.get_identifier()
+    name = conf.get_identifier().encode()
     d = conf.num_atoms_by_species
     num_atoms_by_species = [d[k] for k in d]
     num_species = len(num_atoms_by_species)
@@ -317,10 +321,8 @@ class Fingerprints(object):
         delta2 = row - mean
         M2 += delta*delta2
       if i%100 == 0:
-        print('Processing training example:', i)
         sys.stdout.flush()
     stdev = np.sqrt(M2/(n-1))
-    print('Processing {} configurations finished.\n'.format(i+1))
 
     return mean, stdev
 
