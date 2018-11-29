@@ -371,7 +371,7 @@ class ModelParameters():
         num_params = kim_model.get_number_of_parameters()
 
         for i in range(num_params):
-            out = kim_model.get_parameter_data_type_extent_name_and_description(
+            out = kim_model.get_parameter_metadata(
                 i)
             # TODO use description (For now, we ignore it)
             dtype, extent, name, description, error = out

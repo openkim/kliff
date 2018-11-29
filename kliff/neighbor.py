@@ -30,7 +30,6 @@ class NeighborList(object):
         species_set = set(self.spec_contrib)
         self.nspecies = len(species_set)
 
-# TODO delete this; we use image for all atoms now.
         # pad_image[0] = 3: padding atom 1 is the image of contributing atom 3
         self.image_pad = None
 
@@ -57,18 +56,13 @@ class NeighborList(object):
 
         # create padding atoms
         maxrcut = max(self.rcut.values())
-        coords_pad, spec_pad, self.image_pad = set_padding(cell, PBC,
-                                                           self.spec_contrib, self.coords_contrib, maxrcut)
+        coords_pad, spec_pad, self.image_pad = set_padding(
+            cell, PBC, self.spec_contrib, self.coords_contrib, maxrcut)
         self.coords = np.concatenate((self.coords_contrib, coords_pad))
         self.species = np.concatenate((self.spec_contrib, spec_pad))
         npad = len(spec_pad)
         self.natoms = self.ncontrib + npad
-        # if self.image_pad is empty, concatenate will generate floating values
-        if self.image_pad:
-            self.image = np.concatenate(
-                (np.arange(self.ncontrib), self.image_pad))
-        else:
-            self.image = np.arange(self.ncontrib)
+        self.image = np.concatenate((np.arange(self.ncontrib), self.image_pad))
 
         # generate neighbor list for contributing atoms
         if padding_need_neigh:
@@ -232,4 +226,74 @@ def set_padding(cell, PBC, species, coords, rcut):
     else:
         abs_coords = np.dot(pad_coords, cell).ravel()
 
-    return abs_coords, pad_spec, pad_image
+    return np.asarray(abs_coords), np.asarray(pad_spec), np.array(pad_image)
+
+
+def assemble_forces(forces, n, padding_image_of):
+    """
+    Assemble forces on padding atoms back to contributing atoms.
+
+    Parameters
+    ----------
+
+    forces: 2D array
+      forces on both contributing and padding atoms
+
+    n: int
+      number of contributing atoms
+
+    padding_image_of: 1D int array
+      atom number, of which the padding atom is an image
+
+
+    Return
+    ------
+      Total forces on contributing atoms.
+    """
+
+    # numpy slicing does not make a copy !!!
+    total_forces = np.array(forces[:n])
+
+    has_padding = True if padding_image_of.size != 0 else False
+
+    if has_padding:
+
+        pad_forces = forces[n:]
+        n_padding = pad_forces.shape[0]
+
+        if n < n_padding:
+            for i in range(n):
+                # indices of padding atoms that are images of contributing atom i
+                indices = np.where(padding_image_of == i)
+                total_forces[i] += np.sum(pad_forces[indices], axis=0)
+        else:
+            for f, org_index in zip(pad_forces, padding_image_of):
+                total_forces[org_index] += f
+
+    return total_forces
+
+
+def assemble_stress(coords, forces, volume):
+    """ Calculate the stress using the f dor r method.
+
+    Parameters
+    ----------
+    coords: 2D array
+        Coordinates of both contributing and padding atoms.
+
+    forces: 2D array
+        Partial forces on both contributing and padding atoms.
+
+    volume: float
+        Volume of the configuration.
+    """
+
+    stress = np.zeros(6)
+    stress[0] = np.sum(np.multiply(coords[:, 0], forces[:, 0])) / volume
+    stress[1] = np.sum(np.multiply(coords[:, 1], forces[:, 1])) / volume
+    stress[2] = np.sum(np.multiply(coords[:, 2], forces[:, 2])) / volume
+    stress[3] = np.sum(np.multiply(coords[:, 1], forces[:, 2])) / volume
+    stress[4] = np.sum(np.multiply(coords[:, 0], forces[:, 2])) / volume
+    stress[5] = np.sum(np.multiply(coords[:, 0], forces[:, 1])) / volume
+
+    return stress
