@@ -2,6 +2,7 @@ import sys
 import copy
 import collections
 from collections import OrderedDict
+from collections import Iterable
 import numpy as np
 import yaml
 from ..dataset import Configuration
@@ -97,8 +98,8 @@ class Calculator(object):
         self.params = OrderedDict()
         # set up parameters of the calculator
         # e.g.
-        # self.params['sigma'] = 0.5
-        # self.params['epsilon'] = 0.4
+        # self.params['sigma'] = Parameter(0.5)
+        # self.params['epsilon'] = Parameter(0.4)
 
         # Add a pointer to the compute argument class
         self.compute_argument_class = ComputeArgument
@@ -143,11 +144,11 @@ class Calculator(object):
                 'Lenghs of arguments "configs" and "use_stress" not equal.')
 
         N = len(configs)
-        if not isinstance(use_energy, collections.Iterable):
+        if not isinstance(use_energy, Iterable):
             use_energy = [use_energy for _ in range(N)]
-        if not isinstance(use_forces, collections.Iterable):
+        if not isinstance(use_forces, Iterable):
             use_forces = [use_forces for _ in range(N)]
-        if not isinstance(use_stress, collections.Iterable):
+        if not isinstance(use_stress, Iterable):
             use_stress = [use_stress for _ in range(N)]
 
         self.compute_arguments = []
@@ -180,7 +181,7 @@ class Calculator(object):
         """ Update the parameters in the calculator.
         """
         if key in self.params:
-            self.params[key] = value
+            self.params[key].value = value
         else:
             raise LJCalculatorError(
                 '"{}" is not a parameter of calculator.' .format(key))
@@ -188,9 +189,10 @@ class Calculator(object):
     def save_model_params(self, fname=None):
         params = dict()
         for i, j in self.params.items():
-            if isinstance(j, np.ndarray):
-                j = j.tolist()
-            params[i] = j
+            v = j.value
+            if isinstance(v, np.ndarray):
+                v = v.tolist()
+            params[i] = v
         if fname is not None:
             with open(fname, 'w') as fout:
                 yaml.dump(params, fout, default_flow_style=False)
@@ -203,7 +205,6 @@ class Calculator(object):
             params = yaml.safe_load(fin)
         for key, value in params.items():
             self.set_model_params(key, value)
-        print(self.params)
 
     def echo_model_params(self):
         """Echo the optimizable parameters to stdout.
@@ -217,10 +218,13 @@ class Calculator(object):
         # print('Include the names and the initial guesses (optionally, lower and upper bounds)')
         # print('of the parameters that you want to optimize in the input file.')
         print()
-        for name, attr in self.params.items():
-            print('name: ', name)
-            print('data: ', attr)
+        for name, p in self.params.items():
+            print('name:', name)
+            print('value:', p.value)
+            print('dtype:', p.dtype)
+            print('description:', p.description)
             print()
+        print('='*80)
 
     def read_fitting_params(self):
         self.fitting_params.read()
@@ -235,7 +239,7 @@ class Calculator(object):
         self.fitting_params.restore()
 
     def echo_fitting_params(self):
-        self.fitting_params.fitting()
+        self.fitting_params.echo_params()
 
     def get_energy(self, compute_argument):
         return compute_argument.get_energy()
@@ -245,6 +249,19 @@ class Calculator(object):
 
     def get_stress(self, compute_argument):
         return compute_argument.get_stress()
+
+
+class Parameter(object):
+
+    def __init__(self, value, dtype='double', description=None):
+        self.value = value
+        self.dtype = dtype
+        self.description = description
+
+        if isinstance(self.value, Iterable):
+            if any(isinstance(i, Iterable) for i in value):
+                raise ParameterError(
+                    'Parameter should be a scalar or 1D array.')
 
 
 class FittingParameter(object):
@@ -639,7 +656,7 @@ class FittingParameter(object):
 
 
 def length_equal(a, b):
-    if isinstance(a, collections.Iterable) and isinstance(b, collections.Iterable):
+    if isinstance(a, Iterable) and isinstance(b, Iterable):
         if len(a) == len(b):
             return True
         else:
@@ -660,7 +677,16 @@ class NotComputeError(Exception):
 
 class InputError(Exception):
     def __init__(self, msg):
-        super(Input, self).__init__(msg)
+        super(InputError, self).__init__(msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
+
+class ParameterError(Exception):
+    def __init__(self, msg):
+        super(ParameterError, self).__init__(msg)
         self.msg = msg
 
     def __str__(self):

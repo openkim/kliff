@@ -1,10 +1,10 @@
 import numpy as np
 from .calculator import ComputeArgument
 from .calculator import Calculator
+from .calculator import Parameter
 from ..neighbor import NeighborList
 from ..neighbor import assemble_forces
 from ..neighbor import assemble_stress
-from kimpy import neighlist as nl
 
 
 class LJComputeArgument(ComputeArgument):
@@ -25,8 +25,8 @@ class LJComputeArgument(ComputeArgument):
         self.neigh = neigh
 
     def compute(self, params):
-        epsilon = params['epsilon']
-        sigma = params['sigma']
+        epsilon = params['epsilon'].value
+        sigma = params['sigma'].value
 
         rcut = self.cutoff
         coords = self.conf.coords
@@ -92,10 +92,8 @@ class LJComputeArgument(ComputeArgument):
 
 class LennardJones(Calculator):
 
-    implemented_property = ['energy', 'forces']
-
     def __init__(self, *args, **kwargs):
         super(LennardJones, self).__init__(*args, **kwargs)
-        self.params['epsilon'] = 1.0
-        self.params['sigma'] = 2.0
+        self.params['epsilon'] = Parameter(value=1.0)
+        self.params['sigma'] = Parameter(value=2.0)
         self.compute_argument_class = LJComputeArgument
