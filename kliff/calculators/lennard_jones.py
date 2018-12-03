@@ -97,3 +97,4 @@ class LennardJones(Calculator):
         self.params['epsilon'] = Parameter(value=1.0)
         self.params['sigma'] = Parameter(value=2.0)
         self.compute_argument_class = LJComputeArgument
+        self.fitting_params = self.init_fitting_params(self.params)

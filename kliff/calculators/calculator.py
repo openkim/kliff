@@ -3,6 +3,7 @@ import copy
 import collections
 from collections import OrderedDict
 from collections import Iterable
+import functools
 import numpy as np
 import yaml
 from ..dataset import Configuration
@@ -23,6 +24,15 @@ class ComputeArgument(object):
         self.compute_property = self.check_compute_property()
         self.results = dict([(i, None) for i in self.implemented_property])
 
+    # TODO maybe pass params as an argument, also for refresh
+    def refresh(self):
+        """ Refresh settings.
+
+        Such as recreating the neighbor list due to the change of cutoff.
+        """
+        # NOTE to be filled
+        pass
+
     def check_compute_property(self):
         def add_to_compute_property(compute_property, name):
             if name not in self.implemented_property:
@@ -37,15 +47,6 @@ class ComputeArgument(object):
         if self.compute_stress:
             add_to_compute_property(compute_property, 'stress')
         return compute_property
-
-    # TODO maybe pass params as an argument, also for refresh
-    def refresh(self):
-        """ Refresh settings made in `initialize`.
-
-        Such as recreating the neighbor list due to the change of cutoff.
-        """
-        # NOTE to be filled
-        pass
 
     def compute(self, params):
         """ Compute the properties required by the compute flags, and store them
@@ -93,20 +94,47 @@ class Calculator(object):
 
     """
 
-    def __init__(self, model_name=None):
+    def __init__(self, model_name=None, params_relation_callback=None):
+        """
+        model_name: str (optional)
+            Name of the model.
+
+        param_relations_callback: callback function (optional)
+            A callback function to set the relations between parameters, which are
+            called each minimization step after the optimizer updates the parameters.
+
+            The function with be given the ModelParameters instance as argument, and
+            it can use get_value() and set_value() to manipulate the relation
+            between parameters.
+
+            Example
+            -------
+
+            In the following example, we set the value of B[0] to 2 * A[0].
+
+            def params_relation(params):
+                A = params.get_value('A')
+                B = params.get_value('B')
+                B[0] = 2 * A[0]
+                params.set_value('B', B)
+        """
+
         self.model_name = model_name
+        self.params_relation_callback = params_relation_callback
+
+        # NOTE to be filled
         self.params = OrderedDict()
         # set up parameters of the calculator
         # e.g.
         # self.params['sigma'] = Parameter(0.5)
         # self.params['epsilon'] = Parameter(0.4)
 
-        # Add a pointer to the compute argument class
+        # NOTE to be filled
         self.compute_argument_class = ComputeArgument
 
-        # TODO maybe move to another palce
-        # Maybe define a MetaClass
-        self.fitting_params = FittingParameter(self.params, model_name)
+        # TODO maybe use metaclass to call this automatically after initialization
+        # NOTE do not forget to call this in the subclass
+        self.fitting_params = self.init_fitting_params(self.params)
 
     def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
         """Create compute arguments for a set of configurations.
@@ -211,10 +239,11 @@ class Calculator(object):
         """
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         print()
-        print('='*80)
-        print('Model:', name)
+        print('#'+'='*80)
+        print('# Available parameters to optimize.')
         print()
-        print('Available parameters to optimize:')
+        print('# Model:', name)
+        print('#'+'='*80)
         # print('Include the names and the initial guesses (optionally, lower and upper bounds)')
         # print('of the parameters that you want to optimize in the input file.')
         print()
@@ -224,10 +253,12 @@ class Calculator(object):
             print('dtype:', p.dtype)
             print('description:', p.description)
             print()
-        print('='*80)
 
-    def read_fitting_params(self):
-        self.fitting_params.read()
+    def init_fitting_params(self, params):
+        return FittingParameter(params)
+
+    def read_fitting_params(self, fname):
+        self.fitting_params.read(fname)
 
     def set_fitting_params(self, lines):
         self.fitting_params.set(lines)
@@ -251,17 +282,27 @@ class Calculator(object):
         return compute_argument.get_stress()
 
 
+# TODO take a look at proporty decorator
 class Parameter(object):
 
     def __init__(self, value, dtype='double', description=None):
+
+        if isinstance(value, Iterable):
+            if any(isinstance(i, Iterable) for i in value):
+                raise ParameterError(
+                    'Parameter should be a scalar or 1D array.')
+            value = np.asarray(value)
+
         self.value = value
         self.dtype = dtype
         self.description = description
 
+    def get_value(self):
         if isinstance(self.value, Iterable):
-            if any(isinstance(i, Iterable) for i in value):
-                raise ParameterError(
-                    'Parameter should be a scalar or 1D array.')
+            return self.value.copy()
+
+    def set_value(self, value):
+        self.value = value
 
 
 class FittingParameter(object):
@@ -271,41 +312,15 @@ class FittingParameter(object):
     receive updated paramters from the optimizer.
     """
 
-    def __init__(self, model_params, model_name=None, param_relations_callback=None):
+    def __init__(self, model_params):
         """
         Parameters
         ----------
 
         model_params: OrderDict
             All the paramters of a model (calculator).
-
-        model_name: str (optional)
-            Name of the model (calculator).
-
-        param_relations_callback: callback function
-            A callback function to set the relations between parameters, which are
-            called each minimization step after the optimizer updates the parameters.
-
-            The function with be given the ModelParameters instance as argument, and
-            it can use get_value() and set_value() to manipulate the relation
-            between parameters.
-
-            Example
-            -------
-
-            In the following example, we set the value of B[0] to 2 * A[0].
-
-            def params_relation(params):
-                A = params.get_value('A')
-                B = params.get_value('B')
-                B[0] = 2 * A[0]
-                params.set_value('B', B)
         """
-        # TODO how to deal with param_relation callback
-
-        self.model_name = model_name
         self.model_params = model_params
-        self.param_relations_callback = param_relations_callback
 
         # key: parameter name
         # values: {'value', 'use_default', 'fix', 'lower_bound', 'upper_bound'}
@@ -318,7 +333,7 @@ class FittingParameter(object):
         # values: 'p_idx', and 'c_idx'
         # p_idx: index of parameter
         # c_idx: index of component of the parameter
-        self.index = []
+        self._index = []
 
     def read(self, fname):
         """Read the initial values of parameters. (Interface to user)
@@ -362,14 +377,14 @@ class FittingParameter(object):
         while num_line < len(lines):
             line = lines[num_line].strip()
             num_line += 1
-            if line in self._params:
+            if line in self.params:
                 raise InputError('line: {} file: {}. Parameter {} already '
                                  'set.'.format(num_line, fname, line))
             if line not in self.model_params:
                 raise InputError('line: {} file: {}. Parameter {} not supported by '
                                  'the potential model.'.format(num_line, fname, line))
             name = line
-            size = len(self.model_params[name])
+            size = len(self.model_params[name].value)
             param_lines = [name]
             for j in range(size):
                 param_lines.append(lines[num_line].split())
@@ -404,13 +419,13 @@ class FittingParameter(object):
 # NOTE we want to use set to perturbe params so as to compute Fisher information
 # matrix, where the following two lines are annoying
 # Maybe issue an warning
-#    if name in self._params:
+#    if name in self.params:
 #      raise InputError('Parameter {} already set.'.format(name))
 
         if name not in self.model_params:
             raise InputError(
                 'Parameter "{}" not supported by the potential model.'.format(name))
-        size = len(self.model_params[name])
+        size = len(self.model_params[name].value)
         if len(lines)-1 != size:
             raise InputError(
                 'Incorrect number of data lines for paramter "{}".'.format(name))
@@ -427,7 +442,7 @@ class FittingParameter(object):
             'lower_bound': np.array([None for i in range(size)]),
             'upper_bound': np.array([None for i in range(size)])
         }
-        self._params[name] = tmp_dict
+        self.params[name] = tmp_dict
 
         for j in range(size):
             line = lines[j+1]
@@ -467,11 +482,11 @@ class FittingParameter(object):
 
         # print(file=fout)
         print('#'+'='*80, file=fout)
-        print('# Potential model parameters that are optimzied', file=fout)
+        print('# Model parameters that are optimzied.', file=fout)
         print('#'+'='*80, file=fout)
         print(file=fout)
 
-        for name, attr in self._params.items():
+        for name, attr in self.params.items():
             if print_size:
                 print(name, attr['size'], file=fout)
             else:
@@ -512,7 +527,7 @@ class FittingParameter(object):
         for k, val in enumerate(opt_x):
             name = self._index[k]['name']
             c_idx = self._index[k]['c_idx']
-            self._params[name]['value'][c_idx] = val
+            self.params[name]['value'][c_idx] = val
 
         # user-specified relations between parameters
         if self.param_relations_callback is not None:
@@ -536,7 +551,7 @@ class FittingParameter(object):
         for idx in self._index:
             name = idx['name']
             c_idx = idx['c_idx']
-            opt_x0.append(self._params[name]['value'][c_idx])
+            opt_x0.append(self.params[name]['value'][c_idx])
         return np.asarray(opt_x0)
 
     def get_bounds(self):
@@ -545,34 +560,34 @@ class FittingParameter(object):
         for idx in self._index:
             name = idx['name']
             c_idx = idx['c_idx']
-            lower = self._params[name]['lower_bound'][c_idx]
-            upper = self._params[name]['upper_bound'][c_idx]
+            lower = self.params[name]['lower_bound'][c_idx]
+            upper = self.params[name]['upper_bound'][c_idx]
             bounds.append([lower, upper])
         return bounds
 
     def get_names(self):
-        return self._params.keys()
+        return self.params.keys()
 
     def get_size(self, name):
-        return self._params[name]['size']
+        return self.params[name]['size']
 
     def get_value(self, name):
-        return self._params[name]['value'].copy()
+        return self.params[name]['value'].copy()
 
     def get_index(self, name):
-        return self._params[name]['index']
+        return self.params[name]['index']
 
     def get_lower_bound(self, name):
-        return self._params[name]['lower_bound'].copy()
+        return self.params[name]['lower_bound'].copy()
 
     def get_upper_bound(self, name):
-        return self._params[name]['upper_bound'].copy()
+        return self.params[name]['upper_bound'].copy()
 
     def get_fix(self, name):
-        return self._params[name]['fix'].copy()
+        return self.params[name]['fix'].copy()
 
     def set_value(self, name, value):
-        self._params[name]['value'] = value
+        self.params[name]['value'] = value
 
     def get_number_of_opt_params(self):
         return len(self._index)
@@ -581,7 +596,7 @@ class FittingParameter(object):
         name = self._index[k]['name']
         p_idx = self._index[k]['p_idx']
         c_idx = self._index[k]['c_idx']
-        value = self._params[name]['value'][c_idx]
+        value = self.params[name]['value'][c_idx]
         return value, p_idx, c_idx
 
     def _read_1_item(self, name, j, line):
@@ -590,7 +605,7 @@ class FittingParameter(object):
     def _read_2_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
         if line[1].lower() == 'fix':
-            self._params[name]['fix'][j] = True
+            self.params[name]['fix'][j] = True
         else:
             raise InputError(
                 'Data at line {} of {} corrupted.\n'.format(j+1, name))
@@ -598,20 +613,20 @@ class FittingParameter(object):
     def _read_3_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
         try:
-            self._params[name]['lower_bound'][j] = float(line[1])
-            self._params[name]['upper_bound'][j] = float(line[2])
+            self.params[name]['lower_bound'][j] = float(line[1])
+            self.params[name]['upper_bound'][j] = float(line[2])
         except ValueError as err:
             raise InputError(
                 '{}.\nData at line {} of {} corrupted.\n'.format(err, j+1, name))
 
     def _read_1st_item(self, name, j, first):
         if type(first) == str and first.lower() == 'kim':
-            self._params[name]['use_default'][j] = True
-            model_value = self.model_params[name]
-            self._params[name]['value'][j] = model_value[j]
+            self.params[name]['use_default'][j] = True
+            model_value = self.model_params[name].value
+            self.params[name]['value'][j] = model_value[j]
         else:
             try:
-                self._params[name]['value'][j] = float(first)
+                self.params[name]['value'][j] = float(first)
             except ValueError as err:
                 raise InputError(
                     '{}.\nData at line {} of {} corrupted.\n'.format(err, j+1, name))
@@ -620,7 +635,7 @@ class FittingParameter(object):
         """Check whether the initial guess of a paramter is within its lower and
         upper bounds.
         """
-        attr = self._params[name]
+        attr = self.params[name]
         for i in range(attr['size']):
             lower_bound = attr['lower_bound'][i]
             upper_bound = attr['upper_bound'][i]
@@ -647,8 +662,8 @@ class FittingParameter(object):
         """
 
         p_idx = list(self.model_params.keys()).index(name)
-        size = self._params[name]['size']
-        fix = self._params[name]['fix']
+        size = self.params[name]['size']
+        fix = self.params[name]['fix']
         for j in range(size):
             if not fix[j]:
                 idx = {'name': name, 'p_idx': p_idx, 'c_idx': j}
@@ -664,6 +679,19 @@ def length_equal(a, b):
     else:
         return True  # if one is Iterable and the other is not, we treat them
         # as equal since it can be groadcasted
+
+
+def remove_comments(lines):
+    """Remove lines in a string list that start with # and content after #."""
+    processed_lines = []
+    for line in lines:
+        line = line.strip()
+        if not line or line[0] == '#':
+            continue
+        if '#' in line:
+            line = line[0:line.index('#')]
+        processed_lines.append(line)
+    return processed_lines
 
 
 class NotComputeError(Exception):

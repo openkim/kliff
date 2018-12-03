@@ -11,6 +11,9 @@ calc.echo_model_params()
 calc.save_model_params('kim_params.yml')
 calc.restore_model_params('kim_params.yml')
 
+calc.read_fitting_params('input/Si_SW_init_guess.txt')
+calc.echo_fitting_params()
+
 #
 # calc.create(configs)
 #compute_arguments = calc.get_compute_arguments()

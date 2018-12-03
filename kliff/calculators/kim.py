@@ -69,19 +69,19 @@ class KIM(Calculator):
     def __init__(self, *args, **kwargs):
         super(KIM, self).__init__(*args, **kwargs)
 
-        self.model = self._initialize()
-        self.inquire_params()
-
-        self.compute_argument_class = KIMComputeArgument
-
-    def _initialize(self):
-        """ Initialize the KIM object"""
-
         if self.model_name is None:
             c = self.__class__.__name__
             raise KIMCalculatorError(
                 '"model_name" is a mandatory argument for the "{}" calculator.'.format(c))
 
+        self.model = self._initialize()
+        self._inquire_params()
+
+        self.compute_argument_class = KIMComputeArgument
+        self.fitting_params = self.init_fitting_params(self.params)
+
+    def _initialize(self):
+        """ Initialize the KIM object"""
         # create model
         units_accepted, model, error = kimpy.model.create(
             kimpy.numbering.zeroBased,
@@ -96,7 +96,7 @@ class KIM(Calculator):
             report_error('requested units not accepted in kimpy.model.create')
         return model
 
-    def inquire_params(self):
+    def _inquire_params(self):
         """
         Inquire the KIM model to get all the parameters.
         """
