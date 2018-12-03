@@ -25,8 +25,8 @@ class LJComputeArgument(ComputeArgument):
         self.neigh = neigh
 
     def compute(self, params):
-        epsilon = params['epsilon'].value
-        sigma = params['sigma'].value
+        epsilon = params['epsilon'].value[0]
+        sigma = params['sigma'].value[0]
 
         rcut = self.cutoff
         coords = self.conf.coords
@@ -45,8 +45,8 @@ class LJComputeArgument(ComputeArgument):
                     phi, dphi = self.calc_phi_dphi(epsilon, sigma, r, rcut)
                     energy += 0.5*phi
                     pair = 0.5*dphi/r*rij
-                    forces_including_padding[i] += pair
-                    forces_including_padding[j] -= pair
+                    forces_including_padding[i] = forces_including_padding[i] + pair
+                    forces_including_padding[j] = forces_including_padding[j] - pair
                 elif self.compute_energy:
                     phi = self.calc_phi_dphi(epsilon, sigma, r, rcut)
                     energy += 0.5*phi
@@ -94,7 +94,7 @@ class LennardJones(Calculator):
 
     def __init__(self, *args, **kwargs):
         super(LennardJones, self).__init__(*args, **kwargs)
-        self.params['epsilon'] = Parameter(value=1.0)
-        self.params['sigma'] = Parameter(value=2.0)
+        self.params['epsilon'] = Parameter(value=[1.0])
+        self.params['sigma'] = Parameter(value=[2.0])
         self.compute_argument_class = LJComputeArgument
         self.fitting_params = self.init_fitting_params(self.params)

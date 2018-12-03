@@ -33,6 +33,7 @@ class ComputeArgument(object):
         # NOTE to be filled
         pass
 
+    # TODO check also that the conf provide these properties
     def check_compute_property(self):
         def add_to_compute_property(compute_property, name):
             if name not in self.implemented_property:
@@ -70,6 +71,12 @@ class ComputeArgument(object):
         # NOTE to be filled
         pass
 
+    def get_compute_flag(self, name):
+        if name in self.compute_property:
+            return True
+        else:
+            return False
+
     def get_property(self, name):
         if name not in self.compute_property:
             raise NotComputeError(
@@ -87,6 +94,40 @@ class ComputeArgument(object):
 
     def get_stress(self):
         return self.get_property('stress')
+
+    def get_prediction(self):
+        if self.compute_energy:
+            energy = self.results['energy']
+            pred = np.asarray([energy])
+        else:
+            pred = np.asarray([])
+
+        if self.compute_forces:
+            forces = self.results['forces']
+            pred = np.concatenate((pred, forces.ravel()))
+
+        if self.compute_stress:
+            stress = self.results['stress']
+            pred = np.concatenate((pred, stress))
+
+        return pred
+
+    def get_reference(self):
+        if self.compute_energy:
+            energy = self.conf.energy
+            ref = np.asarray([energy])
+        else:
+            ref = np.asarray([])
+
+        if self.compute_forces:
+            forces = self.conf.forces
+            ref = np.concatenate((ref, forces.ravel()))
+
+        if self.compute_stress:
+            stress = self.conf.stress
+            ref = np.concatenate((ref, stress))
+
+        return ref
 
 
 class Calculator(object):
@@ -192,13 +233,24 @@ class Calculator(object):
     def compute(self, compute_argument):
         compute_argument.compute(self.params)
 
-    def get_configs(self):
-        """ Return a list of objects that the code will parallelize.
+    def register_param_relations_callback(self, param_relations_callback):
+        """ Register a function to set the relations between parameters. """
+        self.param_relations_callback = param_relations_callback
 
-        Usually this is all the configurations in the dataset. But it can be any
-        objects you want to parallelize.
-        """
-        return self.configs
+    def get_energy(self, compute_argument):
+        return compute_argument.get_energy()
+
+    def get_forces(self, compute_argument):
+        return compute_argument.get_forces()
+
+    def get_stress(self, compute_argument):
+        return compute_argument.get_stress()
+
+    def get_prediction(self, compute_argument):
+        return compute_argument.get_prediction()
+
+    def get_reference(self, compute_argument):
+        return compute_argument.get_reference()
 
     def get_model_params(self):
         """ Return a copy of the parameters of the calculator.
@@ -250,6 +302,7 @@ class Calculator(object):
         for name, p in self.params.items():
             print('name:', name)
             print('value:', p.value)
+            print('size:', p.size)
             print('dtype:', p.dtype)
             print('description:', p.description)
             print()
@@ -269,8 +322,28 @@ class Calculator(object):
     def restore_fitting_params(self):
         self.fitting_params.restore()
 
-    def echo_fitting_params(self):
-        self.fitting_params.echo_params()
+    def echo_fitting_params(self, fname=None):
+        self.fitting_params.echo_params(fname)
+
+    def get_opt_params(self):
+        return self.fitting_params.get_opt_params()
+
+    def update_model_params(self):
+        # update from fitting params to model params
+        for key, attr in self.fitting_params.params.items():
+            self.set_model_params(key, attr['value'])
+
+    def update_params(self, opt_params):
+
+        # update from optimzier to fitting params
+        self.fitting_params.update_params(opt_params)
+
+        # update from fitting params to model params
+        self.update_model_params()
+
+        # user-specified relations between parameters
+        if self.params_relation_callback is not None:
+            self.params_relation_callback(self)
 
     def get_energy(self, compute_argument):
         return compute_argument.get_energy()
@@ -292,8 +365,12 @@ class Parameter(object):
                 raise ParameterError(
                     'Parameter should be a scalar or 1D array.')
             value = np.asarray(value)
+            size = len(value)
+        else:
+            raise ParameterError('Parameter should be a scalar or 1D array.')
 
         self.value = value
+        self.size = size
         self.dtype = dtype
         self.description = description
 
@@ -384,7 +461,7 @@ class FittingParameter(object):
                 raise InputError('line: {} file: {}. Parameter {} not supported by '
                                  'the potential model.'.format(num_line, fname, line))
             name = line
-            size = len(self.model_params[name].value)
+            size = self.model_params[name].size
             param_lines = [name]
             for j in range(size):
                 param_lines.append(lines[num_line].split())
@@ -425,7 +502,7 @@ class FittingParameter(object):
         if name not in self.model_params:
             raise InputError(
                 'Parameter "{}" not supported by the potential model.'.format(name))
-        size = len(self.model_params[name].value)
+        size = self.model_params[name].size
         if len(lines)-1 != size:
             raise InputError(
                 'Incorrect number of data lines for paramter "{}".'.format(name))
@@ -460,7 +537,7 @@ class FittingParameter(object):
 
         self._set_index(name)
 
-    def echo_params(self, fname=None, print_size=False):
+    def echo_params(self, fname=None, print_size=True):
         """Print the optimizing parameters to stdout or file.
 
         Parameters
@@ -515,7 +592,7 @@ class FittingParameter(object):
     def update_params(self, opt_x):
         """ Update parameter values from optimzier. (Interface to optimizer)
 
-        This is the opposite operation of get_x0().
+        This is the opposite operation of get_opt_params().
 
         Parameters
         ----------
@@ -529,15 +606,7 @@ class FittingParameter(object):
             c_idx = self._index[k]['c_idx']
             self.params[name]['value'][c_idx] = val
 
-        # user-specified relations between parameters
-        if self.param_relations_callback is not None:
-            self.param_relations_callback(self)
-
-    def register_param_relations_callback(self, param_relations_callback):
-        """ Register a function to set the relations between parameters. """
-        self.param_relations_callback = param_relations_callback
-
-    def get_x0(self):
+    def get_opt_params(self):
         """Nest all parameter values (except the fix ones) to a list.
 
         This is the opposite operation of update_params(). This can be fed to the
@@ -552,6 +621,8 @@ class FittingParameter(object):
             name = idx['name']
             c_idx = idx['c_idx']
             opt_x0.append(self.params[name]['value'][c_idx])
+        if len(opt_x0) == 0:
+            raise ParameterError('No parameters specified to optimize.')
         return np.asarray(opt_x0)
 
     def get_bounds(self):
