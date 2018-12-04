@@ -1,13 +1,10 @@
 import numpy as np
 import scipy.optimize
 import multiprocessing as mp
-import logging
-from . import parallel
+import kliff
+from kliff import parallel
 
-# logger = logging.getLogger(__name__)
-logging.basicConfig(filename='kliff.log',
-                    format='%(asctime)s %(levelname)s: %(message)s',
-                    level=logging.INFO)
+logger = kliff.logger.get_logger(__name__)
 
 
 def energy_forces_residual(identifier, natoms, prediction, reference, data):
@@ -210,7 +207,7 @@ class Loss(object):
             for ca in self.compute_arguments:
                 ca.refresh()
 
-        logging.info('"{}" initialized.'.format(self.__class__.__name__))
+        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 #
 #  def set_nprocs(self, nprocs):
 #    """ Set the number of processors to be used."""
@@ -433,13 +430,13 @@ class Loss(object):
                             loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
 
     def _scipy_optimize_least_squares(self, method, **kwargs):
-        logging.info('scipy least squares method "{}" used.'.format(method))
+        logger.info('scipy least squares method "{}" used.'.format(method))
         residual = self.get_residual
         x0 = self.calculator.get_opt_params()
         return scipy.optimize.least_squares(residual, x0, method=method, **kwargs)
 
     def _scipy_optimize_minimize(self, method, **kwargs):
-        logging.info('scipy optimization method "{}" used.'.format(method))
+        logger.info('scipy optimization method "{}" used.'.format(method))
         loss = self.get_loss
         x0 = self.calculator.get_opt_params()
         return scipy.optimize.minimize(loss, x0, method=method, **kwargs)

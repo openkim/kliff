@@ -21,10 +21,10 @@ compute_arguments = calc.get_compute_arguments()
 ca1 = compute_arguments[0]
 calc.compute(ca1)
 
-energy = calc.get_energy(ca1)
-forces = calc.get_forces(ca1)
-print('Energy:', energy)
-print('Forces:', forces[:3])
+#energy = calc.get_energy(ca1)
+#forces = calc.get_forces(ca1)
+#print('Energy:', energy)
+#print('Forces:', forces[:3])
 
 
 # loss

@@ -1,12 +1,13 @@
 import sys
 import copy
-import collections
 from collections import OrderedDict
 from collections import Iterable
-import functools
 import numpy as np
 import yaml
-from ..dataset import Configuration
+import kliff
+from kliff.dataset import Configuration
+
+logger = kliff.logger.get_logger(__name__)
 
 
 class ComputeArguments(object):
@@ -225,6 +226,7 @@ class Calculator(object):
             ca = self.compute_arguments_class(conf, e, f, s)
             self.compute_arguments.append(ca)
 
+        logger.info('calculator for %d configurations created.', len(configs))
         return self.compute_arguments
 
     def get_compute_arguments(self):
@@ -371,6 +373,13 @@ class Parameter(object):
 
     def set_value(self, value):
         self.value = value
+
+    def to_string(self):
+        s = 'value: {}\n'.format(np.array_str(self.value))
+        s += 'size: {}\n'.format(self.size)
+        s += 'dtype: {}\n'.format(self.dtype)
+        s += 'description: {}\n'.format(self.description)
+        return s
 
 
 class FittingParameter(object):

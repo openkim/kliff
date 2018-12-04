@@ -1,6 +1,9 @@
+import kliff
 from kliff.dataset import DataSet
 from kliff.calculators.kim import KIM
 from kliff.loss import Loss
+
+kliff.logger.set_level('debug')
 
 
 tset = DataSet()
@@ -28,7 +31,7 @@ calc.create(configs)
 # loss
 with Loss(calc, nprocs=1) as loss:
     result = loss.minimize(
-        method='L-BFGS-B', options={'disp': True, 'maxiter': 100})
+        method='L-BFGS-B', options={'disp': True, 'maxiter': 10})
     print(result)
 
 

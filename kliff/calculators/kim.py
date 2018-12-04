@@ -1,8 +1,10 @@
 import numpy as np
+import logging
 from collections import Iterable
 from collections import OrderedDict
 import kimpy
 from kimpy import neighlist as nl
+import kliff
 from ..dataset import Configuration
 from .calculator import ComputeArguments
 from .calculator import Calculator
@@ -10,6 +12,8 @@ from .calculator import Parameter
 from .calculator import length_equal
 from ..neighbor import assemble_forces
 from ..neighbor import assemble_stress
+
+logger = kliff.logger.get_logger(__name__)
 
 
 class KIMComputeArguments(ComputeArguments):
@@ -410,6 +414,13 @@ class KIM(Calculator):
 
         # refresh model
         self.kim_model.clear_then_refresh()
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            params = self.inquire_params()
+            s = ''
+            for name, p in params.items():
+                s += '\nname: {}\n'.format(name)
+                s += p.to_string()
+            logger.debug(s)
 
     def get_model_supported_species(self):
         """Get all the supported species.
