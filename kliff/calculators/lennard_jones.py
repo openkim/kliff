@@ -1,5 +1,5 @@
 import numpy as np
-from .calculator import ComputeArgument
+from .calculator import ComputeArguments
 from .calculator import Calculator
 from .calculator import Parameter
 from ..neighbor import NeighborList
@@ -7,14 +7,14 @@ from ..neighbor import assemble_forces
 from ..neighbor import assemble_stress
 
 
-class LJComputeArgument(ComputeArgument):
+class LJComputeArguments(ComputeArguments):
     """ A Lennard-Jones 6-12 potential.
     """
 
     implemented_property = ['energy', 'forces', 'stress']
 
     def __init__(self, *args, **kwargs):
-        super(LJComputeArgument, self).__init__(*args, **kwargs)
+        super(LJComputeArguments, self).__init__(*args, **kwargs)
         self.cutoff = 5.
         self.refresh()
 
@@ -96,5 +96,5 @@ class LennardJones(Calculator):
         super(LennardJones, self).__init__(*args, **kwargs)
         self.params['epsilon'] = Parameter(value=[1.0])
         self.params['sigma'] = Parameter(value=[2.0])
-        self.compute_argument_class = LJComputeArgument
+        self.compute_arguments_class = LJComputeArguments
         self.fitting_params = self.init_fitting_params(self.params)

@@ -9,7 +9,7 @@ import yaml
 from ..dataset import Configuration
 
 
-class ComputeArgument(object):
+class ComputeArguments(object):
     """ Implementation of code to compute energy, forces, and stress.
 
     """
@@ -171,7 +171,7 @@ class Calculator(object):
         # self.params['epsilon'] = Parameter(0.4)
 
         # NOTE to be filled
-        self.compute_argument_class = ComputeArgument
+        self.compute_arguments_class = ComputeArguments
 
         # TODO maybe use metaclass to call this automatically after initialization
         # NOTE do not forget to call this in the subclass
@@ -222,7 +222,7 @@ class Calculator(object):
 
         self.compute_arguments = []
         for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
-            ca = self.compute_argument_class(conf, e, f, s)
+            ca = self.compute_arguments_class(conf, e, f, s)
             self.compute_arguments.append(ca)
 
         return self.compute_arguments
@@ -230,27 +230,27 @@ class Calculator(object):
     def get_compute_arguments(self):
         return self.compute_arguments
 
-    def compute(self, compute_argument):
-        compute_argument.compute(self.params)
+    def compute(self, compute_arguments):
+        compute_arguments.compute(self.params)
 
     def register_param_relations_callback(self, param_relations_callback):
         """ Register a function to set the relations between parameters. """
         self.param_relations_callback = param_relations_callback
 
-    def get_energy(self, compute_argument):
-        return compute_argument.get_energy()
+    def get_energy(self, compute_arguments):
+        return compute_arguments.get_energy()
 
-    def get_forces(self, compute_argument):
-        return compute_argument.get_forces()
+    def get_forces(self, compute_arguments):
+        return compute_arguments.get_forces()
 
-    def get_stress(self, compute_argument):
-        return compute_argument.get_stress()
+    def get_stress(self, compute_arguments):
+        return compute_arguments.get_stress()
 
-    def get_prediction(self, compute_argument):
-        return compute_argument.get_prediction()
+    def get_prediction(self, compute_arguments):
+        return compute_arguments.get_prediction()
 
-    def get_reference(self, compute_argument):
-        return compute_argument.get_reference()
+    def get_reference(self, compute_arguments):
+        return compute_arguments.get_reference()
 
     def get_model_params(self):
         """ Return a copy of the parameters of the calculator.
@@ -329,12 +329,12 @@ class Calculator(object):
         return self.fitting_params.get_opt_params()
 
     def update_model_params(self):
-        # update from fitting params to model params
+        """ Update from fitting params to model params. """
         for key, attr in self.fitting_params.params.items():
             self.set_model_params(key, attr['value'])
 
     def update_params(self, opt_params):
-
+        """ Update from optimizer params to model params. """
         # update from optimzier to fitting params
         self.fitting_params.update_params(opt_params)
 
@@ -344,15 +344,6 @@ class Calculator(object):
         # user-specified relations between parameters
         if self.params_relation_callback is not None:
             self.params_relation_callback(self)
-
-    def get_energy(self, compute_argument):
-        return compute_argument.get_energy()
-
-    def get_forces(self, compute_argument):
-        return compute_argument.get_forces()
-
-    def get_stress(self, compute_argument):
-        return compute_argument.get_stress()
 
 
 # TODO take a look at proporty decorator

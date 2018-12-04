@@ -256,10 +256,8 @@ class KIMInputAndOutput(object):
         num_compute_arguments = kimpy.compute_argument_name.get_number_of_compute_argument_names()
 
         for i in range(num_compute_arguments):
-            name, error = kimpy.compute_argument_name.get_compute_argument_name(
-                i)
-            check_error(
-                error, 'kimpy.compute_argument_name.get_compute_argument_name')
+            name, error = kimpy.compute_argument_name.get_compute_argument_name(i)
+            check_error(error, 'kimpy.compute_argument_name.get_compute_argument_name')
 
             dtype, error = kimpy.compute_argument_name.get_compute_argument_data_type(
                 name)
