@@ -11,20 +11,20 @@ for key, value in cfg_vars.items():
         cfg_vars[key] = value.replace('-Wstrict-prototypes', '')
 
 
-def tf_includes():
-    try:
-        import tensorflow as tf
-        return tf.sysconfig.get_include()
-    except ImportError:
-        raise ImportError('tensorflow is not found. install it first.')
-
-
-def tf_lib_path():
-    try:
-        import tensorflow as tf
-        return tf.sysconfig.get_lib()
-    except ImportError:
-        raise ImportError('tensorflow is not found. install it first.')
+# def tf_includes():
+#    try:
+#        import tensorflow as tf
+#        return tf.sysconfig.get_include()
+#    except ImportError:
+#        raise ImportError('tensorflow is not found. install it first.')
+#
+#
+# def tf_lib_path():
+#    try:
+#        import tensorflow as tf
+#        return tf.sysconfig.get_lib()
+#    except ImportError:
+#        raise ImportError('tensorflow is not found. install it first.')
 
 
 def tf_extra_compile_args():

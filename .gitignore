@@ -13,10 +13,11 @@ dist/
 KIM_MODEL_PARAMS*
 *.edn
 *.lammps
-maybe_needed
-tests/echo*
-libs/geodesicLMv1.1
 ann_kim.params
+*.yml
+maybe_needed
+libs/geodesicLMv1.1
+tests/echo*
 tests/fingerprints/
 
 # special for docs
