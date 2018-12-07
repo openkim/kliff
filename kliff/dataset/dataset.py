@@ -1,8 +1,9 @@
 import os
 import numpy as np
+import copy
+from collections import OrderedDict
 from kliff.error import SupportError
 from .extxyz import read_extxyz
-from collections import OrderedDict
 
 
 implemented_format = dict()
@@ -35,7 +36,7 @@ class Configuration(object):
         self.species = None  # ndarray of shape(N,)
         self.coords = None   # ndarray of shape(N, 3)
         self.forces = None   # ndarray of shape(N, 3)
-        self.num_atoms_by_species = None   # dict
+        self.natoms_by_species = None   # dict
 
     def read(self, fname):
         if self.format not in implemented_format:
@@ -75,7 +76,7 @@ class Configuration(object):
         Return
         ------
 
-        num_atoms_by_species: OrderedDict
+        natoms_by_species: OrderedDict
             key: str, value: int
         """
 
@@ -84,50 +85,14 @@ class Configuration(object):
         if symbols is None:
             symbols = unique
 
-        num_atoms_by_species = OrderedDict()
+        natoms_by_species = OrderedDict()
         for s in symbols:
             if s in unique:
-                num_atoms_by_species[s] = counts[list(unique).index(s)]
+                natoms_by_species[s] = counts[list(unique).index(s)]
             else:
-                num_atoms_by_species[s] = 0
+                natoms_by_species[s] = 0
 
-        return num_atoms_by_species
-
-    def write_extxyz(self, fname='./echo_config.xyz'):
-
-        with open(fname, 'w') as fout:
-
-            # first line (num of atoms)
-            fout.write('{}\n'.format(self.natoms))
-
-            # second line
-            # lattice
-            fout.write('Lattice="')
-            for line in self.cell:
-                for item in line:
-                    fout.write('{:.16g} '.format(item))
-            fout.write('" ')
-            # PBC
-            fout.write('PBC="')
-            for i in self.PBC:
-                fout.write('{} '.format(int(i)))
-            fout.write('" ')
-            # properties
-            fout.write('Properties="species:S:1:pos:R:3:vel:R:3" ')
-            # energy
-            fout.write('Energy="{:.16g}"\n'.format(self.energy))
-
-            # species, coords, and forces
-            for i in range(self.natoms):
-                fout.write('{:3s}'.format(self.species[i]))
-                fout.write('{:14.6e}'.format(self.coords[3*i+0]))
-                fout.write('{:14.6e}'.format(self.coords[3*i+1]))
-                fout.write('{:14.6e}'.format(self.coords[3*i+2]))
-                if self.forces is not None:
-                    fout.write('{:14.6e}'.format(self.forces[3*i+0]))
-                    fout.write('{:14.6e}'.format(self.forces[3*i+1]))
-                    fout.write('{:14.6e}'.format(self.forces[3*i+2]))
-                fout.write('\n')
+        return natoms_by_species
 
     def get_identifier(self):
         return self.id
@@ -135,17 +100,23 @@ class Configuration(object):
     def get_number_of_atoms(self):
         return self.natoms
 
+    def get_number_of_atoms_by_species(self):
+        return copy.deepcopy(self.num_atoms_by_species)
+
     def get_cell(self):
         return self.cell.copy()
 
-    def get_pbc(self):
+    def get_PBC(self):
         return self.PBC.copy()
 
     def get_energy(self):
         return self.energy
 
     def get_stress(self):
-        return self.stress.copy()
+        if self.stress is not None:
+            return self.stress.copy()
+        else:
+            return None
 
     def get_species(self):
         return self.species.copy()
@@ -154,7 +125,10 @@ class Configuration(object):
         return self.coords.copy()
 
     def get_forces(self):
-        return self.forces.copy()
+        if self.forces is not None:
+            return self.forces.copy()
+        else:
+            return None
 
     def get_weight(self):
         return self.weight
@@ -236,8 +210,7 @@ class DataSet(object):
             all_species = set(all_species)
             # find occurence of species in each configuration
             for conf in self.configs:
-                conf.num_atoms_by_species = conf.count_atoms_by_species(
-                    all_species)
+                conf.natoms_by_species = conf.count_atoms_by_species(all_species)
 
     def get_configurations(self):
         """Get the configurations.

@@ -57,7 +57,7 @@ def read_extxyz(fname):
             energy = None
         # stress is optional
         try:
-            stress = parse_key_value(line, 'Stress', 'float', 6, fname)
+            stress = parse_key_value(line, 'Stress', 'float', 6, fname)
         except KeyNotFoundError:
             stress = None
 
@@ -158,30 +158,28 @@ def write_extxyz(fname, cell, PBC, species, coords, energy=None, forces=None, st
         PBC = [int(i) for i in PBC]
         fout.write('PBC="{} {} {}" '.format(PBC[0], PBC[1], PBC[2]))
 
-        properties = 'Properties=species:S:1:pos:R:3'
-        if forces is not None:
-            properties += ':force:R:3 '
-        else:
-            properties += ' '
-        fout.write(properties)
-
         if energy is not None:
-            fout.write('Energy="{:.15g}"\n'.format(energy))
+            fout.write('Energy="{:.15g}" '.format(energy))
 
         if stress is not None:
             fout.write('Stress="')
             for i, s in enumerate(stress):
                 if i == 5:
-                    fout.write('{:15.g}"'.format(s))
+                    fout.write('{:.15g}" '.format(s))
                 else:
-                    fout.write('{:15.g} '.format(s))
+                    fout.write('{:.15g} '.format(s))
 
-        fout.write('\n')
+        properties = 'Properties=species:S:1:pos:R:3'
+        if forces is not None:
+            properties += ':for:R:3\n'
+        else:
+            properties += '\n'
+        fout.write(properties)
 
         # body
         for i in range(natoms):
-            fout.write('{:3s} '.format(species[i]))
-            fout.write('{:23.15e} {:23.15e} {:23.15e}'.format(
+            fout.write('{:2s} '.format(species[i]))
+            fout.write('{:23.15e} {:23.15e} {:23.15e} '.format(
                 coords[i][0], coords[i][1], coords[i][2]))
             if forces is not None:
                 fout.write('{:23.15e} {:23.15e} {:23.15e}'.format(
