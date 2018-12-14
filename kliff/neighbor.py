@@ -52,7 +52,7 @@ class NeighborList(object):
 
         # inquire information from the conf
         cell = self.conf.get_cell()
-        PBC = self.conf.get_pbc()
+        PBC = self.conf.get_PBC()
 
         # create padding atoms
         maxrcut = max(self.rcut.values())
@@ -64,14 +64,11 @@ class NeighborList(object):
         self.natoms = self.ncontrib + npad
         self.image = np.concatenate((np.arange(self.ncontrib), self.image_pad))
 
-        # generate neighbor list for contributing atoms
         if padding_need_neigh:
             need_neigh = [1 for _ in range(self.ncontrib + npad)]
         else:
-            need_neigh = [1 for _ in range(
-                self.ncontrib)] + [0 for _ in range(npad)]
-        self.numneigh, self.neighlist = create_neigh(
-            self.coords, maxrcut, need_neigh)
+            need_neigh = [1 for _ in range(self.ncontrib)] + [0 for _ in range(npad)]
+        self.numneigh, self.neighlist = create_neigh(self.coords, maxrcut, need_neigh)
 
     def get_neigh(self, i):
         """Get the number of neighbors and the neighbor list of atom `i'.
@@ -83,8 +80,8 @@ class NeighborList(object):
         neighs: 1D array
           neighbor list
         """
-        n = self.numneigh(i)
-        neighs = self.neighlist(i)
+        n = self.numneigh[i]
+        neighs = self.neighlist[i]
         return n, neighs
 
 
