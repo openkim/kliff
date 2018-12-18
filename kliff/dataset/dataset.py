@@ -46,6 +46,7 @@ class Configuration(object):
             (self.cell, self.PBC, self.energy, self.stress, self.species,
              self.coords, self.forces) = read_extxyz(fname)
             self.natoms = len(self.species)
+            self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
 
         if self.do_order:
             self.order_by_species()
@@ -106,17 +107,11 @@ class Configuration(object):
     def get_cell(self):
         return self.cell.copy()
 
+    def get_volume(self):
+        return self.volume
+
     def get_PBC(self):
         return self.PBC.copy()
-
-    def get_energy(self):
-        return self.energy
-
-    def get_stress(self):
-        if self.stress is not None:
-            return self.stress.copy()
-        else:
-            return None
 
     def get_species(self):
         return self.species.copy()
@@ -124,9 +119,18 @@ class Configuration(object):
     def get_coordinates(self):
         return self.coords.copy()
 
+    def get_energy(self):
+        return self.energy
+
     def get_forces(self):
         if self.forces is not None:
             return self.forces.copy()
+        else:
+            return None
+
+    def get_stress(self):
+        if self.stress is not None:
+            return self.stress.copy()
         else:
             return None
 

@@ -48,7 +48,7 @@ class LJComputeArguments(ComputeArguments):
                     forces_including_padding[i] = forces_including_padding[i] + pair
                     forces_including_padding[j] = forces_including_padding[j] - pair
                 elif self.compute_energy:
-                    phi = self.calc_phi_dphi(epsilon, sigma, r, rcut)
+                    phi = self.calc_phi(epsilon, sigma, r, rcut)
                     energy += 0.5*phi
 
         if self.compute_energy:

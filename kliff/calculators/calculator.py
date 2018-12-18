@@ -1,5 +1,6 @@
 import sys
 import copy
+import warnings
 from collections import OrderedDict
 from collections import Iterable
 import numpy as np
@@ -80,7 +81,7 @@ class ComputeArguments(object):
 
     def get_property(self, name):
         if name not in self.compute_property:
-            raise NotComputeError(
+            raise CalculatorError(
                 'Calculator not initialized to comptue "{}".'.format(name))
         result = self.results[name]
         if isinstance(result, np.ndarray):
@@ -178,6 +179,10 @@ class Calculator(object):
         # NOTE do not forget to call this in the subclass
         self.fitting_params = self.init_fitting_params(self.params)
 
+    def set_params_relation_callback(self, params_relation_callback):
+        """Register a function to set the relation between parameters."""
+        self.params_relation_callback = params_relation_callback
+
     def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
         """Create compute arguments for a set of configurations.
 
@@ -235,10 +240,6 @@ class Calculator(object):
     def compute(self, compute_arguments):
         compute_arguments.compute(self.params)
 
-    def register_param_relations_callback(self, param_relations_callback):
-        """ Register a function to set the relations between parameters. """
-        self.param_relations_callback = param_relations_callback
-
     def get_energy(self, compute_arguments):
         return compute_arguments.get_energy()
 
@@ -265,8 +266,7 @@ class Calculator(object):
         if key in self.params:
             self.params[key].value = value
         else:
-            raise LJCalculatorError(
-                '"{}" is not a parameter of calculator.' .format(key))
+            raise CalculatorError('"{}" is not a parameter of calculator.' .format(key))
 
     def save_model_params(self, fname=None):
         params = dict()
@@ -315,8 +315,8 @@ class Calculator(object):
     def read_fitting_params(self, fname):
         self.fitting_params.read(fname)
 
-    def set_fitting_params(self, lines):
-        self.fitting_params.set(lines)
+    def set_fitting_params(self, **kwargs):
+        self.fitting_params.set(**kwargs)
 
     def save_fitting_params(self):
         self.fitting_params.save()
@@ -352,27 +352,33 @@ class Calculator(object):
 class Parameter(object):
 
     def __init__(self, value, dtype='double', description=None):
-
-        if isinstance(value, Iterable):
-            if any(isinstance(i, Iterable) for i in value):
-                raise ParameterError(
-                    'Parameter should be a scalar or 1D array.')
-            value = np.asarray(value)
-            size = len(value)
-        else:
-            raise ParameterError('Parameter should be a scalar or 1D array.')
-
-        self.value = value
-        self.size = size
+        self.set_value_check_shape(value)
         self.dtype = dtype
         self.description = description
 
     def get_value(self):
-        if isinstance(self.value, Iterable):
-            return self.value.copy()
+        return self.value.copy()
+
+    def get_size(self):
+        return len(self.value)
+
+    def get_dtype(self):
+        return self.dtype
+
+    def get_description(self):
+        return self.description
 
     def set_value(self, value):
         self.value = value
+
+    def set_value_check_shape(self, value):
+        if isinstance(value, Iterable):
+            if any(isinstance(i, Iterable) for i in value):
+                raise ParameterError('Parameter should be a scalar or 1D array.')
+            self.value = np.asarray(value)
+            self.size = len(value)
+        else:
+            raise ParameterError('Parameter should be a scalar or 1D array.')
 
     def to_string(self):
         s = 'value: {}\n'.format(np.array_str(self.value))
@@ -413,38 +419,53 @@ class FittingParameter(object):
         self._index = []
 
     def read(self, fname):
-        """Read the initial values of parameters. (Interface to user)
+        """Read the parameters that will be optimized. (Interface to user)
 
-        An alternative is set_param().
-        For a given model parameter, one or multiple initial values may be required,
-        and each must be given in a new line. For each line, the initial guess value
-        is mandatory, where `KIM` (case insensitive) can be given to use the value
-        from the KIM model. Optionally, `fix` can be followed not to optimize this
-        parameters, or lower and upper bounds can be given to limit the parameter
-        value in the range. Note that lower or upper bounds may not be effective if
-        the optimizer does not support it. The following are valid input examples.
+        Each parameter is a 1D array, and each component of the parameter array should
+        be listed in a new line. Each line can contains 1, 2, or 3 elements.
+
+        1st element: float or `DEFAULT`
+            Initial guess of the parameter component. If `DEFAULT` (case insensitive),
+            the value from the calculator is used as the intial guess.
+
+        The 2nd and 3rd elements are optional. If 2 elements are provided:
+
+        2nd element: `FIX` (case insensitive)
+            If `FIX`, the corresponding component will not be optimized.
+
+        If 3 elements are provided:
+
+        2nd element: float or `INF` (case insensitive)
+            Lower bound of the parameter. `INF` indicates that the lower bound is
+            negative infinite, i.e. no lower bound is applied.
+
+        3rd element: float or `INF` (case insensitive)
+            Upper bound of the parameter. `INF` indicates that the upper bound is
+            positive infinite, i.e. no upper bound is applied.
+
+        An alternative is self.set().
 
         Parameters
         ----------
 
         fname: str
-          name of the input file where the optimizing parameters are listed
+          name of file that includes the fitting parameters
 
-        Examples
-        --------
+        Example
+        -------
 
         A
-        KIM
+        DEFAULT
         1.1
 
         B
-        KIM  fix
-        1.1  fix
+        DEFAULT FIX
+        1.1     FIX
 
         C
-        KIM  0.1  2.1
-        1.0  0.1  2.1
-        2.0  fix
+        DEFAULT  0.1  INF
+        1.0      INF  2.1
+        2.0      FIX
         """
 
         with open(fname, 'r') as fin:
@@ -455,74 +476,89 @@ class FittingParameter(object):
             line = lines[num_line].strip()
             num_line += 1
             if line in self.params:
-                raise InputError('line: {} file: {}. Parameter {} already '
-                                 'set.'.format(num_line, fname, line))
+                msg = 'file "{}", line {}. Parameter "{}" already set.' .format(
+                    fname, num_line, line)
+                warnings.warn(msg, category=Warning)
             if line not in self.model_params:
-                raise InputError('line: {} file: {}. Parameter {} not supported by '
-                                 'the potential model.'.format(num_line, fname, line))
+                raise InputError('file "{}", line {}. Parameter "{}" not supported '
+                                 'by calculator.'.format(fname, num_line, line))
             name = line
-            size = self.model_params[name].size
-            param_lines = [name]
+            size = self.model_params[name].get_size()
+            settings = []
             for j in range(size):
-                param_lines.append(lines[num_line].split())
+                settings.append(lines[num_line].split())
                 num_line += 1
-            self.set(param_lines)
+            self.set_one(name, settings)
 
-    def set(self, lines):
+    def set(self, **kwargs):
         """Set the parameters that will be optimized. (Interface to user)
 
-        An alternative is Read().
+        One or more parameters can be set. Each argument is for one parameter, where
+        the argument name is the parameter name, the value of the argument is the
+        settings (including intial value, fix flag, lower bound, and upper bound).
+
+        The value of the argument should be a list of list, where each inner list is for
+        one component of the parameter, which can contain 1, 2, or 3 elements.
+        See self.read() for the options of the elements.
+
+        Example
+        -------
+
+        instance.set(A = [['DEFAULT'],
+                          [2.0, 1.0, 3.0]],
+                     B = [[1.0, 'FIX'],
+                          [2.0, 'INF', 3.0]])
+        """
+        for name, settings in kwargs.items():
+            if name in self.params:
+                msg = 'Parameter "{}" already set.'.format(name)
+                warnings.warn(msg, category=Warning)
+            if name not in self.model_params:
+                raise InputError('Parameter "{}" not supported.'.format(name))
+            self.set_one(name, settings)
+
+    def set_one(self, name, settings):
+        """Set one parameter that will be optimized.
+
         The name of the parameter should be given as the first entry of a list
         (or tuple), and then each data line should be given in in a list.
 
         Parameters
         ----------
 
-        lines, str
-          optimizing parameter initial values, settings
+        name, string
+            name of a fitting parameter
+
+        settings, list of list
+            initial value, flag to fix a parameter, lower and upper bounds of a parameter
 
         Example
         -------
-
-          param_A = ['PARAM_FREE_A',
-                     ['kim', 0, 20],
-                     [2.0, 'fix'],
-                     [2.2, 1.1, 3.3]
-                    ]
-          instance_of_this_class.set(param_A)
+            name = 'param_A'
+            settings = [['default', 0, 20],
+                       [2.0, 'fix'],
+                       [2.2, 'inf', 3.3]]
+          instance.set_one(name, settings)
         """
 
-        name = lines[0].strip()
-# NOTE we want to use set to perturbe params so as to compute Fisher information
-# matrix, where the following two lines are annoying
-# Maybe issue an warning
-#    if name in self.params:
-#      raise InputError('Parameter {} already set.'.format(name))
-
-        if name not in self.model_params:
+        size = self.model_params[name].get_size()
+        if len(settings) != size:
             raise InputError(
-                'Parameter "{}" not supported by the potential model.'.format(name))
-        size = self.model_params[name].size
-        if len(lines)-1 != size:
-            raise InputError(
-                'Incorrect number of data lines for paramter "{}".'.format(name))
+                'Incorrect number of initial values for paramter "{}".'.format(name))
 
-        # index of parameter in model_params (which is the same as in KIM object)
+        # TODO check if there is alternative so as not to use OrderedDict
         index = list(self.model_params.keys()).index(name)
 
-        tmp_dict = {
-            'size': size,
-            'index': index,
-            'value': np.array([None for i in range(size)]),
-            'use_default': np.array([False for i in range(size)]),
-            'fix': np.array([False for i in range(size)]),
-            'lower_bound': np.array([None for i in range(size)]),
-            'upper_bound': np.array([None for i in range(size)])
-        }
+        tmp_dict = {'size': size,
+                    'index': index,
+                    'value': np.array([None for _ in range(size)]),
+                    'use_default': np.array([False for _ in range(size)]),
+                    'fix': np.array([False for _ in range(size)]),
+                    'lower_bound': np.array([None for _ in range(size)]),
+                    'upper_bound': np.array([None for _ in range(size)])}
         self.params[name] = tmp_dict
 
-        for j in range(size):
-            line = lines[j+1]
+        for j, line in enumerate(settings):
             num_items = len(line)
             if num_items == 1:
                 self._read_1_item(name, j, line)
@@ -531,8 +567,8 @@ class FittingParameter(object):
             elif num_items == 3:
                 self._read_3_item(name, j, line)
             else:
-                raise InputError('More than 3 iterms listed at data line '
-                                 '{} for parameter {}.'.format(j+1, name))
+                raise InputError('More than 3 elements listed at data line '
+                                 '{} for parameter "{}".'.format(j+1, name))
             self._check_bounds(name)
 
         self._set_index(name)
@@ -557,7 +593,6 @@ class FittingParameter(object):
         else:
             fout = sys.stdout
 
-        # print(file=fout)
         print('#'+'='*80, file=fout)
         print('# Model parameters that are optimzied.', file=fout)
         print('#'+'='*80, file=fout)
@@ -573,16 +608,25 @@ class FittingParameter(object):
 
             for i in range(attr['size']):
                 print('{:24.16e}'.format(attr['value'][i]), end=' ', file=fout)
-                if not attr['fix'][i] and attr['lower_bound'][i] == None:
-                    print(file=fout)   # print new line if only given value
+
                 if attr['fix'][i]:
-                    print('fix', file=fout)
-                if attr['lower_bound'][i] != None:
-                    print('{:24.16e}'.format(
-                        attr['lower_bound'][i]), end=' ', file=fout)
-                if attr['upper_bound'][i]:
-                    print('{:24.16e}'.format(
-                        attr['upper_bound'][i]), file=fout)
+                    print('fix', end=' ', file=fout)
+
+                lb = attr['lower_bound'][i]
+                ub = attr['upper_bound'][i]
+                has_lb = lb is not None
+                has_ub = ub is not None
+                has_bounds = has_lb or has_ub
+                if has_bounds:
+                    if has_lb:
+                        print('{:24.16e}'.format(lb), end=' ', file=fout)
+                    else:
+                        print('None', end=' ', file=fout)
+                    if has_ub:
+                        print('{:24.16e}'.format(ub), end=' ', file=fout)
+                    else:
+                        print('None', end=' ', file=fout)
+                print(file=fout)
 
             print(file=fout)
 
@@ -679,28 +723,38 @@ class FittingParameter(object):
             self.params[name]['fix'][j] = True
         else:
             raise InputError(
-                'Data at line {} of {} corrupted.\n'.format(j+1, name))
+                'Data at line {} of {} corrupted.'.format(j+1, name))
 
     def _read_3_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
-        try:
-            self.params[name]['lower_bound'][j] = float(line[1])
-            self.params[name]['upper_bound'][j] = float(line[2])
-        except ValueError as err:
-            raise InputError(
-                '{}.\nData at line {} of {} corrupted.\n'.format(err, j+1, name))
+
+        if (line[1] is not None) and (
+                not (isinstance(line[1], str) and line[1].lower() == 'none')):
+            try:
+                self.params[name]['lower_bound'][j] = float(line[1])
+            except ValueError as e:
+                raise InputError(
+                    '{}.\nData at line {} of {} corrupted.'.format(e, j+1, name))
+
+        if (line[2] is not None) and (
+                not (isinstance(line[2], str) and line[2].lower() == 'none')):
+            try:
+                self.params[name]['upper_bound'][j] = float(line[2])
+            except ValueError as e:
+                raise InputError(
+                    '{}.\nData at line {} of {} corrupted.'.format(e, j+1, name))
 
     def _read_1st_item(self, name, j, first):
-        if type(first) == str and first.lower() == 'kim':
+        if isinstance(first, str) and first.lower() == 'default':
             self.params[name]['use_default'][j] = True
-            model_value = self.model_params[name].value
+            model_value = self.model_params[name].get_value()
             self.params[name]['value'][j] = model_value[j]
         else:
             try:
                 self.params[name]['value'][j] = float(first)
-            except ValueError as err:
+            except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.\n'.format(err, j+1, name))
+                    '{}.\nData at line {} of {} corrupted.'.format(e, j+1, name))
 
     def _check_bounds(self, name):
         """Check whether the initial guess of a paramter is within its lower and
@@ -710,11 +764,15 @@ class FittingParameter(object):
         for i in range(attr['size']):
             lower_bound = attr['lower_bound'][i]
             upper_bound = attr['upper_bound'][i]
-            if lower_bound != None:
-                value = attr['value'][i]
-                if value < lower_bound or value > upper_bound:
-                    raise InputError('Initial guess at line {} of parameter {} is '
-                                     'out of bounds.\n'.format(i+1, name))
+            value = attr['value'][i]
+            if lower_bound is not None:
+                if value < lower_bound:
+                    raise InputError('Initial guess at line {} of parameter "{}" '
+                                     'out of bounds.'.format(i+1, name))
+            if upper_bound is not None:
+                if value > upper_bound:
+                    raise InputError('Initial guess at line {} of parameter "{}" '
+                                     'out of bounds.'.format(i+1, name))
 
     def _set_index(self, name):
         """Check whether a specific data value of a parameter will be optimized or
@@ -765,9 +823,9 @@ def remove_comments(lines):
     return processed_lines
 
 
-class NotComputeError(Exception):
+class CalculatorError(Exception):
     def __init__(self, msg):
-        super(NotComputeError, self).__init__(msg)
+        super(CalculatorError, self).__init__(msg)
         self.msg = msg
 
     def __str__(self):
