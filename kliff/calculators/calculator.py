@@ -370,6 +370,7 @@ class Parameter(object):
 
     def set_value(self, value):
         self.value = value
+        self.size = len(value)
 
     def set_value_check_shape(self, value):
         if isinstance(value, Iterable):
@@ -406,16 +407,10 @@ class FittingParameter(object):
         self.model_params = model_params
 
         # key: parameter name
-        # values: {'value', 'use_default', 'fix', 'lower_bound', 'upper_bound'}
+        # values: {'size', 'value', 'use_default', 'fix', 'lower_bound', 'upper_bound'}
         self.params = OrderedDict()
 
-        # index of optimizing sub-parameter (recall that a parameter is a 1D array,
-        # and a sub-parameter is a component in the array.)
-        # a list of dictionary:
-        # key: parameter name
-        # values: 'p_idx', and 'c_idx'
-        # p_idx: index of parameter
-        # c_idx: index of component of the parameter
+        # components of params that are optimized
         self._index = []
 
     def read(self, fname):
@@ -546,16 +541,12 @@ class FittingParameter(object):
             raise InputError(
                 'Incorrect number of initial values for paramter "{}".'.format(name))
 
-        # TODO check if there is alternative so as not to use OrderedDict
-        index = list(self.model_params.keys()).index(name)
-
         tmp_dict = {'size': size,
-                    'index': index,
-                    'value': np.array([None for _ in range(size)]),
-                    'use_default': np.array([False for _ in range(size)]),
-                    'fix': np.array([False for _ in range(size)]),
-                    'lower_bound': np.array([None for _ in range(size)]),
-                    'upper_bound': np.array([None for _ in range(size)])}
+                    'value': [None for _ in range(size)],
+                    'use_default': [False for _ in range(size)],
+                    'fix': [False for _ in range(size)],
+                    'lower_bound': [None for _ in range(size)],
+                    'upper_bound': [None for _ in range(size)]}
         self.params[name] = tmp_dict
 
         for j, line in enumerate(settings):
@@ -633,53 +624,6 @@ class FittingParameter(object):
         if fname:
             fout.close()
 
-    def update_params(self, opt_x):
-        """ Update parameter values from optimzier. (Interface to optimizer)
-
-        This is the opposite operation of get_opt_params().
-
-        Parameters
-        ----------
-
-        opt_x, list of floats
-          parameter values from the optimizer.
-
-        """
-        for k, val in enumerate(opt_x):
-            name = self._index[k]['name']
-            c_idx = self._index[k]['c_idx']
-            self.params[name]['value'][c_idx] = val
-
-    def get_opt_params(self):
-        """Nest all parameter values (except the fix ones) to a list.
-
-        This is the opposite operation of update_params(). This can be fed to the
-        optimizer as the starting parameters.
-
-        Return
-        ------
-          A list of nested optimizing parameter values.
-        """
-        opt_x0 = []
-        for idx in self._index:
-            name = idx['name']
-            c_idx = idx['c_idx']
-            opt_x0.append(self.params[name]['value'][c_idx])
-        if len(opt_x0) == 0:
-            raise ParameterError('No parameters specified to optimize.')
-        return np.asarray(opt_x0)
-
-    def get_bounds(self):
-        """ Get the lower and upper parameter bounds. """
-        bounds = []
-        for idx in self._index:
-            name = idx['name']
-            c_idx = idx['c_idx']
-            lower = self.params[name]['lower_bound'][c_idx]
-            upper = self.params[name]['upper_bound'][c_idx]
-            bounds.append([lower, upper])
-        return bounds
-
     def get_names(self):
         return self.params.keys()
 
@@ -689,8 +633,8 @@ class FittingParameter(object):
     def get_value(self, name):
         return self.params[name]['value'].copy()
 
-    def get_index(self, name):
-        return self.params[name]['index']
+#    def get_index(self, name):
+#        return self.params[name]['index']
 
     def get_lower_bound(self, name):
         return self.params[name]['lower_bound'].copy()
@@ -707,12 +651,61 @@ class FittingParameter(object):
     def get_number_of_opt_params(self):
         return len(self._index)
 
-    def get_opt_param_value_and_i_j_indices(self, k):
-        name = self._index[k]['name']
-        p_idx = self._index[k]['p_idx']
-        c_idx = self._index[k]['c_idx']
+    def update_params(self, opt_x):
+        """ Update parameter values from optimzier. (Interface to optimizer)
+
+        This is the opposite operation of get_opt_params().
+
+        Parameters
+        ----------
+
+        opt_x, list of floats
+          parameter values from the optimizer.
+
+        """
+        for k, val in enumerate(opt_x):
+            name = self._index[k].name
+            c_idx = self._index[k].c_idx
+            self.params[name]['value'][c_idx] = val
+
+    def get_opt_params(self):
+        """Nest all parameter values (except the fix ones) to a list.
+
+        This is the opposite operation of update_params(). This can be fed to the
+        optimizer as the starting parameters.
+
+        Return
+        ------
+          A list of nested optimizing parameter values.
+        """
+        opt_x0 = []
+        for idx in self._index:
+            name = idx.name
+            c_idx = idx.c_idx
+            opt_x0.append(self.params[name]['value'][c_idx])
+        if len(opt_x0) == 0:
+            raise ParameterError('No parameters specified to optimize.')
+        return np.asarray(opt_x0)
+
+    def get_opt_param_value_and_indices(self, k):
+        """Get the `value`, `parameter_index`, and `component_index` of an optimizing
+        parameter given the slot `k`."""
+        name = self._index[k].name
+        p_idx = self._index[k].p_idx
+        c_idx = self._index[k].c_idx
         value = self.params[name]['value'][c_idx]
         return value, p_idx, c_idx
+
+    def get_opt_params_bounds(self):
+        """ Get the lower and upper parameter bounds. """
+        bounds = []
+        for idx in self._index:
+            name = idx.name
+            c_idx = idx.c_idx
+            lower = self.params[name]['lower_bound'][c_idx]
+            upper = self.params[name]['upper_bound'][c_idx]
+            bounds.append([lower, upper])
+        return bounds
 
     def _read_1_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
@@ -775,9 +768,8 @@ class FittingParameter(object):
                                      'out of bounds.'.format(i+1, name))
 
     def _set_index(self, name):
-        """Check whether a specific data value of a parameter will be optimized or
-        not (by checking its 'fix' attribute). If yes, include it in the index
-        list.
+        """Check whether a parameter component will be optimized or not (by
+        checking its 'fix' attribute). If yes, include it in the index list.
 
         Given a parameter and its values such as:
 
@@ -790,13 +782,52 @@ class FittingParameter(object):
         and later be optimized.
         """
 
+        # TODO check if there is alternative so as not to use OrderedDict
         p_idx = list(self.model_params.keys()).index(name)
         size = self.params[name]['size']
         fix = self.params[name]['fix']
-        for j in range(size):
-            if not fix[j]:
-                idx = {'name': name, 'p_idx': p_idx, 'c_idx': j}
-                self._index.append(idx)
+        for c_idx in range(size):
+            if not fix[c_idx]:
+                idx = Index(name, p_idx, c_idx)
+                # check whether already in self._index
+                already_in = False
+                for k, i in enumerate(self._index):
+                    if idx == i:
+                        already_in = k
+                        break
+                if already_in is not False:
+                    self._index[already_in] = idx
+                else:
+                    self._index.append(idx)
+
+
+class Index(object):
+
+    def __init__(self, name, parameter_index=None, component_index=None):
+        self.name = name
+        self.parameter_index = self.p_idx = parameter_index
+        self.component_index = self.c_idx = component_index
+
+    def set_parameter_index(self, index):
+        self.parameter_index = self.p_idx = index
+
+    def set_component_index(self, index):
+        self.component_index = self.c_idx = index
+
+    def __expr__(self):
+        return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ != other.__dict__
+        else:
+            return True
 
 
 def length_equal(a, b):
