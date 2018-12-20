@@ -134,7 +134,7 @@ class KIMComputeArguments(ComputeArguments):
 
         # inquire information from conf
         cell = np.asarray(self.conf.get_cell(), dtype=np.double)
-        pbc = np.asarray(self.conf.get_pbc(), dtype=np.intc)
+        PBC = np.asarray(self.conf.get_PBC(), dtype=np.intc)
         contributing_coords = np.asarray(self.conf.get_coordinates(), dtype=np.double)
         contributing_species = self.conf.get_species()
         num_contributing = self.conf.get_number_of_atoms()
@@ -151,11 +151,11 @@ class KIMComputeArguments(ComputeArguments):
         contributing_species_code = np.array(
             [species_map[s] for s in contributing_species], dtype=np.intc)
 
-        if any(pbc):  # need padding atoms
+        if any(PBC):  # need padding atoms
             out = nl.create_paddings(
                 influence_distance,
                 cell,
-                pbc,
+                PBC,
                 contributing_coords,
                 contributing_species_code)
             padding_coords, padding_species_code, self.padding_image_of, error = out
@@ -310,9 +310,7 @@ class KIM(Calculator):
         return model
 
     def inquire_params(self):
-        """
-        Inquire the KIM model to get all the parameters.
-        """
+        """Inquire the KIM model to get all parameters. """
         params = OrderedDict()
 
         num_params = self.kim_model.get_number_of_parameters()
@@ -331,8 +329,7 @@ class KIM(Calculator):
                     value, error = self.kim_model.get_parameter_int(i, j)
                     check_error(error, 'model.get_parameter_int')
                 else:  # should never reach here
-                    report_error(
-                        'get unexpeced parameter data type "{}"'.format(dtype))
+                    report_error('get unexpeced parameter data type "{}"'.format(dtype))
                 values.append(value)
                 params[name] = Parameter(
                     value=values, dtype=dtype, description=description)
@@ -364,14 +361,11 @@ class KIM(Calculator):
             configs = [configs]
 
         if not length_equal(configs, use_energy):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_energy" not equal.')
+            raise InputError('Lenghs of arguments "configs" and "use_energy" not equal.')
         if not length_equal(configs, use_forces):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_forces" not equal.')
+            raise InputError('Lenghs of arguments "configs" and "use_forces" not equal.')
         if not length_equal(configs, use_stress):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_stress" not equal.')
+            raise InputError('Lenghs of arguments "configs" and "use_stress" not equal.')
 
         N = len(configs)
         if not isinstance(use_energy, Iterable):
@@ -405,12 +399,19 @@ class KIM(Calculator):
 
     def update_model_params(self):
         """ Update from fitting params to model params. """
-        param_names = self.fitting_params.get_names()
-        for name in param_names:
-            i = self.fitting_params.get_index(name)
-            new_value = self.fitting_params.get_value(name)
-            for j, v in enumerate(new_value):
-                self.kim_model.set_parameter(i, j, v)
+#        # update all components
+#        param_names = self.fitting_params.get_names()
+#        for name in param_names:
+#            i = self.fitting_params.get_index(name)
+#            new_value = self.fitting_params.get_value(name)
+#            for j, v in enumerate(new_value):
+#                self.kim_model.set_parameter(i, j, v)
+
+        # only update optimizing components
+        num_params = self.get_number_of_opt_params()
+        for i in range(num_params):
+            v, p, c = self.get_opt_param_value_and_indices(i)
+            self.kim_model.set_parameter(p, c, v)
 
         # refresh model
         self.kim_model.clear_then_refresh()

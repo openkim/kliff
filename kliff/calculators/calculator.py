@@ -264,7 +264,7 @@ class Calculator(object):
         """ Update the parameters in the calculator.
         """
         if key in self.params:
-            self.params[key].value = value
+            self.params[key].set_value(value)
         else:
             raise CalculatorError('"{}" is not a parameter of calculator.' .format(key))
 
@@ -327,8 +327,17 @@ class Calculator(object):
     def echo_fitting_params(self, fname=None):
         self.fitting_params.echo_params(fname)
 
+    def get_number_of_opt_params(self):
+        return self.fitting_params.get_number_of_opt_params()
+
     def get_opt_params(self):
         return self.fitting_params.get_opt_params()
+
+    def get_opt_param_value_and_indices(self, k):
+        return self.fitting_params.get_opt_param_value_and_indices(k)
+
+    def get_opt_params_bounds(self):
+        return self.fitting_params.get_opt_params_bounds()
 
     def update_model_params(self):
         """ Update from fitting params to model params. """
@@ -343,6 +352,7 @@ class Calculator(object):
         # update from fitting params to model params
         self.update_model_params()
 
+        # TODO should be moved above update_model_params
         # user-specified relations between parameters
         if self.params_relation_callback is not None:
             self.params_relation_callback(self)
@@ -369,7 +379,7 @@ class Parameter(object):
         return self.description
 
     def set_value(self, value):
-        self.value = value
+        self.value = np.asarray(value)
         self.size = len(value)
 
     def set_value_check_shape(self, value):
@@ -594,8 +604,6 @@ class FittingParameter(object):
                 print(name, attr['size'], file=fout)
             else:
                 print(name, file=fout)
-
-            # print ('index:', attr['index'], file=fout)
 
             for i in range(attr['size']):
                 print('{:24.16e}'.format(attr['value'][i]), end=' ', file=fout)
