@@ -6,6 +6,13 @@ from kliff.calculators.calculator import CalculatorError
 from kliff.dataset import DataSet
 
 
+def params_relation(params):
+    sigma = params.get_value('sigma')
+    epsilon = params.get_value('epsilon')
+    epsilon[0] = 2 * sigma[0]
+    params.set_value('epsilon', epsilon)
+
+
 def write_tmp_params(fname):
     with open(fname, 'w') as fout:
         fout.write('sigma\n')
@@ -96,31 +103,39 @@ def energy_forces_stress(calc, configs, use_energy=False, use_forces=False,
 
 
 def test_lj():
-    lj = LennardJones()
+    calc = LennardJones()
 
     # set params directly
-    lj.set_fitting_params(
+    calc.set_fitting_params(
         sigma=[[1.1, 'fix']],
         epsilon=[[2.1, None, 3.]])
 
     # set params by reading from file (the same as set params directly)
     #fname = 'tmp_lj.params'
     # write_tmp_params(fname)
-    # lj.read_fitting_params(fname)
+    # calc.read_fitting_params(fname)
     # delete_tmp_params(fname)
 
-    lj.update_model_params()
-    # lj.echo_model_params()
-    # lj.echo_fitting_params()
+    calc.update_model_params()
+    # calc.echo_model_params()
+    # calc.echo_fitting_params()
 
     dset = DataSet(order_by_species=False)
     fname = 'MoS2_energy_forces_stress.xyz'
     dset.read(fname)
     configs = dset.get_configurations()
 
-    energy_forces_stress(lj, configs, True, False, False)
-    energy_forces_stress(lj, configs, True, True, False)
-    energy_forces_stress(lj, configs, True, True, True)
+    energy_forces_stress(calc, configs, True, False, False)
+    energy_forces_stress(calc, configs, True, True, False)
+    energy_forces_stress(calc, configs, True, True, True)
+
+    # params relation callback
+    calc.set_params_relation_callback(params_relation)
+    x0 = calc.get_opt_params()
+    calc.update_params(x0)
+    sigma = calc.get_model_params('sigma')
+    epsilon = calc.get_model_params('epsilon')
+    assert np.allclose(sigma*2, epsilon)
 
 
 if __name__ == '__main__':

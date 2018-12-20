@@ -255,18 +255,48 @@ class Calculator(object):
     def get_reference(self, compute_arguments):
         return compute_arguments.get_reference()
 
-    def get_model_params(self):
-        """ Return a copy of the parameters of the calculator.
-        """
-        return copy.deepcopy(self.params)
+    def get_model_params(self, name):
+        """ Return a copy of the values of parameter.
 
-    def set_model_params(self, key, value):
-        """ Update the parameters in the calculator.
+        Parameters
+        ----------
+        name: string
+            Name of the parameter.
         """
-        if key in self.params:
-            self.params[key].set_value(value)
+        if name in self.params:
+            return self.params[name].get_value()
         else:
-            raise CalculatorError('"{}" is not a parameter of calculator.' .format(key))
+            raise CalculatorError('"{}" is not a parameter of calculator.'.format(name))
+
+    def set_model_params(self, name, value):
+        """ Update the parameter values.
+
+        Parameters
+        ----------
+        name: string
+            Name of the parameter.
+        value: list of floats
+            Value of hte parameter.
+        """
+        if name in self.params:
+            self.params[name].set_value_with_shape_check(value)
+        else:
+            raise CalculatorError('"{}" is not a parameter of calculator.'.format(name))
+
+    def set_model_params_no_shape_check(self, name, value):
+        """ Update the parameter values.
+
+        Parameters
+        ----------
+        name: string
+            Name of the parameter.
+        value: list of floats
+            Value of hte parameter.
+        """
+        if name in self.params:
+            self.params[name].set_value(value)
+        else:
+            raise CalculatorError('"{}" is not a parameter of calculator.'.format(name))
 
     def save_model_params(self, fname=None):
         params = dict()
@@ -286,7 +316,7 @@ class Calculator(object):
         with open(fname, 'r') as fin:
             params = yaml.safe_load(fin)
         for key, value in params.items():
-            self.set_model_params(key, value)
+            self.set_model_params_no_shape_check(key, value)
 
     def echo_model_params(self):
         """Echo the optimizable parameters to stdout.
@@ -341,28 +371,27 @@ class Calculator(object):
 
     def update_model_params(self):
         """ Update from fitting params to model params. """
-        for key, attr in self.fitting_params.params.items():
-            self.set_model_params(key, attr['value'])
+        for name, attr in self.fitting_params.params.items():
+            self.set_model_params_no_shape_check(name, attr['value'])
 
     def update_params(self, opt_params):
         """ Update from optimizer params to model params. """
         # update from optimzier to fitting params
         self.fitting_params.update_params(opt_params)
 
+        # user-specified relation between parameters
+        if self.params_relation_callback is not None:
+            self.params_relation_callback(self.fitting_params)
+
         # update from fitting params to model params
         self.update_model_params()
-
-        # TODO should be moved above update_model_params
-        # user-specified relations between parameters
-        if self.params_relation_callback is not None:
-            self.params_relation_callback(self)
 
 
 # TODO take a look at proporty decorator
 class Parameter(object):
 
     def __init__(self, value, dtype='double', description=None):
-        self.set_value_check_shape(value)
+        self.set_value_with_shape_check(value)
         self.dtype = dtype
         self.description = description
 
@@ -382,7 +411,7 @@ class Parameter(object):
         self.value = np.asarray(value)
         self.size = len(value)
 
-    def set_value_check_shape(self, value):
+    def set_value_with_shape_check(self, value):
         if isinstance(value, Iterable):
             if any(isinstance(i, Iterable) for i in value):
                 raise ParameterError('Parameter should be a scalar or 1D array.')
@@ -641,8 +670,8 @@ class FittingParameter(object):
     def get_value(self, name):
         return self.params[name]['value'].copy()
 
-#    def get_index(self, name):
-#        return self.params[name]['index']
+    def set_value(self, name, value):
+        self.params[name]['value'] = value
 
     def get_lower_bound(self, name):
         return self.params[name]['lower_bound'].copy()
@@ -652,9 +681,6 @@ class FittingParameter(object):
 
     def get_fix(self, name):
         return self.params[name]['fix'].copy()
-
-    def set_value(self, name, value):
-        self.params[name]['value'] = value
 
     def get_number_of_opt_params(self):
         return len(self._index)

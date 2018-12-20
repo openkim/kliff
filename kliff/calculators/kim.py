@@ -399,6 +399,8 @@ class KIM(Calculator):
 
     def update_model_params(self):
         """ Update from fitting params to model params. """
+
+        # update kim parameters
 #        # update all components
 #        param_names = self.fitting_params.get_names()
 #        for name in param_names:
@@ -412,9 +414,13 @@ class KIM(Calculator):
         for i in range(num_params):
             v, p, c = self.get_opt_param_value_and_indices(i)
             self.kim_model.set_parameter(p, c, v)
-
         # refresh model
         self.kim_model.clear_then_refresh()
+
+        # update model params of this calculator
+        for name, attr in self.fitting_params.params.items():
+            self.set_model_params_no_shape_check(name, attr['value'])
+
         if logger.getEffectiveLevel() == logging.DEBUG:
             params = self.inquire_params()
             s = ''
