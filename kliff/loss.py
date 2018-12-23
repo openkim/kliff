@@ -146,10 +146,18 @@ class Loss(object):
         'trust-krylov',
     ]
 
+    scipy_minimize_methods_not_supported_arguments = [
+        'bounds'
+    ]
+
     scipy_least_squares_methods = [
         'trf',
         'dogbox',
         'lm',
+    ]
+
+    scipy_least_squares_methods_not_supported_arguments = [
+        'ounds'
     ]
 
     tf_minimize_methods = [
@@ -238,20 +246,38 @@ class Loss(object):
         if self.calculator_type != 'NeuralNetwork':
 
             if method in self.scipy_least_squares_methods:
-                # change unbounded value to np.inf that least_squares needs
-                try:
-                    bounds = kwargs['bounds']
-                    for i in range(len(bounds)):
-                        bounds[i][0] = -np.inf
-                        bounds[i][1] = np.inf
-                except KeyError:
-                    pass
+                #    # change unbounded value to np.inf that least_squares needs
+                #    try:
+                #        bounds = kwargs['bounds']
+                #        for i in range(len(bounds)):
+                #            bounds[i][0] = -np.inf
+                #            bounds[i][1] = np.inf
+                #    except KeyError:
+                #        pass
+                for i in self.scipy_least_squares_methods_not_supported_arguments:
+                    if i in kwargs:
+                        raise LossError('Argument "{}" should not be set through the '
+                                        '"minimize" method.'.format(i))
+                bounds = self.calculator.get_opt_params_bounds()
+                kwargs['bounds'] = bounds
                 result = self._scipy_optimize_least_squares(method, **kwargs)
             elif method in self.scipy_minimize_methods:
+                for i in self.scipy_minimize_methods_not_supported_arguments:
+                    if i in kwargs:
+                        raise LossError('Argument "{}" should not be set through the '
+                                        '"minimize" method.'.format(i))
+                bounds = self.calculator.get_opt_params_bounds()
+                for i in range(len(bounds)):
+                    lb = bounds[i][0]
+                    ub = bounds[i][1]
+                    if lb is None:
+                        bounds[i][0] = -np.inf
+                    if ub is None:
+                        bounds[i][1] = np.inf
+                kwargs['bounds'] = bounds
                 result = self._scipy_optimize_minimize(method, **kwargs)
             else:
-                raise Exception(
-                    'minimization method "{}" not supported.'.format(method))
+                raise Exception('minimization method "{}" not supported.'.format(method))
 
             # update final optimized paramters to ModelParameters object
             self.calculator.update_params(result.x)
@@ -419,7 +445,7 @@ class Loss(object):
                         fout.write('{:14.6e} {} {}   {}   {}\n'.format(
                             loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
                     else:
-                        fout.write('{:14.6e} {} {:14.6}   {}   {}\n'.format(
+                        fout.write('{:14.6e} {} {:14.6e}   {}   {}\n'.format(
                             loss/nz, energy_rmse/nz, forces_rmse/nz, natoms, identifier))
                 else:
                     if forces_rmse is None:
@@ -472,3 +498,12 @@ class Loss(object):
 
         # write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
         self.calculator.echo_fitting_params(fname='FINAL_FITTED_PARAMS')
+
+
+class LossError(Exception):
+    def __init__(self, msg):
+        super(LossError, self).__init__(msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg

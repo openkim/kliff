@@ -535,6 +535,12 @@ class FittingParameter(object):
         one component of the parameter, which can contain 1, 2, or 3 elements.
         See self.read() for the options of the elements.
 
+        Note
+        ----
+        If a parameter name starts with an underscore `_`, the underscore will be
+        removed. This is usefull when a parameter happens to have the same name as a
+        Python keyword (e.g. `lambda`).
+
         Example
         -------
 
@@ -544,6 +550,8 @@ class FittingParameter(object):
                           [2.0, 'INF', 3.0]])
         """
         for name, settings in kwargs.items():
+            if name.startswith('_'):
+                name = name[1:]
             if name in self.params:
                 msg = 'Parameter "{}" already set.'.format(name)
                 warnings.warn(msg, category=Warning)
@@ -780,8 +788,8 @@ class FittingParameter(object):
             try:
                 self.params[name]['value'][j] = float(first)
             except ValueError as e:
-                raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(e, j+1, name))
+                raise InputError('{}.\nData at line {} of parameter "{}" corrupted.'
+                                 .format(e, j+1, name))
 
     def _check_bounds(self, name):
         """Check whether the initial guess of a paramter is within its lower and
