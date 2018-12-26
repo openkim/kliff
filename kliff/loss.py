@@ -125,9 +125,7 @@ def test_residual(conf_id, natoms, prediction, reference, data):
 
 
 class Loss(object):
-    """Objective function that will be minimized.
-
-    """
+    """Objective function that will be minimized. """
 
     scipy_minimize_methods = [
         'Nelder-Mead',
@@ -207,13 +205,11 @@ class Loss(object):
         if self.calculator_type != 'NeuralNetwork':
 
             self.compute_arguments = self.calculator.get_compute_arguments()
-
-            # update parameter from ModelParameters to calculator, and compute
-            # neighbor list. This is needed since cutoff can be set in ModelParameters.
             self.calculator.update_model_params()
+            infl_dist = self.calculator.get_influence_distance()
             # TODO can be parallelized
             for ca in self.compute_arguments:
-                ca.refresh()
+                ca.refresh(infl_dist)
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 #

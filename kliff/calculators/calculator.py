@@ -17,23 +17,32 @@ class ComputeArguments(object):
     """
     implemented_property = []
 
-    def __init__(self, conf, compute_energy=True, compute_forces=True,
-                 compute_stress=False):
+    def __init__(self, conf, influence_distance, compute_energy=True,
+                 compute_forces=True, compute_stress=False):
         self.conf = conf
+        self.influence_distance = influence_distance
         self.compute_energy = compute_energy
         self.compute_forces = compute_forces
         self.compute_stress = compute_stress
         self.compute_property = self.check_compute_property()
         self.results = dict([(i, None) for i in self.implemented_property])
 
-    # TODO maybe pass params as an argument, also for refresh
-    def refresh(self):
+    def refresh(self, influence_distance=None, params=None):
         """ Refresh settings.
 
         Such as recreating the neighbor list due to the change of cutoff.
         """
+        if influence_distance is not None:
+            infl_dist = influence_distance
+        else:
+            try:
+                infl_dist = params['influence_distance'].get_value()[0]
+            except KeyError:
+                raise ParameterError('"influence_distance" not provided by calculator."')
+        self.influence_distance = infl_dist
+
         # NOTE to be filled
-        pass
+        # create neighbor list based on `infl_dist`
 
     # TODO check also that the conf provide these properties
     def check_compute_property(self):
@@ -173,6 +182,9 @@ class Calculator(object):
         # self.params['epsilon'] = Parameter(0.4)
 
         # NOTE to be filled
+        self.influence_distance = None
+
+        # NOTE to be filled
         self.compute_arguments_class = ComputeArguments
 
         # TODO maybe use metaclass to call this automatically after initialization
@@ -227,12 +239,16 @@ class Calculator(object):
             use_stress = [use_stress for _ in range(N)]
 
         self.compute_arguments = []
+        infl_dist = self.get_influence_distance()
         for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
-            ca = self.compute_arguments_class(conf, e, f, s)
+            ca = self.compute_arguments_class(conf, infl_dist, e, f, s)
             self.compute_arguments.append(ca)
 
         logger.info('calculator for %d configurations created.', len(configs))
         return self.compute_arguments
+
+    def get_influence_distance(self):
+        return self.influence_distance
 
     def get_compute_arguments(self):
         return self.compute_arguments
@@ -347,6 +363,9 @@ class Calculator(object):
 
     def set_fitting_params(self, **kwargs):
         self.fitting_params.set(**kwargs)
+
+    def set_one_fitting_params(self, name, settings):
+        self.fitting_params.set_one(name, settings)
 
     def save_fitting_params(self):
         self.fitting_params.save()
@@ -535,12 +554,6 @@ class FittingParameter(object):
         one component of the parameter, which can contain 1, 2, or 3 elements.
         See self.read() for the options of the elements.
 
-        Note
-        ----
-        If a parameter name starts with an underscore `_`, the underscore will be
-        removed. This is usefull when a parameter happens to have the same name as a
-        Python keyword (e.g. `lambda`).
-
         Example
         -------
 
@@ -550,8 +563,6 @@ class FittingParameter(object):
                           [2.0, 'INF', 3.0]])
         """
         for name, settings in kwargs.items():
-            if name.startswith('_'):
-                name = name[1:]
             if name in self.params:
                 msg = 'Parameter "{}" already set.'.format(name)
                 warnings.warn(msg, category=Warning)

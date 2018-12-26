@@ -2,6 +2,7 @@ import numpy as np
 from .calculator import ComputeArguments
 from .calculator import Calculator
 from .calculator import Parameter
+from .calculator import ParameterError
 from ..neighbor import NeighborList
 from ..neighbor import assemble_forces
 from ..neighbor import assemble_stress
@@ -15,20 +16,31 @@ class LJComputeArguments(ComputeArguments):
 
     def __init__(self, *args, **kwargs):
         super(LJComputeArguments, self).__init__(*args, **kwargs)
-        self.cutoff = 5.
-        self.refresh()
+        self.refresh(self.influence_distance)
 
-    def refresh(self):
+    def refresh(self, influence_distance=None, params=None):
+        """ Refresh settings.
+
+        Recreating the neighbor list due to the change of influence distance.
+        """
+        if influence_distance is not None:
+            infl_dist = influence_distance
+        else:
+            try:
+                infl_dist = params['influence_distance'].get_value()[0]
+            except KeyError:
+                raise ParameterError('"influence_distance" not provided by calculator."')
+        self.influence_distance = infl_dist
+
         # create neighbor list
-        cutoff = {'C-C': self.cutoff}
+        cutoff = {'C-C': infl_dist}
         neigh = NeighborList(self.conf, cutoff, padding_need_neigh=True)
         self.neigh = neigh
 
     def compute(self, params):
-        epsilon = params['epsilon'].value[0]
-        sigma = params['sigma'].value[0]
-
-        rcut = self.cutoff
+        epsilon = params['epsilon'].get_value()[0]
+        sigma = params['sigma'].get_value()[0]
+        rcut = params['cutoff'].get_value()[0]
         coords = self.conf.coords
 
         coords_including_padding = np.reshape(self.neigh.coords, (-1, 3))
@@ -96,5 +108,9 @@ class LennardJones(Calculator):
         super(LennardJones, self).__init__(*args, **kwargs)
         self.params['epsilon'] = Parameter(value=[1.0])
         self.params['sigma'] = Parameter(value=[2.0])
+        self.params['cutoff'] = Parameter(value=[5.0])
         self.compute_arguments_class = LJComputeArguments
         self.fitting_params = self.init_fitting_params(self.params)
+
+    def get_influence_distance(self):
+        return self.params['cutoff'].get_value()[0]

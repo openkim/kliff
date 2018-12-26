@@ -22,7 +22,7 @@ class KIMComputeArguments(ComputeArguments):
 
     implemented_property = []
 
-    def __init__(self, kim_ca, supported_species, influence_distance, *args, **kwargs):
+    def __init__(self, kim_ca, supported_species, *args, **kwargs):
         """
         Parameters
         ----------
@@ -30,13 +30,9 @@ class KIMComputeArguments(ComputeArguments):
 
         supported_species: dict
             Key and value are species string and integer code, respectively.
-
-        influence_distance: float
-            The `cutoff` used to construct neighbor list.
         """
         self.kim_ca = kim_ca
         self.supported_species = supported_species
-        self.influence_distance = influence_distance
         super(KIMComputeArguments, self).__init__(*args, **kwargs)
 
         # neighbor list
@@ -57,7 +53,7 @@ class KIMComputeArguments(ComputeArguments):
 
         self._init_neigh()
 
-        self.refresh()
+        self.refresh(self.influence_distance)
 
     def check_compute_property(self):
         def add_to_compute_property(compute_property, name):
@@ -119,8 +115,9 @@ class KIMComputeArguments(ComputeArguments):
                 if name != kim_ccn.GetNeighborList:
                     report_error('Unsupported required ComputeCallback "{}"'.format(name))
 
-    def refresh(self):
-        self.update_neigh(self.influence_distance)
+    def refresh(self, influence_distance=None, params=None):
+        self.influence_distance = influence_distance
+        self.update_neigh(influence_distance)
         self.register_data(self.compute_energy, self.compute_forces)
 
     def update_neigh(self, influence_distance):
@@ -376,14 +373,14 @@ class KIM(Calculator):
             use_stress = [use_stress for _ in range(N)]
 
         supported_species = self.get_model_supported_species()
-        cutoff = self.get_cutoff()
+        infl_dist = self.get_kim_influence_distance()
 
         self.compute_arguments = []
         for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
             kim_ca, error = self.kim_model.compute_arguments_create()
             check_error(error, 'kim_model.compute_arguments_create')
             ca = self.compute_argument_class(
-                kim_ca, supported_species, cutoff, conf, e, f, s)
+                kim_ca, supported_species, conf, infl_dist, e, f, s)
             self.compute_arguments.append(ca)
 
         return self.compute_arguments
@@ -451,22 +448,32 @@ class KIM(Calculator):
 
         return species
 
-    def get_cutoff(self):
-        """Get the largest cutoff of a model.
+#    def get_cutoff(self):
+#        """Get the largest cutoff of a model.
+#
+#        Return: float
+#          cutoff
+#        """
+#
+#        cutoff = self.kim_model.get_influence_distance()
+#
+#        # TODO we need to make changes to support multiple cutoffs
+#        # TODO modify kimpy to change the function name
+#        model_cutoffs, padding_hints = self.kim_model.get_neighbor_list_cutoffs_and_hints()
+#        if model_cutoffs.size != 1:
+#            report_error('too many cutoffs')
+#
+#        return cutoff
+
+    def get_kim_influence_distance(self):
+        """Get the influence distance of a model.
 
         Return: float
-          cutoff
+            influence distance
         """
 
-        cutoff = self.kim_model.get_influence_distance()
-
-        # TODO we need to make changes to support multiple cutoffs
-        # TODO modify kimpy to change the function name
-        model_cutoffs, padding_hints = self.kim_model.get_neighbor_list_cutoffs_and_hints()
-        if model_cutoffs.size != 1:
-            report_error('too many cutoffs')
-
-        return cutoff
+        infl_dist = self.kim_model.get_influence_distance()
+        return infl_dist
 
 
 class InputError(Exception):
