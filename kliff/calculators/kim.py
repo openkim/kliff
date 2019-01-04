@@ -8,7 +8,7 @@ import kliff
 from ..dataset import Configuration
 from .calculator import ComputeArguments
 from .calculator import Calculator
-from .calculator import Parameter
+from .parameter import Parameter
 from .calculator import length_equal
 from ..neighbor import assemble_forces
 from ..neighbor import assemble_stress

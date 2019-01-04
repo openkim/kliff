@@ -3,7 +3,7 @@ import warnings
 from collections import OrderedDict
 from kliff.calculators import Parameter
 from kliff.calculators import FittingParameter
-from kliff.calculators.calculator import ParameterError
+from kliff.calculators.parameter import ParameterError
 
 
 def test_parameter():
