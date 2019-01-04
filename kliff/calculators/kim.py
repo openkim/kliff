@@ -373,7 +373,7 @@ class KIM(Calculator):
             use_stress = [use_stress for _ in range(N)]
 
         supported_species = self.get_model_supported_species()
-        infl_dist = self.get_kim_influence_distance()
+        infl_dist = self.get_influence_distance()
 
         self.compute_arguments = []
         for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
@@ -465,7 +465,7 @@ class KIM(Calculator):
 #
 #        return cutoff
 
-    def get_kim_influence_distance(self):
+    def get_influence_distance(self):
         """Get the influence distance of a model.
 
         Return: float
