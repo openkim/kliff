@@ -203,13 +203,20 @@ class Loss(object):
         self.calculator_type = calculator.__class__.__name__
 
         if self.calculator_type != 'NeuralNetwork':
-
             self.compute_arguments = self.calculator.get_compute_arguments()
             self.calculator.update_model_params()
-            infl_dist = self.calculator.get_influence_distance()
-            # TODO can be parallelized
-            for ca in self.compute_arguments:
-                ca.refresh(infl_dist)
+            if self.calculator_type == 'WrapperCalculator':
+                calculators = self.calculator.calculators
+            else:
+                calculators = [self.calculator]
+            for calc in calculators:
+                print('@@ calc', calc)
+                infl_dist = calc.get_influence_distance()
+                cas = calc.get_compute_arguments()
+                # TODO can be parallelized
+                for ca in cas:
+                    print('@@ infl', infl_dist)
+                    ca.refresh(infl_dist)
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 #
@@ -319,8 +326,7 @@ class Loss(object):
                     raise Exception(
                         'minimization method "{}" not supported.'.format(method))
 
-                self.calculator.model.write_kim_ann(
-                    sess, fname='ann_kim.params')
+                self.calculator.model.write_kim_ann(sess, fname='ann_kim.params')
 
     def get_residual(self, x):
         """ Compute the residual for the cost.
@@ -340,25 +346,47 @@ class Loss(object):
         # parallel computing of residual
         cas = self.calculator.get_compute_arguments()
 
-        # compute residual
-        if self.nprocs > 1:
-            residuals = parallel.parmap2(
-                self._get_residual_single_config,
-                cas,
-                self.nprocs,
-                self.calculator,
-                self.residual_fn,
-                self.residual_data)
-            residual = np.concatenate(residuals)
+        if self.calculator_type == 'WrapperCalculator':
+            calc_list = self.calculator.get_calculator_list()
+            X = zip(cas, calc_list)
+            if self.nprocs > 1:
+                residuals = parallel.parmap3(
+                    self._get_residual_single_config,
+                    X,
+                    self.nprocs,
+                    self.residual_fn,
+                    self.residual_data)
+                residual = np.concatenate(residuals)
+            else:
+                residual = []
+                for ca, calc in X:
+                    current_residual = self._get_residual_single_config(
+                        ca,
+                        calc,
+                        self.residual_fn,
+                        self.residual_data)
+                    residual = np.concatenate((residual, current_residual))
+
         else:
-            residual = []
-            for ca in cas:
-                current_residual = self._get_residual_single_config(
-                    ca,
+            # compute residual
+            if self.nprocs > 1:
+                residuals = parallel.parmap2(
+                    self._get_residual_single_config,
+                    cas,
+                    self.nprocs,
                     self.calculator,
                     self.residual_fn,
                     self.residual_data)
-                residual = np.concatenate((residual, current_residual))
+                residual = np.concatenate(residuals)
+            else:
+                residual = []
+                for ca in cas:
+                    current_residual = self._get_residual_single_config(
+                        ca,
+                        self.calculator,
+                        self.residual_fn,
+                        self.residual_data)
+                    residual = np.concatenate((residual, current_residual))
 
         return residual
 

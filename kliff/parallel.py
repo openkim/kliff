@@ -80,6 +80,48 @@ def func2(f, X, args, worker_end):
         results.append((i, f(x, *args)))
     worker_end.send(results)
 
+#
+# Accept class method as function, and X needs not to be picklable.
+#
+# TODO `pairs` and `sorted` may be removed since order here is not important
+#
+# parallel over multiple types of objects, i.e. `X` cound be a list of tuple
+#
+
+
+def parmap3(f, X, nprocs, *args):
+
+    pairs = [(i, x) for i, x in enumerate(X)]
+
+    # shuffle and divide into `nprocs` equally-numbered parts
+    shuffle(pairs)
+    groups = np.array_split(pairs, nprocs)
+
+    processes = []
+    managers = []
+    for g in range(nprocs):
+        manager_end, worker_end = mp.Pipe(duplex=False)
+        p = mp.Process(target=func3, args=(f, groups[g], args, worker_end,))
+        p.daemon = True
+        p.start()
+        processes.append(p)
+        managers.append(manager_end)
+
+    results = []
+    for m in managers:
+        results.extend(m.recv())
+    [p.join() for p in processes]
+
+    results = [r for i, r in sorted(results)]
+    return results
+
+
+def func3(f, X, args, worker_end):
+    results = []
+    for i, x in X:
+        results.append((i, f(*x, *args)))
+    worker_end.send(results)
+
 
 if __name__ == '__main__':
 

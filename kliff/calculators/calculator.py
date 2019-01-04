@@ -406,6 +406,81 @@ class Calculator(object):
         self.update_model_params()
 
 
+class WrapperCalculator(object):
+    """Wrapper to deal with the fitting of multiple models."""
+
+    def __init__(self, *calculators):
+        """
+        Parameters
+        ----------
+
+        calculators: instance of Calculator
+        """
+        self.calculators = calculators
+        self._start_end = self._set_start_end()
+
+    def _set_start_end(self):
+        """Compute the start and end indices of the `opt_params` of each calculator
+        in the `opt_params` of the wrapper calculator."""
+        start_end = []
+        i = 0
+        for calc in self.calculators:
+            N = calc.get_number_of_opt_params()
+            start = i
+            end = i+N
+            start_end.append((start, end))
+            i += N
+        return start_end
+
+    def get_compute_arguments(self):
+        all_cas = []
+        for calc in self.calculators:
+            cas = calc.get_compute_arguments()
+            all_cas.extend(cas)
+        return all_cas
+
+    def get_number_of_opt_params(self):
+        N = 0
+        for calc in self.calculators:
+            N += calc.get_number_of_opt_params()
+        return N
+
+    def get_opt_params(self):
+        opt_params = []
+        for calc in self.calculators:
+            p = calc.get_opt_params()
+            opt_params.extend(p)
+        return opt_params
+
+    def get_opt_params_bounds(self):
+        bounds = []
+        for calc in self.calculators:
+            b = calc.get_opt_params_bounds()
+            bounds.extend(b)
+        return bounds
+
+    def update_model_params(self):
+        for calc in self.calculators:
+            calc.update_model_params()
+
+    def update_params(self, opt_params):
+        for i, calc in enumerate(self.calculators):
+            start, end = self._start_end[i]
+            p = opt_params[start:end]
+            calc.update_params(p)
+
+    def get_calculator_list(self):
+        """Create a list of calculators.
+
+        Each calculator has `number of configurations` copies in the list.
+        """
+        calc_list = []
+        for calc in self.calculators:
+            N = len(calc.get_compute_arguments())
+            calc_list.extend([calc]*N)
+        return calc_list
+
+
 # TODO take a look at proporty decorator
 class Parameter(object):
 
@@ -460,7 +535,7 @@ class FittingParameter(object):
         ----------
 
         model_params: OrderDict
-            All the paramters of a model (calculator).
+            All the paramters of a model(calculator).
         """
         self.model_params = model_params
 
@@ -548,7 +623,7 @@ class FittingParameter(object):
 
         One or more parameters can be set. Each argument is for one parameter, where
         the argument name is the parameter name, the value of the argument is the
-        settings (including intial value, fix flag, lower bound, and upper bound).
+        settings(including intial value, fix flag, lower bound, and upper bound).
 
         The value of the argument should be a list of list, where each inner list is for
         one component of the parameter, which can contain 1, 2, or 3 elements.
@@ -557,9 +632,9 @@ class FittingParameter(object):
         Example
         -------
 
-        instance.set(A = [['DEFAULT'],
+        instance.set(A=[['DEFAULT'],
                           [2.0, 1.0, 3.0]],
-                     B = [[1.0, 'FIX'],
+                     B=[[1.0, 'FIX'],
                           [2.0, 'INF', 3.0]])
         """
         for name, settings in kwargs.items():
