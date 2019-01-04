@@ -1,6 +1,6 @@
 import kliff
 from kliff.dataset import DataSet
-from kliff.calculators.kim import KIM
+from kliff.calculators import KIM
 from kliff.loss import Loss
 
 kliff.logger.set_level('debug')
@@ -24,6 +24,7 @@ calc.set_fitting_params(
     B=[['DEFAULT']],
     sigma=[[2.0951, 'fix']],
     gamma=[[2.51412]])
+
 # "lambda" is a python keyword, cannot use the above method
 calc.set_one_fitting_params(name='lambda', settings=[[45.5322]])
 

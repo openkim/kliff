@@ -115,8 +115,6 @@ def energy_residual(conf_id, natoms, prediction, reference, data):
 # @tf.custom_gradient
 def test_residual(conf_id, natoms, prediction, reference, data):
 
-    print('@@ natoms', natoms)
-
     def grad(dy):
         return None, None, None, None, None
 
@@ -203,19 +201,17 @@ class Loss(object):
         self.calculator_type = calculator.__class__.__name__
 
         if self.calculator_type != 'NeuralNetwork':
-            self.compute_arguments = self.calculator.get_compute_arguments()
             self.calculator.update_model_params()
+
             if self.calculator_type == 'WrapperCalculator':
                 calculators = self.calculator.calculators
             else:
                 calculators = [self.calculator]
             for calc in calculators:
-                print('@@ calc', calc)
                 infl_dist = calc.get_influence_distance()
                 cas = calc.get_compute_arguments()
                 # TODO can be parallelized
                 for ca in cas:
-                    print('@@ infl', infl_dist)
                     ca.refresh(infl_dist)
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
@@ -518,10 +514,10 @@ class Loss(object):
             return False  # return False will cause Python to re-raise the expection
 
         # write error report
-        self.error_report()
+        # self.error_report()
 
         # write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
-        self.calculator.echo_fitting_params(fname='FINAL_FITTED_PARAMS')
+        # self.calculator.echo_fitting_params(fname='FINAL_FITTED_PARAMS')
 
 
 class LossError(Exception):
