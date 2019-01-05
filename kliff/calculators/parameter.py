@@ -239,7 +239,7 @@ class FittingParameter(object):
           parameter may have one or more values.
         """
 
-        if fname:
+        if fname is not None:
             fout = open(fname, 'w')
         else:
             fout = sys.stdout
@@ -279,7 +279,7 @@ class FittingParameter(object):
 
             print(file=fout)
 
-        if fname:
+        if fname is not None:
             fout.close()
 
     def get_names(self):

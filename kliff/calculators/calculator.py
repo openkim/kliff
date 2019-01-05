@@ -334,26 +334,34 @@ class Calculator(object):
         for key, value in params.items():
             self.set_model_params_no_shape_check(key, value)
 
-    def echo_model_params(self):
-        """Echo the optimizable parameters to stdout.
-        """
-        name = self.__class__.__name__ if self.model_name is None else self.model_name
-        print()
-        print('#'+'='*80)
+    def echo_model_params(self, fname=None):
+        """Echo the optimizable parameters. """
+
+        if fname is not None:
+            fout = open(fname, 'w')
+        else:
+            fout = sys.stdout
+
+        print(file=fout)
+        print('#'+'='*80, file=fout)
         print('# Available parameters to optimize.')
-        print()
-        print('# Model:', name)
-        print('#'+'='*80)
+        print(file=fout)
+        name = self.__class__.__name__ if self.model_name is None else self.model_name
+        print('# Model:', name, file=fout)
+        print('#'+'='*80, file=fout)
         # print('Include the names and the initial guesses (optionally, lower and upper bounds)')
         # print('of the parameters that you want to optimize in the input file.')
-        print()
+        print(file=fout)
         for name, p in self.params.items():
-            print('name:', name)
-            print('value:', p.value)
-            print('size:', p.size)
-            print('dtype:', p.dtype)
-            print('description:', p.description)
-            print()
+            print('name:', name, file=fout)
+            print('value:', p.value, file=fout)
+            print('size:', p.size, file=fout)
+            print('dtype:', p.dtype, file=fout)
+            print('description:', p.description, file=fout)
+            print(file=fout)
+
+        if fname is not None:
+            fout.close()
 
     def init_fitting_params(self, params):
         return FittingParameter(params)
