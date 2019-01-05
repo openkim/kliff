@@ -1,12 +1,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <vector>
-#include "symmetry_function.h"
+#include "sym_fn.h"
 
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(sym_fn, m) {
+PYBIND11_MODULE(sf, m) {
   m.doc() = "Symmetry function descriptor for ANN potential.";
 
   py::class_<Descriptor>(m, "Descriptor")

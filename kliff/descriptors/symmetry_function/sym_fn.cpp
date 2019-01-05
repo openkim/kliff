@@ -1,5 +1,5 @@
 #include <iostream>
-#include "symmetry_function.h"
+#include "sym_fn.h"
 
 #define DIM 3
 typedef double VectorOfSizeDIM[DIM];

@@ -1,12 +1,9 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import numpy as np
 import sys
 from collections import OrderedDict
-from ..neighbor import NeighborList
-from ..error import InputError, SupportError
-from . import sym_fn
+from kliff.neighbor import NeighborList
+from kliff.error import InputError, SupportError
+from . import sf
 
 
 class Descriptor(object):
@@ -53,7 +50,7 @@ class Descriptor(object):
                 fout.write(
                     '# descritor values (without normalization) for atoms in each configuration\n')
         self._species_code = dict()
-        self._cdesc = sym_fn.Descriptor()
+        self._cdesc = sf.Descriptor()
 
         # set cutoff
         self._set_cutoff()
