@@ -121,7 +121,7 @@ def test_lj():
     # calc.echo_fitting_params()
 
     dset = DataSet(order_by_species=False)
-    fname = 'MoS2_energy_forces_stress.xyz'
+    fname = '../configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
     dset.read(fname)
     configs = dset.get_configurations()
 
