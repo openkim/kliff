@@ -200,7 +200,7 @@ class Loss(object):
 
         self.calculator_type = calculator.__class__.__name__
 
-        if self.calculator_type != 'NeuralNetwork':
+        if self.calculator_type != 'ANNCalculator':
             self.calculator.update_model_params()
 
             if self.calculator_type == 'WrapperCalculator':
@@ -242,7 +242,7 @@ class Loss(object):
         kwargs: extra keyword arguments that can be used by the scipy optimizer.
         """
 
-        if self.calculator_type != 'NeuralNetwork':
+        if self.calculator_type != 'ANNCalculator':
 
             if method in self.scipy_least_squares_methods:
                 #    # change unbounded value to np.inf that least_squares needs

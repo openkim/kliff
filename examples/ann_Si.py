@@ -1,13 +1,10 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import sys
 import numpy as np
 import tensorflow as tf
 from kliff.dataset import DataSet
 from kliff.loss import Loss
 from kliff.fingerprints import Fingerprints
-from kliff.descriptor.symmetryfunction import Set51
+from kliff.descriptors.symmetry_function import Set51
 from kliff.neuralnetwork import Dense
 from kliff.neuralnetwork import Dropout
 from kliff.neuralnetwork import Output
@@ -16,8 +13,7 @@ from kliff.neuralnetwork import ANNCalculator
 
 
 descriptor = Set51(cutvalue={'Si-Si': 5.0})
-fps = Fingerprints(descriptor, normalize=True,
-                   fit_forces=True, dtype=tf.float32)
+fps = Fingerprints(descriptor, normalize=True, fit_forces=True, dtype=tf.float32)
 
 model = NeuralNetwork(fingerprints=fps)
 
@@ -38,7 +34,7 @@ model.add_layer(Output())
 
 # training set
 tset = DataSet()
-tset.read('training_set/Si_T300_4')
+tset.read('../tests/configs_extxyz/Si_4')
 configs = tset.get_configurations()
 
 
@@ -48,10 +44,9 @@ calc.create(configs)
 
 
 # loss
-loss = Loss(model, calc)
+loss = Loss(calc)
 #result = loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': 2})
 result = loss.minimize(method='AdamOptimizer', learning_rate=1e-3)
 
 
 print('Results:', result)
-print('Fitting done')

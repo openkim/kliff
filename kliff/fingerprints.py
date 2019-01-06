@@ -204,7 +204,7 @@ class Fingerprints(object):
 
         # configuration features
         name = conf.get_identifier()
-        d = conf.num_atoms_by_species
+        d = conf.get_number_of_atoms_by_species()
         num_atoms_by_species = [d[k] for k in d]
         num_species = len(num_atoms_by_species)
         num_atoms_by_species = np.asarray(
@@ -248,7 +248,7 @@ class Fingerprints(object):
 
         # configuration features
         name = conf.get_identifier().encode()
-        d = conf.num_atoms_by_species
+        d = conf.get_number_of_atoms_by_species()
         num_atoms_by_species = [d[k] for k in d]
         num_species = len(num_atoms_by_species)
         num_atoms_by_species = np.asarray(

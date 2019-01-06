@@ -102,7 +102,7 @@ class Configuration(object):
         return self.natoms
 
     def get_number_of_atoms_by_species(self):
-        return copy.deepcopy(self.num_atoms_by_species)
+        return copy.deepcopy(self.natoms_by_species)
 
     def get_cell(self):
         return self.cell.copy()
