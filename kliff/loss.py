@@ -331,6 +331,11 @@ class Loss(object):
 
             optimizer = optim.SGD(self.calculator.model.parameters(),
                                   lr=0.001, momentum=0.9)
+            n = 0
+            epoch = 0
+            # TODO read in batch size and num_epochs
+            batch_size = self.calculator.batch_size
+            DATASET_SIZE = len(self.calculator.configs)
             while True:
                 try:
                     # zero the parameter gradients
@@ -339,6 +344,11 @@ class Loss(object):
                     loss = self.calculator.get_loss()
                     loss.backward()
                     optimizer.step()
+                    epoch_new = n*batch_size // DATASET_SIZE
+                    if epoch_new > epoch:
+                        epoch = epoch_new
+                        print('Epoch = {}, loss = {}'.format(epoch, loss))
+                    n += 1
                 except StopIteration:
                     break
 

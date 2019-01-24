@@ -135,6 +135,7 @@ class PytorchANNCalculator(object):
         self.configs = configs
 
         # generate pickled fingerprints
+        # TODO temporary not generate it
         self.model.fingerprints.generate_train_tfrecords(configs, nprocs=mp.cpu_count())
         # create dataloader
         fname = 'fingerprints/train.pkl'
@@ -152,6 +153,7 @@ class PytorchANNCalculator(object):
             # [0] because data_loader make it a batch with 1 element
             zeta = x['gen_coords'][0]
             energy = x['energy'][0]
+            natoms = torch.sum(x['num_atoms_by_species'][0])
             if self.fit_forces:
                 zeta.requires_grad = True
             y = self.model(zeta)
@@ -160,8 +162,10 @@ class PytorchANNCalculator(object):
                 dzeta_dr = x['dgen_datomic_coords'][0]
                 forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
                 zeta.requires_grad = False
-            loss += cost_single_config(pred_energy, energy)
+            c = cost_single_config(pred_energy, energy)/natoms**2
+            loss += c
             # TODO add forces cost
+        loss /= self.batch_size
         return loss
 
     @staticmethod
