@@ -33,9 +33,7 @@ class LJComputeArguments(ComputeArguments):
         self.influence_distance = infl_dist
 
         # create neighbor list
-        cutoff = {'C-C': infl_dist}
-        neigh = NeighborList(self.conf, cutoff, padding_need_neigh=True)
-        self.neigh = neigh
+        self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=True)
 
     def compute(self, params):
         epsilon = params['epsilon'].get_value()[0]
@@ -43,13 +41,14 @@ class LJComputeArguments(ComputeArguments):
         rcut = params['cutoff'].get_value()[0]
         coords = self.conf.coords
 
-        coords_including_padding = np.reshape(self.neigh.coords, (-1, 3))
+        coords_including_padding = self.neigh.coords
         if self.compute_forces:
             forces_including_padding = np.zeros_like(coords_including_padding)
 
         energy = 0
         for i, xyz_i in enumerate(coords):
-            for j in self.neigh.neighlist[i]:
+            neighlist, _, _ = self.neigh.get_neigh(i)
+            for j in neighlist:
                 xyz_j = coords_including_padding[j]
                 rij = xyz_j - xyz_i
                 r = np.linalg.norm(rij)
@@ -66,13 +65,13 @@ class LJComputeArguments(ComputeArguments):
         if self.compute_energy:
             self.results['energy'] = energy
         if self.compute_forces:
-            forces = assemble_forces(
-                forces_including_padding, self.neigh.ncontrib, self.neigh.image_pad)
+            forces = assemble_forces(forces_including_padding,
+                                     len(coords), self.neigh.padding_image)
             self.results['forces'] = forces
         if self.compute_stress:
             volume = self.conf.get_volume()
-            stress = assemble_stress(
-                coords_including_padding, forces_including_padding, volume)
+            stress = assemble_stress(coords_including_padding,
+                                     forces_including_padding, volume)
             self.results['stress'] = stress
 
     @staticmethod
