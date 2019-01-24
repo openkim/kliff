@@ -200,7 +200,7 @@ class Loss(object):
 
         self.calculator_type = calculator.__class__.__name__
 
-        if self.calculator_type != 'ANNCalculator':
+        if 'ANNCalculator' not in self.calculator_type:
             self.calculator.update_model_params()
 
             if self.calculator_type == 'WrapperCalculator':
@@ -242,7 +242,7 @@ class Loss(object):
         kwargs: extra keyword arguments that can be used by the scipy optimizer.
         """
 
-        if self.calculator_type != 'ANNCalculator':
+        if 'ANNCalculator' not in self.calculator_type:
 
             if method in self.scipy_least_squares_methods:
                 #    # change unbounded value to np.inf that least_squares needs
@@ -282,13 +282,12 @@ class Loss(object):
             self.calculator.update_params(result.x)
             return result
 
-        else:
+        elif self.calculator_type == 'ANNCalculator':
 
             try:
                 import tensorflow as tf
             except ImportError as e:
-                raise ImportError(
-                    str(e) + '.\nPlease install "tensorflow" first.')
+                raise ImportError(str(e) + '.\nPlease install "tensorflow" first.')
 
             loss = self.calculator.get_loss()
 
@@ -312,8 +311,8 @@ class Loss(object):
                     if options is not None:
                         for key, val in options.items():
                             scipy_interface_options[key] = val
-                    optimizer = tf.contrib.opt.ScipyOptimizerInterface(loss, method=method,
-                                                                       options=scipy_interface_options)
+                    optimizer = tf.contrib.opt.ScipyOptimizerInterface(
+                        loss, method=method, options=scipy_interface_options)
                     init_op = tf.global_variables_initializer()
                     sess.run(init_op)
                     optimizer.minimize(sess)
@@ -323,6 +322,25 @@ class Loss(object):
                         'minimization method "{}" not supported.'.format(method))
 
                 self.calculator.model.write_kim_ann(sess, fname='ann_kim.params')
+
+        elif self.calculator_type == 'PytorchANNCalculator':
+            try:
+                import torch.optim as optim
+            except ImportError as e:
+                raise ImportError(str(e) + '.\nPlease install "pytorch" first.')
+
+            optimizer = optim.SGD(self.calculator.model.parameters(),
+                                  lr=0.001, momentum=0.9)
+            while True:
+                try:
+                    # zero the parameter gradients
+                    optimizer.zero_grad()
+                    # forward + backward + optimize
+                    loss = self.calculator.get_loss()
+                    loss.backward()
+                    optimizer.step()
+                except StopIteration:
+                    break
 
     def get_residual(self, x):
         """ Compute the residual for the cost.

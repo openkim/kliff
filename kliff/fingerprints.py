@@ -1,12 +1,10 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import tensorflow as tf
-import numpy as np
 import os
 import sys
+import pickle
+import numpy as np
 import multiprocessing as mp
-from . import parallel
+import tensorflow as tf
+from kliff import parallel
 
 
 class Fingerprints(object):
@@ -29,11 +27,12 @@ class Fingerprints(object):
       Data type.
     """
 
-    def __init__(self, descriptor, normalize=True, fit_forces=False, dtype=tf.float32):
+    def __init__(self, descriptor, normalize=True, fit_forces=False, dtype=None):
+
         self.descriptor = descriptor
         self.normalize = normalize
         self.fit_forces = fit_forces
-        self.dtype = dtype
+        self.dtype = dtype if dtype is not None else tf.float32
 
         self.train_tfrecords = None
         self.test_tfrecords = None
@@ -75,8 +74,8 @@ class Fingerprints(object):
             self.mean = None
             self.stdev = None
 
-        self._generate_tfrecords(
-            configs, fname, all_zeta, all_dzetadr, nprocs=nprocs)
+        self._generate_tfrecords(configs, fname, all_zeta, all_dzetadr, nprocs=nprocs)
+        self.dump_pickle(configs, fname, all_zeta, all_dzetadr, nprocs=nprocs)
 
         mean_std_name = os.path.join(os.path.dirname(
             fname), 'fingerprints_mean_and_stdev.txt')
@@ -175,16 +174,13 @@ class Fingerprints(object):
                 dzetadr = None
             if self.fit_forces:
                 self._write_tfrecord_energy_and_force(
-                    writer, conf, self.descriptor,
-                    self.normalize, np_dtype, self.mean, self.stdev, zeta, dzetadr)
+                    writer, conf, self.descriptor, self.normalize, np_dtype,
+                    self.mean, self.stdev, zeta, dzetadr)
             else:
                 self._write_tfrecord_energy(
-                    writer, conf, self.descriptor,
-                    self.normalize, np_dtype, self.mean,
-                    self.stdev, zeta)
+                    writer, conf, self.descriptor, self.normalize, np_dtype,
+                    self.mean, self.stdev, zeta)
         writer.close()
-
-        print('Processing {} configurations finished.\n'.format(len(configs)))
 
     @staticmethod
     def _write_tfrecord_energy(writer, conf, descriptor, normalize, np_dtype,
@@ -288,6 +284,134 @@ class Fingerprints(object):
     def _float_feature(value):
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
+    def dump_pickle(self, configs, fname, all_zeta, all_dzetadr,
+                    nprocs=mp.cpu_count()):
+
+        fname = 'fingerprints/train.pkl'
+        if os.path.exists(fname):
+            print('Found existing image data: {}'.format(fname))
+            return
+
+        print('Pickle images to: {}'.format(fname))
+
+        dirname = os.path.dirname(fname)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        if self.dtype == tf.float32:
+            np_dtype = np.float32
+        elif self.dtype == tf.float64:
+            np_dtype = np.float64
+        else:
+            raise ValueError('Unsupported data type "{}".'.format(dtype))
+
+        writer = open(fname, 'ab')
+        for i, conf in enumerate(configs):
+            if i % 100 == 0:
+                print('Processing configuration:', i)
+                sys.stdout.flush()
+            if all_zeta is not None:
+                zeta = all_zeta[i]
+            else:
+                zeta = None
+            if all_dzetadr is not None and self.fit_forces:
+                dzetadr = all_dzetadr[i]
+            else:
+                dzetadr = None
+            if self.fit_forces:
+                self.pickle_energy_and_force(
+                    writer, conf, self.descriptor, self.normalize, np_dtype,
+                    self.mean, self.stdev, zeta, dzetadr)
+            else:
+                self.pickle_energy(
+                    writer, conf, self.descriptor, self.normalize, np_dtype,
+                    self.mean, self.stdev, zeta)
+        writer.close()
+
+        print('Processing {} configurations finished.\n'.format(len(configs)))
+
+    @staticmethod
+    def pickle_energy(writer, conf, descriptor, normalize, np_dtype, mean, stdev, zeta=None):
+        """ Write data to tfrecord format."""
+
+        # descriptor features
+        num_descriptors = descriptor.get_number_of_descriptors()
+        if zeta is None:
+            zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False)
+
+        # do centering and normalzation if needed
+        if normalize:
+            zeta = (zeta - mean) / stdev
+        zeta = np.asarray(zeta, np_dtype)
+
+        # configuration features
+        name = conf.get_identifier()
+        d = conf.get_number_of_atoms_by_species()
+        num_atoms_by_species = [d[k] for k in d]
+        num_species = len(num_atoms_by_species)
+        weight = np.asarray(conf.get_weight(), np_dtype)
+        energy = np.asarray(conf.get_energy(), np_dtype)
+
+        example = {
+            # meta data
+            'num_descriptors': num_descriptors,
+            'num_species': num_species,
+            # input data
+            'name': name,
+            'num_atoms_by_species': num_atoms_by_species,
+            'weight': weight,
+            'gen_coords': zeta,
+            # labels
+            'energy': energy}
+
+        pickle.dump(example, writer)
+
+    @staticmethod
+    def pickle_energy_and_force(writer, conf, descriptor, normalize, np_dtype,
+                                mean, stdev, zeta=None, dzetadr=None):
+        """ Write data to tfrecord format."""
+
+        # descriptor features
+        num_descriptors = descriptor.get_number_of_descriptors()
+        if zeta is None or dzetadr is None:
+            zeta, dzetadr = descriptor.generate_generalized_coords(
+                conf, fit_forces=True)
+
+        # do centering and normalization if needed
+        if normalize:
+            stdev_3d = np.atleast_3d(stdev)
+            zeta = (zeta - mean) / stdev
+            dzetadr = dzetadr / stdev_3d
+        zeta = np.asarray(zeta, np_dtype)
+        dzetadr = np.asarray(dzetadr, np_dtype)
+
+        # configuration features
+        name = conf.get_identifier().encode()
+        d = conf.get_number_of_atoms_by_species()
+        num_atoms_by_species = [d[k] for k in d]
+        num_species = len(num_atoms_by_species)
+        coords = np.asarray(conf.get_coordinates(), np_dtype)
+        weight = np.asarray(conf.get_weight(), np_dtype)
+        energy = np.asarray(conf.get_energy(), np_dtype)
+        forces = np.asarray(conf.get_forces(), np_dtype)
+
+        example = {
+            # meta data
+            'num_descriptors': num_descriptors,
+            'num_species': num_species,
+            # input data
+            'name': name,
+            'num_atoms_by_species': num_atoms_by_species,
+            'weight': weight,
+            'atomic_coords': coords,
+            'gen_coords': zeta,
+            'dgen_datomic_coords': dzetadr,
+            # labels
+            'energy': energy,
+            'forces': forces}
+
+        pickle.dump(example, writer)
+
     @staticmethod
     def welford_mean_and_stdev(configs, descriptor):
         """Compute the mean and standard deviation of fingerprints.
@@ -384,6 +508,34 @@ def read_tfrecords(fnames, fit_forces=False, num_parallel_calls=None, dtype=tf.f
         dataset = dataset.map(
             _parse_energy, num_parallel_calls=num_parallel_calls)
     return dataset
+
+
+def load_pickle(fnames, fit_forces=False, num_parallel_calls=None, dtype=tf.float32):
+    """Read preprocessed TFRecord data from `fname'.
+
+    Parameter
+    ---------
+
+    fnames, str or list of str
+      names of the TFRecords data file.
+
+    fit_forces, bool
+      wheter to fit to forces.
+
+    Return
+    ------
+
+    Instance of tf.data.
+    """
+    data = []
+    with open(fnames, 'rb') as f:
+        try:
+            while True:
+                x = pickle.load(f)
+                data.append(x)
+        except EOFError:
+            pass
+    return data
 
 
 def tfrecords_to_text(tfrecords_path, text_path, fit_forces=False, gradient=False,
