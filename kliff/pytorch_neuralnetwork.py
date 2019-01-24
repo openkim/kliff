@@ -152,10 +152,22 @@ class PytorchANNCalculator(object):
             # [0] because data_loader make it a batch with 1 element
             zeta = x['gen_coords'][0]
             energy = x['energy'][0]
+            if self.fit_forces:
+                zeta.requires_grad = True
             y = self.model(zeta)
             pred_energy = y.sum()
+            if self.fit_forces:
+                dzeta_dr = x['dgen_datomic_coords'][0]
+                forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
+                zeta.requires_grad = False
             loss += cost_single_config(pred_energy, energy)
+            # TODO add forces cost
         return loss
+
+    @staticmethod
+    def compute_forces(energy, zeta, dzeta_dr):
+        denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
+        forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
 
 
 def cost_single_config(pred_energy, energy=None, forces=None):
