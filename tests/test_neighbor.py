@@ -1,95 +1,64 @@
 import numpy as np
 from kliff.neighbor import NeighborList
-from kliff.neighbor import set_padding
 from kliff.dataset import Configuration
 from kliff.dataset import write_extxyz
 
+target_coords = np.asarray(
+    [[0.000000e+00,   0.000000e+00,  0.000000e+00],
+     [1.234160e+00,   7.125400e-01,  0.000000e+00],
+     [0.000000e+00,   0.000000e+00,  3.355150e+00],
+     [1.234160e+00,   7.125400e-01,  3.355150e+00],
+     [-2.468323e+00, -1.425090e+00,  0.000000e+00],
+     [-2.468323e+00, -1.425090e+00,  3.355150e+00],
+     [-1.234162e+00,  7.125400e-01,  0.000000e+00],
+     [-1.234162e+00,  7.125400e-01,  3.355150e+00],
+     [-1.000000e-06, -1.425090e+00,  0.000000e+00],
+     [-1.000000e-06, -1.425090e+00,  3.355150e+00],
+     [1.234161e+00,   2.137630e+00,  0.000000e+00],
+     [1.234161e+00,   2.137630e+00,  3.355150e+00],
+     [2.468322e+00,   0.000000e+00,  0.000000e+00],
+     [2.468322e+00,   0.000000e+00,  3.355150e+00],
+     [3.702483e+00,   2.137630e+00,  0.000000e+00],
+     [3.702483e+00,   2.137630e+00,  3.355150e+00]])
 
-def create_hexagonal(a=2):
-    cell = np.array([[a, 0, 0],
-                     [a/2, np.sqrt(3)/2*a, 0],
-                     [0, 0, 5]])
-    atom1 = [0, 0, 0]
-    atom2 = cell[0]/3. + cell[1]/3. + 0*cell[2]
-    atom3 = cell[0]*1/3. + cell[1]*1/3. + cell[2]/2.
-    atom4 = cell[0]*2/3. + cell[1]*2/3. + cell[2]/2.
+target_species = ['C']*16
+target_species[0] = 'O'
+target_species[10] = 'O'
+target_species[12] = 'O'
+target_species[14] = 'O'
 
-    coords = []
-    coords.extend(atom1)
-    coords.extend(atom2)
-    coords.extend(atom3)
-    coords.extend(atom4)
-    species = ['C', 'H', 'O', 'N']
-
-    return cell, species, coords
-
-
-def create_all(cell, species, coords, PBC, rcut, fname='tmp_test_neighbor.xyz'):
-    pad_coords, pad_species, atom_id = set_padding(cell, PBC, species, coords, rcut)
-    coords1 = np.concatenate((coords, pad_coords))
-    species1 = np.concatenate((species, pad_species))
-    # write to extended xyz file for visualization
-    write_extxyz(fname, cell, PBC, species1, coords1.reshape((-1, 3)))
-    return species1, coords1
-
-
-def test_set_padding():
-    """Check visually that the set_padding function works.
-    By adjusting rcut, one can check the correctness by plot using Ovito.
-    """
-
-    PBC = [1, 1, 1]
-    a = 2
-    cell, species, coords = create_hexagonal(a)
-
-    rcut = 0.5*3**0.5*a + 0.00001    # make rcut/dist >1
-    # rcut = 0.5*3**0.5*a - 0.00001    # make rcut/dist <1
-    # rcut = a/3**0.5 + 0.00001        # have neigh
-    # rcut = a/3**0.5 - 0.00001         # have no neigh
-
-    cell, species, coords, create_hexagonal(a=2)
-    species1, coords1 = create_all(cell, species, coords, PBC,
-                                   rcut, 'tmp_test_neighbor_1.xyz')
-
-    assert len(species1) == 36
-    assert list(species1).count('C') == 9
-    assert list(species1).count('H') == 9
-    assert list(species1).count('O') == 9
-    assert list(species1).count('N') == 9
-
-    rcut = 0.5*3**0.5*a - 0.00001    # make rcut/dist <1
-    cell, species, coords, create_hexagonal(a=2)
-    species1, coords1 = create_all(cell, species, coords, PBC,
-                                   rcut, 'tmp_test_neighbor_2.xyz')
-
-    assert len(species1) == 26
-    assert list(species1).count('C') == 4
-    assert list(species1).count('H') == 9
-    assert list(species1).count('O') == 9
-    assert list(species1).count('N') == 4
+all_indices = [[6, 1, 8], [0, 10, 12], [7, 3, 9], [2, 11, 13]]
 
 
 def test_neigh():
     conf = Configuration()
-    fname = 'training_set/training_set_graphene/bilayer_sep3.36_i0_j0.xyz'
+    fname = 'configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz'
     conf.read(fname)
+    conf.species[0] = 'O'
 
-    rcut = {'C-C': 2}
-    nei = NeighborList(conf, rcut)
-    fname = 'tmp_test_neighbor_3.xyz'
+    neigh = NeighborList(conf, infl_dist=2, padding_need_neigh=False)
+    fname = 'tmp_test_neighbor.xyz'
     cell = conf.get_cell()
     PBC = conf.get_PBC()
-    write_extxyz(fname, cell, PBC, nei.species, nei.coords.reshape((-1, 3)))
+    coords = neigh.get_coords()
+    species = neigh.get_species()
+    write_extxyz(fname, cell, PBC, species, coords)
 
-    assert nei.natoms == 16
-    assert np.allclose(nei.numneigh, [3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    assert np.allclose(nei.neighlist, [[1, 6, 8], [0, 10, 12], [3, 7, 9], [2, 11, 13]])
+    assert np.allclose(coords, target_coords)
+    assert np.array_equal(species, target_species)
 
-    n, neighlist = nei.get_neigh(0)
-    assert n == 3
-    assert np.allclose(neighlist, [1, 6, 8])
+    # contributing
+    for i in range(conf.get_number_of_atoms()):
+        nei_indices, nei_coords, nei_species = neigh.get_neigh(i)
+        assert np.allclose(nei_indices, all_indices[i])
+
+    # padding
+    for i in range(conf.get_number_of_atoms(), len(coords)):
+        nei_indices, nei_coords, nei_species = neigh.get_neigh(4)
+        assert nei_indices.size == 0
+        assert nei_coords.size == 0
+        assert nei_species.size == 0
 
 
 if __name__ == '__main__':
-    test_set_padding()
     test_neigh()
