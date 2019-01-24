@@ -32,6 +32,10 @@ class NeighborList(object):
     species: 1D array
         speices of contributing and padding atoms
 
+    iamge: 1D array
+        atom number, of which an atom is an image (the image of a contributing atom
+        is itself)
+
     padding_image: 1D array
         atom number, of which the padding atom is an image
     """
@@ -62,6 +66,7 @@ class NeighborList(object):
 
         # padding_image[0] = 3: padding atom 1 is the image of contributing atom 3
         self.padding_image = None
+        self.image = None
 
         # neigh
         self.neigh = nl.initialize()
@@ -77,18 +82,19 @@ class NeighborList(object):
         species_code_cb = np.asarray([atomic_number[s]
                                       for s in species_cb], dtype=np.intc)
         out = nl.create_paddings(self.infl_dist, cell, PBC, coords_cb, species_code_cb)
-        coords_pd, species_code_pd, self.padding_image, error = out
+        coords_pd, species_code_pd, image_pd, error = out
         check_error(error, 'nl.create_padding')
         species_pd = [atomic_species[i] for i in species_code_pd]
 
-        # contributing and padding atoms
-        coords = np.concatenate((coords_cb, coords_pd))
-        self.coords = np.asarray(coords, dtype=np.double)
-        self.species = np.concatenate((species_cb, species_pd))
-
-        # flag to indicate whether to create neighborlist for an atom
         num_cb = coords_cb.shape[0]
         num_pd = coords_pd.shape[0]
+
+        self.coords = np.asarray(np.concatenate((coords_cb, coords_pd)), dtype=np.double)
+        self.species = np.concatenate((species_cb, species_pd))
+        self.padding_image = image_pd
+        self.image = np.concatenate((np.arange(num_cb), image_pd))
+
+        # flag to indicate whether to create neighborlist for an atom
         need_neigh = np.ones(num_cb + num_pd, dtype=np.intc)
         if not self.padding_need_neigh:
             need_neigh[num_cb:] = 0
@@ -135,6 +141,10 @@ class NeighborList(object):
     def get_species(self):
         """Return speices of both contributing and padding atoms."""
         return self.species.copy()
+
+    def get_image(self):
+        """Return image of both contributing and padding atoms."""
+        return self.image.copy()
 
     def get_padding_coords(self):
         num_cb = self.conf.get_number_of_atoms()
