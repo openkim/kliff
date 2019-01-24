@@ -10,6 +10,7 @@ dist/
 *.log
 *.out
 *.tfrecords
+*.pkl
 *.edn
 *.lammps
 *.yml

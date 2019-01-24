@@ -56,7 +56,7 @@ def get_descriptor():
 def test_desc():
 
     config = Configuration(format='extxyz')
-    config.read('../dataset/configs_extxyz/Si.xyz')
+    config.read('../configs_extxyz/Si.xyz')
 
     desc = get_descriptor()
     zeta, _ = desc.generate_generalized_coords(config, fit_forces=True)

@@ -81,28 +81,32 @@ class Descriptor(object):
         """
 
         # create neighbor list
-        nei = NeighborList(conf, self._rcut, padding_need_neigh=True)
-        coords = nei.coords
-        species_code = np.array([self._species_code[i] for i in nei.species])
-        Ncontrib = nei.ncontrib
-        Natoms = nei.natoms
-        neighlist = np.concatenate(nei.neighlist)
-        numneigh = nei.numneigh
-        image = nei.image
+        infl_dist = max(self._rcut.values())
+        nei = NeighborList(conf, infl_dist, padding_need_neigh=False)
 
-        # loop to set up generalized coords
+        coords = np.asarray(nei.coords, dtype=np.double)
+        species = np.asarray([self._species_code[i] for i in nei.species], dtype=np.intc)
+        image = np.asarray(nei.image, dtype=np.intc)
+
+        Natoms = len(coords)
+        Ncontrib = conf.get_number_of_atoms()
         Ndesc = self.get_number_of_descriptors()
+
+        neighlist = []
+        numneigh = []
+        for i in range(Ncontrib):
+            neighbors, _, _ = nei.get_neigh(i)
+            neighlist.append(neighbors)
+            numneigh.append(len(neighbors))
+        neighlist = np.asarray(np.concatenate(neighlist), dtype=np.intc)
+        numneigh = np.asarray(numneigh, dtype=np.intc)
 
         if fit_forces:
             gen_coords, d_gen_coords = self._cdesc.get_gen_coords_and_deri(
-                coords.astype(np.double), species_code.astype(np.intc),
-                neighlist.astype(np.intc), numneigh.astype(np.intc),
-                image.astype(np.intc), Natoms, Ncontrib, Ndesc)
+                coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
         else:
             gen_coords = self._cdesc.get_gen_coords(
-                coords.astype(np.double), species_code.astype(np.intc),
-                neighlist.astype(np.intc), numneigh.astype(np.intc),
-                image.astype(np.intc), Natoms, Ncontrib, Ndesc)
+                coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
 
         if self.debug:
             with open('debug_descriptor.txt', 'a') as fout:

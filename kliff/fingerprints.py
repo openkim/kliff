@@ -199,7 +199,7 @@ class Fingerprints(object):
         zeta = np.asarray(zeta, np_dtype).tostring()
 
         # configuration features
-        name = conf.get_identifier()
+        name = conf.get_identifier().encode()
         d = conf.get_number_of_atoms_by_species()
         num_atoms_by_species = [d[k] for k in d]
         num_species = len(num_atoms_by_species)

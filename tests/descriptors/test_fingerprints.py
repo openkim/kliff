@@ -6,11 +6,11 @@ import numpy as np
 import tensorflow as tf
 from kliff.dataset import DataSet
 from kliff.fingerprints import Fingerprints
-from kliff.descriptor.symmetryfunction import Set51
+from kliff.descriptors.symmetry_function import Set51
 
 # training set
 tset = DataSet()
-tset.read('training_set/Si_T300_4')
+tset.read('../configs_extxyz/Si_4')
 configs = tset.get_configurations()
 
 descriptor = Set51(cutvalue={'Si-Si': 6.0})
