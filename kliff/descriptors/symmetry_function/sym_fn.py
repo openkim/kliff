@@ -91,9 +91,9 @@ class SymmetryFunction(object):
             of the descriptor vector (depending on the the choice of hyper-parameters).
 
 
-        grad_zeta: 4D array if grad is `True`, otherwise `None`
+        dzeta_dr: 4D array if grad is `True`, otherwise `None`
             Gradient of descriptor values w.r.t. atomic coordinates.
-            grad_zeta has shape (num_atoms, num_descriptors, num_atoms, DIM), where
+            dzeta_dr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
             num_atoms and num_descriptors has the same meanings as described in zeta.
             DIM = 3 denotes three Cartesian coordinates.
         """
@@ -120,26 +120,26 @@ class SymmetryFunction(object):
         numneigh = np.asarray(numneigh, dtype=np.intc)
 
         if grad:
-            zeta, grad_zeta = self._cdesc.get_gen_coords_and_deri(
+            zeta, dzeta_dr = self._cdesc.get_gen_coords_and_deri(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
             # reshape 3D array to 4D array
-            grad_zeta = grad_zeta.reshape(Ncontrib, Ndesc, Ncontrib, 3)
+            dzeta_dr = dzeta_dr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
         else:
             zeta = self._cdesc.get_gen_coords(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
 
         if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug('='*25 + 'descriptor values (no normalization)' + '='*25)
-            logger.debug('configuration name: %s', conf.get_identifier())
-            logger.debug('atom id    descriptor values ...')
+            logger.debug('\n'+'='*25 + 'descriptor values (no normalization)' + '='*25)
+            logger.debug('\nconfiguration name: %s', conf.get_identifier())
+            logger.debug('\natom id    descriptor values ...')
             for i, line in enumerate(zeta):
-                s = '{}    '.format(i)
+                s = '\n{}    '.format(i)
                 for j in line:
                     s += '{:.15g} '.format(j)
                 logger.debug(s)
 
         if grad:
-            return zeta, grad_zeta
+            return zeta, dzeta_dr
         else:
             return zeta, None
 
