@@ -32,7 +32,7 @@ class Input(object):
         self.iterator = iterator
         self.fit_forces = fit_forces
 
-        self.num_units = self.descriptor.get_number_of_descriptors()
+        self.num_units = len(self.descriptor)
 
         self.config_name = None
         self.num_atoms_by_species = None

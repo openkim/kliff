@@ -108,7 +108,7 @@ class SymmetryFunction(object):
 
         Natoms = len(coords)
         Ncontrib = conf.get_number_of_atoms()
-        Ndesc = self.get_number_of_descriptors()
+        Ndesc = len(self)
 
         neighlist = []
         numneigh = []
@@ -143,7 +143,7 @@ class SymmetryFunction(object):
         else:
             return zeta, None
 
-    def get_number_of_descriptors(self):
+    def __len__(self):
         """The total number of symmetry functions (each hyper-parameter set counts 1)"""
         N = 0
         for key in self._desc:

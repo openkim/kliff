@@ -188,7 +188,7 @@ class Fingerprints(object):
         """ Write data to tfrecord format."""
 
         # descriptor features
-        num_descriptors = descriptor.get_number_of_descriptors()
+        num_descriptors = len(descriptor)
         if zeta is None:
             zeta, _ = descriptor.transform(conf, grad=False)
 
@@ -228,7 +228,7 @@ class Fingerprints(object):
         """ Write data to tfrecord format."""
 
         # descriptor features
-        num_descriptors = descriptor.get_number_of_descriptors()
+        num_descriptors = len(descriptor)
         if zeta is None or dzetadr is None:
             zeta, dzetadr = descriptor.transform(conf, fit_forces=True)
 
@@ -337,7 +337,7 @@ class Fingerprints(object):
         """ Write data to tfrecord format."""
 
         # descriptor features
-        num_descriptors = descriptor.get_number_of_descriptors()
+        num_descriptors = len(descriptor)
         if zeta is None:
             zeta, _ = descriptor.transform(conf, grad=False)
 
@@ -374,7 +374,7 @@ class Fingerprints(object):
         """ Write data to tfrecord format."""
 
         # descriptor features
-        num_descriptors = descriptor.get_number_of_descriptors()
+        num_descriptors = len(descriptor)
         if zeta is None or dzetadr is None:
             zeta, dzetadr = descriptor.transform(conf, grad=True)
 
