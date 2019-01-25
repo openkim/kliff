@@ -1,88 +1,106 @@
 import numpy as np
 import sys
+import logging
 from collections import OrderedDict
+import kliff
 from kliff.neighbor import NeighborList
 from kliff.error import InputError, SupportError
 from . import sf
 
+logger = kliff.logger.get_logger(__name__)
 
-class Descriptor(object):
-    """Symmetry functions that transform the cartesian coords to generalized coords.
 
-    Parameters
+class SymmetryFunction(object):
+    """Atom-centered symmetry functions descriptor.
+
+
+    Attributes
     ----------
 
-    hyperparams: dict
-      hyperparameters of descriptors
+    Example
+    -------
+    TODO
 
-      Example
-      -------
-        {'g1': None,
-         'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
-         'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
-        }
-
-    cutname: string
-      cutoff function name
-
-    cutvalue: dict
-      cutoff values based on species.
-
-      Example
-      -------
-      cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
-
-    debug: bool
-      True to enable debug mode where descriptor information will be printed to
-      file named `debug_descriptor.txt'.
-
+    Reference: J. Behler, J. Chem. Phys. 134, 074106 (2011).
     """
 
-    def __init__(self, hyperparams, cutname, cutvalue, debug=False):
+    _cdesc = sf.Descriptor()
 
-        self._hyperparams = hyperparams
+    def __init__(self, hyperparams, cutname, cutvalue):
+        """
+
+        Parameters
+        ----------
+
+        hyperparams: dict
+          hyperparameters of descriptors
+
+          Example
+          -------
+            {'g1': None,
+             'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
+             'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
+            }
+
+        cutname: string
+          cutoff function name
+
+        cutvalue: dict
+          cutoff values based on species.
+
+          Example
+          -------
+          cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+
+        """
+
+        self.hyperparams = hyperparams
+        self.cutname = cutname.lower()
+        self.cutvalue = cutvalue
+
         self._desc = OrderedDict()
-        self._cutname = cutname.lower()
-        self._rcut = self.generate_full_cutoff(cutvalue)
-        self.debug = debug
-        if debug:
-            with open('debug_descriptor.txt', 'w') as fout:
-                fout.write(
-                    '# descritor values (without normalization) for atoms in each configuration\n')
         self._species_code = dict()
-        self._cdesc = sf.Descriptor()
 
         # set cutoff
+        self._rcut = None
         self._set_cutoff()
 
         # set hyper params
         self._set_hyperparams()
 
-    def generate_generalized_coords(self, conf, fit_forces=False):
-        """Transform atomic coords to generalized coords.
+        #logger.info('"SymmetryFunction" descriptor initialized.')
+
+    def transform(self, conf, grad=False):
+        """Transform atomic coords to atomic enviroment descriptor values.
 
         Parameter
         ---------
 
-        conf: Configuration object in which the atoms information are stored
+        conf: Configuration object
 
-        fit_forces: bool
-          Whether to fit to forces.
+        grad: bool (optional)
+            Whether to compute the gradient of descriptor values w.r.t. atomic
+            coordinates.
 
         Returns
         -------
-        gen_coords, 2D float array
-          generalized coordinates of size [Ncontrib, Ndescriptors]
+        zeta: 2D array
+            Descriptor values, each row for one atom.
+            zeta has shape (num_atoms, num_descriptors), where num_atoms is the
+            number of atoms in the configuration, and num_descriptors is the size
+            of the descriptor vector (depending on the the choice of hyper-parameters).
 
-        d_gen_coords, 3D float array (only when fit_forces is True)
-          derivative of generalized coordinates w.r.t atomic coords of size
-          [Ncontrib, Ndescriptors, 3*Ncontrib]
 
+        grad_zeta: 4D array if grad is `True`, otherwise `None`
+            Gradient of descriptor values w.r.t. atomic coordinates.
+            grad_zeta has shape (num_atoms, num_descriptors, num_atoms, DIM), where
+            num_atoms and num_descriptors has the same meanings as described in zeta.
+            DIM = 3 denotes three Cartesian coordinates.
         """
 
         # create neighbor list
         infl_dist = max(self._rcut.values())
-        nei = NeighborList(conf, infl_dist, padding_need_neigh=False)
+        nei = NeighborList(conf, infl_dist, padding_need_neigh=True)
 
         coords = np.asarray(nei.coords, dtype=np.double)
         species = np.asarray([self._species_code[i] for i in nei.species], dtype=np.intc)
@@ -101,28 +119,29 @@ class Descriptor(object):
         neighlist = np.asarray(np.concatenate(neighlist), dtype=np.intc)
         numneigh = np.asarray(numneigh, dtype=np.intc)
 
-        if fit_forces:
-            gen_coords, d_gen_coords = self._cdesc.get_gen_coords_and_deri(
+        if grad:
+            zeta, grad_zeta = self._cdesc.get_gen_coords_and_deri(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
+            # reshape 3D array to 4D array
+            grad_zeta = grad_zeta.reshape(Ncontrib, Ndesc, Ncontrib, 3)
         else:
-            gen_coords = self._cdesc.get_gen_coords(
+            zeta = self._cdesc.get_gen_coords(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
 
-        if self.debug:
-            with open('debug_descriptor.txt', 'a') as fout:
-                fout.write('\n\n#'+'='*80+'\n')
-                fout.write('# configure name: {}\n'.format(conf.id))
-                fout.write('# atom id    descriptor values ...\n\n')
-                for i, line in enumerate(gen_coords):
-                    fout.write('{}    '.format(i))
-                    for j in line:
-                        fout.write('{:.15g} '.format(j))
-                    fout.write('\n')
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.debug('='*25 + 'descriptor values (no normalization)' + '='*25)
+            logger.debug('configuration name: %s', conf.get_identifier())
+            logger.debug('atom id    descriptor values ...')
+            for i, line in enumerate(zeta):
+                s = '{}    '.format(i)
+                for j in line:
+                    s += '{:.15g} '.format(j)
+                logger.debug(s)
 
-        if fit_forces:
-            return gen_coords, d_gen_coords
+        if grad:
+            return zeta, grad_zeta
         else:
-            return gen_coords, None
+            return zeta, None
 
     def get_number_of_descriptors(self):
         """The total number of symmetry functions (each hyper-parameter set counts 1)"""
@@ -133,7 +152,7 @@ class Descriptor(object):
 
     def get_cutoff(self):
         """ Return the name and values of cutoff. """
-        return self._cutname, self._rcut
+        return self.cutname, self._rcut
 
     def get_hyperparams(self):
         """ Return the hyperparameters of descriptors. """
@@ -158,9 +177,11 @@ class Descriptor(object):
 
     def _set_cutoff(self):
 
+        self._rcut = self.generate_full_cutoff(self.cutvalue)
+
         # check cutoff support
-        if self._cutname not in ['cos', 'exp']:
-            raise SupportError("Cutoff type `{}' unsupported.".format(cutname))
+        if self.cutname not in ['cos', 'exp']:
+            raise SupportError("Cutoff type `{}' unsupported.".format(self.cutname))
 
         species = set()
         for key, value in self._rcut.items():
@@ -177,12 +198,12 @@ class Descriptor(object):
                     rcutsym[i][j] = self._rcut[si+'-'+sj]
         except KeyError as e:
             raise InputError('Cutoff for {} not provided.'.format(e))
-        self._cdesc.set_cutoff(self._cutname, rcutsym)
+        self._cdesc.set_cutoff(self.cutname, rcutsym)
 
     def _set_hyperparams(self):
 
         # hyperparams of descriptors
-        for key, values in self._hyperparams.items():
+        for key, values in self.hyperparams.items():
             if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
                 raise SupportError(
                     "Symmetry function `{}' unsupported.".format(key))
@@ -216,7 +237,7 @@ class Descriptor(object):
             self._cdesc.add_descriptor(name, params)
 
 
-class Set51(Descriptor):
+class Set51(SymmetryFunction):
     """ Symmetry function descriptor with the hyperparameters from:
     Artrith and Behler, PRB, 85, 045439 (2012)
 
@@ -308,7 +329,7 @@ class Set51(Descriptor):
         super(Set51, self).__init__(params, cutname, cutvalue)
 
 
-class Set30(Descriptor):
+class Set30(SymmetryFunction):
     """ Symmetry function descriptor with the hyperparameters from:
     Artrith and Behler, PRB, 85, 045439 (2012)
 

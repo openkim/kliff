@@ -190,8 +190,7 @@ class Fingerprints(object):
         # descriptor features
         num_descriptors = descriptor.get_number_of_descriptors()
         if zeta is None:
-            zeta, _ = descriptor.generate_generalized_coords(
-                conf, fit_forces=False)
+            zeta, _ = descriptor.transform(conf, grad=False)
 
         # do centering and normalzation if needed
         if normalize:
@@ -231,8 +230,11 @@ class Fingerprints(object):
         # descriptor features
         num_descriptors = descriptor.get_number_of_descriptors()
         if zeta is None or dzetadr is None:
-            zeta, dzetadr = descriptor.generate_generalized_coords(
-                conf, fit_forces=True)
+            zeta, dzetadr = descriptor.transform(conf, fit_forces=True)
+
+        # reshape dzeta from a 4D to a 3D array (combining the last two dims)
+        new_shape = (dzetadr.shape[0], dzetadr.shape[1], -1)
+        dzetadr = dzetadr.reshape(new_shape)
 
         # do centering and normalization if needed
         if normalize:
@@ -337,7 +339,7 @@ class Fingerprints(object):
         # descriptor features
         num_descriptors = descriptor.get_number_of_descriptors()
         if zeta is None:
-            zeta, _ = descriptor.generate_generalized_coords(conf, fit_forces=False)
+            zeta, _ = descriptor.transform(conf, grad=False)
 
         # do centering and normalzation if needed
         if normalize:
@@ -374,8 +376,11 @@ class Fingerprints(object):
         # descriptor features
         num_descriptors = descriptor.get_number_of_descriptors()
         if zeta is None or dzetadr is None:
-            zeta, dzetadr = descriptor.generate_generalized_coords(
-                conf, fit_forces=True)
+            zeta, dzetadr = descriptor.transform(conf, grad=True)
+
+        # reshape dzeta from a 4D to a 3D array (combining the last two dims)
+        new_shape = (dzetadr.shape[0], dzetadr.shape[1], -1)
+        dzetadr = dzetadr.reshape(new_shape)
 
         # do centering and normalization if needed
         if normalize:
@@ -425,8 +430,7 @@ class Fingerprints(object):
 
         # number of features
         conf = configs[0]
-        zeta, _ = descriptor.generate_generalized_coords(
-            conf, fit_forces=False)
+        zeta, _ = descriptor.transform(conf, grad=False)
         size = zeta.shape[1]
 
         # starting Welford's method
@@ -434,8 +438,7 @@ class Fingerprints(object):
         mean = np.zeros(size)
         M2 = np.zeros(size)
         for i, conf in enumerate(configs):
-            zeta, _ = descriptor.generate_generalized_coords(
-                conf, fit_forces=False)
+            zeta, _ = descriptor.transform(conf, grad=False)
             for row in zeta:
                 n += 1
                 delta = row - mean
@@ -453,8 +456,7 @@ class Fingerprints(object):
         """Compute the mean and standard deviation of fingerprints."""
 
         try:
-            rslt = parallel.parmap(descriptor.generate_generalized_coords,
-                                   configs, nprocs, fit_forces)
+            rslt = parallel.parmap(descriptor.transform, configs, nprocs, fit_forces)
             all_zeta = [pair[0] for pair in rslt]
             all_dzetadr = [pair[1] for pair in rslt]
             stacked = np.concatenate(all_zeta)
