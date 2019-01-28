@@ -93,6 +93,7 @@ class Configuration(object):
             else:
                 natoms_by_species[s] = 0
 
+        self.natoms_by_species = natoms_by_species
         return natoms_by_species
 
     def get_identifier(self):
