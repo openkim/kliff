@@ -1,162 +1,176 @@
 import sys
 import numpy as np
 import multiprocessing as mp
-from kliff.error import InputError, SupportError
+from kliff.error import InputError
 from kliff.neighbor import NeighborList
 from kliff.dataset import Configuration
+from ..descriptor import Descriptor
 
 
 from numpy import sqrt, exp
-from ase.data import atomic_numbers
+from kliff.atomic_data import atomic_number
 from ase.calculators.calculator import Parameters
-# from ..utilities import Data, Logger, importer
-# from .cutoffs import Cosine, dict2cutoff
 
 
-class Bispectrum(object):
-    """Class that calculates spherical harmonic bispectrum fingerprints.
+# class Bispectrum(object):
+#    """Class that calculates spherical harmonic bispectrum fingerprints.
+#
+#    Parameters
+#    ----------
+#    cutoff : object or float
+#        Cutoff function, typically from amp.descriptor.cutoffs.  Can be also
+#        fed as a float representing the radius above which neighbor
+#        interactions are ignored; in this case a cosine cutoff function will be
+#        employed.  Default is a 6.5-Angstrom cosine cutoff.
+#
+#    Gs : dict
+#        Dictionary of symbols and dictionaries for making fingerprints.  Either
+#        auto-genetrated, or given in the following form, for example:
+#
+#               >>> Gs = {"Au": {"Au": 3., "O": 2.}, "O": {"Au": 5., "O": 10.}}
+#
+#    jmax : integer or half-integer or dict
+#        Maximum degree of spherical harmonics that will be included in the
+#        fingerprint vector. Can be also fed as a dictionary with chemical
+#        species as keys.
+#
+#    dblabel : str
+#        Optional separate prefix/location for database files, including
+#        fingerprints, fingerprint derivatives, and neighborlists. This file
+#        location can be shared between calculator instances to avoid
+#        re-calculating redundant information. If not supplied, just uses the
+#        value from label.
+#
+#    elements : list
+#        List of allowed elements present in the system. If not provided, will
+#        be found automatically.
+#
+#    """
+#
+#    def __init__(self, cutoff=5., Gs=None, jmax=5, dblabel=None, elements=None):
+#
+#        # If the cutoff is provided as a number, Cosine function will be used
+#        # by default.
+#        if isinstance(cutoff, int) or isinstance(cutoff, float):
+#            cutoff = Cosine(cutoff)
+#        # If the cutoff is provided as a dictionary, assume we need to load it
+#        # with dict2cutoff.
+#        if type(cutoff) is dict:
+#            cutoff = dict2cutoff(cutoff)
+#
+#        # The parameters dictionary contains the minimum information
+#        # to produce a compatible descriptor; that is, one that gives
+#        # an identical fingerprint when fed an ASE image.
+#        p = self.parameters = Parameters(
+#            {'importname': '.descriptor.bispectrum.Bispectrum'})
+#        p.cutoff = cutoff.todict()
+#        p.Gs = Gs
+#        p.jmax = jmax
+#        p.elements = elements
+#
+#        self.dblabel = dblabel
+#        self.parent = None  # Can hold a reference to main Amp instance.
+#
+#    def calculate(self, configs, nprocs=mp.cpu_count(), derivatives=False):
+#        """Calculates the fingerpints of the images, for the ones not already
+#        done.
+#
+#        Parameters
+#        ----------
+#        images : list or str
+#            List of ASE atoms objects with positions, symbols, energies, and
+#            forces in ASE format. This is the training set of data. This can
+#            also be the path to an ASE trajectory (.traj) or database (.db)
+#            file. Energies can be obtained from any reference, e.g. DFT
+#            calculations.
+#
+#        nprocs: int
+#            Number of processors
+#
+#        derivatives : bool
+#            Decides whether or not fingerprintprimes should also be calculated.
+#        """
+#        if derivatives is True:
+#            import warnings
+#            warnings.warn('Zernike descriptor cannot train forces yet. '
+#                          'Force training automatically turnned off. ')
+#            derivatives = False
+#
+#        if (self.dblabel is None) and hasattr(self.parent, 'dblabel'):
+#            self.dblabel = self.parent.dblabel
+#        self.dblabel = 'amp-data' if self.dblabel is None else self.dblabel
+#
+#        p = self.parameters
+#
+#        if p.elements is None:
+#            p.elements = set([conf.get_species() for conf in configs])
+#        p.elements = sorted(p.elements)
+#
+#        if p.Gs is None:
+#            p.Gs = generate_coefficients(p.elements)
+#
+#        # compute neighbor list
+#        if not hasattr(self, 'neighborlist'):
+#            calc = NeighborlistCalculator(cutoff=p.cutoff['kwargs']['Rc'])
+#            self.neighborlist = Data(filename='%s-neighborlists'
+#                                     % self.dblabel,
+#                                     calculator=calc)
+#        self.neighborlist.calculate_items(images, parallel=parallel, log=log)
+#
+#        # compute fingerprints
+#        if not hasattr(self, 'fingerprints'):
+#            calc = FingerprintCalculator(neighborlist=self.neighborlist,
+#                                         Gs=p.Gs,
+#                                         jmax=p.jmax,
+#                                         cutoff=p.cutoff,)
+#            self.fingerprints = Data(filename='%s-fingerprints'
+#                                     % self.dblabel,
+#                                     calculator=calc)
+#        self.fingerprints.calculate_items(images, parallel=parallel, log=log)
+#
+#    def get_number_of_descriptors(self):
+#        # Counts the number of descriptors for each element.
+#        no_of_descriptors = {}
+#        for element in p.elements:
+#            count = 0
+#            if isinstance(p.jmax, dict):
+#                for _2j1 in range(int(2 * p.jmax[element]) + 1):
+#                    for j in range(int(min(_2j1, p.jmax[element])) + 1):
+#                        count += 1
+#            else:
+#                for _2j1 in range(int(2 * p.jmax) + 1):
+#                    for j in range(int(min(_2j1, p.jmax)) + 1):
+#                        count += 1
+#            no_of_descriptors[element] = count
+#
+#        log('Number of descriptors for each element:')
+#        for element in p.elements:
+#            log(' %2s: %d' % (element, no_of_descriptors.pop(element)))
+#
 
-    Parameters
-    ----------
-    cutoff : object or float
-        Cutoff function, typically from amp.descriptor.cutoffs.  Can be also
-        fed as a float representing the radius above which neighbor
-        interactions are ignored; in this case a cosine cutoff function will be
-        employed.  Default is a 6.5-Angstrom cosine cutoff.
-
-    Gs : dict
-        Dictionary of symbols and dictionaries for making fingerprints.  Either
-        auto-genetrated, or given in the following form, for example:
-
-               >>> Gs = {"Au": {"Au": 3., "O": 2.}, "O": {"Au": 5., "O": 10.}}
-
-    jmax : integer or half-integer or dict
-        Maximum degree of spherical harmonics that will be included in the
-        fingerprint vector. Can be also fed as a dictionary with chemical
-        species as keys.
-
-    dblabel : str
-        Optional separate prefix/location for database files, including
-        fingerprints, fingerprint derivatives, and neighborlists. This file
-        location can be shared between calculator instances to avoid
-        re-calculating redundant information. If not supplied, just uses the
-        value from label.
-
-    elements : list
-        List of allowed elements present in the system. If not provided, will
-        be found automatically.
-
-    """
-
-    def __init__(self, cutoff=5., Gs=None, jmax=5, dblabel=None, elements=None):
-
-        # If the cutoff is provided as a number, Cosine function will be used
-        # by default.
-        if isinstance(cutoff, int) or isinstance(cutoff, float):
-            cutoff = Cosine(cutoff)
-        # If the cutoff is provided as a dictionary, assume we need to load it
-        # with dict2cutoff.
-        if type(cutoff) is dict:
-            cutoff = dict2cutoff(cutoff)
-
-        # The parameters dictionary contains the minimum information
-        # to produce a compatible descriptor; that is, one that gives
-        # an identical fingerprint when fed an ASE image.
-        p = self.parameters = Parameters(
-            {'importname': '.descriptor.bispectrum.Bispectrum'})
-        p.cutoff = cutoff.todict()
-        p.Gs = Gs
-        p.jmax = jmax
-        p.elements = elements
-
-        self.dblabel = dblabel
-        self.parent = None  # Can hold a reference to main Amp instance.
-
-    def calculate(self, configs, nprocs=mp.cpu_count(), derivatives=False):
-        """Calculates the fingerpints of the images, for the ones not already
-        done.
-
-        Parameters
-        ----------
-        images : list or str
-            List of ASE atoms objects with positions, symbols, energies, and
-            forces in ASE format. This is the training set of data. This can
-            also be the path to an ASE trajectory (.traj) or database (.db)
-            file. Energies can be obtained from any reference, e.g. DFT
-            calculations.
-
-        nprocs: int
-            Number of processors
-
-        derivatives : bool
-            Decides whether or not fingerprintprimes should also be calculated.
-        """
-        if derivatives is True:
-            import warnings
-            warnings.warn('Zernike descriptor cannot train forces yet. '
-                          'Force training automatically turnned off. ')
-            derivatives = False
-
-        if (self.dblabel is None) and hasattr(self.parent, 'dblabel'):
-            self.dblabel = self.parent.dblabel
-        self.dblabel = 'amp-data' if self.dblabel is None else self.dblabel
-
-        p = self.parameters
-
-        if p.elements is None:
-            p.elements = set([conf.get_species() for conf in configs])
-        p.elements = sorted(p.elements)
-
-        if p.Gs is None:
-            p.Gs = generate_coefficients(p.elements)
-
-        # compute neighbor list
-        if not hasattr(self, 'neighborlist'):
-            calc = NeighborlistCalculator(cutoff=p.cutoff['kwargs']['Rc'])
-            self.neighborlist = Data(filename='%s-neighborlists'
-                                     % self.dblabel,
-                                     calculator=calc)
-        self.neighborlist.calculate_items(images, parallel=parallel, log=log)
-
-        # compute fingerprints
-        if not hasattr(self, 'fingerprints'):
-            calc = FingerprintCalculator(neighborlist=self.neighborlist,
-                                         Gs=p.Gs,
-                                         jmax=p.jmax,
-                                         cutoff=p.cutoff,)
-            self.fingerprints = Data(filename='%s-fingerprints'
-                                     % self.dblabel,
-                                     calculator=calc)
-        self.fingerprints.calculate_items(images, parallel=parallel, log=log)
-
-    def get_number_of_descriptors(self):
-        # Counts the number of descriptors for each element.
-        no_of_descriptors = {}
-        for element in p.elements:
-            count = 0
-            if isinstance(p.jmax, dict):
-                for _2j1 in range(int(2 * p.jmax[element]) + 1):
-                    for j in range(int(min(_2j1, p.jmax[element])) + 1):
-                        count += 1
-            else:
-                for _2j1 in range(int(2 * p.jmax) + 1):
-                    for j in range(int(min(_2j1, p.jmax)) + 1):
-                        count += 1
-            no_of_descriptors[element] = count
-
-        log('Number of descriptors for each element:')
-        for element in p.elements:
-            log(' %2s: %d' % (element, no_of_descriptors.pop(element)))
-
-
-class FingerprintCalculator(object):
+class Bispectrum(Descriptor):
     """For integration with .utilities.Data
     """
 
-    def __init__(self, Gs, jmax, cutoff,):
+    def __init__(self, jmax=5, cutoff=None, Rc=5., *args, **kwargs):
+        super(Bispectrum, self).__init__(*args, **kwargs)
+        """
+        Parameter
+        ---------
+        jmax: int
+
+        cutoff: dict
+            For example cutoff = {'Si-Si':5}
+
+        Rc: float
+        """
+        if 'grad' in kwargs and kwargs['grad']:
+            raise NotImplementedError(
+                'Support for gradients of descriptors not implemented.')
+
         self.globals = Parameters({'cutoff': cutoff,
-                                   'Gs': Gs,
                                    'jmax': jmax})
+        self.Rc = Rc
 
         self.factorial = [1]
         for _ in range(1, int(3. * jmax) + 2):
@@ -164,7 +178,7 @@ class FingerprintCalculator(object):
 
         self._rcut = self.generate_full_cutoff(cutoff)
 
-    def calculate(self, conf, fit_forces=False):
+    def transform(self, conf, grad=False):
         """Makes a list of fingerprints, one per atom, for the fed config.
 
         Parameters
@@ -179,17 +193,20 @@ class FingerprintCalculator(object):
             Each row is a fingerprints for an atom in the configuration.
         """
 
-        nei = NeighborList(conf, self._rcut, padding_need_neigh=True)
-        nei_coords = np.reshape(nei.coords, (-1, 3))  # coords of contribing and padding
-        nei_species = nei.species
+        cutoff = max(self._rcut.values())
+        nei = NeighborList(conf, cutoff, padding_need_neigh=True)
+        coords = nei.coords.reshape(-1, 3)  # coords of contribing and padding
+        species = nei.species
+
+        Gs = generate_coefficients(set(species))
+        self.globals['Gs'] = Gs
 
         fingerprints = []
         for i in range(conf.get_number_of_atoms()):
-            neighbors = nei.neighlist[i]
-            indexfp = self.get_fingerprint(i, nei_coords, nei_species, neighbors)
-            fingerprints.append(indexfp)
-
-        return fingerprints
+            neighbors, _, _ = nei.get_neigh(i)
+            indexfp = self.get_fingerprint(i, coords, species, neighbors)
+            fingerprints.append(indexfp[1])
+        return np.asarray(fingerprints), None
 
     def get_fingerprint(self, index, coords, species, neighbors):
         """Returns the fingerprint of bispectrum for atom
@@ -225,9 +242,8 @@ class FingerprintCalculator(object):
         n_symbols = [species[i] for i in neighbors]
 
         cutoff = self.globals.cutoff
-        #Rc = cutoff['kwargs']['Rc']
-        # TODO modify Rc
-        Rc = 5.0
+        Rc = self.Rc
+        cutoff = max(self._rcut.values())
         jmax = self.globals.jmax
 
         cutoff_fxn = Cosine(Rc)
@@ -530,7 +546,7 @@ def generate_coefficients(elements):
     """
     _G = {}
     for element in elements:
-        _G[element] = atomic_numbers[element]
+        _G[element] = atomic_number[element]
     G = {}
     for element in elements:
         G[element] = _G
@@ -592,18 +608,3 @@ class Cosine(object):
     def __repr__(self):
         return ('<Cosine cutoff with Rc=%.3f from amp.descriptor.cutoffs>'
                 % self.Rc)
-
-
-if __name__ == '__main__':
-
-    Gs = generate_coefficients(['Si'])
-    jmax = 2
-    cutoff = {'Si-Si': 4}
-    fc = FingerprintCalculator(Gs, jmax, cutoff)
-
-    conf = Configuration(format='extxyz')
-    fname = '/home/wenz/Applications/kliff/tests/configs_extxyz/Si.xyz'
-    conf.read(fname)
-
-    rslt = fc.calculate(conf)
-    print('@@@, fp', rslt)
