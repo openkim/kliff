@@ -3,6 +3,7 @@ import sys
 import logging
 from collections import OrderedDict
 import kliff
+from kliff.descriptors import Descriptor
 from kliff.neighbor import NeighborList
 from kliff.error import InputError, SupportError
 from . import sf
@@ -10,7 +11,7 @@ from . import sf
 logger = kliff.logger.get_logger(__name__)
 
 
-class SymmetryFunction(object):
+class SymmetryFunction(Descriptor):
     """Atom-centered symmetry functions descriptor.
 
 
@@ -127,6 +128,7 @@ class SymmetryFunction(object):
         else:
             zeta = self._cdesc.get_gen_coords(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
+            dzeta_dr = None
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug('\n'+'='*25 + 'descriptor values (no normalization)' + '='*25)
@@ -138,10 +140,7 @@ class SymmetryFunction(object):
                     s += '{:.15g} '.format(j)
                 logger.debug(s)
 
-        if grad:
-            return zeta, dzeta_dr
-        else:
-            return zeta, None
+        return zeta, dzeta_dr
 
     def __len__(self):
         """The total number of symmetry functions (each hyper-parameter set counts 1)"""
