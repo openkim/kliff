@@ -198,11 +198,10 @@ class Descriptor(object):
                         dzetadr = dzetadr / stdev_3d
 
                 # pickling data
-                zeta = np.asarray(zeta, self.dtype)
-                name = conf.get_identifier().encode()
-                d = conf.get_number_of_atoms_by_species()
-                num_atoms_by_species = np.asarray([d[k] for k in d], np.intc)
+                name = conf.get_identifier()
+                species = np.asarray(conf.get_species())
                 weight = np.asarray(conf.get_weight(), self.dtype)
+                zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
                 if self.grad:
                     dzetadr = np.asarray(dzetadr, self.dtype)
@@ -210,7 +209,7 @@ class Descriptor(object):
 
                 # TODO maybe change num atoms by species to species list or even conf
                 example = {'name': name,
-                           'num_atoms_by_species': num_atoms_by_species,
+                           'species': species,
                            'weight': weight,
                            'zeta': zeta,
                            'energy': energy}

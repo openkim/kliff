@@ -48,7 +48,6 @@ def test_descriptor():
     fname = '../configs_extxyz/Si.xyz'
     conf = Configuration(format='extxyz', identifier=fname)
     conf.read(fname)
-    conf.count_atoms_by_species()
     configs = [conf, conf]
 
     # case 1
