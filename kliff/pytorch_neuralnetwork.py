@@ -35,6 +35,7 @@ class FingerprintsDataset(Dataset):
         return sample
 
 
+# TODO implement here GPU options
 class FingerprintsDataLoader(DataLoader):
     """ A dataset loader that support number of epochs for the next element method."""
 
@@ -64,14 +65,17 @@ class FingerprintsDataLoader(DataLoader):
 
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, fingerprints, seed=35):
+    def __init__(self, descriptor, seed=35):
         super(NeuralNetwork, self).__init__()
-        self.fingerprints = fingerprints
+        self.descriptor = descriptor
         self.seed = seed
 
-        self.descriptor = self.fingerprints.get_descriptor()
-        self.fit_forces = self.fingerprints.get_fit_forces()
-        self.dtype = self.fingerprints.get_dtype()
+        self.grad = self.descriptor.get_grad()
+        dtype = self.descriptor.get_dtype()
+        if dtype == 'np.float32':
+            self.dtype = torch.float32
+        elif dtype == 'np.float64':
+            self.dtype = torch.float64
 
         self.layer_count = 0
         self.layers = []
@@ -125,20 +129,16 @@ class PytorchANNCalculator(object):
 
         self.data_loader = None
 
-        # self.descriptor = self.fingerprints.get_descriptor()
-        self.fit_forces = self.model.fingerprints.get_fit_forces()
-        self.dtype = self.model.fingerprints.get_dtype()
+        self.grad = self.model.descriptor.grad
+        self.dtype = self.model.descriptor.dtype
 
-    def create(self, configs):
+    def create(self, configs, nprocs=mp.cpu_count()):
         """Preprocess configs into fingerprints, and create data loader for them.
         """
         self.configs = configs
 
         # generate pickled fingerprints
-        # TODO temporary not generate it
-        self.model.fingerprints.generate_train_tfrecords(configs, nprocs=mp.cpu_count())
-        # create dataloader
-        fname = 'fingerprints/train.pkl'
+        fname = self.model.descriptor.generate_train_fingerprints(configs, nprocs=nprocs)
         fp = FingerprintsDataset(fname)
         self.data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=self.num_epochs)
 
@@ -151,15 +151,16 @@ class PytorchANNCalculator(object):
             # chunk of data whose size is smaller than `batch_size`
             x = self.data_loader.next_element()
             # [0] because data_loader make it a batch with 1 element
-            zeta = x['gen_coords'][0]
+            zeta = x['zeta'][0]
             energy = x['energy'][0]
-            natoms = torch.sum(x['num_atoms_by_species'][0])
-            if self.fit_forces:
+            species = x['species'][0]
+            natoms = len(species)
+            if self.grad:
                 zeta.requires_grad = True
             y = self.model(zeta)
             pred_energy = y.sum()
-            if self.fit_forces:
-                dzeta_dr = x['dgen_datomic_coords'][0]
+            if self.grad:
+                dzeta_dr = x['dzeta_dr'][0]
                 forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
                 zeta.requires_grad = False
             c = cost_single_config(pred_energy, energy)/natoms**2

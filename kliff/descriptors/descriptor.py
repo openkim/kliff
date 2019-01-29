@@ -6,6 +6,7 @@ import numpy as np
 import multiprocessing as mp
 import kliff
 from kliff import parallel
+from kliff.atomic_data import atomic_number
 from kliff.error import InputError
 
 logger = kliff.logger.get_logger(__name__)
@@ -29,7 +30,7 @@ class Descriptor(object):
 
     """
 
-    def __init__(self, normalize=True, grad=False, dtype=np.double):
+    def __init__(self, normalize=True, grad=False, dtype=np.float32):
         """
 
 
@@ -48,7 +49,10 @@ class Descriptor(object):
 
         self.normalize = normalize
         self.grad = grad
-        self.dtype = dtype
+        if dtype != np.float32:
+            raise DescriptorError('Descriptor currently only support dtype float32.')
+        else:
+            self.dtype = dtype
 
         self.mean = None
         self.stdev = None
@@ -199,7 +203,8 @@ class Descriptor(object):
 
                 # pickling data
                 name = conf.get_identifier()
-                species = np.asarray(conf.get_species())
+                species = conf.get_species()
+                species = np.asarray([atomic_number[i] for i in species], np.intc)
                 weight = np.asarray(conf.get_weight(), self.dtype)
                 zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
@@ -284,6 +289,9 @@ class Descriptor(object):
 
 
 def dump_mean_stdev(mean, stdev, fname):
+    dirname = os.path.dirname(fname)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
     data = {'mean': mean, 'stdev': stdev}
     with open(fname, 'wb') as f:
         pickle.dump(data, f)

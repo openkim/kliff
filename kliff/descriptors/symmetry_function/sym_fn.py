@@ -27,7 +27,7 @@ class SymmetryFunction(Descriptor):
 
     _cdesc = sf.Descriptor()
 
-    def __init__(self, hyperparams, cutname, cutvalue):
+    def __init__(self, hyperparams, cutname, cutvalue, *args, **kwargs):
         """
 
         Parameters
@@ -54,6 +54,7 @@ class SymmetryFunction(Descriptor):
           cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
 
         """
+        super(SymmetryFunction, self).__init__(*args, *kwargs)
 
         self.hyperparams = hyperparams
         self.cutname = cutname.lower()
@@ -254,7 +255,7 @@ class Set51(SymmetryFunction):
       cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
     """
 
-    def __init__(self, cutvalue, cutname='cos'):
+    def __init__(self, cutvalue, cutname='cos', *args, **kwargs):
 
         params = OrderedDict()
 
@@ -325,7 +326,7 @@ class Set51(SymmetryFunction):
                 elif key == 'g4':
                     val['eta'] /= bhor2ang**2
 
-        super(Set51, self).__init__(params, cutname, cutvalue)
+        super(Set51, self).__init__(params, cutname, cutvalue, *args, **kwargs)
 
 
 class Set30(SymmetryFunction):
@@ -395,4 +396,4 @@ class Set30(SymmetryFunction):
                 elif key == 'g4':
                     val['eta'] /= bhor2ang**2
 
-        super(Set30, self).__init__(params, cutname, cutvalue)
+        super(Set30, self).__init__(params, cutname, cutvalue, *args, **kwargs)
