@@ -8,7 +8,7 @@ from kliff.pytorch_neuralnetwork import NeuralNetwork
 from kliff.pytorch_neuralnetwork import PytorchANNCalculator
 
 
-descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, grad=True)
+descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, grad=True, dtype=np.float64)
 desc_size = len(descriptor)
 
 # dropout for input fingerprint

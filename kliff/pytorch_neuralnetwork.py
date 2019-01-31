@@ -83,6 +83,7 @@ class NeuralNetwork(nn.Module):
 
     Attributes
     -----------
+    layers: list of layers defined in torch.nn
 
     """
 
@@ -105,13 +106,14 @@ class NeuralNetwork(nn.Module):
 
         self.grad = self.descriptor.get_grad()
         dtype = self.descriptor.get_dtype()
-        if dtype == 'np.float32':
+        if dtype == np.float32:
             self.dtype = torch.float32
-        elif dtype == 'np.float64':
+        elif dtype == np.float64:
             self.dtype = torch.float64
+        else:
+            raise NeuralNetworkError('Not support dtype "{}".'.format(dtype))
 
         self.layers = None
-
         torch.manual_seed(seed)
 
     # TODO maybe remove layer['type'], just add a warning saying that this type of
@@ -149,6 +151,9 @@ class NeuralNetwork(nn.Module):
         last = self.layers[-1]['instance']
         if last.out_features != 1:
             raise InputError('"out_features" of last layer should be 1.')
+
+        # cast types
+        self.type(self.dtype)
 
     def forward(self, x):
         for j, layer in enumerate(self.layers):

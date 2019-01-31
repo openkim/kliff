@@ -49,10 +49,7 @@ class Descriptor(object):
 
         self.normalize = normalize
         self.grad = grad
-        if dtype != np.float32:
-            raise DescriptorError('Descriptor currently only support dtype float32.')
-        else:
-            self.dtype = dtype
+        self.dtype = dtype
 
         self.mean = None
         self.stdev = None

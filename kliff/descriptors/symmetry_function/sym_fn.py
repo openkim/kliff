@@ -54,8 +54,7 @@ class SymmetryFunction(Descriptor):
           cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
 
         """
-        super(SymmetryFunction, self).__init__(*args, *kwargs)
-
+        super(SymmetryFunction, self).__init__(*args, **kwargs)
         self.hyperparams = hyperparams
         self.cutname = cutname.lower()
         self.cutvalue = cutvalue
