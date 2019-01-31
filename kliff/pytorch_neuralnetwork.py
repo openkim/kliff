@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from kliff.fingerprints import load_pickle
+from kliff.descriptors.descriptor import load_fingerprints
+from kliff.error import InputError
 
 
 class FingerprintsDataset(Dataset):
@@ -17,12 +18,12 @@ class FingerprintsDataset(Dataset):
         Parameters
         ----------
         fname: string
-            Name of the pickle file.
+            Name of the fingerprints file.
 
         transform: callable (optional):
             Optional transform to be applied on a sample.
         """
-        self.fp = load_pickle(fname)
+        self.fp = load_fingerprints(fname)
         self.transform = transform
 
     def __len__(self):
@@ -37,21 +38,30 @@ class FingerprintsDataset(Dataset):
 
 # TODO implement here GPU options
 class FingerprintsDataLoader(DataLoader):
-    """ A dataset loader that support number of epochs for the next element method."""
+    """A dataset loader that incorporate the support the number of epochs.
+
+    The dataset loader will load an element from the next batch if a batch is fully
+    iterarated. This, in effect, looks like concatenating the dataset the number of
+    epochs times.
+    """
 
     def __init__(self, num_epochs=1, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        num_epochs: int
+            Number of epochs to iterate through the dataset.
+        """
         super(FingerprintsDataLoader, self).__init__(*args, **kwargs)
         self.num_epochs = num_epochs
         self.epoch = 0
         self.iterable = None
 
-    def make_iterable(self):
-        iterable = iter(self)
-        return iterable
-
     def next_element(self):
+        """ Get the next data element.
+        """
         if self.iterable is None:
-            self.iterable = self.make_iterable()
+            self.iterable = self._make_iterable()
         try:
             element = self.iterable.next()
         except StopIteration:
@@ -59,13 +69,36 @@ class FingerprintsDataLoader(DataLoader):
             if self.epoch == self.num_epochs:
                 raise StopIteration
             else:
-                self.iterable = self.make_iterable()
+                self.iterable = self._make_iterable()
                 element = self.next_element()
         return element
 
+    def _make_iterable(self):
+        iterable = iter(self)
+        return iterable
+
 
 class NeuralNetwork(nn.Module):
+    """ Neural Network class build upon PyTorch.
+
+    Attributes
+    -----------
+
+    """
+
     def __init__(self, descriptor, seed=35):
+        """
+
+        Parameters
+        ----------
+
+        descriptor: descriptor object
+            An instance of a descriptor that transforms atomic environment information
+            to the fingerprints that are used as the input for the NN.
+
+        seed: int (optional)
+          random seed to be used by torch.manual_seed()
+        """
         super(NeuralNetwork, self).__init__()
         self.descriptor = descriptor
         self.seed = seed
@@ -77,28 +110,45 @@ class NeuralNetwork(nn.Module):
         elif dtype == 'np.float64':
             self.dtype = torch.float64
 
-        self.layer_count = 0
-        self.layers = []
+        self.layers = None
 
         torch.manual_seed(seed)
 
-    def add_layer(self, layer):
-        """Add a layer to the network.
+    # TODO maybe remove layer['type'], just add a warning saying that this type of
+    # layer is not supported be converted to KIM yet
+    def add_layers(self, *layers):
+        """Add layers to the sequential model.
 
         Parameters
         ----------
-        layer: layer object
-            Options are `Dense`, `Dropout`, and `Output`.
-
+        layers: torch.nn layers
+            torch.nn layers that are used to build a sequential model.
+            Available ones including: torch.nn.Linear, torch.nn.Dropout, and
+            torch.nn.Sigmoid among others. See https://pytorch.org/docs/stable/nn.html
+            for a full list of torch.nn layers.
         """
-        layer_type = layer.__class__.__name__
-        scope = 'layer' + str(len(self.layers))
-        current_layer = {'instance': layer, 'type': layer_type, 'scope': scope}
-        self.layers.append(current_layer)
+        if self.layers is not None:
+            raise NeuralNetworkError(
+                '"add_layers" called multiple times. It should be called only once.')
+        else:
+            self.layers = []
 
-        # set layer as an attribute so that the parameters are automatically registered
-        setattr(self, 'layer_{}'.format(self.layer_count), layer)
-        self.layer_count += 1
+        for la in layers:
+            la_type = la.__class__.__name__
+            la_scope = 'layer' + str(len(self.layers))
+            current_layer = {'instance': la, 'type': la_type, 'scope': la_scope}
+            self.layers.append(current_layer)
+            # set layer as an attribute so that parameters are automatically registered
+            setattr(self, 'layer_{}'.format(len(self.layers)), la)
+
+        # check shape of first layer and last layer
+        first = self.layers[0]['instance']
+        if first.in_features != len(self.descriptor):
+            raise InputError(
+                '"in_features" of first layer should be equal to descriptor size.')
+        last = self.layers[-1]['instance']
+        if last.out_features != 1:
+            raise InputError('"out_features" of last layer should be 1.')
 
     def forward(self, x):
         for j, layer in enumerate(self.layers):
@@ -180,37 +230,10 @@ def cost_single_config(pred_energy, energy=None, forces=None):
     return cost
 
 
-def NN_model(data_loader, batch_size=2):
-    n = 0
-    eof = False
-    while True:
+class NeuralNetworkError(Exception):
+    def __init__(self, msg):
+        super(NeuralNetworkError, self).__init__(msg)
+        self.msg = msg
 
-        cost = 0
-        for _ in range(batch_size):
-            try:
-                x = data_loader.next_element()
-                n += 1
-            except StopIteration:
-                eof = True
-                break
-            zeta = x['gen_coords']
-            deriv_zeta = x['dgen_datomic_coords']
-            energy = x['energy']
-            forces = x['forces']
-            y = cost_single_config(zeta, energy)
-            cost += y
-
-        if (not eof) or (eof and (not n % batch_size == 0)):
-            print('@@@cost', cost)
-
-        if eof:
-            break
-
-
-if __name__ == '__main__':
-
-    fname = 'fingerprints/train.pkl'
-    fp = FingerprintsDataset(fname)
-
-    fp_loader = FingerprintsDataLoader(dataset=fp, num_epochs=3)
-    NN_model(fp_loader)
+    def __str__(self):
+        return self.msg

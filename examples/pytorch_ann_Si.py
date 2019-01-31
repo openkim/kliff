@@ -9,14 +9,15 @@ from kliff.pytorch_neuralnetwork import PytorchANNCalculator
 
 
 descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, grad=True)
-model = NeuralNetwork(descriptor)
+desc_size = len(descriptor)
 
 # dropout for input fingerprint
-model.add_layer(nn.Linear(51, 30))
-model.add_layer(nn.Sigmoid())
-model.add_layer(nn.Linear(30, 30))
-model.add_layer(nn.Sigmoid())
-model.add_layer(nn.Linear(30, 1))
+model = NeuralNetwork(descriptor)
+model.add_layers(nn.Linear(desc_size, 30),
+                 nn.Sigmoid(),
+                 nn.Linear(30, 30),
+                 nn.Sigmoid(),
+                 nn.Linear(30, 1))
 
 
 # training set
