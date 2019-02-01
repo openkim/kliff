@@ -1,25 +1,22 @@
 import sys
 import numpy as np
-import torch.nn as nn
 from kliff.dataset import DataSet
 from kliff.loss import Loss
 from kliff.descriptors.symmetry_function import Set51
-from kliff.pytorch_neuralnetwork import NeuralNetwork
-from kliff.pytorch_neuralnetwork import PytorchANNCalculator
-from kliff.pytorch_neuralnetwork import Dropout
+import kliff.pytorch_neuralnetwork as nn
 
 
 descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, grad=True, dtype=np.float64)
 desc_size = len(descriptor)
 
 # dropout for input fingerprint
-model = NeuralNetwork(descriptor)
+model = nn.NeuralNetwork(descriptor)
 model.add_layers(nn.Linear(desc_size, 30),
                  nn.Sigmoid(),
-                 Dropout(p=0.1),
+                 nn.Dropout(p=0.1),
                  nn.Linear(30, 30),
                  nn.Sigmoid(),
-                 Dropout(p=0.1),
+                 nn.Dropout(p=0.1),
                  nn.Linear(30, 1))
 
 
@@ -30,7 +27,7 @@ configs = tset.get_configurations()
 
 
 # calculator
-calc = PytorchANNCalculator(model, num_epochs=10, batch_size=2)
+calc = nn.PytorchANNCalculator(model, num_epochs=10, batch_size=2)
 calc.create(configs)
 
 

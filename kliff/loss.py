@@ -111,18 +111,37 @@ def energy_residual(conf_id, natoms, prediction, reference, data):
     return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
-# import tensorflow as tf
-# @tf.custom_gradient
-def test_residual(conf_id, natoms, prediction, reference, data):
-
-    def grad(dy):
-        return None, None, None, None, None
-
-    return prediction - reference
-    # return prediction - reference, grad
-
-
 class Loss(object):
+    """Objective function that will be minimized. """
+
+    def __new__(self, calculator, nprocs=1, residual_fn=energy_forces_residual,
+                residual_data=None):
+        """
+        Parameters
+        ----------
+
+        calculator: Calculator object
+
+        nprocs: int
+          Number of processors to parallel to run the predictors.
+
+        residual_fn: function
+          function to compute residual, see `energy_forces_residual` for an example
+
+        residual_data: dict
+          data passed to residual function
+
+        """
+
+        calc_type = calculator.__class__.__name__
+
+        if calc_type == 'PytorchANNCalculator':
+            return LossNeuralNetworkModel(calculator, nprocs, residual_fn, residual_data)
+        else:
+            return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, residual_data)
+
+
+class LossOld(object):
     """Objective function that will be minimized. """
 
     scipy_minimize_methods = [
@@ -546,6 +565,468 @@ class Loss(object):
 
         # write fitted params to `FINAL_FITTED_PARAMS' and stdout at end.
         # self.calculator.echo_fitting_params(fname='FINAL_FITTED_PARAMS')
+
+
+class LossPhysicsMotivatedModel(object):
+    """Objective function that will be minimized. """
+
+    scipy_minimize_methods = [
+        'Nelder-Mead',
+        'Powell',
+        'CG',
+        'BFGS',
+        'Newton-CG',
+        'L-BFGS-B',
+        'TNC',
+        'COBYLA',
+        'SLSQP',
+        'trust-constr',
+        'dogleg',
+        'trust-ncg',
+        'trust-exact',
+        'trust-krylov',
+    ]
+
+    scipy_minimize_methods_not_supported_arguments = [
+        'bounds'
+    ]
+
+    scipy_least_squares_methods = [
+        'trf',
+        'dogbox',
+        'lm',
+    ]
+
+    scipy_least_squares_methods_not_supported_arguments = [
+        'bounds'
+    ]
+
+    def __init__(self, calculator, nprocs=1, residual_fn=energy_forces_residual,
+                 residual_data=None):
+        """
+        Parameters
+        ----------
+
+        calculator: Calculator object
+
+        nprocs: int
+          Number of processors to parallel to run the predictors.
+
+        residual_fn: function
+          function to compute residual, see `energy_forces_residual` for an example
+
+        residual_data: dict
+          data passed to residual function
+
+        """
+
+        self.calculator = calculator
+        self.nprocs = nprocs
+
+        self.residual_fn = residual_fn
+        self.residual_data = residual_data
+        if self.residual_data is None:
+            self.residual_data = dict()
+
+        self.calculator_type = calculator.__class__.__name__
+
+        self.calculator.update_model_params()
+
+        if self.calculator_type == 'WrapperCalculator':
+            calculators = self.calculator.calculators
+        else:
+            calculators = [self.calculator]
+        for calc in calculators:
+            infl_dist = calc.get_influence_distance()
+            cas = calc.get_compute_arguments()
+            # TODO can be parallelized
+            for ca in cas:
+                ca.refresh(infl_dist)
+
+        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
+#
+#  def set_nprocs(self, nprocs):
+#    """ Set the number of processors to be used."""
+#    self.nprocs = nprocs
+#
+#  def set_residual_fn_and_data(self, fn, data):
+#    """ Set residual function and data. """
+#    self.residual_fn = fn
+#    self.residual_fn_data = data
+
+    def minimize(self, method, **kwargs):
+        """ Minimize the loss.
+
+        method: str
+            minimization methods as specified at:
+                https://docs.scipy.org/doc/scipy-1.0.0/reference/generated/scipy.optimize.minimize.html
+                https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
+                https://www.tensorflow.org/api_guides/python/train#Optimizers
+                https://www.tensorflow.org/api_docs/python/tf/contrib/opt/ScipyOptimizerInterface
+
+            Note the usage of tf scipy optimizer interface if the same as on scipy website,
+            not the one described on tf website, specifically, this is for the `options`
+            argument.
+
+        kwargs: extra keyword arguments that can be used by the scipy optimizer.
+        """
+
+        if method in self.scipy_least_squares_methods:
+            #    # change unbounded value to np.inf that least_squares needs
+            #    try:
+            #        bounds = kwargs['bounds']
+            #        for i in range(len(bounds)):
+            #            bounds[i][0] = -np.inf
+            #            bounds[i][1] = np.inf
+            #    except KeyError:
+            #        pass
+            for i in self.scipy_least_squares_methods_not_supported_arguments:
+                if i in kwargs:
+                    raise LossError('Argument "{}" should not be set through the '
+                                    '"minimize" method.'.format(i))
+            bounds = self.calculator.get_opt_params_bounds()
+            kwargs['bounds'] = bounds
+            result = self._scipy_optimize_least_squares(method, **kwargs)
+        elif method in self.scipy_minimize_methods:
+            for i in self.scipy_minimize_methods_not_supported_arguments:
+                if i in kwargs:
+                    raise LossError('Argument "{}" should not be set through the '
+                                    '"minimize" method.'.format(i))
+            bounds = self.calculator.get_opt_params_bounds()
+            for i in range(len(bounds)):
+                lb = bounds[i][0]
+                ub = bounds[i][1]
+                if lb is None:
+                    bounds[i][0] = -np.inf
+                if ub is None:
+                    bounds[i][1] = np.inf
+            kwargs['bounds'] = bounds
+            result = self._scipy_optimize_minimize(method, **kwargs)
+        else:
+            raise Exception('minimization method "{}" not supported.'.format(method))
+
+        # update final optimized paramters to ModelParameters object
+        self.calculator.update_params(result.x)
+        return result
+
+    def get_residual(self, x):
+        """ Compute the residual for the cost.
+        This is a callable for optimizer (e.g. scipy.optimize.least_squares), which is
+        passed as the first positional argument.
+
+        Parameters
+        ----------
+
+        x: 1D array
+          optimizing parameter values
+        """
+
+        # publish params x to predictor
+        self.calculator.update_params(x)
+
+        # parallel computing of residual
+        cas = self.calculator.get_compute_arguments()
+
+        if self.calculator_type == 'WrapperCalculator':
+            calc_list = self.calculator.get_calculator_list()
+            X = zip(cas, calc_list)
+            if self.nprocs > 1:
+                residuals = parallel.parmap3(
+                    self._get_residual_single_config,
+                    X,
+                    self.nprocs,
+                    self.residual_fn,
+                    self.residual_data)
+                residual = np.concatenate(residuals)
+            else:
+                residual = []
+                for ca, calc in X:
+                    current_residual = self._get_residual_single_config(
+                        ca,
+                        calc,
+                        self.residual_fn,
+                        self.residual_data)
+                    residual = np.concatenate((residual, current_residual))
+
+        else:
+            # compute residual
+            if self.nprocs > 1:
+                residuals = parallel.parmap2(
+                    self._get_residual_single_config,
+                    cas,
+                    self.nprocs,
+                    self.calculator,
+                    self.residual_fn,
+                    self.residual_data)
+                residual = np.concatenate(residuals)
+            else:
+                residual = []
+                for ca in cas:
+                    current_residual = self._get_residual_single_config(
+                        ca,
+                        self.calculator,
+                        self.residual_fn,
+                        self.residual_data)
+                    residual = np.concatenate((residual, current_residual))
+
+        return residual
+
+    def get_loss(self, x):
+        """ Compute the loss.
+        This is a callable for optimizer (e.g. scipy.optimize.minimize), which is
+        passed as the first positional argument.
+
+        Parameters
+        ----------
+
+        x: 1D array
+          optimizing parameter values
+        """
+        residual = self.get_residual(x)
+        loss = 0.5*np.linalg.norm(residual)**2
+        return loss
+
+    def _scipy_optimize_least_squares(self, method, **kwargs):
+        logger.info('scipy least squares method "{}" used.'.format(method))
+        residual = self.get_residual
+        x0 = self.calculator.get_opt_params()
+        return scipy.optimize.least_squares(residual, x0, method=method, **kwargs)
+
+    def _scipy_optimize_minimize(self, method, **kwargs):
+        logger.info('scipy optimization method "{}" used.'.format(method))
+        loss = self.get_loss
+        x0 = self.calculator.get_opt_params()
+        return scipy.optimize.minimize(loss, x0, method=method, **kwargs)
+
+    def _get_residual_single_config(self, ca, calculator, residual_fn, residual_data):
+
+        # prediction data
+        calculator.compute(ca)
+        pred = calculator.get_prediction(ca)
+
+        # reference data
+        ref = calculator.get_reference(ca)
+
+        conf = ca.conf
+        identifier = conf.get_identifier()
+        natoms = conf.get_number_of_atoms()
+
+        residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+
+        return residual
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exec_type, exec_value, trackback):
+        # if there is expections, raise it (not for KeyboardInterrupt)
+        if exec_type is not None and exec_type is not KeyboardInterrupt:
+            return False  # return False will cause Python to re-raise the expection
+
+
+class LossNeuralNetworkModel(object):
+    """Objective function that will be minimized. """
+
+    torch_minimize_methods = [
+        'GradientDescentOptimizer',
+        'AdadeltaOptimizer',
+        'AdagradOptimizer',
+        'AdagradDAOptimizer',
+        'MomentumOptimizer',
+        'AdamOptimizer',
+        'FtrlOptimizer',
+        'ProximalGradientDescentOptimizer',
+        'ProximalAdagradOptimizer',
+        'RMSPropOptimizer'
+    ]
+
+    def __init__(self, calculator, nprocs=1, residual_fn=energy_forces_residual,
+                 residual_data=None):
+        """
+        Parameters
+        ----------
+
+        calculator: Calculator object
+
+        nprocs: int
+          Number of processors to parallel to run the predictors.
+
+        residual_fn: function
+          function to compute residual, see `energy_forces_residual` for an example
+
+        residual_data: dict
+          data passed to residual function
+
+        """
+
+        self.calculator = calculator
+        self.nprocs = nprocs
+
+        self.residual_fn = residual_fn
+        self.residual_data = residual_data
+        if self.residual_data is None:
+            self.residual_data = dict()
+
+        self.calculator_type = calculator.__class__.__name__
+
+        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
+#
+#  def set_nprocs(self, nprocs):
+#    """ Set the number of processors to be used."""
+#    self.nprocs = nprocs
+#
+#  def set_residual_fn_and_data(self, fn, data):
+#    """ Set residual function and data. """
+#    self.residual_fn = fn
+#    self.residual_fn_data = data
+
+    def minimize(self, method, **kwargs):
+        """ Minimize the loss.
+
+        method: str
+            minimization methods as specified at:
+                https://docs.scipy.org/doc/scipy-1.0.0/reference/generated/scipy.optimize.minimize.html
+                https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
+                https://www.tensorflow.org/api_guides/python/train#Optimizers
+                https://www.tensorflow.org/api_docs/python/tf/contrib/opt/ScipyOptimizerInterface
+
+            Note the usage of tf scipy optimizer interface if the same as on scipy website,
+            not the one described on tf website, specifically, this is for the `options`
+            argument.
+
+        kwargs: extra keyword arguments that can be used by the scipy optimizer.
+        """
+
+        try:
+            import torch.optim as optim
+        except ImportError as e:
+            raise ImportError(str(e) + '.\nPlease install "pytorch" first.')
+
+        optimizer = optim.SGD(self.calculator.model.parameters(),
+                              lr=0.001, momentum=0.9)
+        n = 0
+        epoch = 0
+        # TODO read in batch size and num_epochs
+        batch_size = self.calculator.batch_size
+        DATASET_SIZE = len(self.calculator.configs)
+        while True:
+            try:
+                # zero the parameter gradients
+                optimizer.zero_grad()
+                # forward + backward + optimize
+                loss = self.calculator.get_loss()
+                loss.backward()
+                optimizer.step()
+                epoch_new = n*batch_size // DATASET_SIZE
+                if epoch_new > epoch:
+                    epoch = epoch_new
+                    print('Epoch = {}, loss = {}'.format(epoch, loss))
+                n += 1
+            except StopIteration:
+                break
+
+    def get_residual(self, x):
+        """ Compute the residual for the cost.
+        This is a callable for optimizer (e.g. scipy.optimize.least_squares), which is
+        passed as the first positional argument.
+
+        Parameters
+        ----------
+
+        x: 1D array
+          optimizing parameter values
+        """
+
+        # publish params x to predictor
+        self.calculator.update_params(x)
+
+        # parallel computing of residual
+        cas = self.calculator.get_compute_arguments()
+
+        if self.calculator_type == 'WrapperCalculator':
+            calc_list = self.calculator.get_calculator_list()
+            X = zip(cas, calc_list)
+            if self.nprocs > 1:
+                residuals = parallel.parmap3(
+                    self._get_residual_single_config,
+                    X,
+                    self.nprocs,
+                    self.residual_fn,
+                    self.residual_data)
+                residual = np.concatenate(residuals)
+            else:
+                residual = []
+                for ca, calc in X:
+                    current_residual = self._get_residual_single_config(
+                        ca,
+                        calc,
+                        self.residual_fn,
+                        self.residual_data)
+                    residual = np.concatenate((residual, current_residual))
+
+        else:
+            # compute residual
+            if self.nprocs > 1:
+                residuals = parallel.parmap2(
+                    self._get_residual_single_config,
+                    cas,
+                    self.nprocs,
+                    self.calculator,
+                    self.residual_fn,
+                    self.residual_data)
+                residual = np.concatenate(residuals)
+            else:
+                residual = []
+                for ca in cas:
+                    current_residual = self._get_residual_single_config(
+                        ca,
+                        self.calculator,
+                        self.residual_fn,
+                        self.residual_data)
+                    residual = np.concatenate((residual, current_residual))
+
+        return residual
+
+    def get_loss(self, x):
+        """ Compute the loss.
+        This is a callable for optimizer (e.g. scipy.optimize.minimize), which is
+        passed as the first positional argument.
+
+        Parameters
+        ----------
+
+        x: 1D array
+          optimizing parameter values
+        """
+        residual = self.get_residual(x)
+        loss = 0.5*np.linalg.norm(residual)**2
+        return loss
+
+    def _get_residual_single_config(self, ca, calculator, residual_fn, residual_data):
+
+        # prediction data
+        calculator.compute(ca)
+        pred = calculator.get_prediction(ca)
+
+        # reference data
+        ref = calculator.get_reference(ca)
+
+        conf = ca.conf
+        identifier = conf.get_identifier()
+        natoms = conf.get_number_of_atoms()
+
+        residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+
+        return residual
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exec_type, exec_value, trackback):
+
+        # if there is expections, raise it (not for KeyboardInterrupt)
+        if exec_type is not None and exec_type is not KeyboardInterrupt:
+            return False  # return False will cause Python to re-raise the expection
 
 
 class LossError(Exception):
