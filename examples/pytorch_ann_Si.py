@@ -6,6 +6,7 @@ from kliff.loss import Loss
 from kliff.descriptors.symmetry_function import Set51
 from kliff.pytorch_neuralnetwork import NeuralNetwork
 from kliff.pytorch_neuralnetwork import PytorchANNCalculator
+from kliff.pytorch_neuralnetwork import Dropout
 
 
 descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, grad=True, dtype=np.float64)
@@ -15,8 +16,10 @@ desc_size = len(descriptor)
 model = NeuralNetwork(descriptor)
 model.add_layers(nn.Linear(desc_size, 30),
                  nn.Sigmoid(),
+                 Dropout(p=0.1),
                  nn.Linear(30, 30),
                  nn.Sigmoid(),
+                 Dropout(p=0.1),
                  nn.Linear(30, 1))
 
 
