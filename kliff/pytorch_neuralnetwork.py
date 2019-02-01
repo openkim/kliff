@@ -1,12 +1,26 @@
 import numpy as np
 import multiprocessing as mp
 from collections import Iterable
+from kliff.descriptors.descriptor import load_fingerprints
+from kliff.error import InputError
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from kliff.descriptors.descriptor import load_fingerprints
-from kliff.error import InputError
+# pytorch buildin (use them directly)
+from torch.nn.modules.linear import Linear, Bilinear
+from torch.nn.modules.conv import Conv1d, Conv2d, Conv3d, \
+    ConvTranspose1d, ConvTranspose2d, ConvTranspose3d
+from torch.nn.modules.activation import Threshold, ReLU, Hardtanh, ReLU6, Sigmoid, Tanh, \
+    Softmax, Softmax2d, LogSoftmax, ELU, SELU, CELU, Hardshrink, LeakyReLU, LogSigmoid, \
+    Softplus, Softshrink, PReLU, Softsign, Softmin, Tanhshrink, RReLU, GLU
+from torch.nn.modules.pooling import AvgPool1d, AvgPool2d, AvgPool3d, MaxPool1d, MaxPool2d, MaxPool3d, \
+    MaxUnpool1d, MaxUnpool2d, MaxUnpool3d, FractionalMaxPool2d, LPPool1d, LPPool2d, \
+    AdaptiveMaxPool1d, AdaptiveMaxPool2d, AdaptiveMaxPool3d, AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d
+from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from torch.nn.modules.normalization import LocalResponseNorm, CrossMapLRN2d, LayerNorm, GroupNorm
+from torch.nn.modules.rnn import RNNBase, RNN, LSTM, GRU, \
+    RNNCellBase, RNNCell, LSTMCell, GRUCell
 
 
 @torch._jit_internal.weak_module
