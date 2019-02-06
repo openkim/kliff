@@ -34,7 +34,7 @@ calc.create(configs)
 # loss
 loss = Loss(calc)
 # result = loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': 2})
-result = loss.minimize(method='AdamOptimizer', learning_rate=1e-3)
+result = loss.minimize(method='SGD', lr=0.001, momentum=0.9)
 
 model.save('./saved_model.pt')
 model.write_kim_model()
