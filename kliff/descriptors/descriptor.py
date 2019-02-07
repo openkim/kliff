@@ -30,7 +30,7 @@ class Descriptor(object):
 
     """
 
-    def __init__(self, normalize=True, grad=False, dtype=np.float32):
+    def __init__(self, normalize=True, dtype=np.float32):
         """
 
 
@@ -41,21 +41,16 @@ class Descriptor(object):
             Whether to center and normalize the fingerprints by:
                 zeta = (zeta - mean(zeta)) / stdev(zeta)
 
-        grad: bool (optional)
-            Whether to compute the gradient of fingerprints w.r.t. atomic coordinates.
-
-
         """
 
         self.normalize = normalize
-        self.grad = grad
         self.dtype = dtype
 
         self.mean = None
         self.stdev = None
 
-    def generate_train_fingerprints(self, configs, prefix='fingerprints',
-                                    reuse=False, nprocs=mp.cpu_count()):
+    def generate_train_fingerprints(self, configs, grad=False, reuse=False,
+                                    prefix='fingerprints', nprocs=mp.cpu_count()):
         """Convert training set to fingerprints.
 
         Parameters
@@ -63,12 +58,15 @@ class Descriptor(object):
 
         configs: list of Configuration objects
 
-        prefix: str
-            Directory name where the generated fingerprints are stored.
-            Path to the generated fingerprints is: is: {prefix}/train.pkl
+        grad: bool (optional)
+            Whether to compute the gradient of fingerprints w.r.t. atomic coordinates.
 
         reuse: bool
             Whether to reuse the fingerprints if one is found at: {prefix}/train.pkl.
+
+        prefix: str
+            Directory name where the generated fingerprints are stored.
+            Path to the generated fingerprints is: is: {prefix}/train.pkl
 
         nprocs: int
           Number of processors to be used.
@@ -92,21 +90,21 @@ class Descriptor(object):
                 return fname
 
         # generate data
-        all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, nprocs)
+        all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
         if self.normalize:
             if all_zeta is not None:
                 stacked = np.concatenate(all_zeta)
                 self.mean = np.mean(stacked, axis=0)
                 self.stdev = np.std(stacked, axis=0)
             else:
-                self.mean, self.stdev = self.welford_mean_and_stdev(configs)
+                self.mean, self.stdev = self.welford_mean_and_stdev(configs, grad)
             dump_mean_stdev(self.mean, self.stdev, mean_stdev_name)
-        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, nprocs=nprocs)
+        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
 
         return fname
 
-    def generate_test_fingerprints(self, configs, prefix='fingerprints',
-                                   train_prefix=None, reuse=False,
+    def generate_test_fingerprints(self, configs, grad=False, reuse=False,
+                                   prefix='fingerprints', train_prefix=None,
                                    nprocs=mp.cpu_count()):
         """Convert test set to fingerprints.
 
@@ -114,6 +112,12 @@ class Descriptor(object):
         ----------
 
         configs: list of Configuration objects
+
+        grad: bool (optional)
+            Whether to compute the gradient of fingerprints w.r.t. atomic coordinates.
+
+        reuse: bool
+            Whether to reuse the fingerprints if one is found at: {prefix}/test.pkl.
 
         prefix: str
             Directory name where the generated fingerprints are stored.
@@ -128,9 +132,6 @@ class Descriptor(object):
             because in this case we need to find the mean and stdev of the fingerprints
             of the training set, which is saved as a file name `mean_stdev.pkl` in the
             derectory specified by `train_prefix`.
-
-        reuse: bool
-            Whether to reuse the fingerprints if one is found at: {prefix}/test.pkl.
 
         nprocs: int
           Number of processors to be used.
@@ -163,12 +164,12 @@ class Descriptor(object):
                 'that for training set generated when normalization is required. '
                 'Try generating training set fingerprints first by calling: '
                 'genereate_train_fingerprints().')
-        all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, nprocs)
-        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, nprocs=nprocs)
+        all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
+        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
 
         return fname
 
-    def dump_fingerprints(self, configs, fname, all_zeta, all_dzetadr,
+    def dump_fingerprints(self, configs, fname, all_zeta, all_dzetadr, grad,
                           nprocs=mp.cpu_count()):
 
         logger.info('Pickle fingerprint images to: %s.', fname)
@@ -184,17 +185,17 @@ class Descriptor(object):
                 zeta = all_zeta[i]
                 dzetadr = all_dzetadr[i]
                 if zeta is None:
-                    zeta, dzetadr = self.transform(conf, grad=self.grad)
+                    zeta, dzetadr = self.transform(conf, grad=grad)
 
                 # reshape dzeta from a 4D to a 3D array (combining the last two dims)
-                if self.grad:
+                if grad:
                     new_shape = (dzetadr.shape[0], dzetadr.shape[1], -1)
                     dzetadr = dzetadr.reshape(new_shape)
 
                 # centering and normalization
                 if self.normalize:
                     zeta = (zeta - self.mean) / self.stdev
-                    if self.grad:
+                    if grad:
                         stdev_3d = np.atleast_3d(self.stdev)
                         dzetadr = dzetadr / stdev_3d
 
@@ -205,7 +206,7 @@ class Descriptor(object):
                 weight = np.asarray(conf.get_weight(), self.dtype)
                 zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
-                if self.grad:
+                if grad:
                     dzetadr = np.asarray(dzetadr, self.dtype)
                     forces = np.asarray(conf.get_forces(), self.dtype)
 
@@ -215,16 +216,16 @@ class Descriptor(object):
                            'weight': weight,
                            'zeta': zeta,
                            'energy': energy}
-                if self.grad:
+                if grad:
                     example['dzeta_dr'] = dzetadr
                     example['forces'] = forces
                 pickle.dump(example, f)
 
         logger.info('Processing %d configurations finished.', len(configs))
 
-    def calc_zeta_dzetadr(self, configs, nprocs):
+    def calc_zeta_dzetadr(self, configs, grad, nprocs=mp.cpu_count()):
         try:
-            rslt = parallel.parmap(self.transform, configs, nprocs, self.grad)
+            rslt = parallel.parmap(self.transform, configs, nprocs, grad)
             all_zeta = [pair[0] for pair in rslt]
             all_dzetadr = [pair[1] for pair in rslt]
         except MemoryError as e:
@@ -234,7 +235,7 @@ class Descriptor(object):
             all_dzetadr = [None for _ in len(configs)]
         return all_zeta, all_dzetadr
 
-    def welford_mean_and_stdev(self, configs):
+    def welford_mean_and_stdev(self, configs, grad):
         """Compute the mean and standard deviation of fingerprints.
 
         This running mean and standard method proposed by Welford is memory-efficient.
@@ -246,7 +247,7 @@ class Descriptor(object):
 
         # number of features
         conf = configs[0]
-        zeta, _ = self.transform(conf, grad=self.grad)
+        zeta, _ = self.transform(conf, grad=grad)
         size = zeta.shape[1]
 
         # starting Welford's method
@@ -277,9 +278,6 @@ class Descriptor(object):
 
     def get_stdev(self):
         return self.stdev.copy()
-
-    def get_grad(self):
-        return self.grad
 
     def get_dtype(self):
         return self.dtype

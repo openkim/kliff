@@ -51,69 +51,74 @@ def test_descriptor():
     configs = [conf, conf]
 
     # case 1
-    desc = ExampleDescriptor(normalize=False, grad=False)
+    desc = ExampleDescriptor(normalize=False)
+    grad = False
     # train set
-    desc.generate_train_fingerprints(configs)
+    desc.generate_train_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, None, None)
     assert_zeta_dzeta_dr(data['zeta'], None, _zeta, None)
     # test set
-    desc.generate_test_fingerprints(configs)
+    desc.generate_test_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, None, None)
     assert_zeta_dzeta_dr(data['zeta'], None, _zeta, None)
 
     # case 2
-    desc = ExampleDescriptor(normalize=False, grad=True)
+    desc = ExampleDescriptor(normalize=False)
+    grad = True
     # train set
-    desc.generate_train_fingerprints(configs)
+    desc.generate_train_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, None, None)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'], _zeta, _dzeta_dr)
     # test set
-    desc.generate_test_fingerprints(configs)
+    desc.generate_test_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, None, None)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'], _zeta, _dzeta_dr)
 
     # case 3
-    desc = ExampleDescriptor(normalize=True, grad=False)
+    desc = ExampleDescriptor(normalize=True)
+    grad = False
     # train set
-    desc.generate_train_fingerprints(configs)
+    desc.generate_train_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
     assert_zeta_dzeta_dr(data['zeta'], None, _normalized_zeta, None)
     # test set
-    desc.generate_test_fingerprints(configs)
+    desc.generate_test_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
     assert_zeta_dzeta_dr(data['zeta'], None, _normalized_zeta, None)
 
     # case 4
-    desc = ExampleDescriptor(normalize=True, grad=True)
+    desc = ExampleDescriptor(normalize=True)
+    grad = True
     # train set
-    desc.generate_train_fingerprints(configs)
+    desc.generate_train_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
                          _normalized_zeta, _normalized_dzeta_dr)
     # test set
-    desc.generate_test_fingerprints(configs)
+    desc.generate_test_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
                          _normalized_zeta, _normalized_dzeta_dr)
 
     # case 5 allow reuse
-    desc = ExampleDescriptor(normalize=True, grad=True)
+    desc = ExampleDescriptor(normalize=True)
+    grad = True
     # train set
-    desc.generate_train_fingerprints(configs, reuse=True)
+    desc.generate_train_fingerprints(configs, grad=grad, reuse=True)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
                          _normalized_zeta, _normalized_dzeta_dr)
     # test set
-    desc.generate_test_fingerprints(configs, reuse=True)
+    desc.generate_test_fingerprints(configs, grad=grad, reuse=True)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],

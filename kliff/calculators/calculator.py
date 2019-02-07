@@ -80,7 +80,7 @@ class ComputeArguments(object):
         self.results['stress'] = stress
         """
         # NOTE to be filled
-        pass
+        raise NotImplementedError('"compute" method of "ComputeArguments" not defined.')
 
     def get_compute_flag(self, name):
         if name in self.compute_property:
