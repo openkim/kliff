@@ -24,11 +24,7 @@ tests/echo*
 tests/fingerprints/
 
 # special for docs
-docs/*
-!docs/source
-docs/source/*
-!docs/source/conf.py
-!docs/source/quickstart.rst
-!docs/source/installation.rst
-!docs/source/index.rst
+docs/build
+docs/source/_static
+docs/source/_templates
 
