@@ -6,7 +6,7 @@
 
 KLIFF is an interatomic potential fitting library that can be used to fit physics-motivated (PM) models and machine learning potentials such as the Aritifical Neural Network (ANN) models.
 
-Documentation at: <https://www.tensorflow.org>
+Documentation at: <https://kliff.readthedocs.io>
 
 ## Why you want to use KLIFF (or don't use it)
 
