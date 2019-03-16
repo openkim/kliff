@@ -371,13 +371,13 @@ class LossPhysicsMotivatedModel(object):
 
         return residual
 
-#    def __enter__(self):
-#        return self
-#
-#    def __exit__(self, exec_type, exec_value, trackback):
-#        # if there is expections, raise it (not for KeyboardInterrupt)
-#        if exec_type is not None and exec_type is not KeyboardInterrupt:
-#            return False  # return False will cause Python to re-raise the expection
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exec_type, exec_value, trackback):
+        # if there is expections, raise it (not for KeyboardInterrupt)
+        if exec_type is not None and exec_type is not KeyboardInterrupt:
+            return False  # return False will cause Python to re-raise the expection
 
 
 class LossNeuralNetworkModel(object):
