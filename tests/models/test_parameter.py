@@ -1,9 +1,9 @@
 import numpy as np
 import warnings
 from collections import OrderedDict
-from kliff.calculators import Parameter
-from kliff.calculators import FittingParameter
-from kliff.calculators.parameter import ParameterError
+from kliff.models import Parameter
+from kliff.models import FittingParameter
+from kliff.models.parameter import ParameterError
 
 
 def test_parameter():

@@ -1,6 +1,5 @@
 import numpy as np
 import logging
-from collections import Iterable
 from collections import OrderedDict
 import kimpy
 from kimpy import neighlist as nl

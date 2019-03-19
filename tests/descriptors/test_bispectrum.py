@@ -9,5 +9,5 @@ conf.read(fname)
 
 jmax = 2
 cutoff = {'Si-Si': 4}
-desc = Bispectrum(jmax, cutoff, normalize=True, grad=False)
-desc.generate_train_fingerprints([conf])
+desc = Bispectrum(jmax, cutoff, normalize=True)
+desc.generate_train_fingerprints([conf], grad=False)

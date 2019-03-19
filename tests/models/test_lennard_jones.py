@@ -1,8 +1,9 @@
 import numpy as np
 import os
 import pytest
-from kliff.calculators import LennardJones
-from kliff.calculators.calculator import CalculatorError
+from kliff.calculator import Calculator
+from kliff.models import LennardJones
+from kliff.error import ModelError
 from kliff.dataset import DataSet
 
 
@@ -59,27 +60,27 @@ def energy_forces_stress(calc, configs, use_energy=False, use_forces=False,
     try:
         energy = calc.get_energy(ca)
         assert energy == pytest.approx(pred_energy, 1e-6)
-    except CalculatorError as e:
+    except ModelError as e:
         if use_energy:
-            raise CalculatorError(e)
+            raise ModelError(e)
         else:
             pass
 
     try:
         forces = calc.get_forces(ca)
         assert np.allclose(forces[:6], pred_forces)
-    except CalculatorError as e:
+    except ModelError as e:
         if use_forces:
-            raise CalculatorError(e)
+            raise ModelError(e)
         else:
             pass
 
     try:
         stress = calc.get_stress(ca)
         assert np.allclose(stress, pred_stress)
-    except CalculatorError as e:
+    except ModelError as e:
         if use_stress:
-            raise CalculatorError(e)
+            raise ModelError(e)
         else:
             pass
 
@@ -103,22 +104,24 @@ def energy_forces_stress(calc, configs, use_energy=False, use_forces=False,
 
 
 def test_lj():
-    calc = LennardJones()
+    model = LennardJones()
 
     # set params directly
-    calc.set_fitting_params(
+    model.set_fitting_params(
         sigma=[[1.1, 'fix']],
         epsilon=[[2.1, None, 3.]])
+
+    model.update_model_params()
+    # model.echo_model_params()
+    # model.echo_fitting_params()
 
     # set params by reading from file (the same as set params directly)
     #fname = 'tmp_lj.params'
     # write_tmp_params(fname)
-    # calc.read_fitting_params(fname)
+    # model.read_fitting_params(fname)
     # delete_tmp_params(fname)
 
-    calc.update_model_params()
-    # calc.echo_model_params()
-    # calc.echo_fitting_params()
+    calc = Calculator(model)
 
     dset = DataSet(order_by_species=False)
     fname = '../configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
@@ -130,11 +133,11 @@ def test_lj():
     energy_forces_stress(calc, configs, True, True, True)
 
     # params relation callback
-    calc.set_params_relation_callback(params_relation)
+    model.set_params_relation_callback(params_relation)
     x0 = calc.get_opt_params()
-    calc.update_params(x0)
-    sigma = calc.get_model_params('sigma')
-    epsilon = calc.get_model_params('epsilon')
+    calc.update_opt_params(x0)
+    sigma = model.get_model_params('sigma')
+    epsilon = model.get_model_params('epsilon')
     assert np.allclose(sigma*2, epsilon)
 
 

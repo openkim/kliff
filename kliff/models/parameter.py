@@ -1,7 +1,7 @@
 import sys
 import warnings
 from collections import OrderedDict
-from collections import Iterable
+from collections.abc import Iterable
 import numpy as np
 import kliff
 

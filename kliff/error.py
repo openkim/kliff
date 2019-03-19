@@ -1,9 +1,9 @@
-class CalculatorError(Exception):
+class ModelError(Exception):
     def __init__(self, msg):
-        super(CalculatorError, self).__init__(msg)
+        super(ModelError, self).__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __expr__(self):
         return self.msg
 
 
@@ -12,7 +12,7 @@ class InputError(Exception):
         super(InputError, self).__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __expr__(self):
         return self.msg
 
 
@@ -21,7 +21,7 @@ class KeyNotFoundError(Exception):
         super(KeyNotFoundError, self).__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __expr__(self):
         return self.msg
 
 
@@ -30,7 +30,7 @@ class SupportError(Exception):
         super(Support, self).__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __expr__(self):
         return self.msg
 
 
@@ -38,5 +38,5 @@ class InitializationError(Exception):
     def __init__(self, value):
         self.value = value
 
-    def __str__(self):
+    def __expr__(self):
         return repr(self.value) + ' initialization failed'

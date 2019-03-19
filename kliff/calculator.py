@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections.abc import Iterable
 import kliff
 from kliff.dataset import Configuration
 from kliff.utils import length_equal

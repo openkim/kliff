@@ -126,16 +126,16 @@ def test_descriptor():
 
     # try use generate_test_fingerprints() before genereate_train_fingerprints()
     # case 1 (should work, since we do not require normalize)
-    desc = ExampleDescriptor(normalize=False, grad=True)
-    desc.generate_test_fingerprints(configs)
+    desc = ExampleDescriptor(normalize=False)
+    desc.generate_test_fingerprints(configs, grad=True)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, None, None)
     assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'], _zeta, _dzeta_dr)
 
     # case 2 (should not work, since we do need normalize)
-    desc = ExampleDescriptor(normalize=True, grad=True)
+    desc = ExampleDescriptor(normalize=True)
     try:
-        desc.generate_test_fingerprints(configs)
+        desc.generate_test_fingerprints(configs, grad=True)
     except DescriptorError as e:
         assert e.__class__ == DescriptorError
 

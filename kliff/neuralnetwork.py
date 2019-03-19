@@ -1,6 +1,6 @@
 import numpy as np
 import multiprocessing as mp
-from collections import Iterable
+from collections.abc import Iterable
 from kliff.descriptors.descriptor import load_fingerprints
 from kliff.error import InputError
 from kliff.dataset import Configuration

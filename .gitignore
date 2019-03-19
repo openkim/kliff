@@ -22,6 +22,7 @@ maybe_needed
 libs/geodesicLMv1.1
 tests/echo*
 tests/fingerprints/
+tmp_*
 
 # special for docs
 docs/build

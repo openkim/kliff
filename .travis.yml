@@ -59,7 +59,11 @@ script:
   - python setup.py install
 
   - cd tests
-  - pytest test_modelparams.py
-  - pytest test_set_parameters_and_cutoff.py
-  - pytest test_kimcalculator.py
-
+  - pytest test_neighbor.py
+  - cd dataset
+  - pytest
+  - cd ../models
+  - pytest
+  - cd ../descriptors
+  - pytest test_descriptor.py
+  - pytest test_symmetry_function.py

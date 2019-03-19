@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections.abc import Iterable
 
 
 def length_equal(a, b):

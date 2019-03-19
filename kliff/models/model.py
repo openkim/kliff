@@ -4,6 +4,7 @@ import numpy as np
 from collections import OrderedDict
 import kliff
 from .parameter import FittingParameter
+from ..error import ModelError
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -90,7 +91,7 @@ class ComputeArguments:
 
     def get_property(self, name):
         if name not in self.compute_property:
-            raise CalculatorError(
+            raise ModelError(
                 'Calculator not initialized to comptue "{}".'.format(name))
         result = self.results[name]
         if isinstance(result, np.ndarray):
@@ -215,8 +216,7 @@ class Model:
         if name in self.params:
             return self.params[name].get_value()
         else:
-            raise CalculatorError(
-                '"{}" is not a parameter of calculator.'.format(name))
+            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params(self, name, value):
         """ Update the parameter values.
@@ -231,8 +231,7 @@ class Model:
         if name in self.params:
             self.params[name].set_value_with_shape_check(value)
         else:
-            raise CalculatorError(
-                '"{}" is not a parameter of calculator.'.format(name))
+            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params_no_shape_check(self, name, value):
         """ Update the parameter values.
@@ -247,8 +246,7 @@ class Model:
         if name in self.params:
             self.params[name].set_value(value)
         else:
-            raise CalculatorError(
-                '"{}" is not a parameter of calculator.'.format(name))
+            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
 
     def save_model_params(self, fname=None):
         params = dict()
