@@ -301,13 +301,13 @@ def load_mean_stdev(fname):
 
 
 def load_fingerprints(fname):
-    """Read preprocessed TFRecord data from `fname'.
+    """Read preprocessed data from `fname'.
 
     Parameter
     ---------
 
     fname, str
-      names of the TFRecords data file.
+      names of the pickled data file.
 
     fit_forces, bool
       wheter to fit to forces.
