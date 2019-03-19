@@ -1,12 +1,13 @@
 os: linux
-sudo: enabled
+sudo: required
 language: python
+dist: xenial
 
 python:
   - "2.7"
   - "3.5"
   - "3.6"
-#  - "3.7"
+  - "3.7"
 
 
 before_install:
@@ -32,8 +33,8 @@ install:
   - sudo make install
   - sudo ldconfig
   # install SW driver and model
-  - kim-api-v2-collections-management install system --sudo SW__MD_335816936951_004
-  - kim-api-v2-collections-management install system --sudo SW_StillingerWeber_1985_Si__MO_405512056662_005
+  - kim-api-v2-collections-management install user SW__MD_335816936951_004
+  - kim-api-v2-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_005
 
 
   # kimpy
