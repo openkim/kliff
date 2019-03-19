@@ -7,7 +7,7 @@ kliff.logger.set_level('debug')
 
 # training set
 tset = DataSet()
-tset.read('../tests/calculators/Si_T300_4/')
+tset.read('../tests/configs_extxyz/Si_4/')
 configs = tset.get_configurations()
 
 # calculator
