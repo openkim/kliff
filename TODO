@@ -83,10 +83,6 @@
   this type of constraint, only "A=func(B,C)" is allowed, but "A>func(B,C)"
   is not.                                                                        Not yet
 
-  Try not to pass object of one class to another class. But pass whatever
-  needed explicitly. For example, do not pass object of ModelParams to Cost,
-  but pass ModelParams.update_params(), and ModelParams.set_env_var(), because
-  only these two functions are used in Cost.                                     Not yet
 
 9. 02/08/2017:
   Add a flag to normalize the forces (energy etc) by the reference values
@@ -104,7 +100,7 @@
 
 11. 03/09/2017:
   Call initialize() in __init__() for in KIMcalculator, then the user does
-  not need to call it explicitly.                                                Not yet
+  not need to call it explicitly.                                                Done
 
 12. 08/03/2017:
   np.reshape can be used as np.reshape(array, (-1:3)), where the dimension
@@ -118,7 +114,7 @@
   For ANN, add check for species that are present in training set also given
   in descriptor.
 
-15. 02/06/2019:                                                                  Not yet
+15. 02/06/2019:                                                                  Done
   Rename the ComputeArguments class as Model, and move the definition of
   parameters into it. So if one wants to define a new model, he only needs
   to subclass this class, and there is no need to create the Calculator
