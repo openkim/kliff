@@ -1,3 +1,12 @@
+class CalculatorError(Exception):
+    def __init__(self, msg):
+        super(CalculatorError, self).__init__(msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
+
 class InputError(Exception):
     def __init__(self, msg):
         super(InputError, self).__init__(msg)
@@ -31,20 +40,3 @@ class InitializationError(Exception):
 
     def __str__(self):
         return repr(self.value) + ' initialization failed'
-
-
-class KIMCalculatorError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-
-def check_error(error, msg):
-    if error != 0 and error is not None:
-        raise KIMCalculatorError('Calling "{}" failed.\n'.format(msg))
-
-
-def report_error(msg):
-    raise KIMCalculatorError(msg)

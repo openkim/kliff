@@ -6,12 +6,12 @@ import kimpy
 from kimpy import neighlist as nl
 import kliff
 from ..dataset import Configuration
-from .calculator import ComputeArguments
-from .calculator import Calculator
+from .model import ComputeArguments
+from .model import Model
 from .parameter import Parameter
-from .calculator import length_equal
 from ..neighbor import assemble_forces
 from ..neighbor import assemble_stress
+from ..utils import length_equal
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -22,7 +22,7 @@ class KIMComputeArguments(ComputeArguments):
 
     implemented_property = []
 
-    def __init__(self, kim_ca, supported_species, *args, **kwargs):
+    def __init__(self, kim_ca, *args, **kwargs):
         """
         Parameters
         ----------
@@ -32,7 +32,6 @@ class KIMComputeArguments(ComputeArguments):
             Key and value are species string and integer code, respectively.
         """
         self.kim_ca = kim_ca
-        self.supported_species = supported_species
         super(KIMComputeArguments, self).__init__(*args, **kwargs)
 
         # neighbor list
@@ -90,7 +89,8 @@ class KIMComputeArguments(ComputeArguments):
             # calculator can only handle energy and forces
             if support_status == kimpy.support_status.required:
                 if (name != kim_can.partialEnergy and name != kim_can.partialForces):
-                    report_error('Unsupported required ComputeArgument "{}"'.format(name))
+                    report_error(
+                        'Unsupported required ComputeArgument "{}"'.format(name))
 
             # supported property
             if name == kim_can.partialEnergy:
@@ -113,7 +113,8 @@ class KIMComputeArguments(ComputeArguments):
             # calculator only provides get_neigh
             if support_status == kimpy.support_status.required:
                 if name != kim_ccn.GetNeighborList:
-                    report_error('Unsupported required ComputeCallback "{}"'.format(name))
+                    report_error(
+                        'Unsupported required ComputeCallback "{}"'.format(name))
 
     def refresh(self, influence_distance=None, params=None):
         self.influence_distance = influence_distance
@@ -132,7 +133,8 @@ class KIMComputeArguments(ComputeArguments):
         # inquire information from conf
         cell = np.asarray(self.conf.get_cell(), dtype=np.double)
         PBC = np.asarray(self.conf.get_PBC(), dtype=np.intc)
-        contributing_coords = np.asarray(self.conf.get_coordinates(), dtype=np.double)
+        contributing_coords = np.asarray(
+            self.conf.get_coordinates(), dtype=np.double)
         contributing_species = self.conf.get_species()
         num_contributing = self.conf.get_number_of_atoms()
         self.num_contributing_particles = num_contributing
@@ -159,12 +161,14 @@ class KIMComputeArguments(ComputeArguments):
             check_error(error, 'nl.create_paddings')
 
             num_padding = padding_species_code.size
-            self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
+            self.num_particles = np.array(
+                [num_contributing + num_padding], dtype=np.intc)
             tmp = np.concatenate((contributing_coords, padding_coords))
             self.coords = np.asarray(tmp, dtype=np.double)
             tmp = np.concatenate((contributing_species_code, padding_species_code))
             self.species_code = np.asarray(tmp, dtype=np.intc)
-            self.particle_contributing = np.ones(self.num_particles[0], dtype=np.intc)
+            self.particle_contributing = np.ones(
+                self.num_particles[0], dtype=np.intc)
             self.particle_contributing[num_contributing:] = 0
             # TODO check whether padding need neigh and create accordingly
             # for now, create neigh for all atoms, including paddings
@@ -225,7 +229,8 @@ class KIMComputeArguments(ComputeArguments):
 
         if compute_energy:
             self.energy = np.array([0.], dtype=np.double)
-            error = self.kim_ca.set_argument_pointer(kim_can.partialEnergy, self.energy)
+            error = self.kim_ca.set_argument_pointer(
+                kim_can.partialEnergy, self.energy)
             check_error(error, 'kim_can.set_argument_pointer')
         else:
             self.energy = None
@@ -234,7 +239,8 @@ class KIMComputeArguments(ComputeArguments):
 
         if compute_forces:
             self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
-            error = self.kim_ca.set_argument_pointer(kim_can.partialForces, self.forces)
+            error = self.kim_ca.set_argument_pointer(
+                kim_can.partialForces, self.forces)
             check_error(error, 'kim_can.set_argument_pointer')
         else:
             self.forces = None
@@ -271,24 +277,25 @@ class KIMComputeArguments(ComputeArguments):
 
     def __del__(self):
         """Garbage collection to destroy the neighbor list automatically"""
-        if self.neigh:
+        if self.neigh is not None:
             nl.clean(self.neigh)
+            self.neigh = None
 
 
-class KIM(Calculator):
+class KIM(Model):
 
     def __init__(self, *args, **kwargs):
         super(KIM, self).__init__(*args, **kwargs)
 
         if self.model_name is None:
             c = self.__class__.__name__
-            raise KIMCalculatorError(
+            raise KIMModelError(
                 '"model_name" is a mandatory argument for the "{}" calculator.'.format(c))
 
         self.kim_model = self._initialize()
         self.params = self.inquire_params()
 
-        self.compute_argument_class = KIMComputeArguments
+        self.compute_arguments_class = KIMComputeArguments
         self.fitting_params = self.init_fitting_params(self.params)
 
     def _initialize(self):
@@ -326,73 +333,17 @@ class KIM(Calculator):
                     value, error = self.kim_model.get_parameter_int(i, j)
                     check_error(error, 'model.get_parameter_int')
                 else:  # should never reach here
-                    report_error('get unexpeced parameter data type "{}"'.format(dtype))
+                    report_error(
+                        'get unexpeced parameter data type "{}"'.format(dtype))
                 values.append(value)
                 params[name] = Parameter(
                     value=values, dtype=dtype, description=description)
         return params
 
-    def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
-        """Create compute arguments for a set of configurations.
-
-        Parameters
-        ----------
-
-        configs: list of Configuration object
-
-        use_energy: bool (optional)
-            Whether to require the calculator to compute energy.
-
-        use_forces: bool (optional)
-            Whether to require the calculator to compute forces.
-
-        use_stress: bool (optional)
-            Whether to require the calculator to compute stress.
-        """
-
-        self.use_energy = use_energy
-        self.use_forces = use_forces
-        self.use_stress = use_stress
-
-        if isinstance(configs, Configuration):
-            configs = [configs]
-
-        if not length_equal(configs, use_energy):
-            raise InputError('Lenghs of arguments "configs" and "use_energy" not equal.')
-        if not length_equal(configs, use_forces):
-            raise InputError('Lenghs of arguments "configs" and "use_forces" not equal.')
-        if not length_equal(configs, use_stress):
-            raise InputError('Lenghs of arguments "configs" and "use_stress" not equal.')
-
-        N = len(configs)
-        if not isinstance(use_energy, Iterable):
-            use_energy = [use_energy for _ in range(N)]
-        if not isinstance(use_forces, Iterable):
-            use_forces = [use_forces for _ in range(N)]
-        if not isinstance(use_stress, Iterable):
-            use_stress = [use_stress for _ in range(N)]
-
-        supported_species = self.get_model_supported_species()
-        infl_dist = self.get_influence_distance()
-
-        self.compute_arguments = []
-        for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
-            kim_ca, error = self.kim_model.compute_arguments_create()
-            check_error(error, 'kim_model.compute_arguments_create')
-            ca = self.compute_argument_class(
-                kim_ca, supported_species, conf, infl_dist, e, f, s)
-            self.compute_arguments.append(ca)
-
-        return self.compute_arguments
-
-    def compute(self, compute_arguments):
-        """
-        Parameters
-        ----------
-
-        compute_arguments: KIMComputeArguments instance
-        """
-        compute_arguments.compute(self.kim_model)
+    def create_a_kim_compute_argument(self):
+        kim_ca, error = self.kim_model.compute_arguments_create()
+        check_error(error, 'kim_model.compute_arguments_create')
+        return kim_ca
 
     def update_model_params(self):
         """ Update from fitting params to model params. """
@@ -426,28 +377,6 @@ class KIM(Calculator):
                 s += p.to_string()
             logger.debug(s)
 
-    def get_model_supported_species(self):
-        """Get all the supported species.
-
-        Return
-        ------
-        species: dictionary
-            Key and value are species string and integer code, respectively.
-        """
-        species = {}
-        num_kim_species = kimpy.species_name.get_number_of_species_names()
-
-        for i in range(num_kim_species):
-            species_name, error = kimpy.species_name.get_species_name(i)
-            check_error(error, 'kimpy.species_name.get_species_name')
-            supported, code, error = self.kim_model.get_species_support_and_code(
-                species_name)
-            check_error(error, 'kim_model.get_species_support_and_code')
-            if supported:
-                species[str(species_name)] = code
-
-        return species
-
 #    def get_cutoff(self):
 #        """Get the largest cutoff of a model.
 #
@@ -471,47 +400,44 @@ class KIM(Calculator):
         Return: float
             influence distance
         """
+        return self.kim_model.get_influence_distance()
 
-        infl_dist = self.kim_model.get_influence_distance()
-        return infl_dist
+    def get_supported_species(self):
+        """Get all the supported species.
 
+        Return
+        ------
+        species: dictionary
+            Key and value are species string and integer code, respectively.
+        """
+        species = {}
+        num_kim_species = kimpy.species_name.get_number_of_species_names()
 
-class InputError(Exception):
-    def __init__(self, value):
-        self.value = value
+        for i in range(num_kim_species):
+            species_name, error = kimpy.species_name.get_species_name(i)
+            check_error(error, 'kimpy.species_name.get_species_name')
+            supported, code, error = self.kim_model.get_species_support_and_code(
+                species_name)
+            check_error(error, 'kim_model.get_species_support_and_code')
+            if supported:
+                species[str(species_name)] = code
 
-    def __str__(self):
-        return self.value
-
-
-class SupportError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class InitializationError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value) + ' initialization failed'
+        return species
 
 
-class KIMCalculatorError(Exception):
+class KIMModelError(Exception):
     def __init__(self, msg):
+        super(KIMModelError, self).__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __expr__(self):
         return self.msg
 
 
 def check_error(error, msg):
     if error != 0 and error is not None:
-        raise KIMCalculatorError('Calling "{}" failed.'.format(msg))
+        raise KIMModelError('Calling "{}" failed.'.format(msg))
 
 
 def report_error(msg):
-    raise KIMCalculatorError(msg)
+    raise KIMModelError(msg)

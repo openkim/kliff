@@ -1,6 +1,6 @@
 import numpy as np
-from .calculator import ComputeArguments
-from .calculator import Calculator
+from .model import ComputeArguments
+from .model import Model
 from .parameter import Parameter
 from .parameter import ParameterError
 from ..neighbor import NeighborList
@@ -101,7 +101,7 @@ class LJComputeArguments(ComputeArguments):
         return phi, dphi
 
 
-class LennardJones(Calculator):
+class LennardJones(Model):
 
     def __init__(self, *args, **kwargs):
         super(LennardJones, self).__init__(*args, **kwargs)

@@ -208,14 +208,15 @@ class LossPhysicsMotivatedModel(object):
         self.residual_data = residual_data if residual_data is not None else dict()
         self.calculator_type = calculator.__class__.__name__
 
-        self.calculator.update_model_params()
+        # update parameters from fitting parameters to model parameters
+        self.calculator.model.update_model_params()
 
         if self.calculator_type == 'WrapperCalculator':
             calculators = self.calculator.calculators
         else:
             calculators = [self.calculator]
         for calc in calculators:
-            infl_dist = calc.get_influence_distance()
+            infl_dist = calc.model.get_influence_distance()
             cas = calc.get_compute_arguments()
             # TODO can be parallelized
             for ca in cas:
@@ -280,7 +281,7 @@ class LossPhysicsMotivatedModel(object):
             raise Exception('minimization method "{}" not supported.'.format(method))
 
         # update final optimized paramters
-        self.calculator.update_params(result.x)
+        self.calculator.update_opt_params(result.x)
         return result
 
     def get_residual(self, x):
@@ -297,7 +298,7 @@ class LossPhysicsMotivatedModel(object):
         """
 
         # publish params x to predictor
-        self.calculator.update_params(x)
+        self.calculator.update_opt_params(x)
 
         cas = self.calculator.get_compute_arguments()
 

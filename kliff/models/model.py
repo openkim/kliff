@@ -1,25 +1,23 @@
 import sys
-import copy
-from collections import OrderedDict
-from collections import Iterable
+import os
 import numpy as np
-import yaml
+from collections import OrderedDict
 import kliff
-from kliff.dataset import Configuration
 from .parameter import FittingParameter
 
 logger = kliff.logger.get_logger(__name__)
 
 
-class ComputeArguments(object):
+class ComputeArguments:
     """ Implementation of code to compute energy, forces, and stress.
 
     """
     implemented_property = []
 
-    def __init__(self, conf, influence_distance, compute_energy=True,
-                 compute_forces=True, compute_stress=False):
+    def __init__(self, conf, supported_species, influence_distance,
+                 compute_energy=True, compute_forces=True, compute_stress=False):
         self.conf = conf
+        self.supported_species = supported_species
         self.influence_distance = influence_distance
         self.compute_energy = compute_energy
         self.compute_forces = compute_forces
@@ -38,7 +36,8 @@ class ComputeArguments(object):
             try:
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
-                raise ParameterError('"influence_distance" not provided by calculator."')
+                raise ParameterError(
+                    '"influence_distance" not provided by calculator."')
         self.influence_distance = infl_dist
 
         # NOTE to be filled
@@ -80,7 +79,8 @@ class ComputeArguments(object):
         self.results['stress'] = stress
         """
         # NOTE to be filled
-        raise NotImplementedError('"compute" method of "ComputeArguments" not defined.')
+        raise NotImplementedError(
+            '"compute" method of "ComputeArguments" not defined.')
 
     def get_compute_flag(self, name):
         if name in self.compute_property:
@@ -141,17 +141,15 @@ class ComputeArguments(object):
         return ref
 
 
-class Calculator(object):
-    """ Base calculator deal with parameters if model.
-
-    """
+class Model:
+    """Model class to deal with parameters."""
 
     def __init__(self, model_name=None, params_relation_callback=None):
         """
-        model_name: str (optional)
+        model_name: str(optional)
             Name of the model.
 
-        param_relations_callback: callback function (optional)
+        param_relations_callback: callback function(optional)
             A callback function to set the relations between parameters, which are
             called each minimization step after the optimizer updates the parameters.
 
@@ -184,6 +182,11 @@ class Calculator(object):
         # NOTE to be filled
         self.influence_distance = None
 
+        # NOTE to be filled, should a dictionary
+        # Key and value are species string and integer code, respectively.
+        # if None, it supportes any species
+        self.supported_species = None
+
         # NOTE to be filled
         self.compute_arguments_class = ComputeArguments
 
@@ -195,83 +198,11 @@ class Calculator(object):
         """Register a function to set the relation between parameters."""
         self.params_relation_callback = params_relation_callback
 
-    def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
-        """Create compute arguments for a set of configurations.
-
-        Parameters
-        ----------
-
-        configs: list of Configuration object
-
-        use_energy: bool or list of bools (optional)
-            Whether to require the calculator to compute energy.
-
-        use_forces: bool or list of bools (optional)
-            Whether to require the calculator to compute forces.
-
-        use_stress: bool or list of bools (optional)
-            Whether to require the calculator to compute stress.
-        """
-
-        # TODO  need not be registered as self
-        self.use_energy = use_energy
-        self.use_forces = use_forces
-        self.use_stress = use_stress
-
-        if isinstance(configs, Configuration):
-            configs = [configs]
-
-        if not length_equal(configs, use_energy):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_energy" not equal.')
-        if not length_equal(configs, use_forces):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_forces" not equal.')
-        if not length_equal(configs, use_stress):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_stress" not equal.')
-
-        N = len(configs)
-        if not isinstance(use_energy, Iterable):
-            use_energy = [use_energy for _ in range(N)]
-        if not isinstance(use_forces, Iterable):
-            use_forces = [use_forces for _ in range(N)]
-        if not isinstance(use_stress, Iterable):
-            use_stress = [use_stress for _ in range(N)]
-
-        self.compute_arguments = []
-        infl_dist = self.get_influence_distance()
-        for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
-            ca = self.compute_arguments_class(conf, infl_dist, e, f, s)
-            self.compute_arguments.append(ca)
-
-        logger.info('calculator for %d configurations created.', len(configs))
-        return self.compute_arguments
-
     def get_influence_distance(self):
         return self.influence_distance
 
-    def get_compute_arguments(self):
-        return self.compute_arguments
-
-    def compute(self, compute_arguments):
-        compute_arguments.compute(self.params)
-        return compute_arguments.results
-
-    def get_energy(self, compute_arguments):
-        return compute_arguments.get_energy()
-
-    def get_forces(self, compute_arguments):
-        return compute_arguments.get_forces()
-
-    def get_stress(self, compute_arguments):
-        return compute_arguments.get_stress()
-
-    def get_prediction(self, compute_arguments):
-        return compute_arguments.get_prediction()
-
-    def get_reference(self, compute_arguments):
-        return compute_arguments.get_reference()
+    def get_supported_species(self):
+        return self.supported_species
 
     def get_model_params(self, name):
         """ Return a copy of the values of parameter.
@@ -284,7 +215,8 @@ class Calculator(object):
         if name in self.params:
             return self.params[name].get_value()
         else:
-            raise CalculatorError('"{}" is not a parameter of calculator.'.format(name))
+            raise CalculatorError(
+                '"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params(self, name, value):
         """ Update the parameter values.
@@ -299,7 +231,8 @@ class Calculator(object):
         if name in self.params:
             self.params[name].set_value_with_shape_check(value)
         else:
-            raise CalculatorError('"{}" is not a parameter of calculator.'.format(name))
+            raise CalculatorError(
+                '"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params_no_shape_check(self, name, value):
         """ Update the parameter values.
@@ -314,7 +247,8 @@ class Calculator(object):
         if name in self.params:
             self.params[name].set_value(value)
         else:
-            raise CalculatorError('"{}" is not a parameter of calculator.'.format(name))
+            raise CalculatorError(
+                '"{}" is not a parameter of calculator.'.format(name))
 
     def save_model_params(self, fname=None):
         params = dict()
@@ -398,123 +332,17 @@ class Calculator(object):
     def get_opt_params_bounds(self):
         return self.fitting_params.get_opt_params_bounds()
 
-    def update_model_params(self):
-        """ Update from fitting params to model params. """
-        for name, attr in self.fitting_params.params.items():
-            self.set_model_params_no_shape_check(name, attr['value'])
-
-    def update_params(self, opt_params):
-        """ Update from optimizer params to model params. """
-        # update from optimzier to fitting params
+    def update_fitting_params(self, opt_params):
+        """Update from optimzier to fitting params."""
         self.fitting_params.update_params(opt_params)
 
-        # user-specified relation between parameters
+    # TODO if parameters relation set, remove the parameters from fitting params
+    def apply_params_relation(self):
+        """Force user-specified relation between parameters."""
         if self.params_relation_callback is not None:
             self.params_relation_callback(self.fitting_params)
 
-        # update from fitting params to model params
-        self.update_model_params()
-
-
-class WrapperCalculator(object):
-    """Wrapper to deal with the fitting of multiple models."""
-
-    def __init__(self, *calculators):
-        """
-        Parameters
-        ----------
-
-        calculators: instance of Calculator
-        """
-        self.calculators = calculators
-        self._start_end = self._set_start_end()
-
-    def _set_start_end(self):
-        """Compute the start and end indices of the `opt_params` of each calculator
-        in the `opt_params` of the wrapper calculator."""
-        start_end = []
-        i = 0
-        for calc in self.calculators:
-            N = calc.get_number_of_opt_params()
-            start = i
-            end = i+N
-            start_end.append((start, end))
-            i += N
-        return start_end
-
-    def get_compute_arguments(self):
-        all_cas = []
-        for calc in self.calculators:
-            cas = calc.get_compute_arguments()
-            all_cas.extend(cas)
-        return all_cas
-
-    def get_number_of_opt_params(self):
-        N = 0
-        for calc in self.calculators:
-            N += calc.get_number_of_opt_params()
-        return N
-
-    def get_opt_params(self):
-        opt_params = []
-        for calc in self.calculators:
-            p = calc.get_opt_params()
-            opt_params.extend(p)
-        return opt_params
-
-    def get_opt_params_bounds(self):
-        bounds = []
-        for calc in self.calculators:
-            b = calc.get_opt_params_bounds()
-            bounds.extend(b)
-        return bounds
-
     def update_model_params(self):
-        for calc in self.calculators:
-            calc.update_model_params()
-
-    def update_params(self, opt_params):
-        for i, calc in enumerate(self.calculators):
-            start, end = self._start_end[i]
-            p = opt_params[start:end]
-            calc.update_params(p)
-
-    def get_calculator_list(self):
-        """Create a list of calculators.
-
-        Each calculator has `number of configurations` copies in the list.
-        """
-        calc_list = []
-        for calc in self.calculators:
-            N = len(calc.get_compute_arguments())
-            calc_list.extend([calc]*N)
-        return calc_list
-
-
-def length_equal(a, b):
-    if isinstance(a, Iterable) and isinstance(b, Iterable):
-        if len(a) == len(b):
-            return True
-        else:
-            return False
-    else:
-        return True  # if one is Iterable and the other is not, we treat them
-        # as equal since it can be groadcasted
-
-
-class CalculatorError(Exception):
-    def __init__(self, msg):
-        super(CalculatorError, self).__init__(msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-
-class InputError(Exception):
-    def __init__(self, msg):
-        super(InputError, self).__init__(msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
+        """Update from fitting params to model params."""
+        for name, attr in self.fitting_params.params.items():
+            self.set_model_params_no_shape_check(name, attr['value'])
