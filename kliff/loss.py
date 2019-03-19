@@ -3,8 +3,8 @@ import scipy.optimize
 import multiprocessing as mp
 import kliff
 from kliff import parallel
-from kliff.pytorch_neuralnetwork import FingerprintsDataset
-from kliff.pytorch_neuralnetwork import FingerprintsDataLoader
+from kliff.neuralnetwork import FingerprintsDataset
+from kliff.neuralnetwork import FingerprintsDataLoader
 
 try:
     import torch

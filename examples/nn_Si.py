@@ -3,7 +3,7 @@ import numpy as np
 from kliff.dataset import DataSet
 from kliff.loss import Loss
 from kliff.descriptors.symmetry_function import Set51
-import kliff.pytorch_neuralnetwork as nn
+import kliff.neuralnetwork as nn
 
 
 descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, dtype=np.float64)
