@@ -117,3 +117,14 @@
 14. 08/02/2018:                                                                  Not yet
   For ANN, add check for species that are present in training set also given
   in descriptor.
+
+15. 02/06/2019:                                                                  Not yet
+  Rename the ComputeArguments class as Model, and move the definition of
+  parameters into it. So if one wants to define a new model, he only needs
+  to subclass this class, and there is no need to create the Calculator
+  class.
+  For the KIM model, it only needs to deal with parameters. Maybe, transform
+  the FittingParameter class into a KIM model class.
+  Also, it seems possible to combine the `model_params` of a calculator,
+  and the `fitting_params` of a calculator, by adding a 'fitting' attribute
+  to `model_params`.

@@ -203,16 +203,17 @@ class Calculator(object):
 
         configs: list of Configuration object
 
-        use_energy: bool (optional)
+        use_energy: bool or list of bools (optional)
             Whether to require the calculator to compute energy.
 
-        use_forces: bool (optional)
+        use_forces: bool or list of bools (optional)
             Whether to require the calculator to compute forces.
 
-        use_stress: bool (optional)
+        use_stress: bool or list of bools (optional)
             Whether to require the calculator to compute stress.
         """
 
+        # TODO  need not be registered as self
         self.use_energy = use_energy
         self.use_forces = use_forces
         self.use_stress = use_stress
@@ -255,6 +256,7 @@ class Calculator(object):
 
     def compute(self, compute_arguments):
         compute_arguments.compute(self.params)
+        return compute_arguments.results
 
     def get_energy(self, compute_arguments):
         return compute_arguments.get_energy()
