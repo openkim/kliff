@@ -31,9 +31,9 @@ install:
   - cmake .. -DCMAKE_BUILD_TYPE=Release
   - sudo make install
   - sudo ldconfig
-  # install SW model
-  - kim-api-v2-collections-management install system SW__MD_335816936951_004
-  - kim-api-v2-collections-management install system SW_StillingerWeber_1985_Si__MO_405512056662_005
+  # install SW driver and model
+  - kim-api-v2-collections-management install system --sudo SW__MD_335816936951_004
+  - kim-api-v2-collections-management install system --sudo SW_StillingerWeber_1985_Si__MO_405512056662_005
 
 
   # kimpy
