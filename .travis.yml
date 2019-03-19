@@ -16,42 +16,28 @@ before_install:
 
   # keep record of kliff directory
   - export KLIFF_DIR=$PWD
+  - export KIM_API_VERSION=v2-2.0.1
+
 
 
 install:
   # kim-api
   - cd $KLIFF_DIR && cd ..
-  - wget http://s3.openkim.org/kim-api/kim-api-v2.0.0-beta.1.txz
-  - tar xJf kim-api-v2.0.0-beta.1.txz
-  - cd kim-api-v2.0.0-beta.1
-  - ./configure
-  - make
+  - wget http://s3.openkim.org/kim-api/kim-api-$KIM_API_VERSION.txz
+  - tar Jxvf kim-api-$KIM_API_VERSION.txz
+  - cd kim-api-$KIM_API_VERSION
+  - mkdir build
+  - cd build
+  - cmake .. -DCMAKE_BUILD_TYPE=Release
   - sudo make install
   - sudo ldconfig
-  - cd examples
-  - make all-user
-
   # install SW model
-  - cd ~/.kim-api/v2_model_drivers/
-  - git clone https://github.com/mjwen/Three_Body_Stillinger_Weber__MD_335816936951_003.git
-  - cd Three_Body_Stillinger_Weber__MD_335816936951_003
-  - git checkout kimapi2.0
-  - make
-  - cd ~/.kim-api/v2_models/
-  - git clone https://github.com/mjwen/Three_Body_Stillinger_Weber_Si__MO_405512056662_004.git
-  - cd Three_Body_Stillinger_Weber_Si__MO_405512056662_004
-  - git checkout kimapi2.0
-  - make
+  - kim-api-v2-collections-management install system SW__MD_335816936951_004
+  - kim-api-v2-collections-management install system SW_StillingerWeber_1985_Si__MO_405512056662_005
 
-  # neighlist
-  - cd $KLIFF_DIR && cd ..
-  - git clone https://github.com/mjwen/neighlist.git
-  - cd neighlist/python
-  - pip install -e .
 
   # kimpy
-  - cd $KLIFF_DIR && cd ..
-  - pip install git+https://github.com/mjwen/kimpy.git@master
+  - pip install kimpy
 
 
 script:
