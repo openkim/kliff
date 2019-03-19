@@ -6,7 +6,7 @@ from kliff.descriptors.symmetry_function import Set51
 import kliff.pytorch_neuralnetwork as nn
 
 
-descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, grad=True, dtype=np.float64)
+descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, dtype=np.float64)
 desc_size = len(descriptor)
 
 # dropout for input fingerprint
@@ -27,14 +27,15 @@ configs = tset.get_configurations()
 
 
 # calculator
-calc = nn.PytorchANNCalculator(model, num_epochs=10, batch_size=2)
-calc.create(configs)
+calc = nn.PytorchANNCalculator(model)
+calc.create(configs, use_forces=True)
 
 
 # loss
 loss = Loss(calc)
 # result = loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': 2})
-result = loss.minimize(method='SGD', lr=0.001, momentum=0.9)
+result = loss.minimize(method='SGD', num_epochs=10, batch_size=2,
+                       lr=0.001, momentum=0.9)
 
 model.save('./saved_model.pt')
 model.write_kim_model()

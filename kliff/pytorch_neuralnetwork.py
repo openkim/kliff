@@ -3,6 +3,7 @@ import multiprocessing as mp
 from collections import Iterable
 from kliff.descriptors.descriptor import load_fingerprints
 from kliff.error import InputError
+from kliff.dataset import Configuration
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -161,7 +162,6 @@ class NeuralNetwork(nn.Module):
         self.descriptor = descriptor
         self.seed = seed
 
-        self.grad = self.descriptor.get_grad()
         dtype = self.descriptor.get_dtype()
         if dtype == np.float32:
             self.dtype = torch.float32
@@ -541,35 +541,88 @@ def get_drop_ratios(groups, supported):
 class PytorchANNCalculator(object):
     """ A neural network calculator.
 
-    Parameters
+    Attributes
     ----------
 
-    model: instance of `NeuralNetwork` class
     """
 
-    def __init__(self, model, batch_size=100, num_epochs=100):
-        self.model = model
-        self.batch_size = batch_size
-        self.num_epochs = num_epochs
+    implemented_property = ['energy', 'forces']
 
-        self.configs = None
+    def __init__(self, model):
+        """
+        Parameters
+        ----------
+
+        model: NeuralNetwork object
+        """
+
+        self.model = model
+        self.dtype = self.model.descriptor.dtype
+        self.train_fingerprints_path = None
+
         self.use_energy = None
         self.use_forces = None
 
-        self.data_loader = None
+        self.results = dict([(i, None) for i in self.implemented_property])
 
-        self.grad = self.model.descriptor.grad
-        self.dtype = self.model.descriptor.dtype
+    def create(self, configs, use_energy=True, use_forces=True, use_stress=False,
+               nprocs=mp.cpu_count()):
+        """Preprocess configs into fingerprints.
 
-    def create(self, configs, nprocs=mp.cpu_count()):
-        """Preprocess configs into fingerprints, and create data loader for them.
+        Parameters
+        ----------
+
+        configs: list of Configuration object
+
+        use_energy: bool (optional)
+            Whether to require the calculator to compute energy.
+
+        use_forces: bool (optional)
+            Whether to require the calculator to compute forces.
+
+        use_stress: bool (optional)
+            Whether to require the calculator to compute stress.
+
+        nprocs: int (optional)
+            Number if processors.
+
         """
+        if use_stress:
+            raise NotImplementedError('"stress" is not supported by NN calculator.')
+
         self.configs = configs
+        self.use_energy = use_energy
+        self.use_forces = use_forces
+
+        if isinstance(configs, Configuration):
+            configs = [configs]
 
         # generate pickled fingerprints
-        fname = self.model.descriptor.generate_train_fingerprints(configs, nprocs=nprocs)
-        fp = FingerprintsDataset(fname)
-        self.data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=self.num_epochs)
+        fname = self.model.descriptor.generate_train_fingerprints(
+            configs, grad=use_forces, nprocs=nprocs)
+        self.train_fingerprints_path = fname
+
+    def get_train_fingerprints_path(self):
+        """Return the path to the training set fingerprints: `train.pkl`."""
+        return self.train_fingerprints_path
+
+    def compute(self, x):
+
+        grad = self.use_forces
+        zeta = x['zeta'][0]
+
+        if grad:
+            zeta.requires_grad = True
+        y = self.model(zeta)
+        pred_energy = y.sum()
+        if grad:
+            dzeta_dr = x['dzeta_dr'][0]
+            forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
+            zeta.requires_grad = False
+        else:
+            forces = None
+
+        return {'energy': pred_energy, 'forces': forces}
 
     def get_loss(self, forces_weight=1.):
         """
@@ -602,6 +655,7 @@ class PytorchANNCalculator(object):
     def compute_forces(energy, zeta, dzeta_dr):
         denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
         forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
+        return forces
 
 
 def cost_single_config(pred_energy, energy=None, forces=None):

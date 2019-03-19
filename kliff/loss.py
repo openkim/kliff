@@ -3,6 +3,14 @@ import scipy.optimize
 import multiprocessing as mp
 import kliff
 from kliff import parallel
+from kliff.pytorch_neuralnetwork import FingerprintsDataset
+from kliff.pytorch_neuralnetwork import FingerprintsDataLoader
+
+try:
+    import torch
+    torch_available = True
+except ImportError:
+    torch_available = False
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -88,7 +96,12 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     except KeyError:
         normalizer = 1
 
-    residual = np.subtract(prediction, reference)
+    # TODO mornalizer
+    #residual = np.subtract(prediction, reference)
+    #residual[0] *= np.sqrt(energy_weight)
+    #residual[1:] *= np.sqrt(forces_weight)
+
+    residual = prediction - reference
     residual[0] *= np.sqrt(energy_weight)
     residual[1:] *= np.sqrt(forces_weight)
 
@@ -184,6 +197,9 @@ class LossPhysicsMotivatedModel(object):
           data passed to residual function
 
         """
+        if not torch_available:
+            raise ImportError(
+                'Please install "PyTorch" first. See: https://pytorch.org')
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -371,13 +387,13 @@ class LossPhysicsMotivatedModel(object):
 
         return residual
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exec_type, exec_value, trackback):
-        # if there is expections, raise it (not for KeyboardInterrupt)
-        if exec_type is not None and exec_type is not KeyboardInterrupt:
-            return False  # return False will cause Python to re-raise the expection
+#    def __enter__(self):
+#        return self
+#
+#    def __exit__(self, exec_type, exec_value, trackback):
+#        # if there is expections, raise it (not for KeyboardInterrupt)
+#        if exec_type is not None and exec_type is not KeyboardInterrupt:
+#            return False  # return False will cause Python to re-raise the expection
 
 
 class LossNeuralNetworkModel(object):
@@ -433,7 +449,7 @@ class LossNeuralNetworkModel(object):
 #    self.residual_fn = fn
 #    self.residual_fn_data = data
 
-    def minimize(self, method, **kwargs):
+    def minimize(self, method, batch_size=100, num_epochs=1000, **kwargs):
         """ Minimize the loss.
 
         method: str
@@ -445,23 +461,27 @@ class LossNeuralNetworkModel(object):
         kwargs: extra keyword arguments that can be used by the PyTorch optimizer.
         """
 
-        try:
-            import torch.optim as optim
-        except ImportError as e:
-            raise ImportError(str(e) + '.\nPlease install "PyTorch" first.')
+        self.method = method
+        self.batch_size = batch_size
+        self.num_epochs = num_epochs
 
-        optimizer = getattr(optim, method)(self.calculator.model.parameters(), **kwargs)
+        # data loader
+        fname = self.calculator.get_train_fingerprints_path()
+        fp = FingerprintsDataset(fname)
+        self.data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
+
+        # optimizing
+        optimizer = getattr(torch.optim, method)(
+            self.calculator.model.parameters(), **kwargs)
         n = 0
         epoch = 0
-        # TODO read in batch size and num_epochs
-        batch_size = self.calculator.batch_size
         DATASET_SIZE = len(self.calculator.configs)
         while True:
             try:
                 # zero the parameter gradients
                 optimizer.zero_grad()
                 # forward + backward + optimize
-                loss = self.calculator.get_loss()
+                loss = self.get_loss()
                 loss.backward()
                 optimizer.step()
                 epoch_new = n*batch_size // DATASET_SIZE
@@ -471,6 +491,49 @@ class LossNeuralNetworkModel(object):
                 n += 1
             except StopIteration:
                 break
+
+    def get_loss(self):
+        """
+        """
+        loss = 0
+        for _ in range(self.batch_size):
+            # raise StopIteration error if out of bounds; This will ignore the last
+            # chunk of data whose size is smaller than `batch_size`
+            inp = self.data_loader.next_element()
+            residual = self._get_residual_single_config(
+                inp, self.calculator, self.residual_fn, self.residual_data)
+            c = torch.sum(torch.pow(residual, 2))
+            loss += c
+        # TODO  maybe divide batch_size elsewhere
+        loss /= self.batch_size
+        return loss
+
+    def _get_residual_single_config(self, inp, calculator, residual_fn, residual_data):
+
+        # prediction data
+        results = calculator.compute(inp)
+        pred_energy = results['energy']
+        pred_forces = results['forces']
+
+        if calculator.use_energy:
+            pred = torch.tensor([pred_energy])
+            ref = torch.tensor([inp['energy'][0]])
+        if calculator.use_forces:
+            ref_forces = inp['forces'][0]
+            if calculator.use_energy:
+                pred = torch.cat((pred, pred_forces.reshape((-1,))))
+                ref = torch.cat((ref, ref_forces.reshape((-1,))))
+            else:
+                pred = pred_forces.reshape((-1,))
+                ref = ref_forces.reshape((-1,))
+
+        identifier = inp['name'][0]
+        species = inp['species'][0]
+        natoms = len(species)
+
+        residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+
+        return residual
 
 
 class LossOld(object):
