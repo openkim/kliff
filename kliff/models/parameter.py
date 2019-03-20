@@ -195,7 +195,7 @@ class FittingParameter(object):
                        [2.2, 'inf', 3.3]]
           instance.set_one(name, settings)
         """
-
+        # TODO update Example in docs, see test_parameter.py for example
         size = self.model_params[name].get_size()
         if len(settings) != size:
             raise InputError(

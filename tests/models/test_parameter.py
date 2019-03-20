@@ -65,7 +65,8 @@ def test_fitting_parameter():
         for i in inp0:
             for j in inp1:
                 for k in inp2:
-                    fp.set(p1=[i], p2=[j, k])
+                    fp.set(p1=[i])
+                    fp.set(p2=[j, k])
 
     assert np.allclose(fp.get_opt_params(), [1.11, 2.21, 3.31])
 
