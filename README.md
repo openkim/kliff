@@ -8,7 +8,7 @@ KLIFF is an interatomic potential fitting library that can be used to fit physic
 
 Documentation at: <https://kliff.readthedocs.io>
 
-## Why you want to use KLIFF (or don't use it)
+## Why you want to use KLIFF (or not use it)
 
 - Interacting seamlessly with[ KIM](https://openkim.org), the fitted model can be readily used in simulation codes such as LAMMPS and ASE via the `KIM API`
 - Creating mixed PM and ANN models
