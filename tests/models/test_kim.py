@@ -30,7 +30,7 @@ def test_main():
     configs = tset.get_configurations()
 
     # model
-    modelname = 'Three_Body_Stillinger_Weber_Si__MO_405512056662_004'
+    modelname = 'SW_StillingerWeber_1985_Si__MO_405512056662_005'
     model = KIM(modelname)
 
     # calculator
