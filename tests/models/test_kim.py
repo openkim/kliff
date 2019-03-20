@@ -45,11 +45,11 @@ def test_main():
         assert energy == pytest.approx(ref_energies[i], 1e-6)
         assert np.allclose(forces, ref_forces[i])
 
-    # model.echo_model_params()
-    model.set_fitting_params(sigma=[['default']],
-                             A=[['default', 'fix']],
-                             B=[['default']])
-    # model.echo_fitting_params()
+    # Cannot set them all by calling this function only once, becase the assertation
+    # depends on order
+    model.set_fitting_params(sigma=[['default']])
+    model.set_fitting_params(A=[['default', 'fix']])
+    model.set_fitting_params(B=[['default']])
 
     # update params
     x0 = calc.get_opt_params()
