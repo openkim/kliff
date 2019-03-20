@@ -43,8 +43,7 @@ install:
 
 script:
   - cd $KLIFF_DIR
-  - python setup.py install
-
+  - pip install -e .
   - cd tests
   - pytest test_neighbor.py
   - cd dataset
