@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import logging
 from collections import OrderedDict
@@ -5,12 +6,11 @@ import kimpy
 from kimpy import neighlist as nl
 import kliff
 from ..dataset import Configuration
-from .model import ComputeArguments
-from .model import Model
+from .model import ComputeArguments, Model
 from .parameter import Parameter
-from ..neighbor import assemble_forces
-from ..neighbor import assemble_stress
+from ..neighbor import assemble_forces, assemble_stress
 from ..utils import length_equal
+from ..error import SupportError
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -423,6 +423,46 @@ class KIM(Model):
 
         return species
 
+    def write_kim_model(self, path=None, name=None):
+        """Write out a KIM model that can be used directly with the kim-api.
+
+        This function typically write two files to `path`: (1) CMakeLists.txt, and
+        (2) $(name).params. `path` will be created if it does not exist.
+
+
+        Parameters
+        ----------
+        path: str (optional)
+            Path to the newly trained model.
+            If `None`, it is set to `./$(MODEL_NAME)_kliff_trained`, where
+            `MODEL_NAME` is the `model_name` on which you are working.
+
+        name: str (optional)
+            Name of the parameterized model file.
+            If `None`, it is set to `kliff_trained`.
+
+        Note
+        ----
+        This only works for parameterized KIM models that support the writing of
+        parameters.
+        """
+        present, required, error = self.kim_model.is_routine_present(
+            kimpy.model_routine_name.WriteParameterizedModel)
+        check_error(error, 'kim_model.is_routine_is_routine_present')
+        if not present:
+            raise SupportError(
+                'This KIM model does not support the writing of parameters.')
+
+        if path is None:
+            path = os.path.join(os.getcwd(), self.model_name+'_kliff_trained')
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if name is None:
+            name = 'kliff_trained'
+
+        error = self.kim_model.write_parameterized_model(path, name)
+        check_error(error, 'kim_model.write_parameterized_model')
+
 
 class KIMModelError(Exception):
     def __init__(self, msg):
@@ -435,7 +475,8 @@ class KIMModelError(Exception):
 
 def check_error(error, msg):
     if error != 0 and error is not None:
-        raise KIMModelError('Calling "{}" failed.'.format(msg))
+        raise KIMModelError(
+            'Calling "{}" failed.\nSee "kim.log" for more infomation.'.format(msg))
 
 
 def report_error(msg):

@@ -5,6 +5,7 @@ from collections import OrderedDict
 import kliff
 from .parameter import FittingParameter
 from ..error import ModelError
+from ..error import SupportError
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -170,7 +171,7 @@ class Model:
                 params.set_value('B', B)
         """
 
-        self.model_name = model_name
+        self.model_name = model_name.rstrip('/')
         self.params_relation_callback = params_relation_callback
 
         # NOTE to be filled
@@ -194,6 +195,10 @@ class Model:
         # TODO maybe use metaclass to call this automatically after initialization
         # NOTE do not forget to call this in the subclass
         self.fitting_params = self.init_fitting_params(self.params)
+
+    def write_kim_model(self):
+        # TODO fill this
+        raise SupportError('This model does not support writing to a KIM model.')
 
     def set_params_relation_callback(self, params_relation_callback):
         """Register a function to set the relation between parameters."""

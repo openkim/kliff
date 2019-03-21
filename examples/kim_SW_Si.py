@@ -42,3 +42,4 @@ with Loss(calc, nprocs=2) as loss:
 
 # print optimized parameters
 model.echo_fitting_params()
+model.write_kim_model()
