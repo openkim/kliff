@@ -23,6 +23,16 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
     quickstart
 
 
+.. toctree::
+    :caption: Extra
+    :name: extra
+    :maxdepth: 2
+
+    reference
+
+
+
+
 Indices and tables
 ==================
 
