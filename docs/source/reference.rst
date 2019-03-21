@@ -1,11 +1,12 @@
 .. _reference:
 
+
 Reference
 =========
 
-.. automodule:: neighbor
+.. toctree::
+    :caption: API DOC
+    :name: apidoc
+    :maxdepth: 1
 
-.. autoclass:: NeighborList
-    :members:
-
-kliff.dataset
+    apidoc/kliff.dataset

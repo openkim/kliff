@@ -28,7 +28,8 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
     :name: extra
     :maxdepth: 2
 
-    reference
+    apidoc/kliff
+    builddoc
 
 
 
