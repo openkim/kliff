@@ -312,5 +312,5 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 
 # A list of modules to be mocked up. This is useful when some external dependencies
 # are not met at build time and break the building process.
-autodoc_mock_imports = ['numpy', 'scipy', 'kimpy', 'torch', 'yaml', 'ase', 'pybind11',
-                        'tensorflow']
+autodoc_mock_imports = ['numpy', 'scipy', 'kimpy', 'yaml', 'ase', 'torch',
+                        'tensorflow', 'sf']

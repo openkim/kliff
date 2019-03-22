@@ -39,13 +39,6 @@ install:
   - pip install kimpy
 
 
-# use doctr to build docs
-env:
-      global:
-        # Doctr deploy key for mjwen/kliff
-        - secure: "uDJ8fl/ioiC8mk1wgzphZf6P6OJXrgKLg9jDT1b1BBPNl+2C/tdlBMcKxjJYl8Ud+FI/Krdj0SWD1ueKyvQg7m7J9Gz1BZ9mddbmDMnT0F14zJZ9196gnbTGd+CpiGI9dBzLZgpT1t/DGvizWpIGTgNFMNzkrBICD7+iAxa546+PEGWyIXHb8tXxqi9xARUQbdwpkO5MiwlAiakaZKROwMjY03QJOflJzKKExgGMQx3aK9TMmebkhngaeMPgUxeClVeG5DXKGuwWGkQpUrLiHZt+dHTO7B1u3JcJa1ZguGmNH6ajOWr0jq/bHy2HtVoghhpG/odneRo8xwZLWDnzsjobEJJqV2n3e0myMevSZd+pOADEWxo+0hwdbArDgpewPdg56e5mh9mc4zCXi3oqnPFsHlLDel+JYmZauTIasE5QAQ/8Agt4DkEvxtI70idpUdIcKR4wTlj7EMi44nOYc29Hqv9EqF7h8pYI3Rqb072BrA13gmJaKm/D2ymHEQllYGTlCUn1ZlTzz4/f+PooedRQpKYw942R+PcbkD9FaYcCBIu4edDURW43QfqKpML0VFJJlk0Mq57KN01smvut3zId9yHzzCr/5dueT6H+tPIM0ZeKQSUNQnw5c1E5aVl5dhtFqrD5RC6q1P3h5VTIVWOLYrNjcc98JcfQXKJZEQM="
-
-
 script:
   - cd $KLIFF_DIR
   - pip install -e .
@@ -58,14 +51,3 @@ script:
   - cd ../descriptors
   - pytest test_descriptor.py
   - pytest test_symmetry_function.py
-
-# build and deploy doc
-  - set -e
-  # build docs
-  - pip install sphinx
-  - pip install sphinx-rtd-theme
-  - cd $KLIFF_DIR/docs
-  - make html
-  - pip install doctr
-  - cd $KLIFF_DIR
-  - doctr deploy . --built-docs $KLIFF_DIR/docs/build/html
