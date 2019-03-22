@@ -14,6 +14,7 @@
 
 import sys
 import os
+from unittest.mock import MagicMock
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -21,6 +22,21 @@ import os
 # this should be the path to the  package, not the source
 # e.g. ~/Applications/kliff
 sys.path.insert(0, os.path.abspath('../../'))
+
+
+# A list of modules to be mocked up.
+# https://docs.readthedocs.io/en/stable/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+# This is useful when some external dependencies are not met at build time and
+# break the building process.
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+
+MOCK_MODULES = ['numpy', 'scipy', 'kimpy', 'yaml', 'ase', 'torch',
+                'tensorflow', 'sf']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
 # -- General configuration ------------------------------------------------
@@ -309,8 +325,3 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-# A list of modules to be mocked up. This is useful when some external dependencies
-# are not met at build time and break the building process.
-autodoc_mock_imports = ['numpy', 'scipy', 'kimpy', 'yaml', 'ase', 'torch',
-                        'tensorflow', 'sf']
