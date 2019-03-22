@@ -110,7 +110,6 @@ class Descriptor(object):
 
         Parameters
         ----------
-
         configs: list of Configuration objects
 
         grad: bool (optional)
@@ -127,14 +126,14 @@ class Descriptor(object):
             Directory name where the generated training fingerprints are stored.
             Defaults to `prefix`.
             This effects only when:
-                1) `normalize` is `True` in the initializer; and
-                2) self.genereate_train_fingerprints() has not been called,
+            1) `normalize` is `True` in the initializer; and
+            2) self.genereate_train_fingerprints() has not been called,
             because in this case we need to find the mean and stdev of the fingerprints
             of the training set, which is saved as a file name `mean_stdev.pkl` in the
             derectory specified by `train_prefix`.
 
         nprocs: int
-          Number of processors to be used.
+            Number of processors to be used.
         """
 
         if train_prefix is None:
@@ -301,20 +300,18 @@ def load_mean_stdev(fname):
 
 
 def load_fingerprints(fname):
-    """Read preprocessed data from `fname'.
+    """Read preprocessed data.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
+    fname: str
+        Names of the pickled data file.
 
-    fname, str
-      names of the pickled data file.
-
-    fit_forces, bool
-      wheter to fit to forces.
+    fit_forces: bool
+        Whether to fit to forces.
 
     Return
     ------
-
     Instance of tf.data.
     """
     data = []

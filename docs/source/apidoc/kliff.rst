@@ -24,13 +24,6 @@ kliff.analysis module
     :undoc-members:
     :show-inheritance:
 
-kliff.ann module
-----------------
-
-.. automodule:: kliff.ann
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 kliff.atomic\_data module
 -------------------------
@@ -84,14 +77,6 @@ kliff.loss module
 -----------------
 
 .. automodule:: kliff.loss
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kliff.modelparameters module
-----------------------------
-
-.. automodule:: kliff.modelparameters
     :members:
     :undoc-members:
     :show-inheritance:

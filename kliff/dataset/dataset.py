@@ -46,7 +46,8 @@ class Configuration(object):
             (self.cell, self.PBC, self.energy, self.stress, self.species,
              self.coords, self.forces) = read_extxyz(fname)
             self.natoms = len(self.species)
-            self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
+            self.volume = abs(
+                np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
 
         if self.do_order:
             self.order_by_species()
@@ -65,23 +66,22 @@ class Configuration(object):
             self.coords = np.asarray(coords)
 
     def count_atoms_by_species(self, symbols=None):
-        """Count the number of atoms with species `symbols' in the configuration.
+        """Count the number of atoms with species `symbols` in the configuration.
 
         Parameters
         ----------
-
         symbols: list of str
-          species of atoms to count
-          If `None', the species already in the configuration are used.
+            Apecies of atoms to count. If `None`, the species already in the
+            configuration are used.
 
         Return
         ------
-
         natoms_by_species: OrderedDict
             key: str, value: int
         """
 
-        unique, counts = np.unique(self.species, return_counts=True)  # unique is sorted
+        unique, counts = np.unique(
+            self.species, return_counts=True)  # unique is sorted
 
         if symbols is None:
             symbols = unique
@@ -145,21 +145,13 @@ class Configuration(object):
 class DataSet(object):
     """Data set class, to deal with multiple configurations.
 
-    Argument
-    --------
-
+    Parameters
+    ---------
     order_by_species: bool
-      whether to order coords (forces if provided) by species
+        whether to order coords (forces if provided) by species
     """
 
     def __init__(self, order_by_species=True):
-        """"
-        Parameters
-        ---------
-
-        order_by_species: bool
-            whether to sort coords (forces if provided) by species
-        """
         self.do_order = order_by_species
         self.configs = []
 

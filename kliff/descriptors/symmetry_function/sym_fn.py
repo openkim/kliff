@@ -32,26 +32,25 @@ class SymmetryFunction(Descriptor):
 
         Parameters
         ----------
-
         hyperparams: dict
-          hyperparameters of descriptors
+            hyperparameters of descriptors
 
-          Example
-          -------
+            Example
+            -------
             {'g1': None,
              'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
              'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
             }
 
         cutname: string
-          cutoff function name
+            cutoff function name
 
         cutvalue: dict
-          cutoff values based on species.
+            cutoff values based on species.
 
-          Example
-          -------
-          cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+            Example
+            -------
+            cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
 
         """
         super(SymmetryFunction, self).__init__(*args, **kwargs)
@@ -74,9 +73,8 @@ class SymmetryFunction(Descriptor):
     def transform(self, conf, grad=False):
         """Transform atomic coords to atomic enviroment descriptor values.
 
-        Parameter
-        ---------
-
+        Parameters
+        ----------
         conf: Configuration object
 
         grad: bool (optional)
@@ -104,7 +102,8 @@ class SymmetryFunction(Descriptor):
         nei = NeighborList(conf, infl_dist, padding_need_neigh=True)
 
         coords = np.asarray(nei.coords, dtype=np.double)
-        species = np.asarray([self._species_code[i] for i in nei.species], dtype=np.intc)
+        species = np.asarray([self._species_code[i]
+                              for i in nei.species], dtype=np.intc)
         image = np.asarray(nei.image, dtype=np.intc)
 
         Natoms = len(coords)
@@ -131,7 +130,8 @@ class SymmetryFunction(Descriptor):
             dzeta_dr = None
 
         if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug('\n'+'='*25 + 'descriptor values (no normalization)' + '='*25)
+            logger.debug(
+                '\n'+'='*25 + 'descriptor values (no normalization)' + '='*25)
             logger.debug('\nconfiguration name: %s', conf.get_identifier())
             logger.debug('\natom id    descriptor values ...')
             for i, line in enumerate(zeta):
@@ -160,10 +160,9 @@ class SymmetryFunction(Descriptor):
     @staticmethod
     def generate_full_cutoff(rcut):
         """Generate a full binary cutoff dictionary.
-            e.g. for input
-                rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}
-            the output would be
-                rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}
+
+        e.g. for input `rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}`, the output would
+        be `rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}`.
         """
         rcut2 = dict()
         for key, val in rcut.items():

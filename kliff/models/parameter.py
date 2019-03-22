@@ -152,17 +152,14 @@ class FittingParameter(object):
         the argument name is the parameter name, the value of the argument is the
         settings(including intial value, fix flag, lower bound, and upper bound).
 
-        The value of the argument should be a list of list, where each inner list is for
-        one component of the parameter, which can contain 1, 2, or 3 elements.
+        The value of the argument should be a list of list, where each inner list is
+        for one component of the parameter, which can contain 1, 2, or 3 elements.
         See self.read() for the options of the elements.
 
         Example
         -------
-
-        instance.set(A=[['DEFAULT'],
-                          [2.0, 1.0, 3.0]],
-                     B=[[1.0, 'FIX'],
-                          [2.0, 'INF', 3.0]])
+        instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF',
+        3.0]])
         """
         for name, settings in kwargs.items():
             if name in self.params:
@@ -180,20 +177,18 @@ class FittingParameter(object):
 
         Parameters
         ----------
-
-        name, string
+        name: string
             name of a fitting parameter
 
-        settings, list of list
-            initial value, flag to fix a parameter, lower and upper bounds of a parameter
+        settings: list of list
+            initial value, flag to fix a parameter, lower and upper bounds of a
+            parameter
 
         Example
         -------
-            name = 'param_A'
-            settings = [['default', 0, 20],
-                       [2.0, 'fix'],
-                       [2.2, 'inf', 3.3]]
-          instance.set_one(name, settings)
+        name = 'param_A'
+        settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
+        instance.set_one(name, settings)
         """
         # TODO update Example in docs, see test_parameter.py for example
         size = self.model_params[name].get_size()

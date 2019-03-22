@@ -16,58 +16,51 @@ logger = kliff.logger.get_logger(__name__)
 
 
 def energy_forces_residual(identifier, natoms, prediction, reference, data):
-    """
+    """A residual function using both energy and forces.
+
     Parameters
     ----------
     identifier: str
-      identifer of the configuration, i.e. path to the file
+        identifer of the configuration, i.e. path to the file
 
     natoms: int
-      number of atoms in the configuration
+        number of atoms in the configuration
 
     prediction: 1D array
-      prediction computed by calculator
+        prediction computed by calculator
 
     reference: 1D array
-      references data for the prediction
+        references data for the prediction
 
     data: dict
-      user provided callback data
-      aviailable keys:
+        User provided callback data, and aviailable keys:
+            energy_weight: float (default: 1)
+            forces_weight: float (default: 1)
 
-      energy_weight: float (default: 1)
-
-      forces_weight: float (default: 1)
-
-      normalize_by_number_of_atoms: bool (default: False)
+    normalize: bool (default: False)
         Whether to normalize the residual by the number of atoms
-
 
     Return
     ------
-
     residual: 1D array
 
-
+    Note
+    ----
     The length of `prediction` and `reference` (call it `S`) are the same, and it
     depends on `use_energy` and `use_forces` in KIMCalculator. Assume the
     configuration contains of `N` atoms.
 
-    1) If use_energy == True and use_forces == False
-      S = 1
+    1) If `use_energy == True` and `use_forces == False`, then `S = 1`.
     `prediction[0]` is the potential energy computed by the calculator, and
     `reference[0]` is the reference energy.
 
-    2) If use_energy == False and use_forces == True
-      S = 3N
+    2) If `use_energy == False` and `use_forces == True`, then `S = 3N`.
     `prediction[3*i+0]`, `prediction[3*i+1]`, and `prediction[3*i+2]` are the
     x, y, and z component of the forces on atom i in the configuration, respecrively.
     Correspondingly, `reference` is the 3N concatenated reference forces.
 
 
-    3) If use_energy == True and use_forces == True
-      S = 3N + 1
-
+    3) If `use_energy == True` and `use_forces == True`, then `S = 3N + 1`.
     `prediction[0]` is the potential energy computed by the calculator, and
     `reference[0]` is the reference energy.
     `prediction[3*i+1]`, `prediction[3*i+2]`, and `prediction[3*i+3]` are the
@@ -233,11 +226,12 @@ class LossPhysicsMotivatedModel(object):
     def minimize(self, method, **kwargs):
         """ Minimize the loss.
 
+        Parameters
+        ----------
         method: str
             minimization methods as specified at:
-                https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
-                https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
-
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
         kwargs: extra keyword arguments that can be used by the scipy optimizer.
         """
 
@@ -450,10 +444,12 @@ class LossNeuralNetworkModel(object):
     def minimize(self, method, batch_size=100, num_epochs=1000, **kwargs):
         """ Minimize the loss.
 
+        Parameters
+        ----------
         method: str
             PyTorch optimization methods, and aviliable ones are:
             [`Adadelta`, `Adagrad`, `Adam`, `SparseAdam`, `Adamax`, `ASGD`,
-             `LBFGS`, `RMSprop`, `Rprop`, `SGD`]
+            `LBFGS`, `RMSprop`, `Rprop`, `SGD`]
             For also: https://pytorch.org/docs/stable/optim.html
 
         kwargs: extra keyword arguments that can be used by the PyTorch optimizer.

@@ -302,10 +302,9 @@ class Bispectrum(Descriptor):
     @staticmethod
     def generate_full_cutoff(rcut):
         """Generate a full binary cutoff dictionary.
-            e.g. for input
-                rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}
-            the output would be
-                rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}
+
+        e.g. for input `rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}`, the output would
+        be `rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}`.
         """
         rcut2 = dict()
         for key, val in rcut.items():
