@@ -306,3 +306,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+# A list of modules to be mocked up. This is useful when some external dependencies
+# are not met at build time and break the building process.
+autodoc_mock_imports = ['numpy', 'kimpy', 'torch', 'pybind11']
