@@ -1,7 +1,6 @@
 from setuptools import setup, Extension
 from distutils.sysconfig import get_config_vars
 import os
-import numpy
 
 
 # remove `-Wstrict-prototypes' that is for C not C++
@@ -9,29 +8,6 @@ cfg_vars = get_config_vars()
 for key, value in cfg_vars.items():
     if type(value) == str and '-Wstrict-prototypes' in value:
         cfg_vars[key] = value.replace('-Wstrict-prototypes', '')
-
-
-# def tf_includes():
-#    try:
-#        import tensorflow as tf
-#        return tf.sysconfig.get_include()
-#    except ImportError:
-#        raise ImportError('tensorflow is not found. install it first.')
-#
-#
-# def tf_lib_path():
-#    try:
-#        import tensorflow as tf
-#        return tf.sysconfig.get_lib()
-#    except ImportError:
-#        raise ImportError('tensorflow is not found. install it first.')
-
-
-def tf_extra_compile_args():
-    args = ['-std=c++11', '-Wall', '-O2', '-fPIC']
-    # gcc 5 needs the following
-    args_gcc5 = ['-D_GLIBCXX_USE_CXX11_ABI=0']
-    return args + args_gcc5
 
 
 def get_extra_compile_args():
@@ -85,7 +61,7 @@ kliff_scripts = ['bin/kliff']
 
 setup(name='kliff',
       version=get_version(),
-      description='Interatomic potential fitting package',
+      description='KLIFF interatomic potential fitting package',
       author='Mingjian Wen',
       url='https://github.com/mjwen/kliff',
       ext_modules=[desc_module],
