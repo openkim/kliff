@@ -208,9 +208,6 @@ class LossPhysicsMotivatedModel(object):
         self.residual_data = residual_data if residual_data is not None else dict()
         self.calculator_type = calculator.__class__.__name__
 
-        # update parameters from fitting parameters to model parameters
-        self.calculator.model.update_model_params()
-
         if self.calculator_type == 'WrapperCalculator':
             calculators = self.calculator.calculators
         else:

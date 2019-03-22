@@ -63,6 +63,10 @@ class Calculator(object):
         if not isinstance(use_stress, Iterable):
             use_stress = [use_stress for _ in range(N)]
 
+        # update parameters from fitting parameters to model parameters
+        # possibly, influence will be updated if the user set related parameters
+        self.model.update_model_params()
+
         supported_species = self.model.get_supported_species()
         infl_dist = self.model.get_influence_distance()
 

@@ -1,12 +1,8 @@
 import numpy as np
 import sys
-try:
-    import kimpy
-    from kimpy import neighlist as nl
-except ImportError as e:
-    raise ImportError(str(e)+'\n"kimpy" not found. Try install it first.')
-from kliff.atomic_data import atomic_number
-from kliff.atomic_data import atomic_species
+import kimpy
+from kimpy import neighlist as nl
+from kliff.atomic_data import atomic_number, atomic_species
 
 
 class NeighborList(object):
@@ -81,7 +77,8 @@ class NeighborList(object):
         # create padding atoms
         species_code_cb = np.asarray([atomic_number[s]
                                       for s in species_cb], dtype=np.intc)
-        out = nl.create_paddings(self.infl_dist, cell, PBC, coords_cb, species_code_cb)
+        out = nl.create_paddings(self.infl_dist, cell, PBC,
+                                 coords_cb, species_code_cb)
         coords_pd, species_code_pd, image_pd, error = out
         check_error(error, 'nl.create_padding')
         species_pd = [atomic_species[i] for i in species_code_pd]
@@ -89,7 +86,8 @@ class NeighborList(object):
         num_cb = coords_cb.shape[0]
         num_pd = coords_pd.shape[0]
 
-        self.coords = np.asarray(np.concatenate((coords_cb, coords_pd)), dtype=np.double)
+        self.coords = np.asarray(np.concatenate(
+            (coords_cb, coords_pd)), dtype=np.double)
         self.species = np.concatenate((species_cb, species_pd))
         self.padding_image = image_pd
         self.image = np.concatenate((np.arange(num_cb), image_pd))
@@ -101,7 +99,8 @@ class NeighborList(object):
 
         # create neighbor list
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
-        error = nl.build(self.neigh, self.coords, self.infl_dist, cutoffs, need_neigh)
+        error = nl.build(self.neigh, self.coords,
+                         self.infl_dist, cutoffs, need_neigh)
         check_error(error, 'nl.build')
 
     def get_neigh(self, index):
