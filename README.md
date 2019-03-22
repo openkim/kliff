@@ -1,4 +1,4 @@
-# KIM-based Learning Integrated Fitting Framework
+# KIM-based Learning-Integrated Fitting Framework (KLIFF)
 
 [![Build Status](https://travis-ci.com/mjwen/kliff.svg?branch=master)](https://travis-ci.com/mjwen/kliff)
 
