@@ -18,7 +18,10 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../../kliff'))
+kliff_src_dir = os.path.abspath('../../kliff')
+for root, dirs, files in os.walk(kliff_src_dir):
+    if '__init__.py' in files:
+        sys.path.insert(0, os.path.abspath(root))
 
 # -- General configuration ------------------------------------------------
 
@@ -309,4 +312,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 
 # A list of modules to be mocked up. This is useful when some external dependencies
 # are not met at build time and break the building process.
-autodoc_mock_imports = ['numpy', 'kimpy', 'torch', 'pybind11']
+autodoc_mock_imports = ['numpy', 'kimpy', 'torch', 'pybind11', 'tensorflow']
