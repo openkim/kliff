@@ -170,8 +170,7 @@ class Model:
                 B[0] = 2 * A[0]
                 params.set_value('B', B)
         """
-
-        self.model_name = model_name.rstrip('/')
+        self.model_name = model_name.rstrip('/') if model_name is not None else None
         self.params_relation_callback = params_relation_callback
 
         # NOTE to be filled
