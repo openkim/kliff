@@ -26,9 +26,9 @@ class get_pybind11_includes(object):
     def __init__(self, user=False):
         self.user = user
 
-#    def __str__(self):
-#        import pybind11
-#        return pybind11.get_include(self.user)
+    def __str__(self):
+        import pybind11
+        return pybind11.get_include(self.user)
 
 
 desc_module = Extension(
