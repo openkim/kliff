@@ -34,9 +34,9 @@ class get_pybind11_includes(object):
             import pybind11
         except ImportError:
             print('"pybind11" cannot be found, installing it using pip. You should '
-                  'see this, since it is a trick to get ReadTheDocs to work.')
+                  'not see this, since it is a trick to get ReadTheDocs to work.')
             import subprocess
-            subprocess.call(['pip install pybind11'])
+            subprocess.run(['pip', 'install', 'pybind11'])
         return pybind11.get_include(self.user)
 
 
