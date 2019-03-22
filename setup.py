@@ -27,16 +27,19 @@ class get_pybind11_includes(object):
         self.user = user
 
     def __str__(self):
-        # `pybind11` should be handled without problem by `install_requires`.
-        # We do this to make autodoc work in ReadTheDocs, which requires installing
-        # the package.
+
         try:
             import pybind11
-        except ImportError:
-            print('"pybind11" cannot be found, installing it using pip. You should '
-                  'not see this, since it is a trick to get ReadTheDocs to work.')
-            import subprocess
-            subprocess.run(['pip', 'install', 'pybind11'])
+        except ImportError as e:
+            # `pybind11` should be handled without problem by `install_requires`.
+            # We do this to make autodoc work for ReadTheDocs, which requires
+            # installing the package, but does not work well with install_requires.
+            if os.environ['HOME'] == '/home/docs':
+                import subprocess
+                subprocess.run(['pip', 'install', 'pybind11'])
+                import pybind11
+            else:
+                raise ImportError(e)
         return pybind11.get_include(self.user)
 
 
