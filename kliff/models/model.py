@@ -1,6 +1,7 @@
 import sys
 import os
 import numpy as np
+import yaml
 from collections import OrderedDict
 import kliff
 from .parameter import FittingParameter

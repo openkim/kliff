@@ -30,3 +30,4 @@ with Loss(calc, nprocs=1) as loss:
 
 # print optimized parameters
 model.echo_fitting_params()
+model.save_model_params()
