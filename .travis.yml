@@ -38,9 +38,6 @@ install:
   # kimpy
   - pip install kimpy
 
-  # for docs
-  - pip install sphinx
-  - pip install sphinx-rtd-theme
 
 # use doctr to build docs
 env:
@@ -65,6 +62,8 @@ script:
 # build and deploy doc
   - set -e
   # build docs
+  - pip install sphinx
+  - pip install sphinx-rtd-theme
   - cd $KLIFF_DIR/docs
   - make html
   - pip install doctr
