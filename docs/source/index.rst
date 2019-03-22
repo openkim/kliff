@@ -26,7 +26,7 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
 .. toctree::
     :caption: Extra
     :name: extra
-    :maxdepth: 2
+    :maxdepth: 1
 
     apidoc/kliff
     builddoc
