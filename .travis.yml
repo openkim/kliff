@@ -68,4 +68,4 @@ script:
   - cd $KLIFF_DIR/docs
   - make html
   - pip install doctr
-  - doctr deploy --built-docs $KLIFF_DIR/docs/build/html
+  - doctr deploy . --built-docs $KLIFF_DIR/docs/build/html
