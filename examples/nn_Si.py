@@ -2,7 +2,7 @@ import sys
 import numpy as np
 from kliff.dataset import DataSet
 from kliff.loss import Loss
-from kliff.descriptors.symmetry_function import Set51
+from kliff.descriptors import Set51
 import kliff.neuralnetwork as nn
 
 
