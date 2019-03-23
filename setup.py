@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from distutils.sysconfig import get_config_vars
 import os
 
@@ -65,10 +65,13 @@ setup(name='kliff',
       author='Mingjian Wen',
       url='https://github.com/mjwen/kliff',
       ext_modules=[desc_module],
-      packages=['kliff'],
-      #packages=['kliff','tensorflow_op', 'geolm'],
+      # NOTE, subpackages need to be specified as well
+      # packages=['kliff'],
+      # NOTE, subpackages need to be included as well
+      # packages=['kliff','tensorflow_op', 'geolm'],
       # package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
       # package_data={'geolm':['_geodesiclm.so']},
+      packages=find_packages(),
       scripts=kliff_scripts,
       install_requires=['scipy', 'pybind11', 'pyyaml'],
       zip_safe=False,
