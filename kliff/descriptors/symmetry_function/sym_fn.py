@@ -8,13 +8,13 @@ from kliff.neighbor import NeighborList
 from kliff.error import InputError, SupportError
 
 # deal with ReadTheDocs, it cannot read C extension
-try:
-    from . import sf
-    sf_imported = True
-except ImportError as e:
-    sf_imported = False
-    sf_imported_error = e
-
+# try:
+#    from . import sf
+#    sf_imported = True
+# except ImportError as e:
+#    sf_imported = False
+#    sf_imported_error = e
+#
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -33,10 +33,11 @@ class SymmetryFunction(Descriptor):
     Reference: J. Behler, J. Chem. Phys. 134, 074106 (2011).
     """
 
-    if sf_imported:
-        _cdesc = sf.Descriptor()
-    else:
-        raise ImportError(sf_imported_error)
+#    if sf_imported:
+#        _cdesc = sf.Descriptor()
+#    else:
+#        raise ImportError(sf_imported_error)
+    _cdesc = None
 
     def __init__(self, hyperparams, cutname, cutvalue, *args, **kwargs):
         """
