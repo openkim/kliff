@@ -19,9 +19,19 @@ from unittest.mock import MagicMock
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+#sys.path.insert(0, os.path.abspath('../../'))
+
 # this should be the path to the package, not the source
 # e.g. ~/Applications/kliff
-#sys.path.insert(0, os.path.abspath('../../'))
+# NOTE, do not use sys.path.insert, especially true when you have a C extension.
+# Because if you use `pip install .` or `python setup install` to build your
+# extension and install the package, the C extension will not be placed in the
+# sorce directory, but will be placed to your virtual environment. Then if you use
+# sys.path.insert to insert your source directory to be the first place to look for
+# your package, it will fail to find the C extension.
+# Here, we add it for sphinx to find the package source package, in case we do not
+# install the package.
+sys.path.append(os.path.abspath('../../'))
 
 
 # A list of modules to be mocked up.
