@@ -1,4 +1,5 @@
 from .descriptor import Descriptor
 from .descriptor import load_fingerprints
-from .symmetry_function import *
+#from .symmetry_function import *
 #from .bispectrum import *
+from . import symmetry_function

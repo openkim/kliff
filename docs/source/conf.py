@@ -26,17 +26,10 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # A list of modules to be mocked up.
 # https://docs.readthedocs.io/en/stable/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-# This is useful when some external dependencies are not met at build time and
-# break the building process.
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-
-MOCK_MODULES = ['numpy', 'scipy', 'kimpy', 'yaml', 'ase', 'torch',
-                'tensorflow', 'sf']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+# This is useful when some external dependencies are not installed at build time,
+# which can break the building process.
+autodoc_mock_imports = ['numpy', 'scipy', 'scipy.optimize', 'kimpy', 'yaml', 'ase',
+                        'torch', 'tensorflow', 'sf']
 
 
 # -- General configuration ------------------------------------------------
