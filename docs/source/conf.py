@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 # This is useful when some external dependencies are not installed at build time,
 # which can break the building process.
 autodoc_mock_imports = ['numpy', 'scipy', 'scipy.optimize', 'kimpy', 'yaml', 'ase',
-                        'torch', 'tensorflow', 'sf']
+                        'torch', 'tensorflow']
 
 
 # -- General configuration ------------------------------------------------
