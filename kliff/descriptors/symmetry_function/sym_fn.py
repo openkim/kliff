@@ -13,7 +13,7 @@ try:
     sf_imported = True
 except ImportError as e:
     sf_imported = False
-    sf_imported_msg = e
+    sf_imported_error = e
 
 
 logger = kliff.logger.get_logger(__name__)
@@ -36,7 +36,7 @@ class SymmetryFunction(Descriptor):
     if sf_imported:
         _cdesc = sf.Descriptor()
     else:
-        raise ImportError(e)
+        raise ImportError(sf_imported_error)
 
     def __init__(self, hyperparams, cutname, cutvalue, *args, **kwargs):
         """
