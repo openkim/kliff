@@ -4,9 +4,8 @@ import numpy as np
 import yaml
 from collections import OrderedDict
 import kliff
-from .parameter import FittingParameter
-from ..error import ModelError
-from ..error import SupportError
+from kliff.models.parameter import FittingParameter
+from kliff.error import ModelError, SupportError
 
 logger = kliff.logger.get_logger(__name__)
 

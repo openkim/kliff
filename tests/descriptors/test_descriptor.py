@@ -1,6 +1,6 @@
 import numpy as np
 from kliff.dataset import Configuration
-from kliff.descriptors import Descriptor
+from kliff.descriptors.descriptor import Descriptor
 from kliff.descriptors.descriptor import load_fingerprints
 from kliff.descriptors.descriptor import DescriptorError
 

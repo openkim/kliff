@@ -1,5 +1,5 @@
-__version__ = '0.0.1'
+from kliff.log import Logger
 
-from .log import Logger
+__version__ = '0.0.1'
 
 logger = Logger(level='info')

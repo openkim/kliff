@@ -1,11 +1,10 @@
 import numpy as np
-from .model import ComputeArguments
-from .model import Model
-from .parameter import Parameter
-from .parameter import ParameterError
-from ..neighbor import NeighborList
-from ..neighbor import assemble_forces
-from ..neighbor import assemble_stress
+import kliff
+from kliff.models.model import ComputeArguments, Model
+from kliff.models.parameter import Parameter, ParameterError
+from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
+
+logger = kliff.logger.get_logger(__name__)
 
 
 class LJComputeArguments(ComputeArguments):
@@ -29,7 +28,8 @@ class LJComputeArguments(ComputeArguments):
             try:
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
-                raise ParameterError('"influence_distance" not provided by calculator."')
+                raise ParameterError(
+                    '"influence_distance" not provided by calculator."')
         self.influence_distance = infl_dist
 
         # create neighbor list

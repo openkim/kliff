@@ -1,6 +1,5 @@
 import numpy as np
-from kliff.error import InputError
-from kliff.error import KeyNotFoundError
+from kliff.error import InputError, KeyNotFoundError
 
 
 def read_extxyz(fname):

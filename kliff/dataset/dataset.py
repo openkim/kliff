@@ -3,7 +3,7 @@ import numpy as np
 import copy
 from collections import OrderedDict
 from kliff.error import SupportError
-from .extxyz import read_extxyz
+from kliff.dataset.extxyz import read_extxyz
 
 
 implemented_format = dict()

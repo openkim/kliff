@@ -3,10 +3,10 @@ import sys
 import logging
 from collections import OrderedDict
 import kliff
-from kliff.descriptors import Descriptor
+from kliff.descriptors.descriptor import Descriptor
 from kliff.neighbor import NeighborList
 from kliff.error import InputError, SupportError
-from . import sf
+from kliff.descriptors.symmetry_function import sf
 
 logger = kliff.logger.get_logger(__name__)
 

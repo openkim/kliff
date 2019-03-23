@@ -2,7 +2,7 @@
 The zeta_ref are taken from aenet by Nongnuch Artrith.
 """
 import numpy as np
-from kliff.descriptors.symmetry_function import SymmetryFunction
+from kliff.descriptors import SymmetryFunction
 from kliff.dataset import Configuration
 from collections import OrderedDict
 

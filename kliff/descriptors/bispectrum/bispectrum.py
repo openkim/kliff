@@ -4,7 +4,7 @@ import multiprocessing as mp
 from kliff.error import InputError
 from kliff.neighbor import NeighborList
 from kliff.dataset import Configuration
-from ..descriptor import Descriptor
+from kliff.descriptors.descriptor import Descriptor
 
 
 from numpy import sqrt, exp

@@ -1,8 +1,8 @@
 import numpy as np
 import warnings
 from collections import OrderedDict
-from kliff.models import Parameter
-from kliff.models import FittingParameter
+from kliff.models.parameter import Parameter
+from kliff.models.parameter import FittingParameter
 from kliff.models.parameter import ParameterError
 
 
