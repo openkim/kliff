@@ -15,6 +15,7 @@ dist/
 *.lammps
 *.yml
 *.pt
+.idea
 ERROR_REPORT
 FINAL_FITTED_PARAMS
 ann_kim.params
