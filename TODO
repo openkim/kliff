@@ -124,3 +124,6 @@
   Also, it seems possible to combine the `model_params` of a calculator,
   and the `fitting_params` of a calculator, by adding a 'fitting' attribute
   to `model_params`.
+
+16. 03/23/2019:
+  Add test to kliff command line tools.                                          Not yet

@@ -1,0 +1,5 @@
+.. module:: doc.calculators
+
+===========
+Calculators
+===========

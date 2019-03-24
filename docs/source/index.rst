@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-KLIFF Documentation
-===================
+KIM-based Learning-Integrated Fitting Framework (KLIFF)
+=======================================================
 
 **KLIFF** is the ``KIM-based Learning-Integrated Fitting Framework`` for interatomic
 potentials.
@@ -15,19 +15,30 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
 
 
 .. toctree::
-    :caption: Table of Contents
-    :name: mastertoc
+    :name: intro
     :maxdepth: 1
 
-    installation
-    quickstart
+    about
+    changelog
 
 
 .. toctree::
-    :caption: Extra
+    :caption: Contents
+    :name: contents
+    :maxdepth: 2
+
+    installation
+    tutorials
+    modules/modules
+    command_line
+
+
+.. toctree::
+    :caption: Extra Information
     :name: extra
     :maxdepth: 1
 
+    faq
     apidoc/kliff
     builddoc
 
