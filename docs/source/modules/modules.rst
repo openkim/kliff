@@ -4,8 +4,7 @@
 Modules
 =======
 
-Quick links:
-============
+**Quick links**
 
 .. list-table::
 

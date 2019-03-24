@@ -3,11 +3,11 @@ import scipy.optimize
 import multiprocessing as mp
 import kliff
 from kliff import parallel
-from kliff.neuralnetwork import FingerprintsDataset
-from kliff.neuralnetwork import FingerprintsDataLoader
 
 try:
     import torch
+    from kliff.neuralnetwork import FingerprintsDataset
+    from kliff.neuralnetwork import FingerprintsDataLoader
     torch_available = True
 except ImportError:
     torch_available = False
@@ -190,9 +190,6 @@ class LossPhysicsMotivatedModel(object):
           data passed to residual function
 
         """
-        if not torch_available:
-            raise ImportError(
-                'Please install "PyTorch" first. See: https://pytorch.org')
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -421,6 +418,10 @@ class LossNeuralNetworkModel(object):
           Data passed to residual function.
 
         """
+
+        if not torch_available:
+            raise ImportError(
+                'Please install "PyTorch" first. See: https://pytorch.org')
 
         self.calculator = calculator
         self.nprocs = nprocs
