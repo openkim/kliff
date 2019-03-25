@@ -1,7 +1,6 @@
 import sys
 import os
 import numpy as np
-import yaml
 from collections import OrderedDict
 import kliff
 from kliff.models.parameter import FittingParameter
@@ -170,6 +169,10 @@ class Model:
                 B[0] = 2 * A[0]
                 params.set_value('B', B)
         """
+        # TODO paras_relation_callbacks may not work for some minimization algorithms
+        # since abruptly change the parameter relation may result in loss to go up,
+        # then the optimization method can fail. So to a check to implement this only
+        # for the minimization methods that support it natively.
         self.model_name = model_name.rstrip('/') if model_name is not None else None
         self.params_relation_callback = params_relation_callback
 
@@ -195,7 +198,7 @@ class Model:
         # NOTE do not forget to call this in the subclass
         self.fitting_params = self.init_fitting_params(self.params)
 
-    def write_kim_model(self):
+    def write_kim_model(self, path=None, fname=None):
         # TODO fill this
         raise SupportError('This model does not support writing to a KIM model.')
 
@@ -252,31 +255,27 @@ class Model:
         else:
             raise ModelError('"{}" is not a parameter of calculator.'.format(name))
 
-    def save_model_params(self, fname=None):
-        params = dict()
-        for i, j in self.params.items():
-            v = j.value
-            if isinstance(v, np.ndarray):
-                v = v.tolist()
-            params[i] = v
-        if fname is not None:
-            with open(fname, 'w') as fout:
-                yaml.dump(params, fout, default_flow_style=False)
-        else:
-            fout = sys.stdout
-            yaml.dump(params, fout, default_flow_style=False)
+#    def save_model_params(self, path):
+#        params = dict()
+#        for i, j in self.params.items():
+#            v = j.value
+#            if isinstance(v, np.ndarray):
+#                v = v.tolist()
+#            params[i] = v
+#        with open(path, 'w') as fout:
+#            yaml.dump(params, fout, default_flow_style=False)
+#
+#    def load_model_params(self, path):
+#        with open(path, 'r') as fin:
+#            params = yaml.safe_load(fin)
+#        for key, value in params.items():
+#            self.set_model_params_no_shape_check(key, value)
 
-    def restore_model_params(self, fname):
-        with open(fname, 'r') as fin:
-            params = yaml.safe_load(fin)
-        for key, value in params.items():
-            self.set_model_params_no_shape_check(key, value)
-
-    def echo_model_params(self, fname=None):
+    def echo_model_params(self, path=None):
         """Echo the optimizable parameters. """
 
-        if fname is not None:
-            fout = open(fname, 'w')
+        if path is not None:
+            fout = open(path, 'w')
         else:
             fout = sys.stdout
 
@@ -298,14 +297,14 @@ class Model:
             print('description:', p.description, file=fout)
             print(file=fout)
 
-        if fname is not None:
+        if path is not None:
             fout.close()
 
     def init_fitting_params(self, params):
         return FittingParameter(params)
 
-    def read_fitting_params(self, fname):
-        self.fitting_params.read(fname)
+    def read_fitting_params(self, path):
+        self.fitting_params.read(path)
 
     def set_fitting_params(self, **kwargs):
         self.fitting_params.set(**kwargs)
@@ -313,14 +312,14 @@ class Model:
     def set_one_fitting_params(self, name, settings):
         self.fitting_params.set_one(name, settings)
 
-    def save_fitting_params(self):
-        self.fitting_params.save()
+#    def save_fitting_params(self, path):
+#        self.fitting_params.save(path)
+#
+#    def load_fitting_params(self, path):
+#        self.fitting_params.load(path)
 
-    def restore_fitting_params(self):
-        self.fitting_params.restore()
-
-    def echo_fitting_params(self, fname=None):
-        self.fitting_params.echo_params(fname)
+    def echo_fitting_params(self, path=None):
+        self.fitting_params.echo_params(path)
 
     def get_number_of_opt_params(self):
         return self.fitting_params.get_number_of_opt_params()
@@ -348,3 +347,10 @@ class Model:
         """Update from fitting params to model params."""
         for name, attr in self.fitting_params.params.items():
             self.set_model_params_no_shape_check(name, attr['value'])
+
+    def save(self, path):
+        self.fitting_params.save(path)
+
+    def load(self, path):
+        self.fitting_params.load(path)
+        self.update_model_params()

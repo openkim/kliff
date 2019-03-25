@@ -26,8 +26,7 @@ model.set_fitting_params(
 
 # "lambda" is a python keyword, cannot use the above method
 model.set_one_fitting_params(name='lambda', settings=[[45.5322]])
-
-# calc.echo_fitting_params()
+# model.echo_fitting_params()
 
 
 calc = Calculator(model)
@@ -43,3 +42,4 @@ with Loss(calc, nprocs=2) as loss:
 # print optimized parameters
 model.echo_fitting_params()
 model.write_kim_model()
+model.save('kliff_model.pkl')

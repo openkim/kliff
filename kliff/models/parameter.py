@@ -1,5 +1,7 @@
+import os
 import sys
 import warnings
+import pickle
 from collections import OrderedDict
 from collections.abc import Iterable
 import numpy as np
@@ -276,6 +278,22 @@ class FittingParameter(object):
 
         if fname is not None:
             fout.close()
+
+    def save(self, path):
+        dirname = os.path.dirname(path)
+        if dirname and not os.path.exists(dirname):
+            os.makedirs(dirname)
+        with open(path, 'wb') as f:
+            pickle.dump(self.params, f)
+
+    def load(self, path):
+        # restore parameters
+        with open(path, 'rb') as f:
+            self.params = pickle.load(f)
+        # resotre index
+        self._index = []
+        for name in self.params.keys():
+            self._index.append(self._set_index(name))
 
     def get_names(self):
         return self.params.keys()

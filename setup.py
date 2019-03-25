@@ -73,6 +73,6 @@ setup(name='kliff',
       # package_data={'geolm':['_geodesiclm.so']},
       packages=find_packages(),
       scripts=kliff_scripts,
-      install_requires=['scipy', 'pybind11', 'pyyaml'],
+      install_requires=['scipy', 'pybind11'],
       zip_safe=False,
       )
