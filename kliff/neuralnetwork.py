@@ -295,7 +295,7 @@ class NeuralNetwork(nn.Module):
         groups.append(new_group)
         return groups
 
-    def write_kim_model(self, path=None, fname=None):
+    def write_kim_model(self, path=None):
 
         # supported
         param_layer = ['Linear']
@@ -312,16 +312,15 @@ class NeuralNetwork(nn.Module):
 
         if path is None:
             path = os.path.join(os.getcwd(), 'NeuralNetwork__MO_000000111111_000')
-        if not os.path.exists(path):
+        if path and not os.path.exists(path):
             os.makedirs(path)
-        if fname is None:
-            fname = 'kliff_trained.params'
 
         # TODO write CMakeList and probably pull the Eigen library
         with open(os.path.join(path, 'CMakeLists.txt'), 'w') as fout:
             fout.write('to be filled')
 
         # write parameter file
+        fname = 'kliff_trained.params'
         with open(os.path.join(path, fname), 'w') as fout:
             fout.write('#' + '='*80 + '\n')
             fout.write(

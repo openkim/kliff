@@ -423,11 +423,11 @@ class KIM(Model):
 
         return species
 
-    def write_kim_model(self, path=None, fname=None):
+    def write_kim_model(self, path=None):
         """Write out a KIM model that can be used directly with the kim-api.
 
         This function typically write two files to `path`: (1) CMakeLists.txt, and
-        (2) $(fname).params. `path` will be created if it does not exist.
+        (2) kliff_trained.params. `path` will be created if it does not exist.
 
 
         Parameters
@@ -435,11 +435,8 @@ class KIM(Model):
         path: str (optional)
             Path to the newly trained model.
             If `None`, it is set to `./$(MODEL_NAME)_kliff_trained`, where
-            `MODEL_NAME` is the `model_name` on which you are working.
-
-        fname: str (optional)
-            Name of the parameterized model file.
-            If `None`, it is set to `kliff_trained`.
+            `MODEL_NAME` is the `model_name` that is provided at the instanization of
+            this class.
 
         Note
         ----
@@ -455,10 +452,9 @@ class KIM(Model):
 
         if path is None:
             path = os.path.join(os.getcwd(), self.model_name+'_kliff_trained')
-        if not os.path.exists(path):
+        if path and not os.path.exists(path):
             os.makedirs(path)
-        if fname is None:
-            fname = 'kliff_trained'
+        fname = 'kliff_trained'
 
         error = self.kim_model.write_parameterized_model(path, fname)
         check_error(error, 'kim_model.write_parameterized_model')

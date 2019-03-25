@@ -198,7 +198,7 @@ class Model:
         # NOTE do not forget to call this in the subclass
         self.fitting_params = self.init_fitting_params(self.params)
 
-    def write_kim_model(self, path=None, fname=None):
+    def write_kim_model(self, path=None):
         # TODO fill this
         raise SupportError('This model does not support writing to a KIM model.')
 
