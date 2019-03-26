@@ -55,6 +55,10 @@ second line, for one atom in the system, taking the form::
 The coordinates ``x  y  z`` should be given in Cartesian values, not fractional
 values.
 
+.. note::
+    An atomic configuration stored in the extended XYZ format can be visualized
+    using the OVITO_ program.
 
 .. _basic XYZ format: https://en.wikipedia.org/wiki/XYZ_file_format
+.. _OVITO: http://ovito.org
 

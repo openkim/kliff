@@ -50,5 +50,5 @@ model.echo_fitting_params()
 # save model for later retraining
 model.save('kliff_model.pkl')
 
-# create a kim model
+# write a kim model
 model.write_kim_model()
