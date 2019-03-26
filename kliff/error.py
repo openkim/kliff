@@ -27,7 +27,7 @@ class KeyNotFoundError(Exception):
 
 class SupportError(Exception):
     def __init__(self, msg):
-        super(Support, self).__init__(msg)
+        super(SupportError, self).__init__(msg)
         self.msg = msg
 
     def __expr__(self):

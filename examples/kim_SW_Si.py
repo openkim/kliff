@@ -1,45 +1,57 @@
+import os
+import requests
+import tarfile
 import kliff
 from kliff.dataset import DataSet
 from kliff.models import KIM
 from kliff.calculator import Calculator
 from kliff.loss import Loss
 
-kliff.logger.set_level('debug')
+
+# setting logger info
+kliff.logger.set_level('info')
+
+
+# create a KIM model
+model = KIM(model_name='Three_Body_Stillinger_Weber_Si__MO_405512056662_004')
+
+# print parameters that are available for fitting
+model.echo_model_params()
+
+# fitting parameters
+model.set_fitting_params(
+    A=[[5.0, 1., 20]],
+    B=[['default']],
+    sigma=[[2.0951, 'fix']],
+    gamma=[[1.5]])
+
+# print fitting parameters
+model.echo_fitting_params()
 
 
 # training set
+dataset_name = 'Si_training_set'
 tset = DataSet()
-tset.read('../tests/configs_extxyz/Si_4/')
+tset.read(dataset_name)
 configs = tset.get_configurations()
 
 
 # calculator
-model = KIM(model_name='Three_Body_Stillinger_Weber_Si__MO_405512056662_004')
-# calc.echo_model_params()
-
-# fitting parameters
-model.set_fitting_params(
-    A=[[16.0, 1., 20]],
-    B=[['DEFAULT']],
-    sigma=[[2.0951, 'fix']],
-    gamma=[[2.51412]])
-
-# "lambda" is a python keyword, cannot use the above method
-model.set_one_fitting_params(name='lambda', settings=[[45.5322]])
-# model.echo_fitting_params()
-
-
 calc = Calculator(model)
 calc.create(configs)
 
 
 # loss
-with Loss(calc, nprocs=2) as loss:
-    result = loss.minimize(method='L-BFGS-B',
-                           options={'disp': True, 'maxiter': 10})
+steps = 100
+loss = Loss(calc, nprocs=1)
+loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': steps})
 
 
 # print optimized parameters
 model.echo_fitting_params()
-model.write_kim_model()
+
+# save model for later retraining
 model.save('kliff_model.pkl')
+
+# create a kim model
+model.write_kim_model()

@@ -19,7 +19,7 @@ dist/
 ERROR_REPORT
 FINAL_FITTED_PARAMS
 ann_kim.params
-maybe_needed
+examples/Si_training_set
 libs/geodesicLMv1.1
 tests/echo*
 tests/fingerprints/
