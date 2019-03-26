@@ -1,6 +1,3 @@
-import os
-import requests
-import tarfile
 import kliff
 from kliff.dataset import DataSet
 from kliff.models import KIM

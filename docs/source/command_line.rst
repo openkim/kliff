@@ -1,4 +1,4 @@
-.. _cmdline:
+.. _cmdlntool:
 
 =================
 Command Line Tool
