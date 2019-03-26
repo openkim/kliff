@@ -12,6 +12,10 @@ neural network potential.
 .. toctree::
     :name: toctutor
     :maxdepth: 1
+    :titlesonly:
+
 
     kim_sw
     nn
+    new_model.rst
+    install_kim_model.rst

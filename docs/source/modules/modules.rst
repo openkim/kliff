@@ -9,8 +9,8 @@ Modules
 .. list-table::
 
     * - :mod:`~doc.models`
-      - :mod:`~doc.calculators`
-    * - :mod:`~doc.loss`
+      - :mod:`~doc.dataset`
+    * - :mod:`~doc.calculators`
       - :mod:`~doc.loss`
 
 .. note::
@@ -22,6 +22,7 @@ Modules
     :maxdepth: 2
 
     models
+    dataset
     calculators
     loss
 

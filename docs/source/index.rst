@@ -26,7 +26,6 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
     :caption: Contents
     :name: contents
     :titlesonly:
-    :maxdepth: 2
 
     installation
     tutorials/tutorials
