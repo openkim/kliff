@@ -1,13 +1,17 @@
-.. _tutorials:
+.. _tut_kim_sw:
 
-=========
-Tutorials
-=========
+==================================
+Train a Stillinger-Weber potential
+==================================
 
-This section provides two example to use KLIFF to train a `Physics-motivated potential`_,
-and a `Neural network potential`_.
-Before getting started, make sure that KLIFF is successfully installed as discussed
-in :ref:`installation`.
+In this tutorial, we train a Stillinger-Weber (SW) potential for silicon that is
+archived on OpenKIM_. Before getting started to train the SW model, let's first
+install the model driver and the parameterized model::
+
+    $ git clone https://github.com/mjwen/Three_Body_Stillinger_Weber__MD_335816936951_003.git
+    $ git clone https://github.com/mjwen/Three_Body_Stillinger_Weber_Si__MO_405512056662_004.git
+    $ kim-api-v2-collections-management install user ./Three_Body_Stillinger_Weber__MD_335816936951_003
+    $ kim-api-v2-collections-management install user ./Three_Body_Stillinger_Weber_Si__MO_405512056662_004
 
 We are going to create potentials for diamond silicon, and fit the potentials
 to a training set of energies and forces consisting of compressed and stretched
@@ -38,18 +42,6 @@ of this format.
     The ``Si_training_set`` is just a toy data set for the purpose to demonstrate
     how to use KLIFF to train potentials. It should not be used to train any
     potential for real simulations.
-
-Physics-motivated potential
-===========================
-
-In this example, we work with the Stillinger-Weber (SW) potential for silicon that is
-archived on OpenKIM_. Before getting started to train the SW model,
-let's first install the model driver and the parameterized model::
-
-    $ git clone https://github.com/mjwen/Three_Body_Stillinger_Weber__MD_335816936951_003.git
-    $ git clone https://github.com/mjwen/Three_Body_Stillinger_Weber_Si__MO_405512056662_004.git
-    $ kim-api-v2-collections-management install user ./Three_Body_Stillinger_Weber__MD_335816936951_003
-    $ kim-api-v2-collections-management install user ./Three_Body_Stillinger_Weber_Si__MO_405512056662_004
 
 
 Model
@@ -320,13 +312,6 @@ third line writes out a KIM potential named
 
 .. seealso::
     For information about how to load a saved model, see :mod:`~doc.modules`.
-
-
-
-
-Neural network potential
-========================
-
 
 
 

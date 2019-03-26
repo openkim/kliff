@@ -5,11 +5,11 @@ Installation
 ============
 
 
-**kliff** needs Python_ 3.5 or newer.
+KLIFF needs Python_ 3.5 or newer.
 
 
-**kliff** is based on KIM_, either to fit physics-motivated potentials archived
-on OpenKIM_ or to deploy the trained potential. To get **kliff** to work, the
+KLIFF is based on KIM_, either to fit physics-motivated potentials archived
+on OpenKIM_ or to deploy the trained potential. To get KLIFF to work, the
 prerequisites kim-api_ and kimpy_ need to be installed first.
 
 
@@ -40,7 +40,7 @@ kimpy_ is on PyPI, which can be installed simply by
 kliff
 =====
 
-After getting kim-api_ and kimpy_ to work, you can install **kliff** via
+After getting kim-api_ and kimpy_ to work, you can install KLIFF via
 
 Package manager
 ---------------
@@ -58,7 +58,7 @@ From source
 Optional
 ========
 
-**kliff** takes advantage of PyTorch_ to build neural network models and conduct the
+KLIFF takes advantage of PyTorch_ to build neural network models and conduct the
 training. So if you want to train neural network potentials, PyTorch_ needs to be
 installed. Please follow the instructions given on the official PyTorch_ website to
 install it.
