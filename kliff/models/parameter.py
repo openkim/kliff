@@ -242,7 +242,7 @@ class FittingParameter(object):
             fout = sys.stdout
 
         print('#'+'='*80, file=fout)
-        print('# Model parameters that are optimzied.', file=fout)
+        print('# Model parameters that are optimized.', file=fout)
         print('#'+'='*80, file=fout)
         print(file=fout)
 
