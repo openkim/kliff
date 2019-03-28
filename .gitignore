@@ -16,6 +16,7 @@ dist/
 *.yml
 *.pt
 .idea
+.DS_Store
 ERROR_REPORT
 FINAL_FITTED_PARAMS
 ann_kim.params
