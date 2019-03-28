@@ -4,28 +4,11 @@ Dataset
 This Module contains the `class` and `functions` to deal with dataset. Currently
 supported dataset format include:
 
-- extended xyz (.exy)
+- extended XYZ (.xyz)
 
 
-kliff.dataset.dataset
----------------------
-
-.. automodule:: kliff.dataset.dataset
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kliff.dataset.extxyz
---------------------
-
-.. automodule:: kliff.dataset.extxyz
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
+kliff.dataset
+-------------
 
 .. automodule:: kliff.dataset
     :members:

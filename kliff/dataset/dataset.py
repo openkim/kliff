@@ -10,17 +10,21 @@ implemented_format = dict()
 implemented_format['extxyz'] = '.xyz'
 
 
-class Configuration(object):
-    """ Class for one atomistic configuration.
+class Configuration:
+    """Class of atomic configuration.
 
     Parameters
     ----------
+    format: str
+        Format of the file that stores the configuration. Currently, supported format
+        includes: `extxyz`.
 
     identifer: str
-      name of the configuration
+        A unique identifier of the configuration.
 
     order_by_species: bool
-      whether to order coords (, and forces if provided) by species
+        If `True`, the atoms in the configuration will be ordered according to their
+        species such that atoms with the same species will have contiguous indices.
     """
 
     def __init__(self, format='extxyz', identifier=None, order_by_species=True):
@@ -38,13 +42,21 @@ class Configuration(object):
         self.forces = None   # ndarray of shape(N, 3)
         self.natoms_by_species = None   # dict
 
-    def read(self, fname):
+    def read(self, path):
+        """Read configuration stored in a file.
+
+        Parameters
+        ----------
+        path: str
+            Path to the file that stores the configuration.
+        """
+
         if self.format not in implemented_format:
             raise SupportError('Data file format "{}" not recognized.')
 
         if self.format == 'extxyz':
             (self.cell, self.PBC, self.energy, self.stress, self.species,
-             self.coords, self.forces) = read_extxyz(fname)
+             self.coords, self.forces) = read_extxyz(path)
             self.natoms = len(self.species)
             self.volume = abs(
                 np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
@@ -53,6 +65,7 @@ class Configuration(object):
             self.order_by_species()
 
     def order_by_species(self):
+        """Order the atoms according to the species."""
         if self.forces is not None:
             species, coords, forces = zip(*sorted(
                 zip(self.species, self.coords, self.forces), key=lambda pair: pair[0]))
@@ -70,21 +83,18 @@ class Configuration(object):
 
         Parameters
         ----------
-        symbols: list of str
-            Apecies of atoms to count. If `None`, the species already in the
+        symbols: list
+            A list of species string. If `None`, the species that are already in the
             configuration are used.
 
         Return
         ------
-        natoms_by_species: OrderedDict
-            key: str, value: int
+        Return an OrderedDict with `keys` the species string specified in `symbols`,
+        and `values` the number of atoms with each species.
         """
 
-        unique, counts = np.unique(
-            self.species, return_counts=True)  # unique is sorted
-
-        if symbols is None:
-            symbols = unique
+        unique, counts = np.unique(self.species, return_counts=True)
+        symbols = unique if symbols is None else symbols
 
         natoms_by_species = OrderedDict()
         for s in symbols:
@@ -97,49 +107,85 @@ class Configuration(object):
         return natoms_by_species
 
     def get_identifier(self):
+        """Return the identifier of the configuration, which is specified at the
+        initialization of the class."""
         return self.id
 
     def get_number_of_atoms(self):
+        """Return the total number of atoms in the configuration."""
         return self.natoms
 
     def get_number_of_atoms_by_species(self):
-        return copy.deepcopy(self.natoms_by_species)
+        """Return a dictionary of the number of atoms with each species."""
+        return self.count_atoms_by_species()
 
     def get_cell(self):
+        """Return a 3x3 matrix of the lattice vectors of the configurations.
+
+        The first, second, and third rows are :math:`a_1`, :math:`a_2`, and
+        :math:`a_3`, respetively.
+        """
         return self.cell.copy()
 
     def get_volume(self):
+        """Return the volume of the configuration."""
         return self.volume
 
     def get_PBC(self):
+        """Return a list of 3 components indicating whether periodic boundary
+        condiction is used along the directions of the first, second, and third
+        lattice vectors.
+        """
         return self.PBC.copy()
 
     def get_species(self):
+        """Return a list of species string of all atoms."""
         return self.species.copy()
 
     def get_coordinates(self):
+        """Return a `Nx3` matrix of the Cartesian coordiantes of all atoms."""
         return self.coords.copy()
 
     def get_energy(self):
+        """Return the potential energy of the configuration."""
         return self.energy
 
     def get_forces(self):
+        """Return a `Nx3` matrix of the forces on each atoms."""
         if self.forces is not None:
             return self.forces.copy()
         else:
             return None
 
     def get_stress(self):
+        """Return the stress of the configuration.
+
+        It returns a list with 6 components in the Voigt notation, i.e. it returns
+        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
+        \sigma_{xy}]`.
+
+        .. seealso::
+            https://en.wikipedia.org/wiki/Voigt_notation
+        """
         if self.stress is not None:
             return self.stress.copy()
         else:
             return None
 
-    def get_weight(self):
-        return self.weight
-
     def set_weight(self, weight):
+        """Set the weight of the configuration if the loss function.
+
+        Parameters
+        ----------
+        weight: float
+            The weight of the configuration.
+        """
         self.weight = weight
+
+    def get_weight(self):
+        """Get the weight of the configuration if the loss function.
+        """
+        return self.weight
 
 
 class DataSet(object):
@@ -148,7 +194,7 @@ class DataSet(object):
     Parameters
     ---------
     order_by_species: bool
-        whether to order coords (forces if provided) by species
+        whether to order coords(forces if provided) by species
     """
 
     def __init__(self, order_by_species=True):
@@ -167,7 +213,7 @@ class DataSet(object):
             extension corresponding to the specified format will be read.
 
         format: str
-            The format in which the data is stored (e.g. 'extxyz').
+            The format in which the data is stored(e.g. 'extxyz').
         """
         try:
             extension = implemented_format[format]
