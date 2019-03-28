@@ -105,7 +105,7 @@ def read_extxyz(fname):
             forces = np.asarray(forces)
         else:
             forces = None
-        return cell, PBC, energy, stress, species, coords, forces
+        return cell, PBC, species, coords, energy, forces, stress
 
 
 def write_extxyz(fname, cell, PBC, species, coords, energy=None, forces=None, stress=None):

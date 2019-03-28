@@ -1,7 +1,7 @@
 import numpy as np
 from kliff.dataset import Configuration
 from kliff.dataset import DataSet
-from kliff.dataset import write_extxyz
+from kliff.dataset.extxyz import write_extxyz
 
 
 def assert_1d_array(a, b):

@@ -3,7 +3,7 @@ import numpy as np
 import copy
 from collections import OrderedDict
 from kliff.error import SupportError
-from kliff.dataset.extxyz import read_extxyz
+from kliff.dataset.extxyz import read_extxyz, write_extxyz
 
 
 implemented_format = dict()
@@ -50,16 +50,10 @@ class Configuration:
         path: str
             Path to the file that stores the configuration.
         """
-
-        if self.format not in implemented_format:
-            raise SupportError('Data file format "{}" not recognized.')
-
-        if self.format == 'extxyz':
-            (self.cell, self.PBC, self.energy, self.stress, self.species,
-             self.coords, self.forces) = read_extxyz(path)
-            self.natoms = len(self.species)
-            self.volume = abs(
-                np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
+        (self.cell, self.PBC, self.species, self.coords, self.energy, self.forces,
+         self.stress) = read_configuration(path, self.format)
+        self.natoms = len(self.species)
+        self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
 
         if self.do_order:
             self.order_by_species()
@@ -132,7 +126,7 @@ class Configuration:
         return self.volume
 
     def get_PBC(self):
-        """Return a list of 3 components indicating whether periodic boundary
+        """Return a list with 3 components indicating whether periodic boundary
         condiction is used along the directions of the first, second, and third
         lattice vectors.
         """
@@ -160,7 +154,7 @@ class Configuration:
     def get_stress(self):
         """Return the stress of the configuration.
 
-        It returns a list with 6 components in the Voigt notation, i.e. it returns
+        It returns a list with 6 components in Voigt notation, i.e. it returns
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
         \sigma_{xy}]`.
 
@@ -266,3 +260,101 @@ class DataSet:
         """
 
         return self.configs
+
+
+def read_configuration(path, format='extxyz'):
+    """Read configuration stored in a file.
+
+    Parameters
+    ----------
+    path: str
+        Path to the file that stores the configuration.
+
+    format: str
+        Format of the file that stores the configuration (e.g. `extxyz`).
+
+    Returns
+    -------
+    cell: array
+        A 3x3 matrix of the lattice vectors.  The first, second, and third rows are
+        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respetively.
+
+    PBC: list
+        A list with 3 components indicating whether periodic boundary condiction is
+        used along the directions of the first, second, and third lattice vectors.
+
+    species: list
+        A list of string with N componment, where N is the number of atoms.
+
+    coords: array
+        A Nx3 matrix of the coordinates of the atoms, where N is the number of atoms.
+
+    energy: float or None
+        Potential energy of the configuration. If it is not provided in the file,
+        return `None`.
+
+    forces: array or None
+        A Nx3 array of the forces on atoms, where N is the number of atoms.
+        If the forces are not provided in the file, return `None`.
+
+    stress: list or None
+        A list with 6 components in Voigt notation, i.e. it returns
+        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
+        \sigma_{xy}]`. If the stresses are not provided in the file, return `None`.
+    """
+
+    if format not in implemented_format:
+        raise SupportError('Data file format "{}" not recognized.')
+
+    if format == 'extxyz':
+        cell, PBC, species, coords, energy, forces, stress = read_extxyz(path)
+
+    return cell, PBC, species, coords, energy, forces, stress
+
+
+def write_configuration(path, cell, PBC, species, coords, energy=None, forces=None,
+                        stress=None, format='extxyz'):
+    """
+    Write a configuration to a file in the specified format.
+
+    Parameters
+    ----------
+    path: str
+        Path to the file that stores the configuration.
+
+    format: str
+        Format of the file that stores the configuration (e.g. `extxyz`).
+
+    cell: array
+        A 3x3 matrix of the lattice vectors.  The first, second, and third rows are
+        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respetively.
+
+    PBC: list
+        A list with 3 components indicating whether periodic boundary condiction is
+        used along the directions of the first, second, and third lattice vectors.
+
+    species: list
+        A list of string with N componment, where N is the number of atoms.
+
+    coords: array
+        A Nx3 matrix of the coordinates of the atoms, where N is the number of atoms.
+
+    energy: float (optional)
+        Potential energy of the configuration. If `None`, skip writting this
+        information.
+
+    forces: array (optional)
+        A Nx3 array of the forces on atoms, where N is the number of atoms.
+        If `None`, skip writting this information.
+
+    stress: list (optional)
+        A list with 6 components in Voigt notation, i.e. it returns
+        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
+        \sigma_{xy}]`. If `None`, skip writting this information.
+    """
+
+    if format not in implemented_format:
+        raise SupportError('Data file format "{}" not recognized.')
+
+    if format == 'extxyz':
+        write_extxyz(path, cell, PBC, species, coords, energy, forces, stress)
