@@ -1,7 +1,7 @@
-kliff.models
-------------
+kliff.error
+-----------
 
-.. automodule:: kliff.models
+.. automodule:: kliff.error
     :members:
     :undoc-members:
     :show-inheritance:

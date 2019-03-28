@@ -1,7 +1,7 @@
-kliff.models
+kliff.fisher
 ------------
 
-.. automodule:: kliff.models
+.. automodule:: kliff.fisher
     :members:
     :undoc-members:
     :show-inheritance:

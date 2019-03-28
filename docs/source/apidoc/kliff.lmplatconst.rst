@@ -1,7 +1,7 @@
-kliff.descriptors
+kliff.lmplatconst
 -----------------
 
-.. automodule:: kliff.descriptors
+.. automodule:: kliff.lmplatconst
     :members:
     :undoc-members:
     :show-inheritance:

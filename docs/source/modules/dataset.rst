@@ -4,6 +4,13 @@
 Dataset
 =======
 
+This Module contains classes and functions to deal with dataset. Currently supported
+dataset format include:
+
+- extended XYZ (.xyz)
+
+
+
 
 Extended XYZ format
 ===================

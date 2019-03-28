@@ -1,7 +1,7 @@
-kliff.models
-------------
+kliff.loss
+----------
 
-.. automodule:: kliff.models
+.. automodule:: kliff.loss
     :members:
     :undoc-members:
     :show-inheritance:

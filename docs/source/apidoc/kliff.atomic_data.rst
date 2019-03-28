@@ -1,7 +1,7 @@
-kliff.descriptors
+kliff.atomic_data
 -----------------
 
-.. automodule:: kliff.descriptors
+.. automodule:: kliff.atomic_data
     :members:
     :undoc-members:
     :show-inheritance:

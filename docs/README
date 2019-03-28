@@ -1,0 +1,6 @@
+Run
+    $ generate_apidoc.py
+to genereate `tmp_apidoc`.
+
+Compare with these in `source/apidoc`, and move `tmp_apidoc` to `source_apidoc`
+if everything looks good.
