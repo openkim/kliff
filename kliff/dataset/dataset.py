@@ -188,32 +188,35 @@ class Configuration:
         return self.weight
 
 
-class DataSet(object):
-    """Data set class, to deal with multiple configurations.
+class DataSet:
+    """Dataset class to deal with multiple :class:`~kliff.dataset.Configuration`.
 
     Parameters
-    ---------
+    ----------
     order_by_species: bool
-        whether to order coords(forces if provided) by species
+        If `True`, the atoms in each configuration will be ordered according to their
+        species such that atoms with the same species will have contiguous indices.
+
     """
 
     def __init__(self, order_by_species=True):
         self.do_order = order_by_species
         self.configs = []
 
-    def read(self, fname, format='extxyz'):
-        """Read atomistic configurations.
+    def read(self, path, format='extxyz'):
+        """Read an atomic configuration.
 
         Parameters
         ----------
 
-        fname: str
-            File name or directory name where the configurations are stored. If given
-            a directory, all the files in this directory and subdirectories with the
-            extension corresponding to the specified format will be read.
+        path: str
+            Path of a file storing a configuration or path to a directory containing
+            multiple files. If given a directory, all the files in this directory and
+            its subdirectories with the extension corresponding to the specified
+            format will be read.
 
         format: str
-            The format in which the data is stored(e.g. 'extxyz').
+            Format of the file that stores the configuration (e.g. 'extxyz').
         """
         try:
             extension = implemented_format[format]
@@ -221,8 +224,8 @@ class DataSet(object):
             raise SupportError(
                 '{}\nNot supported data file format "{}".'.format(e, format))
 
-        if os.path.isdir(fname):
-            dirpath = fname
+        if os.path.isdir(path):
+            dirpath = path
             all_files = []
             for root, dirs, files in os.walk(dirpath):
                 for f in files:
@@ -230,8 +233,8 @@ class DataSet(object):
                         all_files.append(os.path.join(root, f))
             all_files = sorted(all_files)
         else:
-            dirpath = os.path.dirname(fname)
-            all_files = [fname]
+            dirpath = os.path.dirname(path)
+            all_files = [path]
 
         for f in all_files:
             conf = Configuration(format, f, self.do_order)
@@ -240,9 +243,8 @@ class DataSet(object):
 
         size = len(self.configs)
         if size <= 0:
-            raise InputError(
-                'No dataset file with format "{}" found in directory: {}.'
-                .format(format, dirpath))
+            raise InputError('No dataset file with format "{}" found in directory: {}.'
+                             .format(format, dirpath))
 
         if self.do_order:
             # find species present in all configurations
@@ -260,7 +262,7 @@ class DataSet(object):
 
         Return
         ------
-        a list of Configuration instance.
+            A list of :class:`~kliff.dataset.Configuration` instance.
         """
 
         return self.configs
