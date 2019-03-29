@@ -29,6 +29,7 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
 
     installation
     tutorials/tutorials
+    theory
     modules/modules
     command_line
 
