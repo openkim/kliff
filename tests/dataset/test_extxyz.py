@@ -83,7 +83,7 @@ def test_dataset():
     directory = '../configs_extxyz/MoS2'
     tset = DataSet()
     tset.read(directory)
-    configs = tset.get_configurations()
+    configs = tset.get_configs()
     assert len(configs) == 3
 
 

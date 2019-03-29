@@ -30,7 +30,7 @@ model.echo_fitting_params()
 dataset_name = 'Si_training_set'
 tset = DataSet()
 tset.read(dataset_name)
-configs = tset.get_configurations()
+configs = tset.get_configs()
 
 
 # calculator

@@ -27,7 +27,7 @@ def test_main():
     # training set
     tset = DataSet()
     tset.read('../configs_extxyz/Si_4')
-    configs = tset.get_configurations()
+    configs = tset.get_configs()
 
     # model
     modelname = 'SW_StillingerWeber_1985_Si__MO_405512056662_005'

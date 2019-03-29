@@ -51,7 +51,7 @@ class Configuration:
             Path to the file that stores the configuration.
         """
         (self.cell, self.PBC, self.species, self.coords, self.energy, self.forces,
-         self.stress) = read_configuration(path, self.format)
+         self.stress) = read_config(path, self.format)
         self.natoms = len(self.species)
         self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
 
@@ -251,18 +251,21 @@ class DataSet:
             for conf in self.configs:
                 conf.natoms_by_species = conf.count_atoms_by_species(all_species)
 
-    def get_configurations(self):
+    def get_configs(self):
         """Get the configurations.
 
         Return
         ------
             A list of :class:`~kliff.dataset.Configuration` instance.
         """
-
         return self.configs
 
+    def get_num_configs(self):
+        """Return the number of configurations in the dataset"""
+        return len(self.configs)
 
-def read_configuration(path, format='extxyz'):
+
+def read_config(path, format='extxyz'):
     """Read configuration stored in a file.
 
     Parameters
@@ -312,8 +315,8 @@ def read_configuration(path, format='extxyz'):
     return cell, PBC, species, coords, energy, forces, stress
 
 
-def write_configuration(path, cell, PBC, species, coords, energy=None, forces=None,
-                        stress=None, format='extxyz'):
+def write_config(path, cell, PBC, species, coords, energy=None, forces=None,
+                 stress=None, format='extxyz'):
     """
     Write a configuration to a file in the specified format.
 

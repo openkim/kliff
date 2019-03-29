@@ -126,7 +126,7 @@ def test_lj():
     dset = DataSet(order_by_species=False)
     fname = '../configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
     dset.read(fname)
-    configs = dset.get_configurations()
+    configs = dset.get_configs()
 
     energy_forces_stress(calc, configs, True, False, False)
     energy_forces_stress(calc, configs, True, True, False)

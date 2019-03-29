@@ -1,7 +1,7 @@
 import numpy as np
 from kliff.neighbor import NeighborList
 from kliff.dataset import Configuration
-from kliff.dataset import write_configuration
+from kliff.dataset import write_config
 
 target_coords = np.asarray(
     [[0.000000e+00,   0.000000e+00,  0.000000e+00],
@@ -42,7 +42,7 @@ def test_neigh():
     PBC = conf.get_PBC()
     coords = neigh.get_coords()
     species = neigh.get_species()
-    write_configuration(fname, cell, PBC, species, coords, format='extxyz')
+    write_config(fname, cell, PBC, species, coords, format='extxyz')
 
     assert np.allclose(coords, target_coords)
     assert np.array_equal(species, target_species)

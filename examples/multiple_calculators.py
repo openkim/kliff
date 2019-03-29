@@ -10,7 +10,7 @@ kliff.logger.set_level('debug')
 # training set
 tset = DataSet()
 tset.read('../tests/calculators/Si_T300_4/')
-configs = tset.get_configurations()
+configs = tset.get_configs()
 
 # calculators
 calc1 = KIM(model_name='Three_Body_Stillinger_Weber_Si__MO_405512056662_004')
