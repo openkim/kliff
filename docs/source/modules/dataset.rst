@@ -126,13 +126,13 @@ the extended XYZ format supported by KLIFF::
   The supported keys are:
 
   - ``Lattice`` represents the there Cartesian lattice vectors: the first 3
-    numbers denote :math:`a_1`, the next three numbers denote :math:`a_2`, and the
-    last 3 numbers denote :math:`a_3`. Note that :math:`a_1`, :math:`a_2`, and
-    :math:`a_3` should follow the right-hand rule such that the volume of the cell
-    can be obtained by :math:`(a_1\times a_2)\cdot a_3`.
+    numbers denote :math:`\bm a_1`, the next three numbers denote :math:`\bm a_2`,
+    and the last 3 numbers denote :math:`\bm a_3`. Note that :math:`\bm a_1`,
+    :math:`\bm a_2`, and :math:`\bm a_3` should follow the right-hand rule such that
+    the volume of the cell can be obtained by :math:`(\bm a_1\times \bm a_2)\cdot \bm a_3`.
   - ``PBC``. Three integers of ``1`` or ``0`` (or three characters of ``T`` or ``F``)
-    to indicate whether to use periodic boundary conditions along :math:`a_1`,
-    :math:`a_2`, and :math:`a_3`, respectively.
+    to indicate whether to use periodic boundary conditions along :math:`\bm a_1`,
+    :math:`\bm a_2`, and :math:`$\bm a_3$`, respectively.
   - ``Energy``. A real value of the total potential energy of the system.
   - ``Properties`` provides information of the names, size, and types of the data
     that are listed in the body part of the file. For example, the ``Properties`` in
