@@ -89,7 +89,7 @@ More than often, your dataset is generated from first-principles calculations
 using packages like `VASP`, `SIESTA`, and `Quantum Espresso` among others. Their
 output file format may not be support by KLIFF. You can use parse these output to
 get the necessary data, and then convert to the format supported by KLIFF using the
-functions :func:`kliff.dataset.write_config()` and :func:`kliff.dataset.read_config()`.
+functions :func:`kliff.dataset.write_config` and :func:`kliff.dataset.read_config`.
 
 
 Currently supported dataset format include:

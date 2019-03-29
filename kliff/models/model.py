@@ -309,7 +309,7 @@ class Model:
     def set_fitting_params(self, **kwargs):
         self.fitting_params.set(**kwargs)
 
-    def set_one_fitting_params(self, name, settings):
+    def set_one_fitting_param(self, name, settings):
         self.fitting_params.set_one(name, settings)
 
 #    def save_fitting_params(self, path):

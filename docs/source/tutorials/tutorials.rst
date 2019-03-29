@@ -17,5 +17,6 @@ neural network potential.
 
     kim_sw
     nn
-    new_model.rst
-    install_kim_model.rst
+    save_load_model
+    new_model
+    install_kim_model
