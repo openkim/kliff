@@ -4,6 +4,11 @@
 Modules
 =======
 
+In this section, we introduce some of the most frequently used modules. See
+:ref:`reference` for their APIs and other modules in KLIFF.
+
+
+
 **Quick links**
 
 .. list-table::

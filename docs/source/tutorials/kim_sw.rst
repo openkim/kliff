@@ -174,7 +174,7 @@ data). For the silicon training set, we can read and process the files by:
     dataset_name = 'Si_training_set'
     tset = DataSet()
     tset.read(dataset_name)
-    configs = tset.get_configurations()
+    configs = tset.get_configs()
 
 The ``configs`` in the last line is a list of :class:`Configuration`. Each
 configuration is an internal representation of a processed **extended xyz** file,
@@ -350,7 +350,7 @@ Putting them all together, we have
     dataset_name = 'Si_training_set'
     tset = DataSet()
     tset.read(dataset_name)
-    configs = tset.get_configurations()
+    configs = tset.get_configs()
 
 
     # calculator
