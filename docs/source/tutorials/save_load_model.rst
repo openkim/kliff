@@ -10,7 +10,7 @@ purpose of retraining, evaluation, etc.
 
 Save a model
 ============
-The ``save()`` method of each model can be used to save it. Suppose you've trained
+The ``save()`` method of a model can be used to save it. Suppose you've trained
 the Stillinger-Weber (SW) potential discussed in :ref:`tut_kim_sw`, you can save the
 model by:
 
@@ -28,8 +28,9 @@ or :meth:`~kliff.models.Model.set_fitting_params`), and others.
 
 Load a model
 ============
-A model can be loaded after the instantiation. For the same SW potential discussed
-in :ref:`tut_kim_sw`, it can be loaded by:
+
+A model can be loaded using ``load()`` after the instantiation. For the same SW
+potential discussed in :ref:`tut_kim_sw`, it can be loaded by:
 
 .. code-block:: python
 
