@@ -199,7 +199,7 @@ class Model:
         self.fitting_params = self.init_fitting_params(self.params)
 
     def write_kim_model(self, path=None):
-        # TODO fill this
+        # NOTE fill this
         raise SupportError('This model does not support writing to a KIM model.')
 
     def set_params_relation_callback(self, params_relation_callback):

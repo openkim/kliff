@@ -103,8 +103,9 @@ class LJComputeArguments(ComputeArguments):
 
 class LennardJones(Model):
 
-    def __init__(self, *args, **kwargs):
-        super(LennardJones, self).__init__(*args, **kwargs)
+    def __init__(self, model_name=None, params_relation_callback=None):
+        super(LennardJones, self).__init__(model_name, params_relation_callback)
+
         self.params['epsilon'] = Parameter(value=[1.0])
         self.params['sigma'] = Parameter(value=[2.0])
         self.params['cutoff'] = Parameter(value=[5.0])

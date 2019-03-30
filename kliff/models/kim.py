@@ -283,8 +283,8 @@ class KIMComputeArguments(ComputeArguments):
 
 class KIM(Model):
 
-    def __init__(self, *args, **kwargs):
-        super(KIM, self).__init__(*args, **kwargs)
+    def __init__(self, model_name=None, params_relation_callback=None):
+        super(KIM, self).__init__(model_name, params_relation_callback)
 
         if self.model_name is None:
             c = self.__class__.__name__
