@@ -317,6 +317,7 @@ third line writes out a KIM potential named
 Putting them all together, we have
 
 .. code-block:: python
+    :linenos:
 
     import kliff
     from kliff.dataset import DataSet

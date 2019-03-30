@@ -5,10 +5,10 @@ Installation
 ============
 
 
-KLIFF needs Python_ 3.5 or newer.
+KLIFF requires Python_ 3.5 or newer.
 
 
-KLIFF is based on KIM_, either to fit physics-motivated potentials archived
+KLIFF is based on KIM, either to fit physics-motivated potentials archived
 on OpenKIM_ or to deploy the trained potential. To get KLIFF to work, the
 prerequisites kim-api_ and kimpy_ need to be installed first.
 
@@ -37,7 +37,7 @@ kimpy_ is on PyPI, which can be installed simply by
     pip install kimpy
 
 
-kliff
+KLIFF
 =====
 
 After getting kim-api_ and kimpy_ to work, you can install KLIFF via
@@ -66,7 +66,6 @@ install it.
 
 .. _Python: http://www.python.org
 .. _PyTorch: https://pytorch.org
-.. _KIM: https://openkim.org
 .. _OpenKIM: https://openkim.org
 .. _kim-api: https://openkim.org/kim-api
 .. _kimpy: https://github.com/mjwen/kimpy
