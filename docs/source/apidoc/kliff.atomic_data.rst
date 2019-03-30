@@ -5,3 +5,4 @@ kliff.atomic_data
     :members:
     :undoc-members:
     :show-inheritance:
+    :inherited-members:

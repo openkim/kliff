@@ -61,6 +61,7 @@ def autodoc_module(path, module):
         fout.write('    :members:\n')
         fout.write('    :undoc-members:\n')
         fout.write('    :show-inheritance:\n')
+        fout.write('    :inherited-members:\n')
 
 
 if __name__ == '__main__':
