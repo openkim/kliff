@@ -7,34 +7,32 @@ Installation
 
 KLIFF requires Python_ 3.5 or newer.
 
-
-KLIFF is based on KIM, either to fit physics-motivated potentials archived
-on OpenKIM_ or to deploy the trained potential. To get KLIFF to work, the
-prerequisites kim-api_ and kimpy_ need to be installed first.
+KLIFF is built on top of KIM, either to fit physics-motivated potentials
+archived on OpenKIM_ or to deploy the trained potential. To get KLIFF to work,
+two prerequisite packages --- kim-api_ and kimpy_ --- need to be installed first.
 
 
 kim-api
 =======
-A detailed installing steps are provided at kim-api_, so please refer the
+A detailed installing steps are provided at kim-api_, so please refer to the
 instructions there to install.
 
 .. note::
-    After installation, you can do
-    ``$ kim-api-v2-collections-management list``.
+    After installation, you can do ``$ kim-api-collections-management list``.
     If you see a list of directories where the KIM model drivers and models are
-    placed, then you are good to go.
-    Otherwise, you may forget to set up the ``PATH`` and bash completions, which
-    can be achieved by (assuming you are using Bash):
-    ``$ source path/to/the/kim/library/bin/kim-api-v2-activate``
+    placed, then you are good to go. Otherwise, you may forget to set up the
+    ``PATH`` and bash completions, which can be achieved by (assuming you are using
+    Bash): ``$ source path/to/the/kim/library/bin/kim-api-activate``. See the
+    kim-api_ documentation for more information.
 
 
 kimpy
 =====
-kimpy_ is on PyPI, which can be installed simply by
+kimpy_ is on PyPI and it can be installed by
 
 .. code-block:: bash
 
-    pip install kimpy
+    $ pip install kimpy
 
 
 KLIFF
@@ -50,8 +48,8 @@ From source
 -----------
 .. code-block:: bash
 
-    git clone https://github.com/mjwen/kliff
-    pip install ./kliff
+    $ git clone https://github.com/mjwen/kliff
+    $ pip install ./kliff
 
 
 
@@ -68,4 +66,4 @@ install it.
 .. _PyTorch: https://pytorch.org
 .. _OpenKIM: https://openkim.org
 .. _kim-api: https://openkim.org/kim-api
-.. _kimpy: https://github.com/mjwen/kimpy
+.. _kimpy: https://github.com/openkim/kimpy
