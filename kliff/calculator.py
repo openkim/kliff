@@ -250,7 +250,7 @@ class Calculator:
         """Return a list of optimizing parameters.
 
         The optimizing parameters is a list consisting of the values of the model
-        parameters a is set to fit via :meth:`kliff.models.Model.set_fitting_params`
+        parameters that is set to fit via :meth:`kliff.models.Model.set_fitting_params`
         or :meth:`kliff.models.Model.set_one_fitting_param`.
         The returned value is typically passed to an optimizer as the initial values
         to carry out the optimization.
@@ -267,16 +267,15 @@ class Calculator:
         """
         return self.model.get_opt_params_bounds()
 
-    # TODO change name to update_params
     def update_opt_params(self, opt_params):
-        """Update the optmizing parameters from optimizer to model.
+        """Update the optimizing parameters from optimizer to model.
 
         This function is the reverse of :meth:`get_opt_params`.
 
         Parameters
         ----------
         opt_params: list
-            Optimizing parameters used in the optimizer.
+            Optimizing parameters.
         """
         self.model.update_fitting_params(opt_params)
         self.model.apply_params_relation()

@@ -364,9 +364,15 @@ class KIM(Model):
         # refresh model
         self.kim_model.clear_then_refresh()
 
-        # update model params of this calculator
+        # TODO this seems uncessary
+        # the correct way is to reimplemeent set_model_param, get_model_param,
+        # and echo_model_param. Also, inquire_model_params seems could be used as
+        # get_model_params.
+        # this consideration is that we need a parameters object to be passed to
+        # FittingParams. This should not be a problem.
+        # update model params of the model class
         for name, attr in self.fitting_params.params.items():
-            self.set_model_params_no_shape_check(name, attr['value'])
+            self.set_model_params(name, attr['value'], check_shape=False)
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             params = self.inquire_params()

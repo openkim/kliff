@@ -225,35 +225,24 @@ class Model:
         else:
             raise ModelError('"{}" is not a parameter of calculator.'.format(name))
 
-    def set_model_params(self, name, value):
+    def set_model_params(self, name, value, check_shape=True):
         """ Update the parameter values.
 
         Parameters
         ----------
-        name: string
+        name: str
             Name of the parameter.
+
         value: list of floats
             Value of hte parameter.
+
+        check_shape: bool
+            If `True`, check the shape of ``value``.
         """
         if name in self.params:
-            self.params[name].set_value_with_shape_check(value)
+            self.params[name].set_value(value, check_shape)
         else:
-            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
-
-    def set_model_params_no_shape_check(self, name, value):
-        """ Update the parameter values.
-
-        Parameters
-        ----------
-        name: string
-            Name of the parameter.
-        value: list of floats
-            Value of hte parameter.
-        """
-        if name in self.params:
-            self.params[name].set_value(value)
-        else:
-            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
+            raise ModelError('"{}" is not a parameter of the model.'.format(name))
 
 #    def save_model_params(self, path):
 #        params = dict()
@@ -269,7 +258,7 @@ class Model:
 #        with open(path, 'r') as fin:
 #            params = yaml.safe_load(fin)
 #        for key, value in params.items():
-#            self.set_model_params_no_shape_check(key, value)
+#            self.set_model_params(key, value, check_shape=False)
 
     def echo_model_params(self, path=None):
         """Echo the optimizable parameters. """
@@ -346,7 +335,7 @@ class Model:
     def update_model_params(self):
         """Update from fitting params to model params."""
         for name, attr in self.fitting_params.params.items():
-            self.set_model_params_no_shape_check(name, attr['value'])
+            self.set_model_params(name, attr['value'], check_shape=False)
 
     def save(self, path):
         self.fitting_params.save(path)

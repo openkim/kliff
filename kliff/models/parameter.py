@@ -11,10 +11,12 @@ logger = kliff.logger.get_logger(__name__)
 
 
 # TODO take a look at proporty decorator
-class Parameter(object):
+class Parameter:
+    """Parameter class.
+    """
 
     def __init__(self, value, dtype='double', description=None):
-        self.set_value_with_shape_check(value)
+        self.set_value(value)
         self.dtype = dtype
         self.description = description
 
@@ -30,18 +32,20 @@ class Parameter(object):
     def get_description(self):
         return self.description
 
-    def set_value(self, value):
+    def set_value(self, value, check_shape=True):
+        if check_shape:
+            if isinstance(value, Iterable):
+                if any(isinstance(i, Iterable) for i in value):
+                    raise ParameterError('Parameter should be a 1D array.')
+                self._set_val(value)
+            else:
+                raise ParameterError('Parameter should be a 1D array.')
+        else:
+            self._set_val(value)
+
+    def _set_val(self, value):
         self.value = np.asarray(value)
         self.size = len(value)
-
-    def set_value_with_shape_check(self, value):
-        if isinstance(value, Iterable):
-            if any(isinstance(i, Iterable) for i in value):
-                raise ParameterError('Parameter should be a scalar or 1D array.')
-            self.value = np.asarray(value)
-            self.size = len(value)
-        else:
-            raise ParameterError('Parameter should be a scalar or 1D array.')
 
     def to_string(self):
         s = 'value: {}\n'.format(np.array_str(self.value))
@@ -51,7 +55,7 @@ class Parameter(object):
         return s
 
 
-class FittingParameter(object):
+class FittingParameter:
     """Class of model parameters that will be optimzied.
 
     It interacts with optimizer to provide initial guesses of parameters and
