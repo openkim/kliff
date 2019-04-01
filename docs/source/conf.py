@@ -210,6 +210,9 @@ epub_exclude_files = ['search.html']
 autodoc_mock_imports = ['numpy', 'scipy', 'scipy.optimize', 'kimpy', 'yaml', 'ase',
                         'torch', 'tensorflow']
 
+# do not sort member functions of a class
+autodoc_member_order = 'bysource'
+
 # -- Math setup --------------------------------------------------------------
 # imgmath settings
 imgmath_image_format = 'svg'
