@@ -552,20 +552,21 @@ def get_drop_ratios(groups, supported):
 class PytorchANNCalculator(object):
     """ A neural network calculator.
 
+    Parameters
+    ----------
+    model: obj
+        Instance of :class:`~kliff.neuralnetwork.NeuralNetwork`.
+
     Attributes
     ----------
-
+    attr1: list
+        This is an example attribute.
     """
 
+    # TODO should be moved to Model
     implemented_property = ['energy', 'forces']
 
     def __init__(self, model):
-        """
-        Parameters
-        ----------
-
-        model: NeuralNetwork object
-        """
 
         self.model = model
         self.dtype = self.model.descriptor.dtype

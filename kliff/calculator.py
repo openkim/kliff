@@ -10,9 +10,9 @@ class Calculator:
     """ Calcualtor class to exchange information between model and an optimizer.
 
     It computes the `energy`, `forces`, etc. using a potential model, and provides
-    these properties, together with the corresonding reference data, to
+    these properties, together with the corresponding reference data, to
     :class:`~kliff.loss.Loss` to construct a cost function for the optimizer.
-    On the reverse direction, it grad the new parameters from the optimizer and
+    In the reverse direction, it grab the new parameters from the optimizer and
     update the model with the new parameters.
 
     Parameters
@@ -130,6 +130,7 @@ class Calculator:
             compute_arguments.compute(self.model.params)
         return compute_arguments.results
 
+    # TODO, possibly, and an argument `reference` to get reference values
     def get_energy(self, compute_arguments):
         """Get the energy of a configuration.
 
@@ -180,6 +181,7 @@ class Calculator:
 
         return compute_arguments.get_stress()
 
+    # TODO maybe move this and `get_referene` to loss.
     def get_prediction(self, compute_arguments):
         """Get the prediction of all properties that are requested to compute.
 
