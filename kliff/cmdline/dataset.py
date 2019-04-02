@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 
+# TODO maybe move this to dataset
 
-class Tree(object):
+
+class Tree:
 
     def __init__(self):
         self.dirCount = 0
@@ -89,12 +88,47 @@ def dataset_count(directory):
     print(tree.summary())
 
 
+def split_dataset(source, target, nfold):
+    if not os.path.exists(source):
+        return 'input "{}" does not exists'.format(source)
+
+    for i in range(nfold):
+        path = os.path.join(target, 'subset{}'.format(i))
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+    return None
+
+
+class Command:
+    """Utility to manipulate dataset.
+    """
+
+    @staticmethod
+    def add_arguments(parser):
+        func = parser.add_argument
+        func('-c', '--count', type=str, metavar='directory',
+             help='count the number of ".xyz" files in a given directory')
+        func('-s', '--split', nargs=3, metavar=('<input>', '<output>', '<n folds>'),
+             help='split dataset into multiple folds')
+
+    @staticmethod
+    def run(args, parser):
+
+        if args.count is not None:
+            dataset_count(args.count)
+        elif args.split is not None:
+            source, target, nfold = args.split
+            msg = split_dataset(source, target, int(nfold))
+            if msg is not None:
+                parser.error(msg)
+        else:
+            parser.print_help()
+
+
 if __name__ == '__main__':
 
     directory = "."
     if len(sys.argv) > 1:
         directory = sys.argv[1]
-
-    tree = Tree()
-    tree.walk(directory)
-    print(tree.summary())
+    dataset_count(directory)
