@@ -14,9 +14,7 @@ commands = [
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        prog='kliff',
-        description='KLIFF utility collections.')
+    parser = argparse.ArgumentParser(description='KLIFF utility collections.')
     parser.add_argument('-v', '--version', action='version',
                         version='KLIFF {}'.format(__version__))
 
