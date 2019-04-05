@@ -1,4 +1,4 @@
-.. module:: doc.models
+.. _doc.models:
 
 ======
 Models

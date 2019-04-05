@@ -1,4 +1,4 @@
-.. _kliff:
+.. _doc.modules:
 
 =======
 Modules
@@ -13,10 +13,10 @@ In this section, we introduce some of the most frequently used modules. See
 
 .. list-table::
 
-    * - :mod:`~doc.models`
-      - :mod:`~doc.dataset`
-    * - :mod:`~doc.calculators`
-      - :mod:`~doc.loss`
+    * - :ref:`doc.models`
+      - :ref:`doc.dataset`
+    * - :ref:`doc.calculators`
+      - :ref:`doc.loss`
 
 .. note::
     See also :ref:`reference`.

@@ -1,4 +1,4 @@
-.. module:: doc.dataset
+.. _doc.dataset:
 
 =======
 Dataset
