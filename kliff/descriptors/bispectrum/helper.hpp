@@ -117,4 +117,119 @@ void Deallocate3DArray(T***& arrayPtr)
 }
 
 
+// 4D Array  (the elements are not contiguous)
+//******************************************************************************
+// allocate memory and set pointers
+template<class T>
+void AllocateAndInitialize4DArray(T***& arrayPtr, int const extentZero,
+    int const extentOne, int const extentTwo, int const extentThree)
+{
+
+  arrayPtr = new T ****[extentZero];
+  for (int i = 0; i<extentZero; i++) {
+    arrayPtr[i] = new T ***[extentOne];
+    for (int j = 0; j<extentOne; j++) {
+      arrayPtr[i][j] = new T **[extentTwo];
+      for (int k = 0; k<extentTwo; k++) {
+        arrayPtr[i][j][k] = new T *[extentThree];
+        for (int l = 0; l<extentThree; l++) {
+          arrayPtr[i][j][k][l] = 0.0;
+        }
+      }
+    }
+  }
+
+}
+
+
+// deallocate memory
+template<class T>
+void Deallocate4DArray(T***& arrayPtr)
+{
+  if (arrayPtr != NULL) {
+    for (int i = 0; i<extentZero; i++) {
+      if (arrayPtr[i] != NULL) {
+        for (int j = 0; j<extentOne; j++) {
+          if (arrayPtr[i][j] != NULL) {
+            arrayPtr[i][j] = new T **[extentTwo];
+            for (int k = 0; k<extentTwo; k++) {
+              if (arrayPtr[i][j][k] != NULL) {
+                arrayPtr[i][j][k] = new T *[extentThree];
+                delete [] arrayPtr[i][j][k];
+              }}
+            delete [] arrayPtr[i][j];
+          }}
+        delete [] arrayPtr[i];
+      }}
+    delete [] arrayPtr;
+  }
+
+  // nullify pointer
+  arrayPtr = NULL;
+}
+
+
+
+
+// 5D Array  (the elements are not contiguous)
+//******************************************************************************
+// allocate memory and set pointers
+template<class T>
+void AllocateAndInitialize5DArray(T***& arrayPtr, int const extentZero,
+    int const extentOne, int const extentTwo, int const extentThree,
+    int const extentFour)
+{
+
+  arrayPtr = new T ****[extentZero];
+  for (int i = 0; i<extentZero; i++) {
+    arrayPtr[i] = new T ***[extentOne];
+    for (int j = 0; j<extentOne; j++) {
+      arrayPtr[i][j] = new T **[extentTwo];
+      for (int k = 0; k<extentTwo; k++) {
+        arrayPtr[i][j][k] = new T *[extentThree];
+        for (int l = 0; l<extentThree; l++) {
+          arrayPtr[i][j][k][l] = new T [extentFour];
+          for (int m = 0; m<extentFour; m++) {
+            arrayPtr[i][j][k][l][m] = 0.0;
+          }
+        }
+      }
+    }
+  }
+
+}
+
+
+// deallocate memory
+template<class T>
+void Deallocate5DArray(T***& arrayPtr)
+{
+  if (arrayPtr != NULL) {
+    for (int i = 0; i<extentZero; i++) {
+      if (arrayPtr[i] != NULL) {
+        for (int j = 0; j<extentOne; j++) {
+          if (arrayPtr[i][j] != NULL) {
+            arrayPtr[i][j] = new T **[extentTwo];
+            for (int k = 0; k<extentTwo; k++) {
+              if (arrayPtr[i][j][k] != NULL) {
+                arrayPtr[i][j][k] = new T *[extentThree];
+                for (int l = 0; l<extentThree; l++) {
+                  if (arrayPtr[i][j][k][l] != NULL) {
+                    delete [] arrayPtr[i][j][k][l];
+                  }}
+                delete [] arrayPtr[i][j][k];
+              }}
+            delete [] arrayPtr[i][j];
+          }}
+        delete [] arrayPtr[i];
+      }}
+    delete [] arrayPtr;
+  }
+
+  // nullify pointer
+  arrayPtr = NULL;
+}
+
+
+
 #endif // HELPER_H_
