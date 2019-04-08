@@ -26,3 +26,13 @@ class Bispectrum(Descriptor):
         bzero_flag = 0
         self._cdesc = bs.Bispectrum(rfac0, 2*jmax, diagonalstyle, use_shared_arrays,
                                     rmin0, switch_flag, bzero_flag)
+
+        rcuts = np.array([[1.1, 2.2], [1.1, 2.2]], dtype=np.double)
+        rcutfac = 2.2
+        self._cdesc.set_cutoff('cos', rcuts, rcutfac)
+
+        weight = np.array([1.1, 2.2], dtype=np.double)
+        self._cdesc.set_weight(weight)
+
+        radius = np.array([1.1, 2.2], dtype=np.double)
+        self._cdesc.set_radius(radius)

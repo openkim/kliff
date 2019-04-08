@@ -279,6 +279,141 @@ void Bispectrum::grow_rij(int newnmax)
 
  }
 }
+
+/* ----------------------------------------------------------------------
+  compute bispectrum for a set of atoms
+  e.g. eq(5) of ``Gaussian Approximation Potentials: The Accuracy of Quantum
+  Mechanics, without the Electrons``, by Gabor Csany
+------------------------------------------------------------------------- */
+void Bispectrum::compute_B(const double* coordinates, const int* particleSpecies,
+    const int* neighlist, const int* numneigh, const int* image,
+    const int Natoms, const int Ncontrib,
+    double* const zeta, double* const dzetadr) {
+
+  bool fit_forces = (dzetadr != nullptr);
+
+  // prepare data
+  VectorOfSizeDIM* coords = (VectorOfSizeDIM*) coordinates;
+
+  int start = 0;
+  for (int i=0; i<Ncontrib; i++) {
+
+    int const numNei = numneigh[i];
+    int const * const ilist = neighlist+start;
+    int const iSpecies = particleSpecies[i];
+    double const radi = radelem[iSpecies];
+
+    start += numNei;
+
+    // insure rij, inside, wj, and rcutij are of size jnum
+    grow_rij(numNei);
+
+    // rij[][3] = displacements between atom I and those neighbors
+    // inside = indices of neighbors of I within cutoff
+    // wj = weights for neighbors of I within cutoff
+    // rcutij = cutoffs for neighbors of I within cutoff
+    // note Rij sign convention => dU/dRij = dU/dRj = -dU/dRi
+
+    int ninside = 0;
+
+    // Setup loop over neighbors of current particle
+    for (int jj = 0; jj < numNei; ++jj)
+    {
+      // adjust index of particle neighbor
+      int const j = ilist[jj];
+      int const jSpecies = particleSpecies[j];
+
+      // rij vec and
+      double rvec[DIM];
+      for (int dim = 0; dim < DIM; ++dim) {
+        rvec[dim] = coords[j][dim] - coords[i][dim];
+      }
+      double const rsq = rvec[0]*rvec[0] + rvec[1]*rvec[1] + rvec[2]*rvec[2];
+      double const rmag = sqrt(rsq);
+
+      if (rmag < rcuts[iSpecies][jSpecies] && rmag>1e-10) {
+        rij[ninside][0] = rvec[0];
+        rij[ninside][1] = rvec[1];
+        rij[ninside][2] = rvec[2];
+        inside[ninside] = j;
+        wj[ninside] = wjelem[jSpecies];
+        rcutij[ninside] = (radi + radelem[jSpecies])*rcutfac;
+        ninside++;
+      }
+    }
+
+
+    // compute Ui, Zi, and Bi for atom I
+
+    compute_ui(ninside);
+    compute_zi();
+    compute_bi();
+    copy_bi2bvec();
+
+    // for neighbors of I within cutoff:
+    // compute dUi/drj and dBi/drj
+
+    if(fit_forces) {
+      for (int jj = 0; jj < ninside; jj++) {
+        compute_duidrj(rij[jj], wj[jj], rcutij[jj]);
+        compute_dbidrj();
+        copy_dbi2dbvec();
+      }
+    }
+
+
+  } // loop over i
+
+}
+
+
+void Bispectrum::set_cutoff(const char* name, const int Nspecies,
+    const double* rcuts_in, double rcutfac_in)
+{
+//  if (strcmp(name, "cos") == 0) {
+//    cutoff_ = &cut_cos;
+//    d_cutoff_ = &d_cut_cos;
+//  }
+//  else if (strcmp(name, "exp") == 0) {
+//    cutoff_ = &cut_exp;
+//    d_cutoff_ = &d_cut_exp;
+//  }
+
+  // store number of species and cutoff values
+  AllocateAndInitialize2DArray<double>(rcuts, Nspecies, Nspecies);
+  int idx = 0;
+  for (int i=0; i<Nspecies; i++) {
+    for (int j=0; j<Nspecies; j++) {
+      rcuts[i][j] = rcuts_in[idx];
+      idx++;
+    }
+  }
+
+  rcutfac = rcutfac_in;
+}
+
+
+void Bispectrum::set_weight(const int Nspecies, const double* weight_in)
+{
+  AllocateAndInitialize1DArray<double>(wjelem, Nspecies);
+  for (int i=0; i<Nspecies; i++) {
+      wjelem[i] = weight_in[i];
+  }
+
+}
+
+void Bispectrum::set_radius(const int Nspecies, const double* radius_in)
+{
+  AllocateAndInitialize1DArray<double>(radelem, Nspecies);
+  for (int i=0; i<Nspecies; i++) {
+      radelem[i] = radius_in[i];
+  }
+
+}
+
+
+
+
 /* ----------------------------------------------------------------------
    compute Ui by summing over neighbors j
 ------------------------------------------------------------------------- */

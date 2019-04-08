@@ -4,7 +4,9 @@
 #include <complex>
 
 #define MY_PI 3.1415926535897932
+#define DIM 3
 
+typedef double VectorOfSizeDIM[DIM];
 
 struct BISPECTRUM_LOOPINDICES {
   int j1, j2, j;
@@ -21,6 +23,21 @@ public:
   double memory_usage();
 
   int ncoeff;
+
+  // compute bispectrum for a set of atoms
+  void compute_B(const double* coordinates, const int* particleSpecies,
+      const int* neighlist, const int* numneigh, const int* image, const int Natoms,
+      const int Ncontrib, double* const zeta, double* const dzetadr);
+
+  // cutoff
+  void set_cutoff(const char* name, const int Nspecies, const double* rcuts_in,
+      double rcutfac);
+  // element weight
+  void set_weight(const int Nspecies, const double* weight_in);
+  // element radius
+  void set_radius(const int Nspecies, const double* radius_in);
+
+
 
   // functions for bispectrum coefficients
 
@@ -57,6 +74,16 @@ public:
   double*** uarray_r, *** uarray_i;
 
 private:
+
+  // cutoff
+  double** rcuts;
+  double rcutfac;
+  // element weight
+  double* wjelem;
+  // radius
+  double* radelem;
+
+
   double rmin0, rfac0;
 
   //use indexlist instead of loops, constructor generates these

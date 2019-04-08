@@ -12,6 +12,30 @@ PYBIND11_MODULE(bs, m) {
   py::class_<Bispectrum>(m, "Bispectrum")
     .def(py::init<double, int, int, int, double, int, int>())
 
+    .def("set_cutoff",
+      [](Bispectrum &d, char* name, py::array_t<double> rcuts, double rcutfac) {
+        d.set_cutoff(name, rcuts.shape(0), rcuts.data(0), rcutfac);
+      },
+      py::arg("name"),
+      py::arg("rcuts").noconvert(),
+      py::arg("rcutfac")
+    )
+
+    .def("set_weight",
+      [](Bispectrum &d, py::array_t<double> weight) {
+       d.set_weight(weight.size(), weight.data(0));
+      },
+      py::arg("weight").noconvert()
+    )
+
+    .def("set_radius",
+      [](Bispectrum &d, py::array_t<double> radius) {
+        d.set_radius(radius.size(), radius.data(0));
+      },
+      py::arg("radius").noconvert()
+    )
+
+
 //    .def("get_num_descriptors", &Descriptor::get_num_descriptors)
 //
 //    .def("set_cutoff",
