@@ -110,8 +110,6 @@ BISPECTRUM::BISPECTRUM(double rfac0_in,
 
   bvec = NULL;
   dbvec = NULL;
-  //memory->create(bvec, ncoeff, "pair:bvec");
-  //memory->create(dbvec, ncoeff, 3, "pair:dbvec");
   AllocateAndInitialize1DArray<double>(bvec, ncoeff);
   AllocateAndInitialize2DArray<double>(dbvec, ncoeff, 3);
 
@@ -128,16 +126,7 @@ BISPECTRUM::BISPECTRUM(double rfac0_in,
       bzero[j] = www*(j+1);
   }
 
-#ifdef TIMING_INFO
-  timers = new double[20];
-  for(int i = 0; i < 20; i++) timers[i] = 0;
-  print = 0;
-  counter = 0;
-#endif
-
   build_indexlist();
-
-
 }
 
 /* ---------------------------------------------------------------------- */
@@ -146,13 +135,6 @@ BISPECTRUM::~BISPECTRUM()
 {
   if(!use_shared_arrays) {
     destroy_twojmax_arrays();
-    //memory->destroy(rij);
-    //memory->destroy(inside);
-    //memory->destroy(wj);
-    //memory->destroy(rcutij);
-    //memory->destroy(bvec);
-    //memory->destroy(dbvec);
-
     Deallocate2DArray<double>(rij);
     Deallocate1DArray<int>(inside);
     Deallocate1DArray<double>(wj);
@@ -279,20 +261,11 @@ void BISPECTRUM::grow_rij(int newnmax)
   nmax = newnmax;
 
   if(!use_shared_arrays) {
-    //memory->destroy(rij);
-    //memory->destroy(inside);
-    //memory->destroy(wj);
-    //memory->destroy(rcutij);
     Deallocate2DArray<double>(rij);
     Deallocate1DArray<int>(inside);
     Deallocate1DArray<double>(wj);
     Deallocate1DArray<double>(rcutij);
 
-
-   // memory->create(rij, nmax, 3, "pair:rij");
-   // memory->create(inside, nmax, "pair:inside");
-   // memory->create(wj, nmax, "pair:wj");
-   // memory->create(rcutij, nmax, "pair:rcutij");
     AllocateAndInitialize2DArray<double>(rij, nmax, 3);
     AllocateAndInitialize1DArray<int>(inside, nmax);
     AllocateAndInitialize1DArray<double>(wj, nmax);
@@ -318,10 +291,6 @@ void BISPECTRUM::compute_ui(int jnum)
   zero_uarraytot();
   addself_uarraytot(wself);
 
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &starttime);
-#endif
-
   for(int j = 0; j < jnum; j++) {
     x = rij[j][0];
     y = rij[j][1];
@@ -336,12 +305,6 @@ void BISPECTRUM::compute_ui(int jnum)
     compute_uarray(x, y, z, z0, r);
     add_uarraytot(r, wj[j], rcutij[j]);
   }
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &endtime);
-  timers[0] += (endtime.tv_sec - starttime.tv_sec + 1.0 *
-                (endtime.tv_nsec - starttime.tv_nsec) / 1000000000);
-#endif
 
 }
 
@@ -367,10 +330,6 @@ void BISPECTRUM::compute_zi()
   //                sumb1 += cg(j1,mb1,j2,mb2,j) *
   //                  u(j1,ma1,mb1) * u(j2,ma2,mb2)
   //              z(j1,j2,j,ma,mb) += sumb1*cg(j1,ma1,j2,ma2,j)
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &starttime);
-#endif
 
   // compute_dbidrj() requires full j1/j2/j chunk of z elements
   // use zarray j1/j2 symmetry
@@ -413,11 +372,6 @@ void BISPECTRUM::compute_zi()
       } // end loop over j
     } // end loop over j1, j2
 
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &endtime);
-  timers[1] += (endtime.tv_sec - starttime.tv_sec + 1.0 *
-                (endtime.tv_nsec - starttime.tv_nsec) / 1000000000);
-#endif
 }
 
 
@@ -435,10 +389,6 @@ void BISPECTRUM::compute_bi()
   //          for ma = 0,...,j
   //            b(j1,j2,j) +=
   //              2*Conj(u(j,ma,mb))*z(j1,j2,j,ma,mb)
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &starttime);
-#endif
 
   for(int j1 = 0; j1 <= twojmax; j1++)
     for(int j2 = 0; j2 <= j1; j2++) {
@@ -471,12 +421,6 @@ void BISPECTRUM::compute_bi()
           barray[j1][j2][j] -= bzero[j];
       }
     }
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &endtime);
-  timers[2] += (endtime.tv_sec - starttime.tv_sec + 1.0 *
-                (endtime.tv_nsec - starttime.tv_nsec) / 1000000000);
-#endif
 
 }
 
@@ -541,17 +485,7 @@ void BISPECTRUM::compute_duidrj(double* rij, double wj, double rcut)
   z0 = r * cs / sn;
   dz0dr = z0 / r - (r*rscale0) * (rsq + z0 * z0) / rsq;
 
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &starttime);
-#endif
-
   compute_duarray(x, y, z, z0, r, dz0dr, wj, rcut);
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &endtime);
-  timers[3] += (endtime.tv_sec - starttime.tv_sec + 1.0 *
-                (endtime.tv_nsec - starttime.tv_nsec) / 1000000000);
-#endif
 
 }
 
@@ -587,10 +521,6 @@ void BISPECTRUM::compute_dbidrj_nonsymm()
   double* dudr_r, *dudr_i;
   double sumb1_r[3], sumb1_i[3], dzdr_r[3], dzdr_i[3];
   int ma2;
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &starttime);
-#endif
 
   for(int JJ = 0; JJ < idxj_max; JJ++) {
     const int j1 = idxj[JJ].j1;
@@ -693,12 +623,6 @@ void BISPECTRUM::compute_dbidrj_nonsymm()
 
   } //end loop over j1 j2 j
 
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &endtime);
-  timers[4] += (endtime.tv_sec - starttime.tv_sec + 1.0 *
-                (endtime.tv_nsec - starttime.tv_nsec) / 1000000000);
-#endif
-
 }
 
 /* ----------------------------------------------------------------------
@@ -738,10 +662,6 @@ void BISPECTRUM::compute_dbidrj()
   double** jjjzarray_i;
   double jjjmambzarray_r;
   double jjjmambzarray_i;
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &starttime);
-#endif
 
   for(int JJ = 0; JJ < idxj_max; JJ++) {
     const int j1 = idxj[JJ].j1;
@@ -929,12 +849,6 @@ void BISPECTRUM::compute_dbidrj()
       dbdr[k] += 2.0*sumzdu_r[k]*j2fac;
 
   } //end loop over j1 j2 j
-
-#ifdef TIMING_INFO
-  clock_gettime(CLOCK_REALTIME, &endtime);
-  timers[4] += (endtime.tv_sec - starttime.tv_sec + 1.0 *
-                (endtime.tv_nsec - starttime.tv_nsec) / 1000000000);
-#endif
 
 }
 
@@ -1299,37 +1213,24 @@ void BISPECTRUM::create_twojmax_arrays()
 {
   int jdim = twojmax + 1;
 
-  //memory->create(cgarray, jdim, jdim, jdim, jdim, jdim, "sna:cgarray");
-  //memory->create(rootpqarray, jdim+1, jdim+1, "sna:rootpqarray");
-  //memory->create(barray, jdim, jdim, jdim, "sna:barray");
-  //memory->create(dbarray, jdim, jdim, jdim, 3, "sna:dbarray");
   AllocateAndInitialize5DArray<double>(cgarray, jdim, jdim, jdim, jdim, jdim);
   AllocateAndInitialize2DArray<double>(rootpqarray, jdim+1, jdim+1);
   AllocateAndInitialize3DArray<double>(barray, jdim, jdim, jdim);
   AllocateAndInitialize4DArray<double>(dbarray, jdim, jdim, jdim, 3);
 
-  //memory->create(duarray_r, jdim, jdim, jdim, 3, "sna:duarray");
-  //memory->create(duarray_i, jdim, jdim, jdim, 3, "sna:duarray");
   AllocateAndInitialize4DArray<double>(duarray_r, jdim, jdim, jdim, 3);
   AllocateAndInitialize4DArray<double>(duarray_i, jdim, jdim, jdim, 3);
 
-  //memory->create(uarray_r, jdim, jdim, jdim, "sna:uarray");
-  //memory->create(uarray_i, jdim, jdim, jdim, "sna:uarray");
   AllocateAndInitialize3DArray<double>(uarray_r, jdim, jdim, jdim);
   AllocateAndInitialize3DArray<double>(uarray_i, jdim, jdim, jdim);
 
   if (bzero_flag)
-    //memory->create(bzero, jdim,"sna:bzero");
   AllocateAndInitialize1DArray<double>(bzero, jdim);
   else
     bzero = NULL;
 
 
   if(!use_shared_arrays) {
-    //memory->create(uarraytot_r, jdim, jdim, jdim, "sna:uarraytot");
-    //memory->create(zarray_r, jdim, jdim, jdim, jdim, jdim, "sna:zarray");
-    //memory->create(uarraytot_i, jdim, jdim, jdim, "sna:uarraytot");
-    //memory->create(zarray_i, jdim, jdim, jdim, jdim, jdim, "sna:zarray");
     AllocateAndInitialize3DArray<double>(uarraytot_r, jdim, jdim, jdim);
     AllocateAndInitialize5DArray<double>(zarray_r, jdim, jdim, jdim, jdim, jdim);
     AllocateAndInitialize3DArray<double>(uarraytot_i, jdim, jdim, jdim);
@@ -1342,18 +1243,6 @@ void BISPECTRUM::create_twojmax_arrays()
 
 void BISPECTRUM::destroy_twojmax_arrays()
 {
-  //memory->destroy(cgarray);
-  //memory->destroy(rootpqarray);
-  //memory->destroy(barray);
-
-  //memory->destroy(dbarray);
-
-  //memory->destroy(duarray_r);
-  //memory->destroy(duarray_i);
-
-  //memory->destroy(uarray_r);
-  //memory->destroy(uarray_i);
-
   Deallocate5DArray<double>(cgarray);
   Deallocate2DArray<double>(rootpqarray);
   Deallocate3DArray<double>(barray);
@@ -1364,14 +1253,9 @@ void BISPECTRUM::destroy_twojmax_arrays()
   Deallocate3DArray<double>(uarray_i);
 
   if (bzero_flag)
-    //memory->destroy(bzero);
     Deallocate1DArray<double>(bzero);
 
   if(!use_shared_arrays) {
-    //memory->destroy(uarraytot_r);
-    //memory->destroy(zarray_r);
-    //memory->destroy(uarraytot_i);
-    //memory->destroy(zarray_i);
     Deallocate3DArray<double>(uarraytot_r);
     Deallocate5DArray<double>(zarray_r);
     Deallocate3DArray<double>(uarraytot_i);

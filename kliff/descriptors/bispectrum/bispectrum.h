@@ -2,7 +2,6 @@
 #define BISPECTRUM_H_
 
 #include <complex>
-#include <ctime>
 
 #define MY_PI 3.1415926535897932
 
@@ -38,13 +37,6 @@ public:
   void copy_dbi2dbvec();
   double compute_sfac(double, double);
   double compute_dsfac(double, double);
-
-#ifdef TIMING_INFO
-  double* timers;
-  timespec starttime, endtime;
-  int print;
-  int counter;
-#endif
 
   //per sna class instance for OMP use
 
