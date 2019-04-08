@@ -31,10 +31,18 @@ class get_pybind11_includes(object):
         return pybind11.get_include(self.user)
 
 
-desc_module = Extension(
+symmetry_fn = Extension(
     'kliff.descriptors.symmetry_function.sf',
     sources=['kliff/descriptors/symmetry_function/sym_fn_bind.cpp',
              'kliff/descriptors/symmetry_function/sym_fn.cpp'],
+    include_dirs=[get_pybind11_includes(),
+                  get_pybind11_includes(user=True)],
+    extra_compile_args=get_extra_compile_args(),
+    language='c++',)
+
+bispectrum = Extension(
+    'kliff.descriptors.bispectrum.bs',
+    sources=['kliff/descriptors/bispectrum/bispectrum.cpp'],
     include_dirs=[get_pybind11_includes(),
                   get_pybind11_includes(user=True)],
     extra_compile_args=get_extra_compile_args(),
@@ -64,7 +72,7 @@ setup(name='kliff',
       description='KLIFF interatomic potential fitting package',
       author='Mingjian Wen',
       url='https://github.com/mjwen/kliff',
-      ext_modules=[desc_module],
+      ext_modules=[symmetry_fn, bispectrum],
       # NOTE, subpackages need to be specified as well
       # packages=['kliff'],
       # NOTE, subpackages need to be included as well

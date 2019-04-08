@@ -1,8 +1,12 @@
 #include "bispectrum.h"
-#include "help.hpp"
+#include "helper.hpp"
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
+#include <iostream>
+
+#define MAX(A,B) ((A) > (B) ? (A) : (B))
+#define MIN(A,B) ((A) < (B) ? (A) : (B))
 
 /* ----------------------------------------------------------------------
 
@@ -108,8 +112,8 @@ BISPECTRUM::BISPECTRUM(double rfac0_in,
   dbvec = NULL;
   //memory->create(bvec, ncoeff, "pair:bvec");
   //memory->create(dbvec, ncoeff, 3, "pair:dbvec");
-  AllocateAndInitialize1Darray<double>(bvec, ncoeff);
-  AllocateAndInitialize2Darray<double>(dbvec, ncoeff, 3);
+  AllocateAndInitialize1DArray<double>(bvec, ncoeff);
+  AllocateAndInitialize2DArray<double>(dbvec, ncoeff, 3);
 
   rij = NULL;
   inside = NULL;
@@ -149,12 +153,12 @@ BISPECTRUM::~BISPECTRUM()
     //memory->destroy(bvec);
     //memory->destroy(dbvec);
 
-    Deallocate2Darray<double>(rij);
-    Deallocate1Darray<double>(inside);
-    Deallocate1Darray<double>(wj);
-    Deallocate1Darray<double>(rcutij);
-    Deallocate1Darray<double>(bvec);
-    Deallocate1Darray<double>(dbvec);
+    Deallocate2DArray<double>(rij);
+    Deallocate1DArray<int>(inside);
+    Deallocate1DArray<double>(wj);
+    Deallocate1DArray<double>(rcutij);
+    Deallocate1DArray<double>(bvec);
+    Deallocate2DArray<double>(dbvec);
   }
   delete[] idxj;
 }
@@ -279,20 +283,20 @@ void BISPECTRUM::grow_rij(int newnmax)
     //memory->destroy(inside);
     //memory->destroy(wj);
     //memory->destroy(rcutij);
-    Deallocate2Darray<double>(rij);
-    Deallocate1Darray<double>(inside);
-    Deallocate1Darray<double>(wj);
-    Deallocate1Darray<double>(rcutij);
+    Deallocate2DArray<double>(rij);
+    Deallocate1DArray<int>(inside);
+    Deallocate1DArray<double>(wj);
+    Deallocate1DArray<double>(rcutij);
 
 
    // memory->create(rij, nmax, 3, "pair:rij");
    // memory->create(inside, nmax, "pair:inside");
    // memory->create(wj, nmax, "pair:wj");
    // memory->create(rcutij, nmax, "pair:rcutij");
-    AllocateAndInitialize2Darray<double>(rij, nmax, 3);
-    AllocateAndInitialize1Darray<double>(inside, nmax);
-    AllocateAndInitialize1Darray<double>(wj, nmax);
-    AllocateAndInitialize1Darray<double>(rcutij, nmax);
+    AllocateAndInitialize2DArray<double>(rij, nmax, 3);
+    AllocateAndInitialize1DArray<int>(inside, nmax);
+    AllocateAndInitialize1DArray<double>(wj, nmax);
+    AllocateAndInitialize1DArray<double>(rcutij, nmax);
 
 
  }
@@ -1280,12 +1284,12 @@ double BISPECTRUM::memory_usage()
   int jdim = twojmax + 1;
   double bytes;
   bytes = jdim * jdim * jdim * jdim * jdim * sizeof(double);
-  bytes += 2 * jdim * jdim * jdim * sizeof(complex<double>);
+  bytes += 2 * jdim * jdim * jdim * sizeof(std::complex<double>);
   bytes += 2 * jdim * jdim * jdim * sizeof(double);
-  bytes += jdim * jdim * jdim * 3 * sizeof(complex<double>);
+  bytes += jdim * jdim * jdim * 3 * sizeof(std::complex<double>);
   bytes += jdim * jdim * jdim * 3 * sizeof(double);
   bytes += ncoeff * sizeof(double);
-  bytes += jdim * jdim * jdim * jdim * jdim * sizeof(complex<double>);
+  bytes += jdim * jdim * jdim * jdim * jdim * sizeof(std::complex<double>);
   return bytes;
 }
 
@@ -1299,24 +1303,24 @@ void BISPECTRUM::create_twojmax_arrays()
   //memory->create(rootpqarray, jdim+1, jdim+1, "sna:rootpqarray");
   //memory->create(barray, jdim, jdim, jdim, "sna:barray");
   //memory->create(dbarray, jdim, jdim, jdim, 3, "sna:dbarray");
-  AllocateAndInitializ5Darray<double>(cgarray, jdim, jdim, jdim, jdim, jdim);
-  AllocateAndInitializ2Darray<double>(rootpqarray, jdim+1, jdim+1);
-  AllocateAndInitializ3Darray<double>(barray, jdim, jdim, jdim);
-  AllocateAndInitializ4Darray<double>(dbarray, jdim, jdim, jdim, 3);
+  AllocateAndInitialize5DArray<double>(cgarray, jdim, jdim, jdim, jdim, jdim);
+  AllocateAndInitialize2DArray<double>(rootpqarray, jdim+1, jdim+1);
+  AllocateAndInitialize3DArray<double>(barray, jdim, jdim, jdim);
+  AllocateAndInitialize4DArray<double>(dbarray, jdim, jdim, jdim, 3);
 
   //memory->create(duarray_r, jdim, jdim, jdim, 3, "sna:duarray");
   //memory->create(duarray_i, jdim, jdim, jdim, 3, "sna:duarray");
-  AllocateAndInitializ4Darray<double>(duarray_r, jdim, jdim, jdim, 3);
-  AllocateAndInitializ4Darray<double>(duarray_i, jdim, jdim, jdim, 3);
+  AllocateAndInitialize4DArray<double>(duarray_r, jdim, jdim, jdim, 3);
+  AllocateAndInitialize4DArray<double>(duarray_i, jdim, jdim, jdim, 3);
 
   //memory->create(uarray_r, jdim, jdim, jdim, "sna:uarray");
   //memory->create(uarray_i, jdim, jdim, jdim, "sna:uarray");
-  AllocateAndInitializ3Darray<double>(uarray_r, jdim, jdim, jdim);
-  AllocateAndInitializ3Darray<double>(uarray_i, jdim, jdim, jdim);
+  AllocateAndInitialize3DArray<double>(uarray_r, jdim, jdim, jdim);
+  AllocateAndInitialize3DArray<double>(uarray_i, jdim, jdim, jdim);
 
   if (bzero_flag)
     //memory->create(bzero, jdim,"sna:bzero");
-  AllocateAndInitializ1Darray<double>(bzero, jdim);
+  AllocateAndInitialize1DArray<double>(bzero, jdim);
   else
     bzero = NULL;
 
@@ -1326,10 +1330,10 @@ void BISPECTRUM::create_twojmax_arrays()
     //memory->create(zarray_r, jdim, jdim, jdim, jdim, jdim, "sna:zarray");
     //memory->create(uarraytot_i, jdim, jdim, jdim, "sna:uarraytot");
     //memory->create(zarray_i, jdim, jdim, jdim, jdim, jdim, "sna:zarray");
-    AllocateAndInitializ3Darray<double>(uarraytot_r, jdim, jdim, jdim);
-    AllocateAndInitializ5Darray<double>(zarray_r, jdim, jdim, jdim, jdim, jdim);
-    AllocateAndInitializ3Darray<double>(uarraytot_i, jdim, jdim, jdim);
-    AllocateAndInitializ5Darray<double>(zarray_i, jdim, jdim, jdim, jdim, jdim);
+    AllocateAndInitialize3DArray<double>(uarraytot_r, jdim, jdim, jdim);
+    AllocateAndInitialize5DArray<double>(zarray_r, jdim, jdim, jdim, jdim, jdim);
+    AllocateAndInitialize3DArray<double>(uarraytot_i, jdim, jdim, jdim);
+    AllocateAndInitialize5DArray<double>(zarray_i, jdim, jdim, jdim, jdim, jdim);
   }
 
 }
@@ -1350,28 +1354,28 @@ void BISPECTRUM::destroy_twojmax_arrays()
   //memory->destroy(uarray_r);
   //memory->destroy(uarray_i);
 
-  Deallocate5Darray<double>(cgarray);
-  Deallocate2Darray<double>(rootpqarray);
-  Deallocate3Darray<double>(barray);
-  Deallocate4Darray<double>(dbarray);
-  Deallocate4Darray<double>(duarray_r);
-  Deallocate4Darray<double>(duarray_i);
-  Deallocate3Darray<double>(uarray_r);
-  Deallocate3Darray<double>(uarray_i);
+  Deallocate5DArray<double>(cgarray);
+  Deallocate2DArray<double>(rootpqarray);
+  Deallocate3DArray<double>(barray);
+  Deallocate4DArray<double>(dbarray);
+  Deallocate4DArray<double>(duarray_r);
+  Deallocate4DArray<double>(duarray_i);
+  Deallocate3DArray<double>(uarray_r);
+  Deallocate3DArray<double>(uarray_i);
 
   if (bzero_flag)
     //memory->destroy(bzero);
-    Deallocate1Darray<double>(uarray_i);
+    Deallocate1DArray<double>(bzero);
 
   if(!use_shared_arrays) {
     //memory->destroy(uarraytot_r);
     //memory->destroy(zarray_r);
     //memory->destroy(uarraytot_i);
     //memory->destroy(zarray_i);
-    Deallocate3Darray<double>(uarraytot_r);
-    Deallocate5Darray<double>(zarray_r);
-    Deallocate3Darray<double>(uarraytot_i);
-    Deallocate5Darray<double>(zarray_i);
+    Deallocate3DArray<double>(uarraytot_r);
+    Deallocate5DArray<double>(zarray_r);
+    Deallocate3DArray<double>(uarraytot_i);
+    Deallocate5DArray<double>(zarray_i);
   }
 }
 
@@ -1384,7 +1388,8 @@ double BISPECTRUM::factorial(int n)
   if (n < 0 || n > nmaxfactorial) {
     char str[128];
     sprintf(str, "Invalid argument to factorial %d", n);
-    error->all(FLERR, str);
+    //error->all(FLERR, str);
+    std::cerr<<str;
   }
 
   return nfac_table[n];

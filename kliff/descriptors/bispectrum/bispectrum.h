@@ -1,8 +1,10 @@
-#ifndef BISPECTRUM_H
-#define BISPECTRUM_H
+#ifndef BISPECTRUM_H_
+#define BISPECTRUM_H_
 
 #include <complex>
 #include <ctime>
+
+#define MY_PI 3.1415926535897932
 
 
 struct BISPECTRUM_LOOPINDICES {
@@ -119,5 +121,5 @@ private:
 };
 
 
-#endif /* BISPECTRUM_H */
+#endif /* BISPECTRUM_H_ */
 
