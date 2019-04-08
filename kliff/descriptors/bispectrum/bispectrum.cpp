@@ -1,3 +1,8 @@
+/* This implementation is based on the SNAP potential implemented in LAMMPS
+   by Aidan Thompson, Christian Trott.
+*/
+
+
 #include "bispectrum.h"
 #include "helper.hpp"
 #include <cmath>
@@ -89,7 +94,7 @@
 
 ------------------------------------------------------------------------- */
 
-BISPECTRUM::BISPECTRUM(double rfac0_in,
+Bispectrum::Bispectrum(double rfac0_in,
          int twojmax_in, int diagonalstyle_in, int use_shared_arrays_in,
          double rmin0_in, int switch_flag_in, int bzero_flag_in)
 {
@@ -131,7 +136,7 @@ BISPECTRUM::BISPECTRUM(double rfac0_in,
 
 /* ---------------------------------------------------------------------- */
 
-BISPECTRUM::~BISPECTRUM()
+Bispectrum::~Bispectrum()
 {
   if(!use_shared_arrays) {
     destroy_twojmax_arrays();
@@ -145,7 +150,7 @@ BISPECTRUM::~BISPECTRUM()
   delete[] idxj;
 }
 
-void BISPECTRUM::build_indexlist()
+void Bispectrum::build_indexlist()
 {
   if(diagonalstyle == 0) {
     int idxj_count = 0;
@@ -247,14 +252,14 @@ void BISPECTRUM::build_indexlist()
 }
 /* ---------------------------------------------------------------------- */
 
-void BISPECTRUM::init()
+void Bispectrum::init()
 {
   init_clebsch_gordan();
   init_rootpqarray();
 }
 
 
-void BISPECTRUM::grow_rij(int newnmax)
+void Bispectrum::grow_rij(int newnmax)
 {
   if(newnmax <= nmax) return;
 
@@ -278,7 +283,7 @@ void BISPECTRUM::grow_rij(int newnmax)
    compute Ui by summing over neighbors j
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_ui(int jnum)
+void Bispectrum::compute_ui(int jnum)
 {
   double rsq, r, x, y, z, z0, theta0;
 
@@ -298,6 +303,7 @@ void BISPECTRUM::compute_ui(int jnum)
     rsq = x * x + y * y + z * z;
     r = sqrt(rsq);
 
+    // TODO this is not in agreement with the paper, maybe cahnge it
     theta0 = (r - rmin0) * rfac0 * MY_PI / (rcutij[j] - rmin0);
     //    theta0 = (r - rmin0) * rscale0;
     z0 = r / tan(theta0);
@@ -314,7 +320,7 @@ void BISPECTRUM::compute_ui(int jnum)
    compute Zi by summing over products of Ui
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_zi()
+void Bispectrum::compute_zi()
 {
   // for j1 = 0,...,twojmax
   //   for j2 = 0,twojmax
@@ -379,7 +385,7 @@ void BISPECTRUM::compute_zi()
    compute Bi by summing conj(Ui)*Zi
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_bi()
+void Bispectrum::compute_bi()
 {
   // for j1 = 0,...,twojmax
   //   for j2 = 0,twojmax
@@ -428,7 +434,7 @@ void BISPECTRUM::compute_bi()
    copy Bi array to a vector
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::copy_bi2bvec()
+void Bispectrum::copy_bi2bvec()
 {
   int ncount, j1, j2, j;
 
@@ -468,7 +474,7 @@ void BISPECTRUM::copy_bi2bvec()
    calculate derivative of Ui w.r.t. atom j
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_duidrj(double* rij, double wj, double rcut)
+void Bispectrum::compute_duidrj(double* rij, double wj, double rcut)
 {
   double rsq, r, x, y, z, z0, theta0, cs, sn;
   double dz0dr;
@@ -478,6 +484,7 @@ void BISPECTRUM::compute_duidrj(double* rij, double wj, double rcut)
   z = rij[2];
   rsq = x * x + y * y + z * z;
   r = sqrt(rsq);
+  //TODO this is not in agreemnt with paper
   double rscale0 = rfac0 * MY_PI / (rcut - rmin0);
   theta0 = (r - rmin0) * rscale0;
   cs = cos(theta0);
@@ -495,7 +502,7 @@ void BISPECTRUM::compute_duidrj(double* rij, double wj, double rcut)
    variant not using symmetry relation
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_dbidrj_nonsymm()
+void Bispectrum::compute_dbidrj_nonsymm()
 {
   // for j1 = 0,...,twojmax
   //   for j2 = 0,twojmax
@@ -631,7 +638,7 @@ void BISPECTRUM::compute_dbidrj_nonsymm()
    variant using symmetry relation
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_dbidrj()
+void Bispectrum::compute_dbidrj()
 {
   // for j1 = 0,...,twojmax
   //   for j2 = 0,twojmax
@@ -856,7 +863,7 @@ void BISPECTRUM::compute_dbidrj()
    copy Bi derivatives into a vector
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::copy_dbi2dbvec()
+void Bispectrum::copy_dbi2dbvec()
 {
   int ncount, j1, j2, j;
 
@@ -903,7 +910,7 @@ void BISPECTRUM::copy_dbi2dbvec()
 
 /* ---------------------------------------------------------------------- */
 
-void BISPECTRUM::zero_uarraytot()
+void Bispectrum::zero_uarraytot()
 {
   for (int j = 0; j <= twojmax; j++)
     for (int ma = 0; ma <= j; ma++)
@@ -915,7 +922,7 @@ void BISPECTRUM::zero_uarraytot()
 
 /* ---------------------------------------------------------------------- */
 
-void BISPECTRUM::addself_uarraytot(double wself_in)
+void Bispectrum::addself_uarraytot(double wself_in)
 {
   for (int j = 0; j <= twojmax; j++)
     for (int ma = 0; ma <= j; ma++) {
@@ -928,7 +935,7 @@ void BISPECTRUM::addself_uarraytot(double wself_in)
    add Wigner U-functions for one neighbor to the total
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::add_uarraytot(double r, double wj, double rcut)
+void Bispectrum::add_uarraytot(double r, double wj, double rcut)
 {
   double sfac;
 
@@ -951,7 +958,7 @@ void BISPECTRUM::add_uarraytot(double r, double wj, double rcut)
    compute Wigner U-functions for one neighbor
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_uarray(double x, double y, double z,
+void Bispectrum::compute_uarray(double x, double y, double z,
                          double z0, double r)
 {
   double r0inv;
@@ -1029,7 +1036,7 @@ void BISPECTRUM::compute_uarray(double x, double y, double z,
    see comments in compute_uarray()
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::compute_duarray(double x, double y, double z,
+void Bispectrum::compute_duarray(double x, double y, double z,
                           double z0, double r, double dz0dr,
                           double wj, double rcut)
 {
@@ -1193,7 +1200,7 @@ void BISPECTRUM::compute_duarray(double x, double y, double z,
    memory usage of arrays
 ------------------------------------------------------------------------- */
 
-double BISPECTRUM::memory_usage()
+double Bispectrum::memory_usage()
 {
   int jdim = twojmax + 1;
   double bytes;
@@ -1209,7 +1216,7 @@ double BISPECTRUM::memory_usage()
 
 /* ---------------------------------------------------------------------- */
 
-void BISPECTRUM::create_twojmax_arrays()
+void Bispectrum::create_twojmax_arrays()
 {
   int jdim = twojmax + 1;
 
@@ -1241,7 +1248,7 @@ void BISPECTRUM::create_twojmax_arrays()
 
 /* ---------------------------------------------------------------------- */
 
-void BISPECTRUM::destroy_twojmax_arrays()
+void Bispectrum::destroy_twojmax_arrays()
 {
   Deallocate5DArray<double>(cgarray);
   Deallocate2DArray<double>(rootpqarray);
@@ -1267,7 +1274,7 @@ void BISPECTRUM::destroy_twojmax_arrays()
    factorial n, wrapper for precomputed table
 ------------------------------------------------------------------------- */
 
-double BISPECTRUM::factorial(int n)
+double Bispectrum::factorial(int n)
 {
   if (n < 0 || n > nmaxfactorial) {
     char str[128];
@@ -1280,10 +1287,10 @@ double BISPECTRUM::factorial(int n)
 }
 
 /* ----------------------------------------------------------------------
-   factorial n table, size BISPECTRUM::nmaxfactorial+1
+   factorial n table, size Bispectrum::nmaxfactorial+1
 ------------------------------------------------------------------------- */
 
-const double BISPECTRUM::nfac_table[] = {
+const double Bispectrum::nfac_table[] = {
   1,
   1,
   2,
@@ -1458,7 +1465,7 @@ const double BISPECTRUM::nfac_table[] = {
    the function delta given by VMK Eq. 8.2(1)
 ------------------------------------------------------------------------- */
 
-double BISPECTRUM::deltacg(int j1, int j2, int j)
+double Bispectrum::deltacg(int j1, int j2, int j)
 {
   double sfaccg = factorial((j1 + j2 + j) / 2 + 1);
   return sqrt(factorial((j1 + j2 - j) / 2) *
@@ -1471,7 +1478,7 @@ double BISPECTRUM::deltacg(int j1, int j2, int j)
    the quasi-binomial formula VMK 8.2.1(3)
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::init_clebsch_gordan()
+void Bispectrum::init_clebsch_gordan()
 {
   double sum,dcg,sfaccg;
   int m, aa2, bb2, cc2;
@@ -1529,7 +1536,7 @@ void BISPECTRUM::init_clebsch_gordan()
    the p = 0, q = 0 entries are allocated and skipped for convenience.
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::init_rootpqarray()
+void Bispectrum::init_rootpqarray()
 {
   for (int p = 1; p <= twojmax; p++)
     for (int q = 1; q <= twojmax; q++)
@@ -1540,7 +1547,7 @@ void BISPECTRUM::init_rootpqarray()
    a = j/2
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::jtostr(char* str, int j)
+void Bispectrum::jtostr(char* str, int j)
 {
   if(j % 2 == 0)
     sprintf(str, "%d", j / 2);
@@ -1552,7 +1559,7 @@ void BISPECTRUM::jtostr(char* str, int j)
    aa = m - j/2
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::mtostr(char* str, int j, int m)
+void Bispectrum::mtostr(char* str, int j, int m)
 {
   if(j % 2 == 0)
     sprintf(str, "%d", m - j / 2);
@@ -1565,7 +1572,7 @@ void BISPECTRUM::mtostr(char* str, int j, int m)
    using notation of VMK Table 8.11
 ------------------------------------------------------------------------- */
 
-void BISPECTRUM::print_clebsch_gordan(FILE* file)
+void Bispectrum::print_clebsch_gordan(FILE* file)
 {
   char stra[20], strb[20], strc[20], straa[20], strbb[20], strcc[20];
   int m, aa2, bb2;
@@ -1606,7 +1613,7 @@ void BISPECTRUM::print_clebsch_gordan(FILE* file)
 
 /* ---------------------------------------------------------------------- */
 
-int BISPECTRUM::compute_ncoeff()
+int Bispectrum::compute_ncoeff()
 {
   int ncount;
 
@@ -1638,7 +1645,7 @@ int BISPECTRUM::compute_ncoeff()
 
 /* ---------------------------------------------------------------------- */
 
-double BISPECTRUM::compute_sfac(double r, double rcut)
+double Bispectrum::compute_sfac(double r, double rcut)
 {
   if (switch_flag == 0) return 1.0;
   if (switch_flag == 1) {
@@ -1654,7 +1661,7 @@ double BISPECTRUM::compute_sfac(double r, double rcut)
 
 /* ---------------------------------------------------------------------- */
 
-double BISPECTRUM::compute_dsfac(double r, double rcut)
+double Bispectrum::compute_dsfac(double r, double rcut)
 {
   if (switch_flag == 0) return 0.0;
   if (switch_flag == 1) {

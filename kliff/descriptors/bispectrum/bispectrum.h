@@ -10,12 +10,12 @@ struct BISPECTRUM_LOOPINDICES {
   int j1, j2, j;
 };
 
-class BISPECTRUM {
+class Bispectrum {
 
 public:
-  BISPECTRUM(double, int, int, int, double, int, int);
+  Bispectrum(double, int, int, int, double, int, int);
 
-  ~BISPECTRUM();
+  ~Bispectrum();
   void build_indexlist();
   void init();
   double memory_usage();
@@ -38,7 +38,7 @@ public:
   double compute_sfac(double, double);
   double compute_dsfac(double, double);
 
-  //per sna class instance for OMP use
+  //per bispectrum class instance for OMP use
 
   double* bvec, ** dbvec;
   double** rij;

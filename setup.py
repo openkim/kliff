@@ -42,7 +42,9 @@ symmetry_fn = Extension(
 
 bispectrum = Extension(
     'kliff.descriptors.bispectrum.bs',
-    sources=['kliff/descriptors/bispectrum/bispectrum.cpp'],
+    sources=['kliff/descriptors/bispectrum/bispectrum.cpp',
+             'kliff/descriptors/bispectrum/helper.cpp',
+             'kliff/descriptors/bispectrum/bispectrum_bind.cpp'],
     include_dirs=[get_pybind11_includes(),
                   get_pybind11_includes(user=True)],
     extra_compile_args=get_extra_compile_args(),
