@@ -15,14 +15,21 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
 
 .. toctree::
-    :caption: Contents
+    :caption: The Basics
     :maxdepth: 2
 
     installation
     tutorials/tutorials
     theory
     modules/modules
+
+
+.. toctree::
+    :caption: Advanced Topics
+    :maxdepth: 2
+
     command_line
+
 
 .. toctree::
     :caption: Extra Information
@@ -31,6 +38,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
     faq
     apidoc/kliff
     builddoc
+    Fork KLIFF on Github <https://github.com/mjwen/kliff>
 
 
 
