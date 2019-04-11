@@ -146,8 +146,8 @@ class NeighborList:
     def get_numneigh_and_neighlist_1D(self, request_padding=False):
         """Get the number of neighbrs and neighbor list for all atoms.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         request_padding: bool
             If ``True``, the returned number of neighbors and neighbor list include
             those for padding atoms; If ``False``, only return these for contirbuting
@@ -200,8 +200,8 @@ class NeighborList:
     def get_species_code(self, mapping):
         """Integer species code of both contributing and padding atoms.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         mapping: dict
             A mapping between species string and its code.
 
@@ -226,8 +226,8 @@ class NeighborList:
     def get_padding_species_code(self, mapping):
         """Integer species code of padding atoms.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         mapping: dict
             A mapping between species string and its code.
 
