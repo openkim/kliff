@@ -23,7 +23,6 @@ In this section, we introduce some of the most frequently used modules. See
 
 .. toctree::
     :caption: List of All Modules
-    :name: modules
     :maxdepth: 2
 
     models

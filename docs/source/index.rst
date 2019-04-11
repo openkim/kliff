@@ -8,7 +8,6 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
 
 .. toctree::
-    :name: intro
     :maxdepth: 1
 
     about
@@ -17,8 +16,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
 .. toctree::
     :caption: Contents
-    :name: contents
-    :titlesonly:
+    :maxdepth: 2
 
     installation
     tutorials/tutorials
@@ -28,8 +26,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
 .. toctree::
     :caption: Extra Information
-    :name: extra
-    :maxdepth: 1
+    :maxdepth: 2
 
     faq
     apidoc/kliff

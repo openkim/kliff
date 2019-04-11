@@ -4,13 +4,11 @@
 .. include:: ../auto_examples/index.rst
 
 
-Below are some other examples
-=============================
+**Below are some other examples**
 
 
 .. toctree::
     :name: toctutor
-    :maxdepth: 1
     :titlesonly:
 
     nn
