@@ -220,13 +220,13 @@ imgmath_image_format = 'svg'
 imgmath_latex_preamble = '\usepackage{bm}\n'
 
 
-# -- sphix-galley setup ------------------------------------------------------
+# -- sphinx-galley setup ------------------------------------------------------
 sphinx_gallery_conf = {
-    'examples_dirs': '../../examples',   # path to your example scripts
+    'examples_dirs': '../../examples',  # path to your example scripts
     'gallery_dirs': 'auto_examples',  # path where to save gallery generated examples
     'filename_pattern': '/example_',  # incldue files with names 'example_'; '/'
                                       # matches the directory name separator
-    'ignore_pattern': '^((?!/example_).)*$',  # exclude files without name
-                                              # '/example_'
-    'plot_gallery': 'False',  # do not run examples while building
+    # exclude files without name '/example_'
+    'ignore_pattern': '^((?!/example_).)*$',
+    # 'plot_gallery': 'False',  # do not run examples while building
 }
