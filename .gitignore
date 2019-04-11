@@ -15,7 +15,6 @@ dist/
 *.lammps
 *.yml
 *.pt
-*.md5
 .idea
 .DS_Store
 ERROR_REPORT
