@@ -29,6 +29,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
     :maxdepth: 2
 
     command_line
+    builddoc
 
 
 .. toctree::
@@ -37,7 +38,6 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
     faq
     apidoc/kliff
-    builddoc
     Fork KLIFF on Github <https://github.com/mjwen/kliff>
 
 
