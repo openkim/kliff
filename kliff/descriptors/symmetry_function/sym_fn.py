@@ -15,6 +15,29 @@ class SymmetryFunction(Descriptor):
     """Atom-centered symmetry functions descriptor.
 
 
+    Parameters
+    ----------
+    hyperparams: dict
+        hyperparameters of descriptors
+
+        Example
+        -------
+        {'g1': None,
+         'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
+         'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
+        }
+
+    cutname: string
+        cutoff function name
+
+    cutvalue: dict
+        cutoff values based on species.
+
+        Example
+        -------
+        cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+
+
     Attributes
     ----------
 
@@ -25,39 +48,12 @@ class SymmetryFunction(Descriptor):
     Reference: J. Behler, J. Chem. Phys. 134, 074106 (2011).
     """
 
-    _cdesc = sf.Descriptor()
+    def __init__(self, cut_name, cut_values, hyperparams, normalize=True,
+                 dtype=np.float32):
+        super(SymmetryFunction, self).__init__(cut_name, cut_values, hyperparams,
+                                               normalize, dtype)
 
-    def __init__(self, hyperparams, cutname, cutvalue, *args, **kwargs):
-        """
-
-        Parameters
-        ----------
-        hyperparams: dict
-            hyperparameters of descriptors
-
-            Example
-            -------
-            {'g1': None,
-             'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
-             'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
-            }
-
-        cutname: string
-            cutoff function name
-
-        cutvalue: dict
-            cutoff values based on species.
-
-            Example
-            -------
-            cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
-
-        """
-        super(SymmetryFunction, self).__init__(*args, **kwargs)
-        self.hyperparams = hyperparams
-        self.cutname = cutname.lower()
-        self.cutvalue = cutvalue
-
+        self._cdesc = sf.Descriptor()
         self._desc = OrderedDict()
         self._species_code = dict()
 
@@ -68,7 +64,7 @@ class SymmetryFunction(Descriptor):
         # set hyper params
         self._set_hyperparams()
 
-        #logger.info('"SymmetryFunction" descriptor initialized.')
+        logger.info('"SymmetryFunction" descriptor initialized.')
 
     def transform(self, conf, grad=False):
         """Transform atomic coords to atomic enviroment descriptor values.
@@ -151,7 +147,7 @@ class SymmetryFunction(Descriptor):
 
     def get_cutoff(self):
         """ Return the name and values of cutoff. """
-        return self.cutname, self._rcut
+        return self.cut_name, self.cut_values
 
     def get_hyperparams(self):
         """ Return the hyperparameters of descriptors. """
@@ -175,11 +171,11 @@ class SymmetryFunction(Descriptor):
 
     def _set_cutoff(self):
 
-        self._rcut = self.generate_full_cutoff(self.cutvalue)
+        self._rcut = self.generate_full_cutoff(self.cut_values)
 
         # check cutoff support
-        if self.cutname not in ['cos', 'exp']:
-            raise SupportError("Cutoff type `{}' unsupported.".format(self.cutname))
+        if self.cut_name not in ['cos', 'exp']:
+            raise SupportError("Cutoff type `{}' unsupported.".format(self.cut_name))
 
         species = set()
         for key, value in self._rcut.items():
@@ -196,7 +192,7 @@ class SymmetryFunction(Descriptor):
                     rcutsym[i][j] = self._rcut[si+'-'+sj]
         except KeyError as e:
             raise InputError('Cutoff for {} not provided.'.format(e))
-        self._cdesc.set_cutoff(self.cutname, rcutsym)
+        self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
 
@@ -324,7 +320,7 @@ class Set51(SymmetryFunction):
                 elif key == 'g4':
                     val['eta'] /= bhor2ang**2
 
-        super(Set51, self).__init__(params, cutname, cutvalue, *args, **kwargs)
+        super(Set51, self).__init__(cutname, cutvalue, params, *args, **kwargs)
 
 
 class Set30(SymmetryFunction):
@@ -394,4 +390,4 @@ class Set30(SymmetryFunction):
                 elif key == 'g4':
                     val['eta'] /= bhor2ang**2
 
-        super(Set30, self).__init__(params, cutname, cutvalue, *args, **kwargs)
+        super(Set30, self).__init__(cutname, cutvalue, params, *args, **kwargs)

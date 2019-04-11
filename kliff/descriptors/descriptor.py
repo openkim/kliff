@@ -12,42 +12,85 @@ from kliff.error import InputError
 logger = kliff.logger.get_logger(__name__)
 
 
-class Descriptor(object):
-    """Base class for all atomic enviroment descriptors.
+class Descriptor:
+    """Base class of atomic enviroment descriptors.
 
     Preprocess dataset to generate fingerprints.
 
-    Example
-    -------
 
+    Parameters
+    ----------
+    normalize: bool (optional)
+        If ``True``, the fingerprints is centered and normalized according to:
+        ``zeta = (zeta - mean(zeta)) / stdev(zeta)``
 
     Attributes
     ----------
+    mean: list
+        Mean of the fingerprints.
 
-    mean
-    stdev
-
-
+    stdev: list
+        Standard deviation of the fingerprints.
     """
 
-    def __init__(self, normalize=True, dtype=np.float32):
-        """
+    def __init__(self, cut_name, cut_values, hyperparams, normalize=True,
+                 dtype=np.float32):
 
-
-        Parameters
-        ----------
-
-        normalize: bool (optional)
-            Whether to center and normalize the fingerprints by:
-                zeta = (zeta - mean(zeta)) / stdev(zeta)
-
-        """
-
+        self.cut_name = cut_name
+        self.cut_values = cut_values
+        self.hyperparams = hyperparams
         self.normalize = normalize
         self.dtype = dtype
 
         self.mean = None
         self.stdev = None
+
+
+#    def set_cutoff(self, name, values):
+#        """Set the cutoff used in the descriptor.
+#
+#        Parameters
+#        ----------
+#        name: str
+#            Name of the cutoff, such as ``cos``, ``P3``, ``P7``.
+#
+#        values: dict
+#            Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
+#            are atomic species, and value should be a float.
+#
+#        Example
+#        -------
+#        >>> desc = Descriptor()
+#        >>> name = 'cos'
+#        >>> values = {'C-C':4.5,'H-H':3.0,'C-H':4.0}
+#        >>> desc.set_cutoff(name, values)
+#        """
+#
+#        self.cutname = name
+#        self.cutoff = generate_full_cutoff(values)
+#        self.species_code = dict()
+#
+#        species = get_species_from_cutoff(values)
+#        num_species = len(species)
+#
+#        rcutsym = np.zeros([num_species, num_species], dtype=np.double)
+#        try:
+#            for i, si in enumerate(species):
+#                self.species_code[si] = i
+#                for j, sj in enumerate(species):
+#                    rcutsym[i][j] = self.cutoff[si+'-'+sj]
+#        except KeyError as e:
+#            raise InputError('Cutoff for "{}" not provided.'.format(e))
+#
+#    def set_hyperparams(self, hyperparams):
+#        """Set the hyperparameters that the descriptor needs.
+#
+#        Parameters
+#        ----------
+#        hyperparams: dict
+#            Hyperparameters of the descriptor.
+#        """
+#        self.hyperparams = hyperparams
 
     def generate_train_fingerprints(self, configs, grad=False, reuse=False,
                                     prefix='fingerprints', nprocs=mp.cpu_count()):
@@ -323,6 +366,61 @@ def load_fingerprints(fname):
         except EOFError:
             pass
     return data
+
+
+def generate_full_cutoff(cutoff):
+    """Generate a full binary cutoff dictionary.
+
+    For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it,
+    whih the same value as `S1-S2`.
+
+    Parameters
+    ----------
+    cutoff: dict
+        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B``
+        are atomic species, and value should be a float.
+
+    Return
+    ------
+    dict
+        A dictionary with all combination of species as keys.
+
+    Example
+    -------
+    >>> cutoff = {'C-C': 4.0, 'C-H':3.5}
+    >>> generate_full_cutoff(cutoff)
+        {'C-C': 4.0, 'C-H':3.5, 'H-C':3.5}
+    """
+    rcut2 = dict()
+    for key, val in cutoff.items():
+        s1, s2 = key.split('-')
+        if s1 != s2:
+            rcut2[s2+'-'+s1] = val
+    # merge
+    rcut2.update(cutoff)
+
+    return rcut2
+
+
+def get_species_from_cutoff(cutoff):
+    """Get the species info from cutoff dictionary.
+
+    Parameters
+    ----------
+    cutoff: dict
+        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B``
+        are atomic species, and value should be a float.
+
+    Return
+    ------
+    list
+        All species in cutoff keys.
+    """
+    species = set()
+    for key in cutoff:
+        s1, s2 = key.split('-')
+        species.update([s1, s2])
+    return list(species)
 
 
 class DescriptorError(Exception):
