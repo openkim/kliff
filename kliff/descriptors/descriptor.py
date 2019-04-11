@@ -20,12 +20,29 @@ class Descriptor:
 
     Parameters
     ----------
+    cut_name: str
+        Name of the cutoff, such as ``cos``, ``P3``, ``P7``.
+
+    cut_values: dict
+        Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
+        are atomic species, and value should be a float.
+
+    hyperparams: dict
+        A dictionary of the hyperparams of the descriptor.
+
     normalize: bool (optional)
         If ``True``, the fingerprints is centered and normalized according to:
         ``zeta = (zeta - mean(zeta)) / stdev(zeta)``
 
+    dtype: np.dtype
+        Data type for the generated fingerprints, such as ``np.float32`` and
+        ``np.float64``.
+
     Attributes
     ----------
+    size: int
+        Lengh of the fingerprint vector.
+
     mean: list
         Mean of the fingerprints.
 
@@ -42,6 +59,7 @@ class Descriptor:
         self.normalize = normalize
         self.dtype = dtype
 
+        self.size = None
         self.mean = None
         self.stdev = None
 
@@ -315,14 +333,29 @@ class Descriptor:
             'Method "transform" not implemented; it has to be added by any "Descriptor" '
             'subclass.')
 
+    def get_size(self):
+        """Retrun the size of the descritpor vector."""
+        return self.size
+
     def get_mean(self):
+        """Return a list of the mean of the fingerprints."""
         return self.mean.copy()
 
     def get_stdev(self):
+        """Return a list of the standard deviation of the fingerprints."""
         return self.stdev.copy()
 
     def get_dtype(self):
+        """Return the data type of the fingerprints."""
         return self.dtype
+
+    def get_cutoff(self):
+        """Return the name and values of cutoff. """
+        return self.cut_name, self.cut_values
+
+    def get_hyperparams(self):
+        """Return the hyperparameters of descriptors. """
+        return self.hyperparams
 
 
 def dump_mean_stdev(mean, stdev, fname):
@@ -402,8 +435,8 @@ def generate_full_cutoff(cutoff):
     return rcut2
 
 
-def get_species_from_cutoff(cutoff):
-    """Get the species info from cutoff dictionary.
+def generate_species_code(cutoff):
+    """Genereate species code info from cutoff dictionary.
 
     Parameters
     ----------
@@ -413,14 +446,23 @@ def get_species_from_cutoff(cutoff):
 
     Return
     ------
-    list
-        All species in cutoff keys.
+    species: dict
+        A dictionary of species and the integer code, with keys the species in
+        ``cutoff`` keys, and values integer code for species.
+
+    Example
+    -------
+    >>> cutoff = {'C-C': 4.0, 'C-H':3.5}
+    >>> generate_species_code(cutoff)
+        {'C':0, 'H':1}
     """
     species = set()
     for key in cutoff:
         s1, s2 = key.split('-')
         species.update([s1, s2])
-    return list(species)
+    species = list(species)
+    species_code = {s: i for i, s in enumerate(species)}
+    return species_code
 
 
 class DescriptorError(Exception):

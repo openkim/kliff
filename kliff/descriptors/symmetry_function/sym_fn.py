@@ -4,6 +4,7 @@ import logging
 from collections import OrderedDict
 import kliff
 from kliff.descriptors.descriptor import Descriptor
+from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
 from kliff.neighbor import NeighborList
 from kliff.error import InputError, SupportError
 from . import sf
@@ -138,60 +139,20 @@ class SymmetryFunction(Descriptor):
 
         return zeta, dzeta_dr
 
-    def __len__(self):
-        """The total number of symmetry functions (each hyper-parameter set counts 1)"""
-        N = 0
-        for key in self._desc:
-            N += len(self._desc[key])
-        return N
-
-    def get_cutoff(self):
-        """ Return the name and values of cutoff. """
-        return self.cut_name, self.cut_values
-
-    def get_hyperparams(self):
-        """ Return the hyperparameters of descriptors. """
-        return self._desc
-
-    @staticmethod
-    def generate_full_cutoff(rcut):
-        """Generate a full binary cutoff dictionary.
-
-        e.g. for input `rcut = {'C-C':1.42, 'C-H':1.0, 'H-H':0.8}`, the output would
-        be `rcut = {'C-C':1.42, 'C-H':1.0, 'H-C':1.0, 'H-H':0.8}`.
-        """
-        rcut2 = dict()
-        for key, val in rcut.items():
-            spec1, spec2 = key.split('-')
-            if spec1 != spec2:
-                rcut2[spec2+'-'+spec1] = val
-        # merge
-        rcut2.update(rcut)
-        return rcut2
-
     def _set_cutoff(self):
-
-        self._rcut = self.generate_full_cutoff(self.cut_values)
 
         # check cutoff support
         if self.cut_name not in ['cos', 'exp']:
             raise SupportError("Cutoff type `{}' unsupported.".format(self.cut_name))
 
-        species = set()
-        for key, value in self._rcut.items():
-            spec1, spec2 = key.split('-')
-            species.update([spec1, spec2])
-        species = list(species)
-        num_species = len(species)
+        self._rcut = generate_full_cutoff(self.cut_values)
+        self._species_code = generate_species_code(self.cut_values)
+        num_species = len(self._species_code)
 
         rcutsym = np.zeros([num_species, num_species], dtype=np.double)
-        try:
-            for i, si in enumerate(species):
-                self._species_code[si] = i
-                for j, sj in enumerate(species):
-                    rcutsym[i][j] = self._rcut[si+'-'+sj]
-        except KeyError as e:
-            raise InputError('Cutoff for {} not provided.'.format(e))
+        for si, i in self._species_code.items():
+            for sj, j in self._species_code.items():
+                rcutsym[i][j] = self._rcut[si+'-'+sj]
         self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
@@ -230,6 +191,15 @@ class SymmetryFunction(Descriptor):
             self._desc[name] = params
             self._cdesc.add_descriptor(name, params)
 
+    def __len__(self):
+        N = 0
+        for key in self._desc:
+            N += len(self._desc[key])
+        return N
+
+    def get_size(self):
+        return len(self)
+
 
 class Set51(SymmetryFunction):
     """ Symmetry function descriptor with the hyperparameters from:
@@ -238,15 +208,15 @@ class Set51(SymmetryFunction):
     Parameters
     ----------
 
-    cutname: string
+    cutname: str
       cutoff function name, e.g. `cos`
 
     cutvalue: dict
       cutoff values based on species.
 
-      Example
-      -------
-      cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+    Example
+    -------
+        cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
     """
 
     def __init__(self, cutvalue, cutname='cos', *args, **kwargs):
