@@ -110,6 +110,7 @@ class Descriptor:
 #        """
 #        self.hyperparams = hyperparams
 
+
     def generate_train_fingerprints(self, configs, grad=False, reuse=False,
                                     prefix='fingerprints', nprocs=mp.cpu_count()):
         """Convert training set to fingerprints.
@@ -329,9 +330,34 @@ class Descriptor:
         return mean, stdev
 
     def transform(self, conf, grad=False):
-        raise NotImplementedError(
-            'Method "transform" not implemented; it has to be added by any "Descriptor" '
-            'subclass.')
+        """Transform atomic coords to atomic enviroment descriptor values.
+
+        Parameters
+        ----------
+        conf: :class:`~kliff.dataset.Configuration` object
+            A configuration of atoms.
+
+        grad: bool (optional)
+            Whether to compute the gradient of descriptor values w.r.t. atomic
+            coordinates.
+
+        Returns
+        -------
+        zeta: 2D array
+            Descriptor values, each row for one atom.
+            zeta has shape (num_atoms, num_descriptors), where num_atoms is the
+            number of atoms in the configuration, and num_descriptors is the size
+            of the descriptor vector (depending on the the choice of hyper-parameters).
+
+        dzeta_dr: 4D array if grad is ``True``, otherwise ``None``
+            Gradient of descriptor values w.r.t. atomic coordinates.
+            dzeta_dr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
+            num_atoms and num_descriptors has the same meanings as described in zeta.
+            DIM = 3 denotes three Cartesian coordinates.
+        """
+
+        raise NotImplementedError('Method "transform" not implemented; it has to '
+                                  'be needes to be added by any subclass.')
 
     def get_size(self):
         """Retrun the size of the descritpor vector."""

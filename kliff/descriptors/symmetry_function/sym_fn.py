@@ -13,40 +13,42 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class SymmetryFunction(Descriptor):
-    """Atom-centered symmetry functions descriptor.
-
+    """Atom-centered symmetry functions descriptor as discussed in [Behler2011]_.
 
     Parameters
     ----------
+    cut_name: str
+        Name of the cutoff, such as ``cos``, ``exp``.
+
+    cut_values: dict
+        Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
+        are atomic species, and value should be a float.
+
     hyperparams: dict
-        hyperparameters of descriptors
+        A dictionary of the hyperparams of the descriptor.
 
-        Example
-        -------
-        {'g1': None,
-         'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
-         'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]
-        }
+    normalize: bool (optional)
+        If ``True``, the fingerprints is centered and normalized according to:
+        ``zeta = (zeta - mean(zeta)) / stdev(zeta)``
 
-    cutname: string
-        cutoff function name
-
-    cutvalue: dict
-        cutoff values based on species.
-
-        Example
-        -------
-        cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
-
-
-    Attributes
-    ----------
+    dtype: np.dtype (optional)
+        Data type for the generated fingerprints, such as ``np.float32`` and
+        ``np.float64``.
 
     Example
     -------
-    TODO
+    >>> cut_name = 'cos'
+    >>> cut_values = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+    >>> hyperparams = {'g1': None,
+    >>>                'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
+    >>>                'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]}
+    >>> desc = SymmetryFunction(cut_name, cut_values, hyperparams)
 
-    Reference: J. Behler, J. Chem. Phys. 134, 074106 (2011).
+    References
+    ----------
+    .. [Behler2011] J. Behler, "Atom-centered symmetry functions for constructing
+       high-dimensional neural network potentials," J. Chem. Phys. 134, 074106
+       (2011).
     """
 
     def __init__(self, cut_name, cut_values, hyperparams, normalize=True,
@@ -67,7 +69,9 @@ class SymmetryFunction(Descriptor):
 
         Parameters
         ----------
-        conf: Configuration object
+        conf: :class:`~kliff.dataset.Configuration` object
+            A configuration of atoms.
+
 
         grad: bool (optional)
             Whether to compute the gradient of descriptor values w.r.t. atomic
@@ -81,8 +85,7 @@ class SymmetryFunction(Descriptor):
             number of atoms in the configuration, and num_descriptors is the size
             of the descriptor vector (depending on the the choice of hyper-parameters).
 
-
-        dzeta_dr: 4D array if grad is `True`, otherwise `None`
+        dzeta_dr: 4D array if grad is ``True``, otherwise ``None``
             Gradient of descriptor values w.r.t. atomic coordinates.
             dzeta_dr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
             num_atoms and num_descriptors has the same meanings as described in zeta.
@@ -91,25 +94,17 @@ class SymmetryFunction(Descriptor):
 
         # create neighbor list
         infl_dist = max(self.cutoff.values())
-        nei = NeighborList(conf, infl_dist, padding_need_neigh=True)
+        nei = NeighborList(conf, infl_dist, padding_need_neigh=False)
 
-        coords = np.asarray(nei.coords, dtype=np.double)
+        coords = nei.coords
+        image = nei.image
         species = np.asarray([self.species_code[i]
                               for i in nei.species], dtype=np.intc)
-        image = np.asarray(nei.image, dtype=np.intc)
+        numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
         Natoms = len(coords)
         Ncontrib = conf.get_number_of_atoms()
         Ndesc = len(self)
-
-        neighlist = []
-        numneigh = []
-        for i in range(Ncontrib):
-            neighbors, _, _ = nei.get_neigh(i)
-            neighlist.append(neighbors)
-            numneigh.append(len(neighbors))
-        neighlist = np.asarray(np.concatenate(neighlist), dtype=np.intc)
-        numneigh = np.asarray(numneigh, dtype=np.intc)
 
         if grad:
             zeta, dzeta_dr = self._cdesc.get_gen_coords_and_deri(
