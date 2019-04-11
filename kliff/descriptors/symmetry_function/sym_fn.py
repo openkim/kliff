@@ -54,15 +54,10 @@ class SymmetryFunction(Descriptor):
         super(SymmetryFunction, self).__init__(cut_name, cut_values, hyperparams,
                                                normalize, dtype)
 
-        self._cdesc = sf.Descriptor()
         self._desc = OrderedDict()
-        self._species_code = dict()
 
-        # set cutoff
-        self._rcut = None
+        self._cdesc = sf.Descriptor()
         self._set_cutoff()
-
-        # set hyper params
         self._set_hyperparams()
 
         logger.info('"SymmetryFunction" descriptor initialized.')
@@ -95,11 +90,11 @@ class SymmetryFunction(Descriptor):
         """
 
         # create neighbor list
-        infl_dist = max(self._rcut.values())
+        infl_dist = max(self.cutoff.values())
         nei = NeighborList(conf, infl_dist, padding_need_neigh=True)
 
         coords = np.asarray(nei.coords, dtype=np.double)
-        species = np.asarray([self._species_code[i]
+        species = np.asarray([self.species_code[i]
                               for i in nei.species], dtype=np.intc)
         image = np.asarray(nei.image, dtype=np.intc)
 
@@ -145,14 +140,14 @@ class SymmetryFunction(Descriptor):
         if self.cut_name not in ['cos', 'exp']:
             raise SupportError("Cutoff type `{}' unsupported.".format(self.cut_name))
 
-        self._rcut = generate_full_cutoff(self.cut_values)
-        self._species_code = generate_species_code(self.cut_values)
-        num_species = len(self._species_code)
+        self.cutoff = generate_full_cutoff(self.cut_values)
+        self.species_code = generate_species_code(self.cut_values)
+        num_species = len(self.species_code)
 
         rcutsym = np.zeros([num_species, num_species], dtype=np.double)
-        for si, i in self._species_code.items():
-            for sj, j in self._species_code.items():
-                rcutsym[i][j] = self._rcut[si+'-'+sj]
+        for si, i in self.species_code.items():
+            for sj, j in self.species_code.items():
+                rcutsym[i][j] = self.cutoff[si+'-'+sj]
         self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
