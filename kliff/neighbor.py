@@ -5,53 +5,58 @@ from kimpy import neighlist as nl
 from kliff.atomic_data import atomic_number, atomic_species
 
 
-class NeighborList(object):
+class NeighborList:
     """Neighbor list class based on kimpy.neighlist.
 
-    This uses the same approach that `LAMMPS` and `KIM` adopt:
-    The atoms in the configuration (assuming a total of N atoms) are named contributing
-    atoms, and padding atoms are created to satisfy the boundary conditions. The
-    contributing atoms are numbered as 1, 2, ... N-1, and the padding atoms are numbered
-    as N, N+1, N+2... Neighbors of atom can include both contributing atoms and padding
+    This uses the same approach that `LAMMPS` and `KIM` adopt: The atoms in the
+    configuration (assuming a total of N atoms) are named contributing atoms, and
+    padding atoms are created to satisfy the boundary conditions. The contributing
+    atoms are numbered as 1, 2, ... N-1, and the padding atoms are numbered as N,
+    N+1, N+2... Neighbors of atom can include both contributing atoms and padding
     atoms.
 
-    Note
-    ----
-    To get the total force on a contributing atom, the forces on all padding atoms who
-    are images of the contributing atom should be added back to the contirbuting atom.
+
+    Parameters
+    ----------
+    conf: Configuration object
+        It stores the atoms information.
+
+    infl_dist: float
+        Influence distance, within which atoms are interacting with each other.
+        In literatures, this is usually refered as `cutoff`.
+
+    padding_need_neigh: bool
+        Whether to generate neighbors for padding atoms.
 
     Attributes
     ----------
     coords: 2D array
-        coordinates of contributing and padding atoms
+        Coordinates of contributing and padding atoms.
 
-    species: 1D array
-        speices of contributing and padding atoms
+    species: list
+        Species string of contributing and padding atoms.
 
     iamge: 1D array
-        atom number, of which an atom is an image (the image of a contributing atom
-        is itself)
+        Atom index, of which an atom is an image. The image of a contributing
+        atom is itself.
 
-    padding_image: 1D array
-        atom number, of which the padding atom is an image
+    padding_coords: 2D array
+        Coordinates of padding atoms.
+
+    padding_species: list
+        Species string and padding atoms.
+
+    padding_iamge: 1D array
+        Atom index, of which a padding atom is an image.
+
+    Note
+    ----
+    To get the total force on a contributing atom, the forces on all padding atoms
+    who are images of the contributing atom should be added back to the contirbuting
+    atom.
     """
 
     def __init__(self, conf, infl_dist, padding_need_neigh=False):
-        """
-
-        Parameters
-        ----------
-        conf: Configuration object
-            It stores the atoms information.
-
-        infl_dist: float
-            Influence distance, within which atoms are interacting with each other.
-            In literatures, this is usually refered as `cutoff`.
-
-        padding_need_neigh: bool
-            Whether to generate neighbors for padding atoms.
-        """
-
         self.conf = conf
         self.infl_dist = infl_dist
         self.padding_need_neigh = padding_need_neigh
@@ -59,10 +64,12 @@ class NeighborList(object):
         # all atoms: contrib + padding
         self.coords = None
         self.species = None
+        self.image = None
 
+        self.padding_coords = None
+        self.padding_species = None
         # padding_image[0] = 3: padding atom 1 is the image of contributing atom 3
         self.padding_image = None
-        self.image = None
 
         # neigh
         self.neigh = nl.initialize()
@@ -75,23 +82,26 @@ class NeighborList(object):
         PBC = np.asarray(self.conf.get_PBC(), dtype=np.intc)
 
         # create padding atoms
-        species_code_cb = np.asarray([atomic_number[s]
-                                      for s in species_cb], dtype=np.intc)
-        out = nl.create_paddings(self.infl_dist, cell, PBC,
-                                 coords_cb, species_code_cb)
+        species_code_cb = np.asarray(
+            [atomic_number[s] for s in species_cb], dtype=np.intc)
+        out = nl.create_paddings(
+            self.infl_dist, cell, PBC, coords_cb, species_code_cb)
         coords_pd, species_code_pd, image_pd, error = out
         check_error(error, 'nl.create_padding')
         species_pd = [atomic_species[i] for i in species_code_pd]
 
+        self.padding_coords = np.asarray(coords_pd, dtype=np.double)
+        self.padding_species = species_pd
+        self.padding_image = np.asarray(image_pd, dtype=np.intc)
+
         num_cb = coords_cb.shape[0]
         num_pd = coords_pd.shape[0]
 
-        self.coords = np.asarray(np.concatenate(
-            (coords_cb, coords_pd)), dtype=np.double)
+        self.coords = np.asarray(np.concatenate((coords_cb, coords_pd)),
+                                 dtype=np.double)
         self.species = np.concatenate((species_cb, species_pd))
-        self.padding_image = image_pd
-        self.image = np.concatenate((np.arange(num_cb), image_pd))
-
+        self.image = np.asarray(np.concatenate((np.arange(num_cb), image_pd)),
+                                dtype=np.intc)
         # flag to indicate whether to create neighborlist for an atom
         need_neigh = np.ones(num_cb + num_pd, dtype=np.intc)
         if not self.padding_need_neigh:
@@ -104,23 +114,23 @@ class NeighborList(object):
         check_error(error, 'nl.build')
 
     def get_neigh(self, index):
-        """Get the number of neighbors and the neighbor list of atom index.
+        """Get the indices, coordiantes, and speices string of a given atom.
 
         Parameters
         ----------
         index: int
-            Atom number whose neighbor info is returned.
+            Atom number whose neighbor info is requested.
 
         Returns
         -------
-        neigh_indices: list of float
-            indices of neighbor atoms in self.coords and self.species
+        neigh_indices: list
+            Indices of neighbor atoms in self.coords and self.species.
 
         neigh_coords: 2D array
-            coords of neighbor atoms
+            Coordinates of neighbor atoms.
 
-        neigh_speices: list of str
-            species symbol of neighbor atoms
+        neigh_speices: list
+            Species symbol of neighbor atoms.
         """
 
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
@@ -133,27 +143,102 @@ class NeighborList(object):
         neigh_species = self.species[neigh_indices]
         return neigh_indices, neigh_coords, neigh_species
 
+    def get_numneigh_and_neighlist_1D(self, request_padding=False):
+        """Get the number of neighbrs and neighbor list for all atoms.
+
+        Parameter
+        ---------
+        request_padding: bool
+            If ``True``, the returned number of neighbors and neighbor list include
+            those for padding atoms; If ``False``, only return these for contirbuting
+            atoms.
+
+        Return
+        ------
+        numneigh: 1D array
+            Number of neighbors for all atoms.
+
+        neighlist: 1D array
+            Indicies of the neighbors for all atoms stacked into a 1D array.
+            Its total length is ``sum(numneigh)``, and the first ``numneigh[0]``
+            components are the neighbors of atom `0`, the next ``numneigh[1]``
+            componemnts are the neighbors of atom `1` ....
+        """
+        if request_padding:
+            if not self.padding_need_neigh:
+                raise NeighborListError(
+                    'Request to get neighbors of padding atoms, but '
+                    '"padding_need_neigh" is set to "False" at initializaion.')
+            N = len(self.coords)
+        else:
+            N = self.conf.get_number_of_atoms()
+
+        cutoffs = np.asarray([self.infl_dist], dtype=np.double)
+        neigh_list_index = 0
+
+        numneigh = []
+        neighlist = []
+        for i in range(N):
+            num_neigh, neigh_indices, error = nl.get_neigh(
+                self.neigh, cutoffs, neigh_list_index, i)
+            check_error(error, 'nl.get_neigh')
+            numneigh.append(num_neigh)
+            neighlist.append(neigh_indices)
+        neighlist = np.asarray(np.concatenate(neighlist), dtype=np.intc)
+        numneigh = np.asarray(numneigh, dtype=np.intc)
+
+        return numneigh, neighlist
+
     def get_coords(self):
         """Return coords of both contributing and padding atoms."""
         return self.coords.copy()
 
     def get_species(self):
         """Return speices of both contributing and padding atoms."""
-        return self.species.copy()
+        return self.species[:]
+
+    def get_species_code(self, mapping):
+        """Integer species code of both contributing and padding atoms.
+
+        Parameter
+        ---------
+        mapping: dict
+            A mapping between species string and its code.
+
+        Return
+        1D array
+            Integer species code.
+        """
+        return np.asarray([mapping[s] for s in self.species], dtype=np.intc)
 
     def get_image(self):
         """Return image of both contributing and padding atoms."""
         return self.image.copy()
 
     def get_padding_coords(self):
-        num_cb = self.conf.get_number_of_atoms()
-        return self.coords[num_cb:].copy()
+        """Return coords of padding atoms."""
+        return self.padding_coords.copy()
 
     def get_padding_speices(self):
-        num_cb = self.conf.get_number_of_atoms()
-        return self.speices[num_cb:].copy()
+        """Return species string of padding atoms."""
+        return self.padding_speices[:]
+
+    def get_padding_species_code(self, mapping):
+        """Integer species code of padding atoms.
+
+        Parameter
+        ---------
+        mapping: dict
+            A mapping between species string and its code.
+
+        Return
+        1D array
+            Integer species code.
+        """
+        return np.asarray([mapping[s] for s in self.padding_species], dtype=np.intc)
 
     def get_padding_image(self):
+        """Return image of padding atoms."""
         return self.padding_image.copy()
 
     def __del__(self):
@@ -183,7 +268,7 @@ def assemble_forces(forces, n, padding_image):
     """
 
     # numpy slicing does not make a copy !!!
-    total_forces = np.array(forces[:n])
+    total_forces = np.array(forces[: n])
 
     has_padding = True if padding_image.size != 0 else False
 
@@ -230,6 +315,15 @@ def assemble_stress(coords, forces, volume):
     return stress
 
 
+class NeighborListError(Exception):
+    def __init__(self, msg):
+        super(NeighborListError, self).__init__(msg)
+        self.msg = msg
+
+    def __expr__(self):
+        return self.msg
+
+
 def check_error(error, message=None):
     if error != 0 and error is not None:
-        raise Exception('kimpy error. Calling "{}" failed.'.format(message))
+        raise NeighborListError('Calling "{}" failed.'.format(message))

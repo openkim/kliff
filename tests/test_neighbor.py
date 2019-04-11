@@ -28,6 +28,7 @@ target_species[12] = 'O'
 target_species[14] = 'O'
 
 all_indices = [[6, 1, 8], [0, 10, 12], [7, 3, 9], [2, 11, 13]]
+all_numneigh = [len(i) for i in all_indices]
 
 
 def test_neigh():
@@ -54,10 +55,14 @@ def test_neigh():
 
     # padding
     for i in range(conf.get_number_of_atoms(), len(coords)):
-        nei_indices, nei_coords, nei_species = neigh.get_neigh(4)
+        nei_indices, nei_coords, nei_species = neigh.get_neigh(i)
         assert nei_indices.size == 0
         assert nei_coords.size == 0
         assert nei_species.size == 0
+
+    numneigh, neighlist = neigh.get_numneigh_and_neighlist_1D(request_padding=False)
+    np.array_equal(numneigh, all_numneigh)
+    np.array_equal(neighlist, np.concatenate(all_indices))
 
 
 if __name__ == '__main__':
