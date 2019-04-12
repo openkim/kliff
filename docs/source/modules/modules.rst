@@ -1,8 +1,8 @@
 .. _doc.modules:
 
-=======
-Modules
-=======
+=======================
+Frequently Used Modules
+=======================
 
 In this section, we introduce some of the most frequently used modules. See
 :ref:`reference` for their APIs and other modules in KLIFF.
@@ -23,7 +23,6 @@ In this section, we introduce some of the most frequently used modules. See
 
 .. toctree::
     :caption: List of All Modules
-    :name: modules
     :maxdepth: 2
 
     models

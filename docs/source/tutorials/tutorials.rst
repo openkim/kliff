@@ -1,22 +1,19 @@
 .. _tutorials:
 
-=========
-Tutorials
-=========
 
-To learn how to use KLIFF, begin with the tutorials. The :ref:`tut_kim_sw` example
-is a good entry point to see the basics of training a physics-motivated potential,
-and the :ref:`tut_nn` example walks through the steps to train a machine-learning
-neural network potential.
+.. include:: ../auto_examples/index.rst
+
+
+**Below are some other examples**
+
 
 .. toctree::
     :name: toctutor
-    :maxdepth: 1
     :titlesonly:
 
-
-    kim_sw
     nn
     save_load_model
     install_kim_model
     new_model
+
+
