@@ -13,18 +13,51 @@ logger = kliff.logger.get_logger(__name__)
 class Bispectrum(Descriptor):
     """Bispectrum descriptor.
 
+    Preprocess dataset to generate fingerprints using the Bispectrum descriptor
+    as discussed in [Bartok2010]_ and [Thompson2015]_.
 
     Parameters
     ----------
-    TODO
+    cut_dists: dict
+        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are
+        atomic species string, and value should be a float.
 
+    cut_name: str
+        Name of the cutoff function.
 
+    hyperparams: dict
+        A dictionary of the hyperparams of the descriptor.
 
+    normalize: bool (optional)
+        If ``True``, the fingerprints is centered and normalized according to:
+        ``zeta = (zeta - mean(zeta)) / stdev(zeta)``
+
+    dtype: np.dtype
+        Data type for the generated fingerprints, such as ``np.float32`` and
+        ``np.float64``.
+
+    Example
+    -------
+    >>> cut_name = 'cos'
+    >>> cut_dists = {'C-C': 5.0, 'C-H': 4.5, 'H-H': 4.0}
+    >>> hyperparams = {'jmax': 4,
+    >>>                'weight': {'C':1.0, 'H':1.0},
+    >>> desc = Bispectrum(cut_dists, cut_name, hyperparams)
+
+    References
+    ----------
+    .. [Bartok2010] Bartók, Albert P., Mike C. Payne, Risi Kondor, and Gábor Csányi.
+       "Gaussian approximation potentials: The accuracy of quantum mechanics, without
+       the electrons." Physical review letters 104, no. 13 (2010): 136403.
+    .. [Thompson2015] Thompson, Aidan P., Laura P. Swiler, Christian R. Trott,
+       Stephen M. Foiles, and Garritt J. Tucker. "Spectral neighbor analysis method
+       for automated generation of quantum-accurate interatomic potentials." Journal
+       of Computational Physics 285 (2015): 316-330.
     """
 
-    def __init__(self, cut_name, cut_values, hyperparams=None, normalize=True,
+    def __init__(self, cut_dists, cut_name=None, hyperparams=None, normalize=True,
                  dtype=np.float32):
-        super(Bispectrum, self).__init__(cut_name, cut_values, hyperparams,
+        super(Bispectrum, self).__init__(cut_dists, cut_name, hyperparams,
                                          normalize, dtype)
 
         self.update_hyperparams(self.hyperparams)
@@ -105,12 +138,17 @@ class Bispectrum(Descriptor):
         self.hyperparams = default_hyperparams
 
     def _set_cutoff(self):
-        if self.cut_name not in ['cos']:
+        supported = ['cos']
+        if self.cut_name is None:
+            self.cut_name = supported[0]
+        if self.cut_name not in supported:
+            spd = ['"{}", '.format(s) for s in supported]
             raise BispectrumError(
-                'Cutoff "{}" not supported by this descriptor.'.format(self.cut_name))
+                'Cutoff "{}" not supported by this descriptor. Use {}.'
+                .format(self.cut_name, spd))
 
-        self.cutoff = generate_full_cutoff(self.cut_values)
-        self.species_code = generate_species_code(self.cut_values)
+        self.cutoff = generate_full_cutoff(self.cut_dists)
+        self.species_code = generate_species_code(self.cut_dists)
         num_species = len(self.species_code)
 
         rcutsym = np.zeros([num_species, num_species], dtype=np.double)
