@@ -5,14 +5,22 @@ import kliff
 from kliff.descriptors.descriptor import Descriptor
 from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
 from kliff.neighbor import NeighborList
-from kliff.error import InputError
 from . import bs
 
 logger = kliff.logger.get_logger(__name__)
 
 
 class Bispectrum(Descriptor):
-    """Bispectrum descriptor."""
+    """Bispectrum descriptor.
+
+
+    Parameters
+    ----------
+    TODO
+
+
+
+    """
 
     def __init__(self, cut_name, cut_values, hyperparams=None, normalize=True,
                  dtype=np.float32):
@@ -25,10 +33,10 @@ class Bispectrum(Descriptor):
         rfac0 = self.hyperparams['rfac0']
         jmax = self.hyperparams['jmax']
         diagonalstyle = self.hyperparams['diagonalstyle']
-        use_shared_arrays = self.hyperparams['use_shared_arrays']
         rmin0 = self.hyperparams['rmin0']
         switch_flag = self.hyperparams['switch_flag']
         bzero_flag = self.hyperparams['bzero_flag']
+        use_shared_arrays = 0
         self._cdesc = bs.Bispectrum(rfac0, 2*jmax, diagonalstyle, use_shared_arrays,
                                     rmin0, switch_flag, bzero_flag)
 
@@ -78,30 +86,28 @@ class Bispectrum(Descriptor):
         """Update the hyperparameters based on the input at initialization.
         """
         default_hyperparams = {
-            'jmax': 3,
+            'jmax': 4,
             'rfac0': 0.99363,
             'diagonalstyle': 3,
-            'use_shared_arrays': 0,
             'rmin0': 0,
             'switch_flag': 1,
-            'bzero_flag': 0, }
+            'bzero_flag': 0,
+            'weight': None}
 
         if params is not None:
             for key, value in params.items():
                 if key not in default_hyperparams:
-                    name = self.__class__.__name__
-                    raise InputError(
-                        'Hyperparameter "{}" not supported by descirptor "{}".'
-                        .format(key, name))
+                    raise BispectrumError(
+                        'Hyperparameter "{}" not supported by this descirptor.'
+                        .format(key))
                 else:
                     default_hyperparams[key] = value
         self.hyperparams = default_hyperparams
 
     def _set_cutoff(self):
-
-        # check cutoff support
-        if self.cut_name not in ['cos', 'exp']:
-            raise SupportError("Cutoff type `{}' unsupported.".format(self.cut_name))
+        if self.cut_name not in ['cos']:
+            raise BispectrumError(
+                'Cutoff "{}" not supported by this descriptor.'.format(self.cut_name))
 
         self.cutoff = generate_full_cutoff(self.cut_values)
         self.species_code = generate_species_code(self.cut_values)
@@ -115,8 +121,17 @@ class Bispectrum(Descriptor):
         self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
-
-        weight = np.array([1., 1.], dtype=np.double)
+        weight_in = self.hyperparams['weight']
+        if weight_in is None:
+            weight = np.ones(len(self.species_code), dtype=np.double)
+        else:
+            weight = np.array(len(self.species_code), dtype=np.double)
+            for spec, code in self.species_code.items():
+                try:
+                    weight[code] = weight_in[spec]
+                except KeyError:
+                    raise BispectrumError(
+                        '"weight" for species "{}" not provided.'.format(spec))
         self._cdesc.set_weight(weight)
 
     def get_size(self):
@@ -142,3 +157,12 @@ class Bispectrum(Descriptor):
                         if (j >= j1):
                             N += 1
         return N
+
+
+class BispectrumError(Exception):
+    def __init__(self, msg):
+        super(BispectrumError, self).__init__(msg)
+        self.msg = msg
+
+    def __expr__(self):
+        return self.msg
