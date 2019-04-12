@@ -31,8 +31,7 @@ public:
           double* const zeta, double* const dzetadr);
 
   // cutoff
-  void set_cutoff(const char* name, const int Nspecies, const double* rcuts_in,
-          double rcutfac);
+  void set_cutoff(const char* name, const int Nspecies, const double* rcuts_in);
   // element weight
   void set_weight(const int Nspecies, const double* weight_in);
   // element radius
@@ -78,11 +77,8 @@ private:
 
   // cutoff
   double** rcuts;
-  double rcutfac;
   // element weight
   double* wjelem;
-  // radius
-  double* radelem;
 
 
   double rmin0, rfac0;

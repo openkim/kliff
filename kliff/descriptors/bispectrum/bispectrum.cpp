@@ -124,7 +124,6 @@ Bispectrum::Bispectrum(double rfac0_in,
   rcutij = NULL;
   nmax = 0;
   idxj = NULL;
-  radelem = NULL;
   wjelem = NULL;
   rcuts = NULL;
 
@@ -307,7 +306,6 @@ void Bispectrum::compute_B(double const* coordinates, int const* particleSpecies
     int const numNei = numneigh[i];
     int const * const ilist = neighlist+start;
     int const iSpecies = particleSpecies[i];
-    double const radi = radelem[iSpecies];
 
     start += numNei;
 
@@ -343,7 +341,7 @@ void Bispectrum::compute_B(double const* coordinates, int const* particleSpecies
         rij[ninside][2] = rvec[2];
         inside[ninside] = j;
         wj[ninside] = wjelem[jSpecies];
-        rcutij[ninside] = (radi + radelem[jSpecies])*rcutfac;
+        rcutij[ninside] = rcuts[iSpecies][jSpecies];
         ninside++;
       }
     }
@@ -387,7 +385,7 @@ void Bispectrum::compute_B(double const* coordinates, int const* particleSpecies
 
 
 void Bispectrum::set_cutoff(const char* name, const int Nspecies,
-    const double* rcuts_in, double rcutfac_in)
+    const double* rcuts_in)
 {
 //  if (strcmp(name, "cos") == 0) {
 //    cutoff_ = &cut_cos;
@@ -409,7 +407,6 @@ void Bispectrum::set_cutoff(const char* name, const int Nspecies,
     }
   }
 
-  rcutfac = rcutfac_in;
 }
 
 
@@ -422,19 +419,6 @@ void Bispectrum::set_weight(const int Nspecies, const double* weight_in)
   }
 
 }
-
-void Bispectrum::set_radius(const int Nspecies, const double* radius_in)
-{
-  Deallocate1DArray<double>(radelem);
-  AllocateAndInitialize1DArray<double>(radelem, Nspecies);
-  for (int i=0; i<Nspecies; i++) {
-      radelem[i] = radius_in[i];
-  }
-
-}
-
-
-
 
 /* ----------------------------------------------------------------------
    compute Ui by summing over neighbors j

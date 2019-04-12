@@ -84,8 +84,7 @@ class Bispectrum(Descriptor):
             'use_shared_arrays': 0,
             'rmin0': 0,
             'switch_flag': 1,
-            'bzero_flag': 0,
-            'rcutfac': 0.5, }
+            'bzero_flag': 0, }
 
         if params is not None:
             for key, value in params.items():
@@ -113,16 +112,12 @@ class Bispectrum(Descriptor):
             for sj, j in self.species_code.items():
                 rcutsym[i][j] = self.cutoff[si+'-'+sj]
 
-        rcutfac = self.hyperparams['rcutfac']
-        self._cdesc.set_cutoff(self.cut_name, rcutsym, rcutfac)
+        self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
 
         weight = np.array([1., 1.], dtype=np.double)
         self._cdesc.set_weight(weight)
-
-        radius = np.array([5., 5.], dtype=np.double)
-        self._cdesc.set_radius(radius)
 
     def get_size(self):
         """Return the size of descriptor.
