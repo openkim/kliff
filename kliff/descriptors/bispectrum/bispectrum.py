@@ -162,7 +162,7 @@ class Bispectrum(Descriptor):
         if weight_in is None:
             weight = np.ones(len(self.species_code), dtype=np.double)
         else:
-            weight = np.array(len(self.species_code), dtype=np.double)
+            weight = np.zeros(len(self.species_code), dtype=np.double)
             for spec, code in self.species_code.items():
                 try:
                     weight[code] = weight_in[spec]
