@@ -124,6 +124,9 @@ Bispectrum::Bispectrum(double rfac0_in,
   rcutij = NULL;
   nmax = 0;
   idxj = NULL;
+  radelem = NULL;
+  wjelem = NULL;
+  rcuts = NULL;
 
   if (bzero_flag) {
     double www = wself*wself*wself;
@@ -132,6 +135,8 @@ Bispectrum::Bispectrum(double rfac0_in,
   }
 
   build_indexlist();
+
+  init();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -285,12 +290,13 @@ void Bispectrum::grow_rij(int newnmax)
   e.g. eq(5) of ``Gaussian Approximation Potentials: The Accuracy of Quantum
   Mechanics, without the Electrons``, by Gabor Csany
 ------------------------------------------------------------------------- */
-void Bispectrum::compute_B(const double* coordinates, const int* particleSpecies,
-    const int* neighlist, const int* numneigh, const int* image,
-    const int Natoms, const int Ncontrib,
-    double* const zeta, double* const dzetadr) {
+void Bispectrum::compute_B(double const* coordinates, int const* particleSpecies,
+    int const* neighlist, int const* numneigh, int const* image,
+    int const Natoms, int const Ncontrib,
+    double* const zeta, double* const dzeta_dr)
+{
 
-  bool fit_forces = (dzetadr != nullptr);
+  bool fit_forces = (dzeta_dr != nullptr);
 
   // prepare data
   VectorOfSizeDIM* coords = (VectorOfSizeDIM*) coordinates;
@@ -350,6 +356,10 @@ void Bispectrum::compute_B(const double* coordinates, const int* particleSpecies
     compute_bi();
     copy_bi2bvec();
 
+    for(int icoeff = 0; icoeff < ncoeff; icoeff++) {
+      zeta[i*ncoeff+icoeff] = bvec[icoeff];
+    }
+
     // for neighbors of I within cutoff:
     // compute dUi/drj and dBi/drj
 
@@ -358,9 +368,18 @@ void Bispectrum::compute_B(const double* coordinates, const int* particleSpecies
         compute_duidrj(rij[jj], wj[jj], rcutij[jj]);
         compute_dbidrj();
         copy_dbi2dbvec();
-      }
-    }
 
+        // copy to dzeta_dr
+        int const j = inside[jj];
+        for(int icoeff = 0; icoeff < ncoeff; icoeff++) {
+          int page = (i*ncoeff + icoeff)*Ncontrib*DIM;
+          for (int dim = 0; dim < DIM; ++dim) {
+            dzeta_dr[page + i*DIM+dim] += dbvec[icoeff][dim];
+            dzeta_dr[page + image[j]*DIM+dim] -= dbvec[icoeff][dim];
+          }
+        }
+      }
+    }  // fit forces
 
   } // loop over i
 
@@ -380,6 +399,7 @@ void Bispectrum::set_cutoff(const char* name, const int Nspecies,
 //  }
 
   // store number of species and cutoff values
+  Deallocate2DArray<double>(rcuts);
   AllocateAndInitialize2DArray<double>(rcuts, Nspecies, Nspecies);
   int idx = 0;
   for (int i=0; i<Nspecies; i++) {
@@ -395,6 +415,7 @@ void Bispectrum::set_cutoff(const char* name, const int Nspecies,
 
 void Bispectrum::set_weight(const int Nspecies, const double* weight_in)
 {
+  Deallocate1DArray<double>(wjelem);
   AllocateAndInitialize1DArray<double>(wjelem, Nspecies);
   for (int i=0; i<Nspecies; i++) {
       wjelem[i] = weight_in[i];
@@ -404,6 +425,7 @@ void Bispectrum::set_weight(const int Nspecies, const double* weight_in)
 
 void Bispectrum::set_radius(const int Nspecies, const double* radius_in)
 {
+  Deallocate1DArray<double>(radelem);
   AllocateAndInitialize1DArray<double>(radelem, Nspecies);
   for (int i=0; i<Nspecies; i++) {
       radelem[i] = radius_in[i];

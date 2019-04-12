@@ -98,8 +98,8 @@ class SymmetryFunction(Descriptor):
 
         coords = nei.coords
         image = nei.image
-        species = np.asarray([self.species_code[i]
-                              for i in nei.species], dtype=np.intc)
+        species = np.asarray([self.species_code[i] for i in nei.species],
+                             dtype=np.intc)
         numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
         Natoms = len(coords)

@@ -176,9 +176,9 @@ void Descriptor::get_generalized_coords(const double* coordinates,
           // generalzied coords and derivative
           gen_coords[i*Ndescriptor+idx] += gc;
           if (fit_forces) {
+            int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
             for (int kdim = 0; kdim < DIM; ++kdim) {
               double pair = - dgcdr_two*rij[kdim]/rijmag;
-              int page = (i*Ndescriptor + idx)*DIM*Ncontrib;
               d_gen_coords[page + i*DIM+kdim] += pair;
               d_gen_coords[page + image[j]*DIM+kdim] -= pair;
             }

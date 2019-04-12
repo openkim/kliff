@@ -6,6 +6,13 @@ fname = '../configs_extxyz/Si.xyz'
 conf = Configuration(format='extxyz', identifier=fname)
 conf.read(fname)
 
-cutoff = {'Si-Si': 4}
-jmax = 3
-desc = Bispectrum(jmax)
+
+cut_func = 'cos'
+cut_values = {'Si-Si': 5.0}
+
+desc = Bispectrum(cut_func, cut_values)
+zeta, dzeta_dr = desc.transform(conf)
+print('natoms=', conf.get_number_of_atoms())
+print('ndescs=', desc.get_size())
+print(zeta.shape)
+print(dzeta_dr.shape)

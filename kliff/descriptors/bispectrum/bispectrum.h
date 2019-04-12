@@ -25,13 +25,14 @@ public:
   int ncoeff;
 
   // compute bispectrum for a set of atoms
-  void compute_B(const double* coordinates, const int* particleSpecies,
-      const int* neighlist, const int* numneigh, const int* image, const int Natoms,
-      const int Ncontrib, double* const zeta, double* const dzetadr);
+  void compute_B(double const* coordinates, int const* particleSpecies,
+          int const* neighlist, int const* numneigh, int const* image,
+          int const Natoms, int const Ncontrib,
+          double* const zeta, double* const dzetadr);
 
   // cutoff
   void set_cutoff(const char* name, const int Nspecies, const double* rcuts_in,
-      double rcutfac);
+          double rcutfac);
   // element weight
   void set_weight(const int Nspecies, const double* weight_in);
   // element radius
