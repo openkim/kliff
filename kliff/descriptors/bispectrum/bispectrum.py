@@ -51,14 +51,13 @@ class Bispectrum(Descriptor):
         Ncontrib = conf.get_number_of_atoms()
         Ndesc = self.get_size()
 
-        grad = True
         if grad:
-            zeta, dzeta_dr = self._cdesc.compute_B(
+            zeta, dzeta_dr = self._cdesc.compute_zeta_and_dzeta_dr(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
             # reshape to 4D array
             dzeta_dr = dzeta_dr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
         else:
-            zeta = self._cdesc.compute_B(
+            zeta = self._cdesc.compute_zeta(
                 coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc)
             dzeta_dr = None
 
