@@ -49,5 +49,4 @@ script:
   - cd ../models
   - pytest
   - cd ../descriptors
-  - pytest test_descriptor.py
-  - pytest test_symmetry_function.py
+  - pytest
