@@ -6,7 +6,6 @@ import kliff
 from kliff.descriptors.descriptor import Descriptor
 from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
 from kliff.neighbor import NeighborList
-from kliff.error import InputError, SupportError
 from . import sf
 
 logger = kliff.logger.get_logger(__name__)
@@ -24,8 +23,18 @@ class SymmetryFunction(Descriptor):
     cut_name: str
         Name of the cutoff function.
 
-    hyperparams: dict
-        A dictionary of the hyperparams of the descriptor.
+    hyperparams: dict or str
+        A dictionary of the hyper parameters of that define the descriptor. We
+        provide two sets of hyperparams that can be used by setting
+        ``hyperparams='set51'`` or ``hyperparams='set31'``, which are taken from
+        [Artrith2012]_ and [Artrith2013]_, respectively. To see what they are, one
+        can do:
+
+        >>> cut_name = 'cos'  # just for init purpose
+        >>> cut_dists = {'C-C': 5.}  # just for init purpose
+        >>> hyperparams = 'set51'
+        >>> desc = SymmetryFunction(cut_dists, cut_name, hyperparams)
+        >>> desc.get_hyperparams()
 
     normalize: bool (optional)
         If ``True``, the fingerprints is centered and normalized according to:
@@ -37,8 +46,19 @@ class SymmetryFunction(Descriptor):
 
     Example
     -------
+
+    If ``set51`` or ``set31`` hyperparams are used, the cutoff distances should be
+    given in ``Angstrom``.
+
     >>> cut_name = 'cos'
-    >>> cut_dists = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+    >>> cut_dists = {'C-C': 5., 'C-H': 4.5, 'H-H': 4.0}
+    >>> hyperparams = 'set51'
+    >>> desc = SymmetryFunction(cut_dists, cut_name, hyperparams)
+
+    You can provide your own hyperparams as a dictionary:
+
+    >>> cut_name = 'cos'
+    >>> cut_dists = {'C-C': 5., 'C-H': 4.5, 'H-H': 4.0}
     >>> hyperparams = {'g1': None,
     >>>                'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
     >>>                'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]}
@@ -49,6 +69,12 @@ class SymmetryFunction(Descriptor):
     .. [Behler2011] J. Behler, "Atom-centered symmetry functions for constructing
        high-dimensional neural network potentials," J. Chem. Phys. 134, 074106
        (2011).
+    .. [Artrith2012] N. Artrith and J. Behler. "High-dimensional neural network
+       potentials for metal surfaces: A prototype study for copper." Physical Review
+       B 85, no. 4 (2012): 045439.
+    .. [Artrith2013] N. Artrith, B. Hiller, and J. Behler. "Neural network potentials
+       for metals and oxides–First applications to copper clusters at zinc oxide."
+       physica status solidi (b) 250, no. 6 (2013): 1191-1203.
     """
 
     def __init__(self, cut_name, cut_dists, hyperparams, normalize=True,
@@ -130,10 +156,14 @@ class SymmetryFunction(Descriptor):
         return zeta, dzeta_dr
 
     def _set_cutoff(self):
-
-        # check cutoff support
-        if self.cut_name not in ['cos', 'exp']:
-            raise SupportError("Cutoff type `{}' unsupported.".format(self.cut_name))
+        supported = ['cos', 'exp']
+        if self.cut_name is None:
+            self.cut_name = supported[0]
+        if self.cut_name not in supported:
+            spd = ['"{}", '.format(s) for s in supported]
+            raise SymmetryFunctionError(
+                'Cutoff "{}" not supported by this descriptor. Use {}.'
+                .format(self.cut_name, spd))
 
         self.cutoff = generate_full_cutoff(self.cut_dists)
         self.species_code = generate_species_code(self.cut_dists)
@@ -146,12 +176,23 @@ class SymmetryFunction(Descriptor):
         self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
+        if isinstance(self.hyperparams, str):
+            name = self.hyperparams.lower()
+            if name == 'set51':
+                self.hyperparams = get_set51()
+            elif name == 'set31':
+                self.hyperparams = get_set31()
+            else:
+                raise SymmetryFunctionError(
+                    'hyperparams "{}" unrecognized.'.format(name))
+        if not isinstance(self.hyperparams, OrderedDict):
+            self.hyperparams = OrderedDict(self.hyperparams)
 
         # hyperparams of descriptors
         for key, values in self.hyperparams.items():
             if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
-                raise SupportError(
-                    "Symmetry function `{}' unsupported.".format(key))
+                raise SymmetryFunctionError(
+                    'Symmetry function "{}" unrognized.'.format(key))
 
             # g1 needs no hyperparams, put a placeholder
             name = key.lower()
@@ -191,163 +232,141 @@ class SymmetryFunction(Descriptor):
         return len(self)
 
 
-class Set51(SymmetryFunction):
-    """ Symmetry function descriptor with the hyperparameters from:
-    Artrith and Behler, PRB, 85, 045439 (2012)
+def get_set51():
 
-    Parameters
-    ----------
+    params = OrderedDict()
 
-    cutname: str
-      cutoff function name, e.g. `cos`
+    params['g2'] = [
+        {'eta': 0.001, 'Rs': 0.},
+        {'eta': 0.01,   'Rs': 0.},
+        {'eta': 0.02,   'Rs': 0.},
+        {'eta': 0.035,  'Rs': 0.},
+        {'eta': 0.06,   'Rs': 0.},
+        {'eta': 0.1,    'Rs': 0.},
+        {'eta': 0.2,    'Rs': 0.},
+        {'eta': 0.4,    'Rs': 0.}
+    ]
 
-    cutvalue: dict
-      cutoff values based on species.
+    params['g4'] = [
+        {'zeta': 1,  'lambda': -1, 'eta': 0.0001},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.0001},
+        {'zeta': 2,  'lambda': -1, 'eta': 0.0001},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.0001},
+        {'zeta': 1,  'lambda': -1, 'eta': 0.003},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.003},
+        {'zeta': 2,  'lambda': -1, 'eta': 0.003},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.003},
+        {'zeta': 1,  'lambda': -1,  'eta': 0.008},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.008},
+        {'zeta': 2,  'lambda': -1,  'eta': 0.008},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.008},
+        {'zeta': 1,  'lambda': -1,  'eta': 0.015},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 2,  'lambda': -1,  'eta': 0.015},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 4,  'lambda': -1,  'eta': 0.015},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 16,  'lambda': -1,  'eta': 0.015},
+        {'zeta': 16,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 1,  'lambda': -1,  'eta': 0.025},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 2,  'lambda': -1,  'eta': 0.025},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 4,  'lambda': -1,  'eta': 0.025},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 16,  'lambda': -1,  'eta': 0.025},
+        {'zeta': 16,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 1,  'lambda': -1,  'eta': 0.045},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 2,  'lambda': -1,  'eta': 0.045},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 4,  'lambda': -1,  'eta': 0.045},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 16,  'lambda': -1,  'eta': 0.045},
+        {'zeta': 16,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 1,  'lambda': -1,  'eta': 0.08},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.08},
+        {'zeta': 2,  'lambda': -1,  'eta': 0.08},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.08},
+        {'zeta': 4,  'lambda': -1,  'eta': 0.08},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.08},
+        # {'zeta':16,  'lambda':-1,  'eta':0.08 },
+        {'zeta': 16,  'lambda': 1,  'eta': 0.08}
+    ]
 
-    Example
-    -------
-        cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+    # tranfer units from bohr to angstrom
+    bhor2ang = 0.529177
+    for key, values in params.items():
+        for val in values:
+            if key == 'g2':
+                val['eta'] /= bhor2ang**2
+            elif key == 'g4':
+                val['eta'] /= bhor2ang**2
+
+    return params
+
+
+def get_set31():
+    """Hyperparameters for symmetry functions, as discussed in:
+    Nongnuch Artrith and Jorg Behler. "High-dimensional neural network potentials
+    for metal surfaces: A prototype study for copper." Physical Review B 85, no. 4
+    (2012): 045439.
     """
 
-    def __init__(self, cutvalue, cutname='cos', *args, **kwargs):
+    params = OrderedDict()
 
-        params = OrderedDict()
+    params['g2'] = [
+        {'eta': 0.0009, 'Rs': 0.},
+        {'eta': 0.01,   'Rs': 0.},
+        {'eta': 0.02,   'Rs': 0.},
+        {'eta': 0.035,  'Rs': 0.},
+        {'eta': 0.06,   'Rs': 0.},
+        {'eta': 0.1,    'Rs': 0.},
+        {'eta': 0.2,    'Rs': 0.},
+        {'eta': 0.4,    'Rs': 0.}
+    ]
 
-        params['g2'] = [
-            {'eta': 0.001, 'Rs': 0.},
-            {'eta': 0.01,   'Rs': 0.},
-            {'eta': 0.02,   'Rs': 0.},
-            {'eta': 0.035,  'Rs': 0.},
-            {'eta': 0.06,   'Rs': 0.},
-            {'eta': 0.1,    'Rs': 0.},
-            {'eta': 0.2,    'Rs': 0.},
-            {'eta': 0.4,    'Rs': 0.}
-        ]
+    params['g4'] = [
+        {'zeta': 1,  'lambda': -1, 'eta': 0.0001},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.0001},
+        {'zeta': 2,  'lambda': -1, 'eta': 0.0001},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.0001},
+        {'zeta': 1,  'lambda': -1, 'eta': 0.003},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.003},
+        {'zeta': 2,  'lambda': -1, 'eta': 0.003},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.003},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.008},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.008},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.015},
+        {'zeta': 16, 'lambda': 1,  'eta': 0.015},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.025},
+        {'zeta': 16, 'lambda': 1,  'eta': 0.025},
+        {'zeta': 1,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 2,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 4,  'lambda': 1,  'eta': 0.045},
+        {'zeta': 16, 'lambda': 1,  'eta': 0.045}
+    ]
 
-        params['g4'] = [
-            {'zeta': 1,  'lambda': -1, 'eta': 0.0001},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.0001},
-            {'zeta': 2,  'lambda': -1, 'eta': 0.0001},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.0001},
-            {'zeta': 1,  'lambda': -1, 'eta': 0.003},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.003},
-            {'zeta': 2,  'lambda': -1, 'eta': 0.003},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.003},
-            {'zeta': 1,  'lambda': -1,  'eta': 0.008},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.008},
-            {'zeta': 2,  'lambda': -1,  'eta': 0.008},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.008},
-            {'zeta': 1,  'lambda': -1,  'eta': 0.015},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 2,  'lambda': -1,  'eta': 0.015},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 4,  'lambda': -1,  'eta': 0.015},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 16,  'lambda': -1,  'eta': 0.015},
-            {'zeta': 16,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 1,  'lambda': -1,  'eta': 0.025},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 2,  'lambda': -1,  'eta': 0.025},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 4,  'lambda': -1,  'eta': 0.025},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 16,  'lambda': -1,  'eta': 0.025},
-            {'zeta': 16,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 1,  'lambda': -1,  'eta': 0.045},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 2,  'lambda': -1,  'eta': 0.045},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 4,  'lambda': -1,  'eta': 0.045},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 16,  'lambda': -1,  'eta': 0.045},
-            {'zeta': 16,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 1,  'lambda': -1,  'eta': 0.08},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.08},
-            {'zeta': 2,  'lambda': -1,  'eta': 0.08},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.08},
-            {'zeta': 4,  'lambda': -1,  'eta': 0.08},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.08},
-            # {'zeta':16,  'lambda':-1,  'eta':0.08 },
-            {'zeta': 16,  'lambda': 1,  'eta': 0.08}
-        ]
+    # tranfer units from bohr to angstrom
+    bhor2ang = 0.529177
+    for key, values in params.items():
+        for val in values:
+            if key == 'g2':
+                val['eta'] /= bhor2ang**2
+            elif key == 'g4':
+                val['eta'] /= bhor2ang**2
 
-        # tranfer units from bohr to angstrom
-        bhor2ang = 0.529177
-        for key, values in params.items():
-            for val in values:
-                if key == 'g2':
-                    val['eta'] /= bhor2ang**2
-                elif key == 'g4':
-                    val['eta'] /= bhor2ang**2
-
-        super(Set51, self).__init__(cutname, cutvalue, params, *args, **kwargs)
+    return params
 
 
-class Set30(SymmetryFunction):
-    """ Symmetry function descriptor with the hyperparameters from:
-    Artrith and Behler, PRB, 85, 045439 (2012)
+class SymmetryFunctionError(Exception):
+    def __init__(self, msg):
+        super(SymmetryFunctionError, self).__init__(msg)
+        self.msg = msg
 
-    Parameters
-    ----------
-
-    cutname: string
-      cutoff function name, e.g. `cos`
-
-    cutvalue: dict
-      cutoff values based on species.
-
-      Example
-      -------
-      cutvalue = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
-    """
-
-    def __init__(self, cutvalue, cutname='cos'):
-
-        params = OrderedDict()
-
-        params['g2'] = [
-            {'eta': 0.0009, 'Rs': 0.},
-            {'eta': 0.01,   'Rs': 0.},
-            {'eta': 0.02,   'Rs': 0.},
-            {'eta': 0.035,  'Rs': 0.},
-            {'eta': 0.06,   'Rs': 0.},
-            {'eta': 0.1,    'Rs': 0.},
-            {'eta': 0.2,    'Rs': 0.},
-            {'eta': 0.4,    'Rs': 0.}
-        ]
-
-        params['g4'] = [
-            {'zeta': 1,  'lambda': -1, 'eta': 0.0001},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.0001},
-            {'zeta': 2,  'lambda': -1, 'eta': 0.0001},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.0001},
-            {'zeta': 1,  'lambda': -1, 'eta': 0.003},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.003},
-            {'zeta': 2,  'lambda': -1, 'eta': 0.003},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.003},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.008},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.008},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 16,  'lambda': 1,  'eta': 0.015},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 16,  'lambda': 1,  'eta': 0.025},
-            {'zeta': 1,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 2,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 4,  'lambda': 1,  'eta': 0.045},
-            {'zeta': 16,  'lambda': 1,  'eta': 0.045}
-        ]
-
-        # tranfer units from bohr to angstrom
-        bhor2ang = 0.529177
-        for key, values in params.items():
-            for val in values:
-                if key == 'g2':
-                    val['eta'] /= bhor2ang**2
-                elif key == 'g4':
-                    val['eta'] /= bhor2ang**2
-
-        super(Set30, self).__init__(cutname, cutvalue, params, *args, **kwargs)
+    def __expr__(self):
+        return self.msg

@@ -40,8 +40,7 @@ class Bispectrum(Descriptor):
     -------
     >>> cut_name = 'cos'
     >>> cut_dists = {'C-C': 5.0, 'C-H': 4.5, 'H-H': 4.0}
-    >>> hyperparams = {'jmax': 4,
-    >>>                'weight': {'C':1.0, 'H':1.0},
+    >>> hyperparams = {'jmax': 4, 'weight': {'C':1.0, 'H':1.0}}
     >>> desc = Bispectrum(cut_dists, cut_name, hyperparams)
 
     References
