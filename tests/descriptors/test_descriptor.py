@@ -38,11 +38,11 @@ def assert_zeta_dzeta_dr(zeta, dzeta_dr, target_zeta, target_dzeta_dr):
 
 class ExampleDescriptor(Descriptor):
     def __init__(self, normalize):
-        cutname = None
         cutvalues = None
+        cutname = None
         hyperparams = None
         super(ExampleDescriptor, self).__init__(
-            cutname, cutvalues, hyperparams, normalize)
+            cutvalues, cutname, hyperparams, normalize)
 
     def transform(self, conf, grad):
         if grad:

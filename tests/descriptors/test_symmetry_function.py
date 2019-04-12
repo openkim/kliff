@@ -129,7 +129,7 @@ def get_descriptor():
     desc_params['g5'] = [{'zeta': 1,  'lambda': -1, 'eta': 0.0001},
                          {'zeta': 2,  'lambda': 1, 'eta': 0.003}]
 
-    desc = SymmetryFunction(cutfunc, cutvalue, desc_params)
+    desc = SymmetryFunction(cutvalue, cutfunc, desc_params)
 
     return desc
 

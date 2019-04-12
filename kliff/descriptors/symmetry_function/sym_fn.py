@@ -17,12 +17,12 @@ class SymmetryFunction(Descriptor):
 
     Parameters
     ----------
-    cut_name: str
-        Name of the cutoff, such as ``cos``, ``exp``.
+    cut_dists: dict
+        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are
+        atomic species string, and value should be a float.
 
-    cut_values: dict
-        Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
-        are atomic species, and value should be a float.
+    cut_name: str
+        Name of the cutoff function.
 
     hyperparams: dict
         A dictionary of the hyperparams of the descriptor.
@@ -38,11 +38,11 @@ class SymmetryFunction(Descriptor):
     Example
     -------
     >>> cut_name = 'cos'
-    >>> cut_values = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
+    >>> cut_dists = {'C-C': 3.5, 'C-H': 3.0, 'H-H': 1.0}
     >>> hyperparams = {'g1': None,
     >>>                'g2': [{'eta':0.1, 'Rs':0.2}, {'eta':0.3, 'Rs':0.4}],
     >>>                'g3': [{'kappa':0.1}, {'kappa':0.2}, {'kappa':0.3}]}
-    >>> desc = SymmetryFunction(cut_name, cut_values, hyperparams)
+    >>> desc = SymmetryFunction(cut_dists, cut_name, hyperparams)
 
     References
     ----------
@@ -51,9 +51,9 @@ class SymmetryFunction(Descriptor):
        (2011).
     """
 
-    def __init__(self, cut_name, cut_values, hyperparams, normalize=True,
+    def __init__(self, cut_name, cut_dists, hyperparams, normalize=True,
                  dtype=np.float32):
-        super(SymmetryFunction, self).__init__(cut_name, cut_values, hyperparams,
+        super(SymmetryFunction, self).__init__(cut_name, cut_dists, hyperparams,
                                                normalize, dtype)
 
         self._desc = OrderedDict()
@@ -135,8 +135,8 @@ class SymmetryFunction(Descriptor):
         if self.cut_name not in ['cos', 'exp']:
             raise SupportError("Cutoff type `{}' unsupported.".format(self.cut_name))
 
-        self.cutoff = generate_full_cutoff(self.cut_values)
-        self.species_code = generate_species_code(self.cut_values)
+        self.cutoff = generate_full_cutoff(self.cut_dists)
+        self.species_code = generate_species_code(self.cut_dists)
         num_species = len(self.species_code)
 
         rcutsym = np.zeros([num_species, num_species], dtype=np.double)

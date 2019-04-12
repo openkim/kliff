@@ -15,17 +15,20 @@ logger = kliff.logger.get_logger(__name__)
 class Descriptor:
     """Base class of atomic enviroment descriptors.
 
-    Preprocess dataset to generate fingerprints.
-
+    Preprocess dataset to generate fingerprints. This is the base class for all
+    descriptors, so it should not be used directly. Instead, descriptors built on top
+    of this such as :class:`~kliff.descriptors.SymmetryFunction` and
+    :class:`~kliff.descriptors.Bispectrum` can be used to transform the atomic
+    enviroment information into fingerprints.
 
     Parameters
     ----------
-    cut_name: str
-        Name of the cutoff, such as ``cos``, ``P3``, ``P7``.
+    cut_dists: dict
+        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are
+        atomic species string, and value should be a float.
 
-    cut_values: dict
-        Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
-        are atomic species, and value should be a float.
+    cut_name: str
+        Name of the cutoff function, such as ``cos``, ``P3``, ``P7``.
 
     hyperparams: dict
         A dictionary of the hyperparams of the descriptor.
@@ -50,11 +53,11 @@ class Descriptor:
         Standard deviation of the fingerprints.
     """
 
-    def __init__(self, cut_name, cut_values, hyperparams, normalize=True,
+    def __init__(self, cut_dists, cut_name, hyperparams, normalize=True,
                  dtype=np.float32):
 
+        self.cut_dists = cut_dists
         self.cut_name = cut_name
-        self.cut_values = cut_values
         self.hyperparams = hyperparams
         self.normalize = normalize
         self.dtype = dtype
@@ -377,7 +380,7 @@ class Descriptor:
 
     def get_cutoff(self):
         """Return the name and values of cutoff. """
-        return self.cut_name, self.cut_values
+        return self.cut_name, self.cut_dists
 
     def get_hyperparams(self):
         """Return the hyperparameters of descriptors. """
