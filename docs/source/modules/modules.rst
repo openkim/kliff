@@ -25,8 +25,9 @@ In this section, we introduce some of the most frequently used modules. See
     :caption: List of All Modules
     :maxdepth: 2
 
-    models
     dataset
+    models
+    descriptors
     calculators
     loss
 
