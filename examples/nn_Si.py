@@ -1,12 +1,13 @@
 import sys
 import numpy as np
+from kliff.descriptors import SymmetryFunction
 from kliff.dataset import DataSet
 from kliff.loss import Loss
-from kliff.descriptors import Set51
 import kliff.neuralnetwork as nn
 
 
-descriptor = Set51(cutvalue={'Si-Si': 5.0}, normalize=True, dtype=np.float64)
+descriptor = SymmetryFunction(cut_name='cos', cut_dists={'Si-Si': 5.0},
+                              hyperparams='set31', normalize=True)
 desc_size = len(descriptor)
 
 # dropout for input fingerprint

@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import multiprocessing as mp
 from collections.abc import Iterable
 from kliff.descriptors.descriptor import load_fingerprints

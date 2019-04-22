@@ -77,9 +77,9 @@ class SymmetryFunction(Descriptor):
        physica status solidi (b) 250, no. 6 (2013): 1191-1203.
     """
 
-    def __init__(self, cut_name, cut_dists, hyperparams, normalize=True,
+    def __init__(self, cut_dists, cut_name, hyperparams, normalize=True,
                  dtype=np.float32):
-        super(SymmetryFunction, self).__init__(cut_name, cut_dists, hyperparams,
+        super(SymmetryFunction, self).__init__(cut_dists, cut_name, hyperparams,
                                                normalize, dtype)
 
         self._desc = OrderedDict()
@@ -230,6 +230,9 @@ class SymmetryFunction(Descriptor):
 
     def get_size(self):
         return len(self)
+
+    def get_hyperparams(self):
+        return self._desc
 
 
 def get_set51():
