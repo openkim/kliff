@@ -111,10 +111,6 @@ that construct the residual using energy and forces is defined as (in a nutshell
             energy_weight /= natoms
             forces_weight /= natoms
 
-        # such that the loss is proportional to atoms but not natoms^2
-        energy_weight = energy_weight**0.5
-        forces_weight = forces_weight**0.5
-
         # obtain residual and properly normalize it
         residual = prediction - reference
         residual[0] *= energy_weight

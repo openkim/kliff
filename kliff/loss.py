@@ -3,6 +3,7 @@ import scipy.optimize
 import multiprocessing as mp
 import kliff
 from kliff import parallel
+from kliff.error import InputError
 
 try:
     import torch
@@ -69,34 +70,24 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     """
 
     if len(prediction) != 3*natoms + 1:
-        raise ValueError(
-            "len(prediction) != 3N+1, where N is the number of atoms.")
+        raise ValueError("len(prediction) != 3N+1, where N is the number of atoms.")
 
-    try:
-        energy_weight = data['energy_weight']
-    except KeyError:
-        energy_weight = 1
-    try:
-        forces_weight = data['forces_weight']
-    except KeyError:
-        forces_weight = 1
-    try:
-        do_normalize = data['normalize_by_number_of_atoms']
-        if do_normalize:
-            normalizer = natoms
-        else:
-            normalizer = 1
-    except KeyError:
-        normalizer = 1
+    # prepare weight based on user provided data
+    energy_weight = data['energy_weight']
+    forces_weight = data['forces_weight']
+    normalize = data['normalize_by_natoms']
+    if energy_weight is None:
+        energy_weight = 1.0
+    if forces_weight is None:
+        forces_weight = 1.0
+    if normalize:
+        energy_weight /= natoms
+        forces_weight /= natoms
 
-    # TODO mornalizer
-    #residual = np.subtract(prediction, reference)
-    #residual[0] *= np.sqrt(energy_weight)
-    #residual[1:] *= np.sqrt(forces_weight)
-
+    # obtain residual and properly normalize it
     residual = prediction - reference
-    residual[0] *= np.sqrt(energy_weight)
-    residual[1:] *= np.sqrt(forces_weight)
+    residual[0] *= energy_weight
+    residual[1:] *= forces_weight
 
     return residual
 
@@ -138,13 +129,29 @@ class Loss(object):
           data passed to residual function
 
         """
+        data = self.check_residual_data(residual_data)
 
         calc_type = calculator.__class__.__name__
 
         if calc_type == 'PytorchANNCalculator':
-            return LossNeuralNetworkModel(calculator, nprocs, residual_fn, residual_data)
+            return LossNeuralNetworkModel(calculator, nprocs, residual_fn, data)
         else:
-            return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, residual_data)
+            return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, data)
+
+    @staticmethod
+    def check_residual_data(data):
+        default = {'energy_weight': 1.0,
+                   'forces_weight': 1.0,
+                   'stress_weight': 1.0,
+                   'normalize_by_natoms': True}
+        if data is not None:
+            for key, value in data.items():
+                if key not in default:
+                    raise InputError(
+                        '"{}" not supported by "residual_data".'.format(key))
+                else:
+                    default[key] = value
+        return default
 
 
 class LossPhysicsMotivatedModel(object):
@@ -466,20 +473,37 @@ class LossNeuralNetworkModel(object):
         self.data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
 
         # optimizing
-        optimizer = getattr(torch.optim, method)(
-            self.calculator.model.parameters(), **kwargs)
+        try:
+            optimizer = getattr(torch.optim, method)(
+                self.calculator.model.parameters(), **kwargs)
+        except TypeError as e:
+            print(str(e))
+            idx = str(e).index("argument '") + 10
+            err_arg = str(e)[idx:].strip("'")
+            raise InputError('Argument "{}" not supported by optimizer "{}".'
+                             .format(err_arg, method))
         n = 0
         epoch = 0
         DATASET_SIZE = len(self.calculator.configs)
         while True:
             try:
-                # zero the parameter gradients
-                optimizer.zero_grad()
-                # forward + backward + optimize
-                loss = self.get_loss()
-                loss.backward()
-                optimizer.step()
+                if method in ['LBFGS']:
+                    def closure():
+                        # zero the parameter gradients
+                        optimizer.zero_grad()
+                        # forward + backward + optimize
+                        loss = self.get_loss()
+                        loss.backward()
+                        return loss
+                    optimizer.step(closure)
+                else:
+                    optimizer.zero_grad()
+                    # forward + backward + optimize
+                    loss = self.get_loss()
+                    loss.backward()
+                    optimizer.step()
                 epoch_new = n*batch_size // DATASET_SIZE
+
                 if epoch_new > epoch:
                     epoch = epoch_new
                     print('Epoch = {}, loss = {}'.format(epoch, loss))

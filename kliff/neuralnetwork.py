@@ -579,7 +579,7 @@ class PytorchANNCalculator(object):
         self.results = dict([(i, None) for i in self.implemented_property])
 
     def create(self, configs, use_energy=True, use_forces=True, use_stress=False,
-               nprocs=mp.cpu_count()):
+               reuse=False, nprocs=mp.cpu_count()):
         """Preprocess configs into fingerprints.
 
         Parameters
@@ -611,8 +611,10 @@ class PytorchANNCalculator(object):
             configs = [configs]
 
         # generate pickled fingerprints
+        print('Start generating fingerprints')
         fname = self.model.descriptor.generate_train_fingerprints(
-            configs, grad=use_forces, nprocs=nprocs)
+            configs, grad=use_forces, reuse=reuse, nprocs=nprocs)
+        print('Finish generating fingerprints')
         self.train_fingerprints_path = fname
 
     def get_train_fingerprints_path(self):

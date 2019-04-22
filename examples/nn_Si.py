@@ -12,31 +12,34 @@ desc_size = len(descriptor)
 
 # dropout for input fingerprint
 model = nn.NeuralNetwork(descriptor)
-model.add_layers(nn.Linear(desc_size, 30),
-                 nn.Sigmoid(),
-                 nn.Dropout(p=0.1),
-                 nn.Linear(30, 30),
-                 nn.Sigmoid(),
-                 nn.Dropout(p=0.1),
-                 nn.Linear(30, 1))
+model.add_layers(nn.Linear(desc_size, 10),
+                 nn.Tanh(),
+                 # nn.Dropout(p=0.1),
+                 nn.Linear(10, 10),
+                 nn.Tanh(),
+                 # nn.Dropout(p=0.1),
+                 nn.Linear(10, 1))
 
 
 # training set
 tset = DataSet()
-tset.read('../tests/configs_extxyz/Si_4')
+tset.read('Si_training_set/varying_alat')
 configs = tset.get_configs()
 
 
 # calculator
 calc = nn.PytorchANNCalculator(model)
-calc.create(configs, use_forces=True)
+calc.create(configs, use_forces=True, reuse=False)
 
 
 # loss
-loss = Loss(calc)
-# result = loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': 2})
-result = loss.minimize(method='SGD', num_epochs=10, batch_size=2,
-                       lr=0.001, momentum=0.9)
+loss = Loss(calc, residual_data={'forces_weight': 0.3})
+
+#result = loss.minimize(method='SGD', num_epochs=10, batch_size=100, lr=0.1)
+# result = loss.minimize(method='LBFGS', num_epochs=100, batch_size=400,
+#                       lr=0.001)
+result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.01)
+
 
 model.save('./saved_model.pt')
 model.write_kim_model()
