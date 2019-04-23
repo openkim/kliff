@@ -34,6 +34,26 @@ neural network potential.
    :hidden:
 
    /auto_examples/example_kim_SW_Si
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon">
+
+.. only:: html
+
+    .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
+
+        :ref:`sphx_glr_auto_examples_example_nn_Si.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_nn_Si
 .. raw:: html
 
     <div style='clear:both'></div>
@@ -48,13 +68,13 @@ neural network potential.
 
   .. container:: sphx-glr-download
 
-    :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/Wenz/Applications/kliff/docs/source/auto_examples/auto_examples_python.zip>`
+    :download:`Download all examples in Python source code: auto_examples_python.zip <//home/wenz/Applications/kliff/docs/source/auto_examples/auto_examples_python.zip>`
 
 
 
   .. container:: sphx-glr-download
 
-    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/Wenz/Applications/kliff/docs/source/auto_examples/auto_examples_jupyter.zip>`
+    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//home/wenz/Applications/kliff/docs/source/auto_examples/auto_examples_jupyter.zip>`
 
 
 .. only:: html

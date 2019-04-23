@@ -19,7 +19,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
     :maxdepth: 2
 
     installation
-    tutorials/tutorials
+    tutorials
     theory
     modules/modules
 
@@ -28,6 +28,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
     :caption: Advanced Topics
     :maxdepth: 2
 
+    howto/howto
     command_line
     builddoc
 
@@ -38,7 +39,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
     faq
     apidoc/kliff
-    Fork KLIFF on Github <https://github.com/mjwen/kliff>
+    Fork KLIFF on GitHub <https://github.com/mjwen/kliff>
 
 
 

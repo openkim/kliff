@@ -16,8 +16,8 @@ archived on OpenKIM_.
 #
 #     $ git clone https://github.com/mjwen/Three_Body_Stillinger_Weber__MD_335816936951_003.git
 #     $ git clone https://github.com/mjwen/Three_Body_Stillinger_Weber_Si__MO_405512056662_004.git
-#     $ kim-api-v2-collections-management install user ./Three_Body_Stillinger_Weber__MD_335816936951_003
-#     $ kim-api-v2-collections-management install user ./Three_Body_Stillinger_Weber_Si__MO_405512056662_004
+#     $ kim-api-collections-management install user ./Three_Body_Stillinger_Weber__MD_335816936951_003
+#     $ kim-api-collections-management install user ./Three_Body_Stillinger_Weber_Si__MO_405512056662_004
 #
 # We are going to create potentials for diamond silicon, and fit the potentials
 # to a training set of energies and forces consisting of compressed and stretched
@@ -25,9 +25,8 @@ archived on OpenKIM_.
 # trajectories at different temperatures.
 # Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/pytorch/examples/Si_training_set.tar.gz>`
 # and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``.
-#
-# The data is stored in **extended xyz** format, and see TODO for an introduction
-# of this format.
+# The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
+# information of this format.
 #
 # .. warning::
 #    The ``Si_training_set`` is just a toy data set for the purpose to demonstrate
@@ -37,7 +36,7 @@ archived on OpenKIM_.
 
 ###############################################################################
 # Let's first import the modules that will be used in this example.
-#
+
 from kliff.models import KIM
 from kliff.loss import Loss
 from kliff.calculator import Calculator
@@ -167,13 +166,16 @@ calc.create(configs)
 # much as possible. KLIFF provides a large number of minimization algorithms by
 # interacting with SciPy_. For physics-motivated potentials, any algorithm listed on
 # `scipy.optimize.minimize`_ and `scipy.optimize.least_squares`_ can be used.
-# In the following code snippet, we create a loss function that uses the ``L-BFGS-B``
-# minimization algorithm. The minimization will run on 1 processor and a max number of
-# 100 iterations are allowed.
+# In the following code snippet, we create a loss of energy and forces, where the
+# residual function uses an ``energy_weight`` of ``1.0`` and a ``forces_weight`` of
+# ``0.1``, and only ``1`` processor will be used to calculate the loss. The
+# ``L-BFGS-B`` minimization algorithm is applied to minimize the loss, and the
+# minimization is allowed to run for a a max number of 100 iterations.
 #
 
 steps = 100
-loss = Loss(calc, nprocs=1)
+residual_data = {'energy_weight': 1.0, 'forces_weight': 0.1}
+loss = Loss(calc, residual_data=residual_data, nprocs=1)
 loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': steps})
 
 ################################################################################
