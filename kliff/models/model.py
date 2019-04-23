@@ -143,32 +143,34 @@ class ComputeArguments:
 
 
 class Model:
-    """Model class to deal with parameters."""
+    """Base class for all physics-motivated models.
+
+    Parameters
+    ----------
+    model_name: str (optional)
+        Name of the model.
+
+    param_relations_callback: function (optional)
+        A callback function to set the relations between parameters, which are
+        called each minimization step after the optimizer updates the parameters.
+
+        The function with be given the ModelParameters instance as argument, and
+        it can use get_value() and set_value() to manipulate the relation
+        between parameters.
+
+        Example
+        -------
+
+        In the following example, we set the value of B[0] to 2 * A[0].
+
+        def params_relation(params):
+            A = params.get_value('A')
+            B = params.get_value('B')
+            B[0] = 2 * A[0]
+            params.set_value('B', B)
+    """
 
     def __init__(self, model_name=None, params_relation_callback=None):
-        """
-        model_name: str(optional)
-            Name of the model.
-
-        param_relations_callback: callback function(optional)
-            A callback function to set the relations between parameters, which are
-            called each minimization step after the optimizer updates the parameters.
-
-            The function with be given the ModelParameters instance as argument, and
-            it can use get_value() and set_value() to manipulate the relation
-            between parameters.
-
-            Example
-            -------
-
-            In the following example, we set the value of B[0] to 2 * A[0].
-
-            def params_relation(params):
-                A = params.get_value('A')
-                B = params.get_value('B')
-                B[0] = 2 * A[0]
-                params.set_value('B', B)
-        """
         # TODO paras_relation_callbacks may not work for some minimization algorithms
         # since abruptly change the parameter relation may result in loss to go up,
         # then the optimization method can fail. So to a check to implement this only
@@ -338,8 +340,22 @@ class Model:
             self.set_model_params(name, attr['value'], check_shape=False)
 
     def save(self, path):
+        """Save a model to disk.
+
+        Parameters
+        ----------
+        path: str
+            Path where to store the model.
+        """
         self.fitting_params.save(path)
 
     def load(self, path):
+        """Load a model on disk into memory.
+
+        Parameters
+        ----------
+        path: str
+            Path where the model is stored.
+        """
         self.fitting_params.load(path)
         self.update_model_params()

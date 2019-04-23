@@ -5,7 +5,10 @@ Installation
 ============
 
 
-KLIFF requires Python_ 3.5 or newer.
+KLIFF requires:
+
+- Python_ 3.5 or newer.
+- A C++ compiler that supports C++11.
 
 KLIFF is built on top of KIM, either to fit physics-motivated potentials
 archived on OpenKIM_ or to deploy the trained potential. To get KLIFF to work,

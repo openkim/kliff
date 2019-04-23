@@ -138,27 +138,21 @@ class FingerprintsDataLoader(DataLoader):
 
 
 class NeuralNetwork(nn.Module):
-    """ Neural Network class build upon PyTorch.
+    """ Neural Network model.
 
-    Attributes
-    -----------
-    layers: list of layers defined in torch.nn
+    A feed-forward neural network model built using PyTorch.
 
+    Parameters
+    ----------
+    descriptor: object
+        A descriptor that transforms atomic environment information to the
+        fingerprints, which are used as the input for the neural network.
+
+    seed: int (optional)
+        Global seed for random numbers.
     """
 
     def __init__(self, descriptor, seed=35):
-        """
-
-        Parameters
-        ----------
-
-        descriptor: descriptor object
-            An instance of a descriptor that transforms atomic environment information
-            to the fingerprints that are used as the input for the NN.
-
-        seed: int (optional)
-          random seed to be used by torch.manual_seed()
-        """
         super(NeuralNetwork, self).__init__()
         self.descriptor = descriptor
         self.seed = seed
@@ -171,18 +165,19 @@ class NeuralNetwork(nn.Module):
         else:
             raise NeuralNetworkError('Not support dtype "{}".'.format(dtype))
 
-        self.layers = None
         torch.manual_seed(seed)
+        self.layers = None
+        self.save_prefix = None
+        self.save_start = None
+        self.save_frequency = None
 
-    # TODO maybe remove layer['type'], just add a warning saying that this type of
-    # layer is not supported be converted to KIM yet
     def add_layers(self, *layers):
         """Add layers to the sequential model.
 
         Parameters
         ----------
         layers: torch.nn layers
-            torch.nn layers that are used to build a sequential model.
+            ``torch.nn`` layers that are used to build a sequential model.
             Available ones including: torch.nn.Linear, torch.nn.Dropout, and
             torch.nn.Sigmoid among others. See https://pytorch.org/docs/stable/nn.html
             for a full list of torch.nn layers.
@@ -194,19 +189,16 @@ class NeuralNetwork(nn.Module):
             self.layers = []
 
         for la in layers:
-            la_type = la.__class__.__name__
-            la_scope = 'layer' + str(len(self.layers))
-            current_layer = {'instance': la, 'type': la_type, 'scope': la_scope}
-            self.layers.append(current_layer)
+            self.layers.append(la)
             # set layer as an attribute so that parameters are automatically registered
             setattr(self, 'layer_{}'.format(len(self.layers)), la)
 
         # check shape of first layer and last layer
-        first = self.layers[0]['instance']
+        first = self.layers[0]
         if first.in_features != len(self.descriptor):
             raise InputError(
                 '"in_features" of first layer should be equal to descriptor size.')
-        last = self.layers[-1]['instance']
+        last = self.layers[-1]
         if last.out_features != 1:
             raise InputError('"out_features" of last layer should be 1.')
 
@@ -215,98 +207,74 @@ class NeuralNetwork(nn.Module):
 
     def forward(self, x):
         for j, layer in enumerate(self.layers):
-            li = layer['instance']
-            lt = layer['type']
-            ls = layer['scope']
-            x = li(x)
+            x = layer(x)
         return x
 
     def set_save_metadata(self, prefix, start, frequency):
         """ Set metadata that controls how the model are saved.
 
+        If this function is called before minimization starts, the model will be
+        saved to the directory specified by ``prefix`` every ``frequency`` epochs,
+        beginning at the ``start`` epoch.
+
         Parameters
         ----------
         prefix: str
-            Directory where the model are saved.
-            Models will be named as '{}/model_epoch{}.pt'.format(prefix, epoch)
-
-        frequency: int
-            Save the model every `frequency` epochs.
+            Directory where the models are saved.
+            Model will be named as `{prefix}/model_epoch{ep}.pt`, where `ep` is the
+            epoch number.
 
         start: int
             Eopch number at which begins to save the model.
+
+        frequency: int
+            Save the model every ``frequency`` epochs.
         """
-        self.save_path = path
+        self.save_prefix = prefix
+        self.save_start = start
         self.save_frequency = frequency
-        self.start_epoch = start_epoch
 
     def save(self, path):
+        """Save a model to disk.
+
+        Parameters
+        ----------
+        path: str
+            Path where to store the model.
+        """
         torch.save(self.state_dict(), path)
 
     def load(self, path, mode):
+        """Load a model on disk into memory.
+
+        Parameters
+        ----------
+        path: str
+            Path where the model is stored.
+
+        mode: str
+            Purpose of the loaded model. Should be either ``train`` or ``eval``.
+        """
+
         self.load_state_dict(torch.load(path))
         if mode == 'train':
             self.train()
         elif mode == 'eval':
             self.eval()
         else:
-            raise NeuralNetworkError('Uncongnized "mode" in model.load().')
-
-    def _group_layers(self, param_layer, activ_layer, dropout_layer):
-        """Divide all the layers into groups.
-
-        The first group is either an empty list or a `Dropout` layer for the input layer.
-        The last group typically contains only a `Linear` layer.
-        For other groups, each group contains two, or three layers.  `Linear` layer
-        and an activation layer are mandatory, and a third `Dropout` layer is optional.
-
-
-        Returns
-        -------
-        groups: list of list of layers
-        """
-
-        groups = []
-        new_group = []
-
-        supported = param_layer + activ_layer + dropout_layer
-        for i, la in enumerate(self.layers):
-            li = la['instance']
-            name = li.__class__.__name__
-            if name not in supported:
-                raise NeuralNetworkError('Layer "{}" not supported by KIM model. '
-                                         'Cannot proceed to write.'.format(name))
-            if name in activ_layer:
-                if i == 0:
-                    raise NeuralNetworkError(
-                        'First layer cannot be a "{}" layer'.format(name))
-                if self.layers[i-1]['instance'].__class__.__name__ not in param_layer:
-                    raise NeuralNetworkError(
-                        'Cannot convert to KIM model. a "{}" layer must follow '
-                        'a "Linear" layer.'.format(name))
-            if name[:7] in dropout_layer:
-                if self.layers[i-1]['instance'].__class__.__name__ not in activ_layer:
-                    raise NeuralNetworkError(
-                        'Cannot convert to KIM model. a "{}" layer must follow '
-                        'an activation layer.'.format(name))
-            if name in param_layer:
-                groups.append(new_group)
-                new_group = []
-            new_group.append(la)
-        groups.append(new_group)
-        return groups
+            raise NeuralNetworkError(
+                'Uncongnized mode "{}" in model.load().'.format(mode))
 
     def write_kim_model(self, path=None):
-
         # supported
         param_layer = ['Linear']
         activ_layer = ['Sigmoid', 'Tanh', 'ReLU', 'ELU']
         dropout_layer = ['Dropout']
         layer_groups = self._group_layers(param_layer, activ_layer, dropout_layer)
 
-        weights, biases = get_weights_and_biases(layer_groups, param_layer)
-        activations = get_activations(layer_groups, activ_layer)
-        drop_ratios = get_drop_ratios(layer_groups, dropout_layer)
+        weights, biases = self._get_weights_and_biases(layer_groups, param_layer)
+        activations = self._get_activations(layer_groups, activ_layer)
+        drop_ratios = self._get_drop_ratios(layer_groups, dropout_layer)
 
         descriptor = self.descriptor
         dtype = self.dtype
@@ -497,57 +465,102 @@ class NeuralNetwork(nn.Module):
                         fout.write('{:15.7e}'.format(item))
                 fout.write('\n\n')
 
+    def _group_layers(self, param_layer, activ_layer, dropout_layer):
+        """Divide all the layers into groups.
 
-def get_weights_and_biases(groups, supported):
-    """ Get the weights and biases of all layers that have weights and biases."""
-    weights = []
-    biases = []
-    for i, g in enumerate(groups):
-        if i != 0:
-            li = g[0]['instance']
-            name = li.__class__.__name__
-            if name in supported:
-                weight = li.weight
-                bias = li.bias
-                weights.append(weight)
-                biases.append(bias)
-    return weights, biases
+        The first group is either an empty list or a `Dropout` layer for the input
+        layer. The last group typically contains only a `Linear` layer.  For other
+        groups, each group contains two, or three layers. `Linear` layer and an
+        activation layer are mandatory, and a third `Dropout` layer is optional.
 
+        Returns
+        -------
+        groups: list of list of layers
+        """
 
-def get_activations(groups, supported):
-    activations = []
-    for i, g in enumerate(groups):
-        if i != 0 and i != (len(groups) - 1):
-            li = g[1]['instance']
-            name = li.__class__.__name__
-            if name in supported:
-                activations.append(name.lower())
-    return activations
+        groups = []
+        new_group = []
 
+        supported = param_layer + activ_layer + dropout_layer
+        for i, layer in enumerate(self.layers):
+            name = layer.__class__.__name__
+            if name not in supported:
+                raise NeuralNetworkError('Layer "{}" not supported by KIM model. '
+                                         'Cannot proceed to write.'.format(name))
+            if name in activ_layer:
+                if i == 0:
+                    raise NeuralNetworkError(
+                        'First layer cannot be a "{}" layer'.format(name))
+                if self.layers[i-1].__class__.__name__ not in param_layer:
+                    raise NeuralNetworkError(
+                        'Cannot convert to KIM model. a "{}" layer must follow '
+                        'a "Linear" layer.'.format(name))
+            if name[:7] in dropout_layer:
+                if self.layers[i-1].__class__.__name__ not in activ_layer:
+                    raise NeuralNetworkError(
+                        'Cannot convert to KIM model. a "{}" layer must follow '
+                        'an activation layer.'.format(name))
+            if name in param_layer:
+                groups.append(new_group)
+                new_group = []
+            new_group.append(layer)
+        groups.append(new_group)
 
-def get_drop_ratios(groups, supported):
-    drop_ratios = []
-    for i, g in enumerate(groups):
-        if i == 0:
-            if len(g) != 0:
-                li = g[0]['instance']
-                name = li.__class__.__name__
+        return groups
+
+    @staticmethod
+    def _get_weights_and_biases(groups, supported):
+        """Get the weights and biases of all layers that have weights and biases."""
+        weights = []
+        biases = []
+        for i, g in enumerate(groups):
+            if i != 0:
+                layer = g[0]
+                name = layer.__class__.__name__
                 if name in supported:
-                    drop_ratios.append(li.p)
-            else:
-                drop_ratios.append(0.)
-        elif i == len(groups) - 1:
-            pass
-        else:
-            if len(g) == 3:
-                li = g[2]['instance']
-                name = li.__class__.__name__
-                if name in supported:
-                    drop_ratios.append(li.p)
-            else:
-                drop_ratios.append(0.)
+                    weight = layer.weight
+                    bias = layer.bias
+                    weights.append(weight)
+                    biases.append(bias)
+        return weights, biases
 
-    return drop_ratios
+    @staticmethod
+    def _get_activations(groups, supported):
+        """Get the activation of all layers."""
+        activations = []
+        for i, g in enumerate(groups):
+            if i != 0 and i != (len(groups) - 1):
+                layer = g[1]
+                name = layer.__class__.__name__
+                if name in supported:
+                    activations.append(name.lower())
+        return activations
+
+    @staticmethod
+    def _get_drop_ratios(groups, supported):
+        """Get the dropout ratio of all layers."""
+        drop_ratios = []
+        for i, g in enumerate(groups):
+            if i == 0:
+                if len(g) != 0:
+                    layer = g[0]
+                    name = layer.__class__.__name__
+                    if name in supported:
+                        drop_ratios.append(layer.p)
+                else:
+                    drop_ratios.append(0.)
+            elif i == len(groups) - 1:
+                pass
+            else:
+                if len(g) == 3:
+                    layer = g[2]
+                    name = layer.__class__.__name__
+                    if name in supported:
+                        drop_ratios.append(layer.p)
+                else:
+                    drop_ratios.append(0.)
+
+        return drop_ratios
 
 
 class PytorchANNCalculator(object):

@@ -33,7 +33,7 @@ class LJComputeArguments(ComputeArguments):
         self.influence_distance = infl_dist
 
         # create neighbor list
-        self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=True)
+        self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=False)
 
     def compute(self, params):
         epsilon = params['epsilon'].get_value()[0]
