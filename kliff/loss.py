@@ -70,7 +70,8 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     """
 
     if len(prediction) != 3*natoms + 1:
-        raise ValueError("len(prediction) != 3N+1, where N is the number of atoms.")
+        raise ValueError(
+            "len(prediction) != 3N+1, where N is the number of atoms.")
 
     # prepare weight based on user provided data
     energy_weight = data['energy_weight']
@@ -273,7 +274,8 @@ class LossPhysicsMotivatedModel(object):
                         .format(method))
 
         else:
-            raise Exception('minimization method "{}" not supported.'.format(method))
+            raise Exception(
+                'minimization method "{}" not supported.'.format(method))
 
         # update final optimized paramters
         self.calculator.update_opt_params(result.x)
@@ -301,12 +303,13 @@ class LossPhysicsMotivatedModel(object):
             calc_list = self.calculator.get_calculator_list()
             X = zip(cas, calc_list)
             if self.nprocs > 1:
-                residuals = parallel.parmap3(
+                residuals = parallel.parmap2(
                     self._get_residual_single_config,
                     X,
-                    self.nprocs,
                     self.residual_fn,
-                    self.residual_data)
+                    self.residual_data,
+                    nprocs=self.nprocs,
+                    tuple_X=True)
                 residual = np.concatenate(residuals)
             else:
                 residual = []
@@ -323,10 +326,11 @@ class LossPhysicsMotivatedModel(object):
                 residuals = parallel.parmap2(
                     self._get_residual_single_config,
                     cas,
-                    self.nprocs,
                     self.calculator,
                     self.residual_fn,
-                    self.residual_data)
+                    self.residual_data,
+                    nprocs=self.nprocs,
+                    tuple_X=False)
                 residual = np.concatenate(residuals)
             else:
                 residual = []
@@ -470,7 +474,8 @@ class LossNeuralNetworkModel(object):
         # data loader
         fname = self.calculator.get_train_fingerprints_path()
         fp = FingerprintsDataset(fname)
-        self.data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
+        self.data_loader = FingerprintsDataLoader(
+            dataset=fp, num_epochs=num_epochs)
 
         # optimizing
         try:
