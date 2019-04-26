@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scipy.optimize
 import multiprocessing as mp
@@ -274,7 +275,7 @@ class LossPhysicsMotivatedModel(object):
                         .format(method))
 
         else:
-            raise Exception(
+            raise LossError(
                 'minimization method "{}" not supported.'.format(method))
 
         # update final optimized paramters
@@ -345,7 +346,7 @@ class LossPhysicsMotivatedModel(object):
         return residual
 
     def get_loss(self, x):
-        """ Compute the loss.
+        """Compute the loss.
 
         This is a callable for optimizing method in scipy.optimize,minimize,
         which is passed as the first positional argument.
@@ -462,11 +463,13 @@ class LossNeuralNetworkModel(object):
             PyTorch optimization methods, and aviliable ones are:
             [`Adadelta`, `Adagrad`, `Adam`, `SparseAdam`, `Adamax`, `ASGD`,
             `LBFGS`, `RMSprop`, `Rprop`, `SGD`]
-            For also: https://pytorch.org/docs/stable/optim.html
+            See also: https://pytorch.org/docs/stable/optim.html
 
         kwargs: extra keyword arguments that can be used by the PyTorch optimizer.
         """
-
+        if method not in self.torch_minimize_methods:
+            raise LossError(
+                'Minimization method "{}" not supported.'.format(method))
         self.method = method
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -475,7 +478,7 @@ class LossNeuralNetworkModel(object):
         fname = self.calculator.get_train_fingerprints_path()
         fp = FingerprintsDataset(fname)
         self.data_loader = FingerprintsDataLoader(
-            dataset=fp, num_epochs=num_epochs)
+            dataset=fp, num_epochs=self.num_epochs)
 
         # optimizing
         try:
@@ -487,12 +490,34 @@ class LossNeuralNetworkModel(object):
             err_arg = str(e)[idx:].strip("'")
             raise InputError('Argument "{}" not supported by optimizer "{}".'
                              .format(err_arg, method))
+
+        # model save metadata
+        save_prefix = self.calculator.model.save_prefix
+        save_start = self.calculator.model.save_start
+        save_frequency = self.calculator.model.save_frequency
+        if save_prefix is None or save_start is None or save_frequency is None:
+            logger.info('Model saving meta data not set by user. Now set it '
+                        'to "prefix=./kliff_saved_model", "start=num_epochs/2",'
+                        ' and "frequency=10".')
+            save_prefix = os.path.join(os.getcwd(), 'kliff_saved_model')
+            save_start = self.num_epochs//2
+            save_frequency = 10
+            self.calculator.model.set_save_metadata(
+                save_prefix, save_start, save_frequency)
+
+        # other metadata
         n = 0
         epoch = 0
         DATASET_SIZE = len(self.calculator.configs)
+
+        msg = 'Start minimization using optimization method: {}.'.format(
+            self.method)
+        logger.info(msg)
+        print(msg)
+
         while True:
             try:
-                if method in ['LBFGS']:
+                if self.method in ['LBFGS']:
                     def closure():
                         # zero the parameter gradients
                         optimizer.zero_grad()
@@ -507,18 +532,23 @@ class LossNeuralNetworkModel(object):
                     loss = self.get_loss()
                     loss.backward()
                     optimizer.step()
-                epoch_new = n*batch_size // DATASET_SIZE
+                epoch_new = n*self.batch_size // DATASET_SIZE
 
                 if epoch_new > epoch:
                     epoch = epoch_new
                     print('Epoch = {}, loss = {}'.format(epoch, loss))
                 n += 1
+
+                if (epoch_new >= save_start and
+                        (epoch_new - save_start) % save_frequency == 0):
+                    fname = 'model_epoch{}.pkl'.format(epoch)
+                    path = os.path.join(save_prefix, fname)
+                    self.calculator.model.save(path)
+
             except StopIteration:
                 break
 
     def get_loss(self):
-        """
-        """
         loss = 0
         for _ in range(self.batch_size):
             # raise StopIteration error if out of bounds; This will ignore the last

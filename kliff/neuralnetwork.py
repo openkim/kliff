@@ -11,23 +11,28 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 # pytorch buildin (use them directly)
 from torch.nn.modules.linear import Linear, Bilinear
-from torch.nn.modules.conv import Conv1d, Conv2d, Conv3d, \
+from torch.nn.modules.conv import Conv1d, Conv2d, Conv3d,\
     ConvTranspose1d, ConvTranspose2d, ConvTranspose3d
-from torch.nn.modules.activation import Threshold, ReLU, Hardtanh, ReLU6, Sigmoid, Tanh, \
-    Softmax, Softmax2d, LogSoftmax, ELU, SELU, CELU, Hardshrink, LeakyReLU, LogSigmoid, \
-    Softplus, Softshrink, PReLU, Softsign, Softmin, Tanhshrink, RReLU, GLU
-from torch.nn.modules.pooling import AvgPool1d, AvgPool2d, AvgPool3d, MaxPool1d, MaxPool2d, MaxPool3d, \
-    MaxUnpool1d, MaxUnpool2d, MaxUnpool3d, FractionalMaxPool2d, LPPool1d, LPPool2d, \
-    AdaptiveMaxPool1d, AdaptiveMaxPool2d, AdaptiveMaxPool3d, AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d
+from torch.nn.modules.activation import Threshold, ReLU, Hardtanh, ReLU6,\
+    Sigmoid, Tanh, Softmax, Softmax2d, LogSoftmax, ELU, SELU, CELU,\
+    Hardshrink, LeakyReLU, LogSigmoid, Softplus, Softshrink, PReLU,\
+    Softsign, Softmin, Tanhshrink, RReLU, GLU
+from torch.nn.modules.pooling import AvgPool1d, AvgPool2d, AvgPool3d,\
+    MaxPool1d, MaxPool2d, MaxPool3d, MaxUnpool1d, MaxUnpool2d, MaxUnpool3d,\
+    FractionalMaxPool2d, LPPool1d, LPPool2d, AdaptiveMaxPool1d,\
+    AdaptiveMaxPool2d, AdaptiveMaxPool3d, AdaptiveAvgPool1d,\
+    AdaptiveAvgPool2d, AdaptiveAvgPool3d
 from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
-from torch.nn.modules.normalization import LocalResponseNorm, CrossMapLRN2d, LayerNorm, GroupNorm
-from torch.nn.modules.rnn import RNNBase, RNN, LSTM, GRU, \
-    RNNCellBase, RNNCell, LSTMCell, GRUCell
+from torch.nn.modules.normalization import LocalResponseNorm, CrossMapLRN2d,\
+    LayerNorm, GroupNorm
+from torch.nn.modules.rnn import RNNBase, RNN, LSTM, GRU, RNNCellBase, \
+    RNNCell, LSTMCell, GRUCell
 
 
 @torch._jit_internal.weak_module
 class Dropout(torch.nn.modules.dropout._DropoutNd):
-    """A Dropout layer that zeros the same element of descriptor values for all atoms.
+    """A Dropout layer that zeros the same element of descriptor values for all
+    atoms.
 
     Note `torch.nn.Dropout` dropout each component independently.
 
@@ -59,29 +64,30 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
             shape_4D = (*shape, 1)
 
         else:
-            raise Exception(
-                'Input need to be 2D or 3D tensor, but got a {}D tensor.'.format(dim))
+            raise Exception('Input need to be 2D or 3D tensor, but got a '
+                            '{}D tensor.'.format(dim))
         x = torch.reshape(input, shape_4D)
         x = torch.transpose(x, 1, 2)
-        y = torch.nn.functional.dropout2d(x, self.p, self.training, self.inplace)
+        y = torch.nn.functional.dropout2d(
+            x, self.p, self.training, self.inplace)
         y = torch.transpose(y, 1, 2)
         y = torch.reshape(y, shape)
         return y
 
 
 class FingerprintsDataset(Dataset):
-    """Atomic environment fingerprints dataset."""
+    """Atomic environment fingerprints dataset.
+
+    Parameters
+    ----------
+    fname: string
+        Name of the fingerprints file.
+
+    transform: callable (optional):
+        Optional transform to be applied on a sample.
+    """
 
     def __init__(self, fname, transform=None):
-        """
-        Parameters
-        ----------
-        fname: string
-            Name of the fingerprints file.
-
-        transform: callable (optional):
-            Optional transform to be applied on a sample.
-        """
         self.fp = load_fingerprints(fname)
         self.transform = transform
 
@@ -99,18 +105,17 @@ class FingerprintsDataset(Dataset):
 class FingerprintsDataLoader(DataLoader):
     """A dataset loader that incorporate the support the number of epochs.
 
-    The dataset loader will load an element from the next batch if a batch is fully
-    iterarated. This, in effect, looks like concatenating the dataset the number of
-    epochs times.
+    The dataset loader will load an element from the next batch if a batch is
+    fully iterarated. This, in effect, looks like concatenating the dataset the
+    number of epochs times.
+
+    Parameters
+    ----------
+    num_epochs: int
+        Number of epochs to iterate through the dataset.
     """
 
     def __init__(self, num_epochs=1, *args, **kwargs):
-        """
-        Parameters
-        ----------
-        num_epochs: int
-            Number of epochs to iterate through the dataset.
-        """
         super(FingerprintsDataLoader, self).__init__(*args, **kwargs)
         self.num_epochs = num_epochs
         self.epoch = 0
@@ -138,7 +143,7 @@ class FingerprintsDataLoader(DataLoader):
 
 
 class NeuralNetwork(nn.Module):
-    """ Neural Network model.
+    """Neural Network model.
 
     A feed-forward neural network model built using PyTorch.
 
@@ -179,25 +184,26 @@ class NeuralNetwork(nn.Module):
         layers: torch.nn layers
             ``torch.nn`` layers that are used to build a sequential model.
             Available ones including: torch.nn.Linear, torch.nn.Dropout, and
-            torch.nn.Sigmoid among others. See https://pytorch.org/docs/stable/nn.html
+            torch.nn.Sigmoid among others. See
+            https://pytorch.org/docs/stable/nn.html
             for a full list of torch.nn layers.
         """
         if self.layers is not None:
-            raise NeuralNetworkError(
-                '"add_layers" called multiple times. It should be called only once.')
+            raise NeuralNetworkError('"add_layers" called multiple times. '
+                                     'It should be called only once.')
         else:
             self.layers = []
 
         for la in layers:
             self.layers.append(la)
-            # set layer as an attribute so that parameters are automatically registered
+            # set it as attr so that parameters are automatically registered
             setattr(self, 'layer_{}'.format(len(self.layers)), la)
 
         # check shape of first layer and last layer
         first = self.layers[0]
         if first.in_features != len(self.descriptor):
-            raise InputError(
-                '"in_features" of first layer should be equal to descriptor size.')
+            raise InputError('"in_features" of first layer should be equal to '
+                             'descriptor size.')
         last = self.layers[-1]
         if last.out_features != 1:
             raise InputError('"out_features" of last layer should be 1.')
@@ -211,18 +217,18 @@ class NeuralNetwork(nn.Module):
         return x
 
     def set_save_metadata(self, prefix, start, frequency):
-        """ Set metadata that controls how the model are saved.
+        """Set metadata that controls how the model are saved during training.
 
         If this function is called before minimization starts, the model will be
-        saved to the directory specified by ``prefix`` every ``frequency`` epochs,
-        beginning at the ``start`` epoch.
+        saved to the directory specified by ``prefix`` every ``frequency``
+        epochs, beginning at the ``start`` epoch.
 
         Parameters
         ----------
         prefix: str
             Directory where the models are saved.
-            Model will be named as `{prefix}/model_epoch{ep}.pt`, where `ep` is the
-            epoch number.
+            Model will be named as `{prefix}/model_epoch{ep}.pt`, where `ep` is
+            the epoch number.
 
         start: int
             Eopch number at which begins to save the model.
@@ -230,9 +236,9 @@ class NeuralNetwork(nn.Module):
         frequency: int
             Save the model every ``frequency`` epochs.
         """
-        self.save_prefix = prefix
-        self.save_start = start
-        self.save_frequency = frequency
+        self.save_prefix = str(prefix)
+        self.save_start = int(start)
+        self.save_frequency = int(frequency)
 
     def save(self, path):
         """Save a model to disk.
@@ -242,6 +248,9 @@ class NeuralNetwork(nn.Module):
         path: str
             Path where to store the model.
         """
+        dirname = os.path.dirname(path)
+        if dirname and not os.path.exists(dirname):
+            os.makedirs(dirname)
         torch.save(self.state_dict(), path)
 
     def load(self, path, mode):
@@ -270,9 +279,11 @@ class NeuralNetwork(nn.Module):
         param_layer = ['Linear']
         activ_layer = ['Sigmoid', 'Tanh', 'ReLU', 'ELU']
         dropout_layer = ['Dropout']
-        layer_groups = self._group_layers(param_layer, activ_layer, dropout_layer)
+        layer_groups = self._group_layers(
+            param_layer, activ_layer, dropout_layer)
 
-        weights, biases = self._get_weights_and_biases(layer_groups, param_layer)
+        weights, biases = self._get_weights_and_biases(
+            layer_groups, param_layer)
         activations = self._get_activations(layer_groups, activ_layer)
         drop_ratios = self._get_drop_ratios(layer_groups, dropout_layer)
 
@@ -280,7 +291,8 @@ class NeuralNetwork(nn.Module):
         dtype = self.dtype
 
         if path is None:
-            path = os.path.join(os.getcwd(), 'NeuralNetwork__MO_000000111111_000')
+            path = os.path.join(
+                os.getcwd(), 'NeuralNetwork__MO_000000111111_000')
         if path and not os.path.exists(path):
             os.makedirs(path)
 
@@ -292,8 +304,8 @@ class NeuralNetwork(nn.Module):
         fname = 'kliff_trained.params'
         with open(os.path.join(path, fname), 'w') as fout:
             fout.write('#' + '='*80 + '\n')
-            fout.write(
-                '# KIM ANN potential parameters, generated by `kliff` fitting program.\n')
+            fout.write('# KIM ANN potential parameters, generated by `kliff` '
+                       'fitting program.\n')
             fout.write('#' + '='*80 + '\n\n')
 
             # cutoff
@@ -350,11 +362,11 @@ class NeuralNetwork(nn.Module):
                             lam = val[1]
                             eta = val[2]
                             if dtype == torch.float64:
-                                fout.write(
-                                    '{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta))
+                                fout.write('{:.15g} {:.15g} {:.15g}'
+                                           .format(zeta, lam, eta))
                             else:
-                                fout.write(
-                                    '{:.7g} {:.7g} {:.7g}'.format(zeta, lam, eta))
+                                fout.write('{:.7g} {:.7g} {:.7g}'
+                                           .format(zeta, lam, eta))
                             fout.write('    # zeta  lambda  eta\n')
                         fout.write('\n')
                     elif name == 'g5':
@@ -363,11 +375,11 @@ class NeuralNetwork(nn.Module):
                             lam = val[1]
                             eta = val[2]
                             if dtype == torch.float64:
-                                fout.write(
-                                    '{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta))
+                                fout.write('{:.15g} {:.15g} {:.15g}'
+                                           .format(zeta, lam, eta))
                             else:
-                                fout.write(
-                                    '{:.7g} {:.7g} {:.7g}'.format(zeta, lam, eta))
+                                fout.write('{:.7g} {:.7g} {:.7g}'
+                                           .format(zeta, lam, eta))
                             fout.write('    # zeta  lambda  eta\n')
                         fout.write('\n')
 
@@ -404,18 +416,18 @@ class NeuralNetwork(nn.Module):
             fout.write('#' + '='*80 + '\n')
             fout.write('# ANN structure and parameters\n')
             fout.write('#\n')
-            fout.write('# Note that the ANN assumes each row of the input "X" is '
-                       'an observation, i.e.\n')
+            fout.write('# Note that the ANN assumes each row of the input "X" '
+                       'is an observation, i.e.\n')
             fout.write('# the layer is implemented as\n')
             fout.write('# Y = activation(XW + b).\n')
-            fout.write('# You need to transpose your weight matrix if each column of "X" '
-                       'is an observation.\n')
+            fout.write('# You need to transpose your weight matrix if each '
+                       'column of "X" is an observation.\n')
             fout.write('#' + '='*80 + '\n\n')
 
             # number of layers
             num_layers = len(weights)
-            fout.write('{}    # number of layers (excluding input layer, including '
-                       'output layer)\n'.format(num_layers))
+            fout.write('{}    # number of layers (excluding input layer, '
+                       'including output layer)\n'.format(num_layers))
 
             # size of layers
             for b in biases:
@@ -438,11 +450,11 @@ class NeuralNetwork(nn.Module):
                 # weight
                 rows, cols = w.shape
                 if i != num_layers-1:
-                    fout.write(
-                        '# weight of hidden layer {} (shape({}, {}))\n'.format(i+1, rows, cols))
+                    fout.write('# weight of hidden layer {} (shape({}, {}))\n'
+                               .format(i+1, rows, cols))
                 else:
-                    fout.write(
-                        '# weight of output layer (shape({}, {}))\n'.format(rows, cols))
+                    fout.write('# weight of output layer (shape({}, {}))\n'
+                               .format(rows, cols))
                 for line in w:
                     for item in line:
                         if dtype == torch.float64:
@@ -453,11 +465,11 @@ class NeuralNetwork(nn.Module):
 
                 # bias
                 if i != num_layers-1:
-                    fout.write(
-                        '# bias of hidden layer {} (shape({}, {}))\n'.format(i+1, rows, cols))
+                    fout.write('# bias of hidden layer {} (shape({}, {}))\n'
+                               .format(i+1, rows, cols))
                 else:
-                    fout.write(
-                        '# bias of output layer (shape({}, {}))\n'.format(rows, cols))
+                    fout.write('# bias of output layer (shape({}, {}))\n'
+                               .format(rows, cols))
                 for item in b:
                     if dtype == torch.float64:
                         fout.write('{:23.15e}'.format(item))
@@ -468,13 +480,14 @@ class NeuralNetwork(nn.Module):
     def _group_layers(self, param_layer, activ_layer, dropout_layer):
         """Divide all the layers into groups.
 
-        The first group is either an empty list or a `Dropout` layer for the input
-        layer. The last group typically contains only a `Linear` layer.  For other
-        groups, each group contains two, or three layers. `Linear` layer and an
-        activation layer are mandatory, and a third `Dropout` layer is optional.
+        The first group is either an empty list or a `Dropout` layer for the
+        input layer. The last group typically contains only a `Linear` layer.
+        For other groups, each group contains two, or three layers. `Linear`
+        layer and an activation layer are mandatory, and a third `Dropout` layer
+        is optional.
 
-        Returns
-        -------
+        Return
+        ------
         groups: list of list of layers
         """
 
@@ -485,8 +498,9 @@ class NeuralNetwork(nn.Module):
         for i, layer in enumerate(self.layers):
             name = layer.__class__.__name__
             if name not in supported:
-                raise NeuralNetworkError('Layer "{}" not supported by KIM model. '
-                                         'Cannot proceed to write.'.format(name))
+                raise NeuralNetworkError(
+                    'Layer "{}" not supported by KIM model. Cannot proceed '
+                    'to write.'.format(name))
             if name in activ_layer:
                 if i == 0:
                     raise NeuralNetworkError(
@@ -510,7 +524,8 @@ class NeuralNetwork(nn.Module):
 
     @staticmethod
     def _get_weights_and_biases(groups, supported):
-        """Get the weights and biases of all layers that have weights and biases."""
+        """Get weights and biases of all layers that have weights and biases.
+        """
         weights = []
         biases = []
         for i, g in enumerate(groups):
@@ -591,8 +606,8 @@ class PytorchANNCalculator(object):
 
         self.results = dict([(i, None) for i in self.implemented_property])
 
-    def create(self, configs, use_energy=True, use_forces=True, use_stress=False,
-               reuse=False, nprocs=mp.cpu_count()):
+    def create(self, configs, use_energy=True, use_forces=True,
+               use_stress=False, reuse=False, nprocs=mp.cpu_count()):
         """Preprocess configs into fingerprints.
 
         Parameters
@@ -614,7 +629,8 @@ class PytorchANNCalculator(object):
 
         """
         if use_stress:
-            raise NotImplementedError('"stress" is not supported by NN calculator.')
+            raise NotImplementedError(
+                '"stress" is not supported by NN calculator.')
 
         self.configs = configs
         self.use_energy = use_energy
@@ -652,37 +668,11 @@ class PytorchANNCalculator(object):
 
         return {'energy': pred_energy, 'forces': forces}
 
-    def get_loss(self, forces_weight=1.):
-        """
-        """
-        loss = 0
-        for _ in range(self.batch_size):
-            # raise StopIteration error if out of bounds; This will ignore the last
-            # chunk of data whose size is smaller than `batch_size`
-            x = self.data_loader.next_element()
-            # [0] because data_loader make it a batch with 1 element
-            zeta = x['zeta'][0]
-            energy = x['energy'][0]
-            species = x['species'][0]
-            natoms = len(species)
-            if self.grad:
-                zeta.requires_grad = True
-            y = self.model(zeta)
-            pred_energy = y.sum()
-            if self.grad:
-                dzeta_dr = x['dzeta_dr'][0]
-                forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
-                zeta.requires_grad = False
-            c = cost_single_config(pred_energy, energy)/natoms**2
-            loss += c
-            # TODO add forces cost
-        loss /= self.batch_size
-        return loss
-
     @staticmethod
     def compute_forces(energy, zeta, dzeta_dr):
         denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-        forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
+        forces = -torch.tensordot(denergy_dzeta,
+                                  dzeta_dr, dims=([0, 1], [0, 1]))
         return forces
 
 
@@ -696,5 +686,5 @@ class NeuralNetworkError(Exception):
         super(NeuralNetworkError, self).__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __expr__(self):
         return self.msg

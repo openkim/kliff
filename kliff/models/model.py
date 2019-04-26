@@ -10,13 +10,12 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class ComputeArguments:
-    """ Implementation of code to compute energy, forces, and stress.
-
-    """
+    """Implementation of code to compute energy, forces, and stress."""
     implemented_property = []
 
     def __init__(self, conf, supported_species, influence_distance,
-                 compute_energy=True, compute_forces=True, compute_stress=False):
+                 compute_energy=True, compute_forces=True,
+                 compute_stress=False):
         self.conf = conf
         self.supported_species = supported_species
         self.influence_distance = influence_distance
@@ -27,7 +26,7 @@ class ComputeArguments:
         self.results = dict([(i, None) for i in self.implemented_property])
 
     def refresh(self, influence_distance=None, params=None):
-        """ Refresh settings.
+        """Refresh settings.
 
         Such as recreating the neighbor list due to the change of cutoff.
         """
@@ -61,7 +60,7 @@ class ComputeArguments:
         return compute_property
 
     def compute(self, params):
-        """ Compute the properties required by the compute flags, and store them
+        """Compute the properties required by the compute flags, and store them
         in self.results.
 
         Parameters
@@ -152,7 +151,8 @@ class Model:
 
     param_relations_callback: function (optional)
         A callback function to set the relations between parameters, which are
-        called each minimization step after the optimizer updates the parameters.
+        called each minimization step after the optimizer updates the
+        parameters.
 
         The function with be given the ModelParameters instance as argument, and
         it can use get_value() and set_value() to manipulate the relation
@@ -171,11 +171,14 @@ class Model:
     """
 
     def __init__(self, model_name=None, params_relation_callback=None):
-        # TODO paras_relation_callbacks may not work for some minimization algorithms
-        # since abruptly change the parameter relation may result in loss to go up,
-        # then the optimization method can fail. So to a check to implement this only
-        # for the minimization methods that support it natively.
-        self.model_name = model_name.rstrip('/') if model_name is not None else None
+        # TODO paras_relation_callbacks may not work for some minimization
+        # algorithms since abruptly change the parameter relation may result in
+        # loss to go up, then the optimization method can fail. So to a check to
+        # implement this only for the minimization methods that support it
+        # natively.
+        self.model_name = model_name
+        if self.model_name is not None:
+            self.model_name = self.model_name.rstrip('/')
         self.params_relation_callback = params_relation_callback
 
         # NOTE to be filled
@@ -202,7 +205,8 @@ class Model:
 
     def write_kim_model(self, path=None):
         # NOTE fill this
-        raise SupportError('This model does not support writing to a KIM model.')
+        raise SupportError(
+            'This model does not support writing to a KIM model.')
 
     def set_params_relation_callback(self, params_relation_callback):
         """Register a function to set the relation between parameters."""
@@ -225,7 +229,8 @@ class Model:
         if name in self.params:
             return self.params[name].get_value()
         else:
-            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
+            raise ModelError(
+                '"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params(self, name, value, check_shape=True):
         """ Update the parameter values.
@@ -239,12 +244,13 @@ class Model:
             Value of hte parameter.
 
         check_shape: bool
-            If `True`, check the shape of ``value``.
+            If ``True``, check the shape of ``value``.
         """
         if name in self.params:
             self.params[name].set_value(value, check_shape)
         else:
-            raise ModelError('"{}" is not a parameter of the model.'.format(name))
+            raise ModelError(
+                '"{}" is not a parameter of the model.'.format(name))
 
 #    def save_model_params(self, path):
 #        params = dict()
@@ -263,7 +269,13 @@ class Model:
 #            self.set_model_params(key, value, check_shape=False)
 
     def echo_model_params(self, path=None):
-        """Echo the optimizable parameters. """
+        """Print the optimizable parameters.
+
+        Parameter
+        ---------
+        path: str (optional)
+            Path to print the information. if ``None``, print to stdout.
+        """
 
         if path is not None:
             fout = open(path, 'w')
@@ -274,11 +286,12 @@ class Model:
         print('#'+'='*80, file=fout)
         print('# Available parameters to optimize.')
         print(file=fout)
-        name = self.__class__.__name__ if self.model_name is None else self.model_name
+        if self.model_name is None:
+            name = self.__class__.__name__
+        else:
+            name = self.model_name
         print('# Model:', name, file=fout)
         print('#'+'='*80, file=fout)
-        # print('Include the names and the initial guesses (optionally, lower and upper bounds)')
-        # print('of the parameters that you want to optimize in the input file.')
         print(file=fout)
         for name, p in self.params.items():
             print('name:', name, file=fout)

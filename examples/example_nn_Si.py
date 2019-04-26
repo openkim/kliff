@@ -69,6 +69,8 @@ model.add_layers(
     nn.Tanh(),
     # output layer
     nn.Linear(N2, 1))
+model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
+
 
 ###############################################################################
 # In the above code, we build a NN model with an input layer, two hidden layer,
@@ -86,6 +88,10 @@ model.add_layers(
 # (hidden or output), the input size must be equal to the output size of the
 # previous layer. The ``out_size`` of the output layer much be 1 such that the
 # output of the NN model is gives the energy of atom.
+#
+# The ``set_save_metadata`` function call informs where to save intermediate
+# models during the optimization (discussed below), and what the starting epoch
+# and how often to save the model.
 
 
 ################################################################################
@@ -137,5 +143,5 @@ result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.01)
 # We can also write the trained model to a KIM model such that it can be used in
 # other simulation codes such as LAMMPS via the KIM API.
 
-model.save('./saved_model.pt')
+model.save('./saved_model.pkl')
 model.write_kim_model()
