@@ -1,0 +1,7 @@
+include README.md
+recursive-include kliff *.hpp *.h
+recursive-include tests *.py *.xyz
+recursive-include examples *.py README.txt Si_training_set.tar.gz
+recursive-include docs *
+prune docs/build
+global-exclude .DS_Store tmp_*

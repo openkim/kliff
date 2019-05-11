@@ -12,7 +12,8 @@ KLIFF requires:
 
 KLIFF is built on top of KIM, either to fit physics-motivated potentials
 archived on OpenKIM_ or to deploy the trained potential. To get KLIFF to work,
-two prerequisite packages --- kim-api_ and kimpy_ --- need to be installed first.
+two prerequisite packages --- kim-api_ and kimpy_ --- need to be installed
+first.
 
 
 kim-api
@@ -24,9 +25,9 @@ instructions there to install.
     After installation, you can do ``$ kim-api-collections-management list``.
     If you see a list of directories where the KIM model drivers and models are
     placed, then you are good to go. Otherwise, you may forget to set up the
-    ``PATH`` and bash completions, which can be achieved by (assuming you are using
-    Bash): ``$ source path/to/the/kim/library/bin/kim-api-activate``. See the
-    kim-api_ documentation for more information.
+    ``PATH`` and bash completions, which can be achieved by (assuming you are
+    using Bash): ``$ source path/to/the/kim/library/bin/kim-api-activate``. See
+    the kim-api_ documentation for more information.
 
 
 kimpy
@@ -45,7 +46,9 @@ After getting kim-api_ and kimpy_ to work, you can install KLIFF via
 
 Package manager
 ---------------
-coming soon...
+.. code-block:: bash
+
+   $ pip install kliff
 
 From source
 -----------
@@ -60,9 +63,9 @@ Optional
 ========
 
 KLIFF takes advantage of PyTorch_ to build neural network models and conduct the
-training. So if you want to train neural network potentials, PyTorch_ needs to be
-installed. Please follow the instructions given on the official PyTorch_ website to
-install it.
+training. So if you want to train neural network potentials, PyTorch_ needs to
+be installed. Please follow the instructions given on the official PyTorch_
+website to install it.
 
 
 .. _Python: http://www.python.org
