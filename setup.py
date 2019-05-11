@@ -10,48 +10,66 @@ for key, value in cfg_vars.items():
         cfg_vars[key] = value.replace('-Wstrict-prototypes', '')
 
 
-def get_extra_compile_args():
-    return ['-std=c++11']
+class get_pybind11_includes:
+    """Helper class to determine the pybind11 include path.
 
+    The purpose of this class is to postpone importing pybind11 until it is
+    actually installed, so that the ``get_include()`` method can be invoked.
 
-class get_pybind11_includes(object):
-    """Helper class to determine the pybind11 include path
-
-    The purpose of this class is to postpone importing pybind11 until it is actually
-    installed, so that the ``get_include()`` method can be invoked.
-
-    Borrowd from: https://github.com/pybind/python_example/blob/master/setup.py
+    See:
+    https://github.com/pybind/python_example/blob/master/setup.py
+    https://github.com/pybind/python_example/issues/32
     """
 
     def __init__(self, user=False):
+        try:
+            import pybind11
+        except ImportError:
+            if subprocess.call(
+                [sys.executable, '-m', 'pip', 'install', 'pybind11']
+            ):
+                raise RuntimeError('pybind11 install failed.')
         self.user = user
 
     def __str__(self):
         import pybind11
+
         return pybind11.get_include(self.user)
 
 
-symmetry_fn = Extension(
+def get_includes():
+    return [get_pybind11_includes(), get_pybind11_includes(user=True)]
+
+
+def get_extra_compile_args():
+    return ['-std=c++11']
+
+
+sym_fn = Extension(
     'kliff.descriptors.symmetry_function.sf',
-    sources=['kliff/descriptors/symmetry_function/sym_fn_bind.cpp',
-             'kliff/descriptors/symmetry_function/sym_fn.cpp'],
-    include_dirs=[get_pybind11_includes(),
-                  get_pybind11_includes(user=True)],
+    sources=[
+        'kliff/descriptors/symmetry_function/sym_fn_bind.cpp',
+        'kliff/descriptors/symmetry_function/sym_fn.cpp',
+    ],
+    include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
-    language='c++',)
+    language='c++',
+)
 
 bispectrum = Extension(
     'kliff.descriptors.bispectrum.bs',
-    sources=['kliff/descriptors/bispectrum/bispectrum.cpp',
-             'kliff/descriptors/bispectrum/helper.cpp',
-             'kliff/descriptors/bispectrum/bispectrum_bind.cpp'],
-    include_dirs=[get_pybind11_includes(),
-                  get_pybind11_includes(user=True)],
+    sources=[
+        'kliff/descriptors/bispectrum/bispectrum.cpp',
+        'kliff/descriptors/bispectrum/helper.cpp',
+        'kliff/descriptors/bispectrum/bispectrum_bind.cpp',
+    ],
+    include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
-    language='c++',)
+    language='c++',
+)
 
 
-def get_version(fname='kliff'+os.path.sep+'__init__.py'):
+def get_version(fname=os.path.join('kliff', '__init__.py')):
     with open(fname) as fin:
         for line in fin:
             line = line.strip()
@@ -69,20 +87,30 @@ def get_version(fname='kliff'+os.path.sep+'__init__.py'):
 kliff_scripts = ['bin/kliff']
 
 
-setup(name='kliff',
-      version=get_version(),
-      description='KLIFF interatomic potential fitting package',
-      author='Mingjian Wen',
-      url='https://github.com/mjwen/kliff',
-      ext_modules=[symmetry_fn, bispectrum],
-      # NOTE, subpackages need to be specified as well
-      # packages=['kliff'],
-      # NOTE, subpackages need to be included as well
-      # packages=['kliff','tensorflow_op', 'geolm'],
-      # package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
-      # package_data={'geolm':['_geodesiclm.so']},
-      packages=find_packages(),
-      scripts=kliff_scripts,
-      install_requires=['scipy', 'pybind11'],
-      zip_safe=False,
-      )
+setup(
+    name='kliff',
+    version=get_version(),
+    # NOTE, subpackages need to be specified as well
+    # packages=['kliff'],
+    # NOTE, subpackages need to be included as well
+    # packages=['kliff','tensorflow_op', 'geolm'],
+    # package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
+    # package_data={'geolm':['_geodesiclm.so']},
+    packages=find_packages(),
+    ext_modules=[sym_fn, bispectrum],
+    scripts=kliff_scripts,
+    install_requires=['scipy', 'pybind11', 'pytest'],
+    author='Mingjian Wen',
+    author_email='wenxx151@gmail.com',
+    url='https://github.com/mjwen/kliff',
+    description='KLIFF: KIM-based Learning-Integrated Fitting Framework',
+    long_description='KLIFF: KIM-based Learning-Integrated Fitting Framework',
+    classifiers=(
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'License :: OSI Approved :: Common Development and Distribution License 1.0 (CDDL-1.0)',
+        'Operating System :: OS Independent',
+    ),
+    zip_safe=False,
+)
