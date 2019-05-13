@@ -43,9 +43,7 @@ class ComputeArguments:
             try:
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
-                raise ParameterError(
-                    '"influence_distance" not provided by calculator."'
-                )
+                raise ParameterError('"influence_distance" not provided by calculator."')
         self.influence_distance = infl_dist
 
         # NOTE to be filled
@@ -89,9 +87,7 @@ class ComputeArguments:
         self.results['stress'] = stress
         """
         # NOTE to be filled
-        raise NotImplementedError(
-            '"compute" method of "ComputeArguments" not defined.'
-        )
+        raise NotImplementedError('"compute" method of "ComputeArguments" not defined.')
 
     def get_compute_flag(self, name):
         if name in self.compute_property:
@@ -101,9 +97,7 @@ class ComputeArguments:
 
     def get_property(self, name):
         if name not in self.compute_property:
-            raise ModelError(
-                'Calculator not initialized to comptue "{}".'.format(name)
-            )
+            raise ModelError('Calculator not initialized to comptue "{}".'.format(name))
         result = self.results[name]
         if isinstance(result, np.ndarray):
             result = result.copy()
@@ -217,9 +211,7 @@ class Model:
 
     def write_kim_model(self, path=None):
         # NOTE fill this
-        raise SupportError(
-            'This model does not support writing to a KIM model.'
-        )
+        raise SupportError('This model does not support writing to a KIM model.')
 
     def set_params_relation_callback(self, params_relation_callback):
         """Register a function to set the relation between parameters."""
@@ -242,9 +234,7 @@ class Model:
         if name in self.params:
             return self.params[name].get_value()
         else:
-            raise ModelError(
-                '"{}" is not a parameter of calculator.'.format(name)
-            )
+            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params(self, name, value, check_shape=True):
         """ Update the parameter values.
@@ -263,9 +253,7 @@ class Model:
         if name in self.params:
             self.params[name].set_value(value, check_shape)
         else:
-            raise ModelError(
-                '"{}" is not a parameter of the model.'.format(name)
-            )
+            raise ModelError('"{}" is not a parameter of the model.'.format(name))
 
     #    def save_model_params(self, path):
     #        params = dict()
@@ -286,8 +274,8 @@ class Model:
     def echo_model_params(self, path=None):
         """Print the optimizable parameters.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         path: str (optional)
             Path to print the information. if ``None``, print to stdout.
         """

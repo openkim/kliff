@@ -84,20 +84,13 @@ class KIMComputeArguments(ComputeArguments):
             dtype, error = kim_can.get_compute_argument_data_type(name)
             check_error(error, 'kim_can.get_compute_argument_data_type')
 
-            support_status, error = self.kim_ca.get_argument_support_status(
-                name
-            )
+            support_status, error = self.kim_ca.get_argument_support_status(name)
             check_error(error, 'kim_ca.get_argument_support_status')
 
             # calculator can only handle energy and forces
             if support_status == kimpy.support_status.required:
-                if (
-                    name != kim_can.partialEnergy
-                    and name != kim_can.partialForces
-                ):
-                    report_error(
-                        'Unsupported required ComputeArgument "{}"'.format(name)
-                    )
+                if name != kim_can.partialEnergy and name != kim_can.partialForces:
+                    report_error('Unsupported required ComputeArgument "{}"'.format(name))
 
             # supported property
             if name == kim_can.partialEnergy:
@@ -114,17 +107,13 @@ class KIMComputeArguments(ComputeArguments):
             name, error = kim_ccn.get_compute_callback_name(i)
             check_error(error, 'kim_ccn.get_compute_callback_name')
 
-            support_status, error = self.kim_ca.get_callback_support_status(
-                name
-            )
+            support_status, error = self.kim_ca.get_callback_support_status(name)
             check_error(error, 'compute_arguments.get_callback_support_status')
 
             # calculator only provides get_neigh
             if support_status == kimpy.support_status.required:
                 if name != kim_ccn.GetNeighborList:
-                    report_error(
-                        'Unsupported required ComputeCallback "{}"'.format(name)
-                    )
+                    report_error('Unsupported required ComputeCallback "{}"'.format(name))
 
     def refresh(self, influence_distance=None, params=None):
         self.influence_distance = influence_distance
@@ -143,9 +132,7 @@ class KIMComputeArguments(ComputeArguments):
         # inquire information from conf
         cell = np.asarray(self.conf.get_cell(), dtype=np.double)
         PBC = np.asarray(self.conf.get_PBC(), dtype=np.intc)
-        contributing_coords = np.asarray(
-            self.conf.get_coordinates(), dtype=np.double
-        )
+        contributing_coords = np.asarray(self.conf.get_coordinates(), dtype=np.double)
         contributing_species = self.conf.get_species()
         num_contributing = self.conf.get_number_of_atoms()
         self.num_contributing_particles = num_contributing
@@ -170,24 +157,16 @@ class KIMComputeArguments(ComputeArguments):
                 contributing_coords,
                 contributing_species_code,
             )
-            padding_coords, padding_species_code, self.padding_image_of, error = (
-                out
-            )
+            padding_coords, padding_species_code, self.padding_image_of, error = out
             check_error(error, 'nl.create_paddings')
 
             num_padding = padding_species_code.size
-            self.num_particles = np.array(
-                [num_contributing + num_padding], dtype=np.intc
-            )
+            self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
             tmp = np.concatenate((contributing_coords, padding_coords))
             self.coords = np.asarray(tmp, dtype=np.double)
-            tmp = np.concatenate(
-                (contributing_species_code, padding_species_code)
-            )
+            tmp = np.concatenate((contributing_species_code, padding_species_code))
             self.species_code = np.asarray(tmp, dtype=np.intc)
-            self.particle_contributing = np.ones(
-                self.num_particles[0], dtype=np.intc
-            )
+            self.particle_contributing = np.ones(self.num_particles[0], dtype=np.intc)
             self.particle_contributing[num_contributing:] = 0
             # TODO check whether padding need neigh and create accordingly
             # for now, create neigh for all atoms, including paddings
@@ -197,12 +176,8 @@ class KIMComputeArguments(ComputeArguments):
             self.padding_image_of = np.array([])
             self.num_particles = np.array([num_contributing], dtype=np.intc)
             self.coords = np.array(contributing_coords, dtype=np.double)
-            self.species_code = np.array(
-                contributing_species_code, dtype=np.intc
-            )
-            self.particle_contributing = np.ones(
-                num_contributing, dtype=np.intc
-            )
+            self.species_code = np.array(contributing_species_code, dtype=np.intc)
+            self.particle_contributing = np.ones(num_contributing, dtype=np.intc)
             need_neigh = self.particle_contributing
 
         error = nl.build(
@@ -221,9 +196,7 @@ class KIMComputeArguments(ComputeArguments):
         kim_can = kimpy.compute_argument_name
         if compute_energy:
             name = kim_can.partialEnergy
-            support_status, error = self.kim_ca.get_argument_support_status(
-                name
-            )
+            support_status, error = self.kim_ca.get_argument_support_status(name)
             check_error(error, 'kim_ca.get_argument_support_status')
             if not (
                 support_status == kimpy.support_status.required
@@ -233,9 +206,7 @@ class KIMComputeArguments(ComputeArguments):
 
         if compute_forces:
             name = kim_can.partialForces
-            support_status, error = self.kim_ca.get_argument_support_status(
-                name
-            )
+            support_status, error = self.kim_ca.get_argument_support_status(name)
             check_error(error, 'kim_ca.get_argument_support_status')
             if not (
                 support_status == kimpy.support_status.required
@@ -259,16 +230,12 @@ class KIMComputeArguments(ComputeArguments):
         )
         check_error(error, 'kim_can.set_argument_pointer')
 
-        error = self.kim_ca.set_argument_pointer(
-            kim_can.coordinates, self.coords
-        )
+        error = self.kim_ca.set_argument_pointer(kim_can.coordinates, self.coords)
         check_error(error, 'kim_can.set_argument_pointer')
 
         if compute_energy:
             self.energy = np.array([0.0], dtype=np.double)
-            error = self.kim_ca.set_argument_pointer(
-                kim_can.partialEnergy, self.energy
-            )
+            error = self.kim_ca.set_argument_pointer(kim_can.partialEnergy, self.energy)
             check_error(error, 'kim_can.set_argument_pointer')
         else:
             self.energy = None
@@ -277,9 +244,7 @@ class KIMComputeArguments(ComputeArguments):
 
         if compute_forces:
             self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
-            error = self.kim_ca.set_argument_pointer(
-                kim_can.partialForces, self.forces
-            )
+            error = self.kim_ca.set_argument_pointer(kim_can.partialForces, self.forces)
             check_error(error, 'kim_can.set_argument_pointer')
         else:
             self.forces = None
@@ -294,9 +259,7 @@ class KIMComputeArguments(ComputeArguments):
             self.results['energy'] = self.energy[0]
         if self.compute_forces:
             forces = assemble_forces(
-                self.forces,
-                self.num_contributing_particles,
-                self.padding_image_of,
+                self.forces, self.num_contributing_particles, self.padding_image_of
             )
             self.results['forces'] = forces
         if self.compute_stress:
@@ -312,9 +275,7 @@ class KIMComputeArguments(ComputeArguments):
 
         # register get neigh callback
         error = self.kim_ca.set_callback_pointer(
-            kimpy.compute_callback_name.GetNeighborList,
-            nl.get_neigh_kim(),
-            neigh,
+            kimpy.compute_callback_name.GetNeighborList, nl.get_neigh_kim(), neigh
         )
         check_error(error, 'compute_arguments.set_callback_pointer')
 
@@ -332,9 +293,7 @@ class KIM(Model):
         if self.model_name is None:
             c = self.__class__.__name__
             raise KIMModelError(
-                '"model_name" is a mandatory argument for the "{}" calculator.'.format(
-                    c
-                )
+                '"model_name" is a mandatory argument for the "{}" calculator.'.format(c)
             )
 
         self.kim_model = self._initialize()
@@ -367,9 +326,7 @@ class KIM(Model):
         for i in range(num_params):
             out = self.kim_model.get_parameter_metadata(i)
             dtype, extent, name, description, error = out
-            check_error(
-                error, 'model.get_parameter_data_type_extent_and_description'
-            )
+            check_error(error, 'model.get_parameter_data_type_extent_and_description')
 
             values = []
             for j in range(extent):
@@ -380,9 +337,7 @@ class KIM(Model):
                     value, error = self.kim_model.get_parameter_int(i, j)
                     check_error(error, 'model.get_parameter_int')
                 else:  # should never reach here
-                    report_error(
-                        'get unexpeced parameter data type "{}"'.format(dtype)
-                    )
+                    report_error('get unexpeced parameter data type "{}"'.format(dtype))
                 values.append(value)
                 params[name] = Parameter(
                     value=values, dtype=dtype, description=description
@@ -531,9 +486,7 @@ class KIMModelError(Exception):
 def check_error(error, msg):
     if error != 0 and error is not None:
         raise KIMModelError(
-            'Calling "{}" failed.\nSee "kim.log" for more infomation.'.format(
-                msg
-            )
+            'Calling "{}" failed.\nSee "kim.log" for more infomation.'.format(msg)
         )
 
 

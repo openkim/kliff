@@ -28,15 +28,11 @@ class LJComputeArguments(ComputeArguments):
             try:
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
-                raise ParameterError(
-                    '"influence_distance" not provided by calculator."'
-                )
+                raise ParameterError('"influence_distance" not provided by calculator."')
         self.influence_distance = infl_dist
 
         # create neighbor list
-        self.neigh = NeighborList(
-            self.conf, infl_dist, padding_need_neigh=False
-        )
+        self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=False)
 
     def compute(self, params):
         epsilon = params['epsilon'].get_value()[0]
@@ -59,12 +55,8 @@ class LJComputeArguments(ComputeArguments):
                     phi, dphi = self.calc_phi_dphi(epsilon, sigma, r, rcut)
                     energy += 0.5 * phi
                     pair = 0.5 * dphi / r * rij
-                    forces_including_padding[i] = (
-                        forces_including_padding[i] + pair
-                    )
-                    forces_including_padding[j] = (
-                        forces_including_padding[j] - pair
-                    )
+                    forces_including_padding[i] = forces_including_padding[i] + pair
+                    forces_including_padding[j] = forces_including_padding[j] - pair
                 elif self.compute_energy:
                     phi = self.calc_phi(epsilon, sigma, r, rcut)
                     energy += 0.5 * phi

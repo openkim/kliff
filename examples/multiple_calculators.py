@@ -25,6 +25,4 @@ calc = WrapperCalculator(calc1, calc2)
 
 # loss
 with Loss(calc, nprocs=2) as loss:
-    result = loss.minimize(
-        method='L-BFGS-B', options={'disp': True, 'maxiter': 10}
-    )
+    result = loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': 10})

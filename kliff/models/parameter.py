@@ -203,9 +203,7 @@ class FittingParameter:
         size = self.model_params[name].get_size()
         if len(settings) != size:
             raise InputError(
-                'Incorrect number of initial values for paramter "{}".'.format(
-                    name
-                )
+                'Incorrect number of initial values for paramter "{}".'.format(name)
             )
 
         tmp_dict = {
@@ -397,9 +395,7 @@ class FittingParameter:
         if line[1].lower() == 'fix':
             self.params[name]['fix'][j] = True
         else:
-            raise InputError(
-                'Data at line {} of {} corrupted.'.format(j + 1, name)
-            )
+            raise InputError('Data at line {} of {} corrupted.'.format(j + 1, name))
 
     def _read_3_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
@@ -411,9 +407,7 @@ class FittingParameter:
                 self.params[name]['lower_bound'][j] = float(line[1])
             except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(
-                        e, j + 1, name
-                    )
+                    '{}.\nData at line {} of {} corrupted.'.format(e, j + 1, name)
                 )
 
         if (line[2] is not None) and (
@@ -423,9 +417,7 @@ class FittingParameter:
                 self.params[name]['upper_bound'][j] = float(line[2])
             except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(
-                        e, j + 1, name
-                    )
+                    '{}.\nData at line {} of {} corrupted.'.format(e, j + 1, name)
                 )
 
     def _read_1st_item(self, name, j, first):

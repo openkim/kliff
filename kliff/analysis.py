@@ -52,9 +52,7 @@ def error_report(self, normalize_by_num_atoms=True, fname='ERROR_REPORT'):
             else:
                 forces_rmse = None
 
-            residual = self.residual_fn(
-                identifier, natoms, pred, ref, self.residual_data
-            )
+            residual = self.residual_fn(identifier, natoms, pred, ref, self.residual_data)
             loss = 0.5 * np.linalg.norm(residual) ** 2
 
             if normalize_by_num_atoms:

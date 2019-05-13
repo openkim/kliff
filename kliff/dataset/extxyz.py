@@ -51,9 +51,7 @@ def read_extxyz(fname):
         # energy is optional
         try:
             in_quotes = check_in_quotes(line, 'Energy', fname)
-            energy = parse_key_value(
-                line, 'Energy', 'float', 1, fname, in_quotes
-            )[0]
+            energy = parse_key_value(line, 'Energy', 'float', 1, fname, in_quotes)[0]
         except KeyNotFoundError:
             energy = None
         # stress is optional
@@ -73,9 +71,7 @@ def read_extxyz(fname):
         elif len(line) == 7:
             has_forces = True
         else:
-            raise InputError(
-                'Corrupted data at line 3 of file "{}" .'.format(fname)
-            )
+            raise InputError('Corrupted data at line 3 of file "{}" .'.format(fname))
 
         try:
             num_lines = 0
@@ -107,9 +103,7 @@ def read_extxyz(fname):
         if num_lines != natoms:
             raise InputError(
                 'Corrupted data file "{}". Number of atoms is "{}", '
-                'whereas number of data lines is "{}".'.format(
-                    fname, natoms, num_lines
-                )
+                'whereas number of data lines is "{}".'.format(fname, natoms, num_lines)
             )
 
         species = np.asarray(species)
@@ -270,16 +264,12 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
         else:
             value = value[value.index('=') + 1 :]
             value = value.lstrip(' ')
-            value += (
-                ' '
-            )  # add an whitespace at end in case this is the last key
+            value += ' '  # add an whitespace at end in case this is the last key
             value = value[: value.index(' ')]
         value = value.split()
     except Exception as e:
         raise InputError(
-            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(
-                e, key, fname
-            )
+            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(e, key, fname)
         )
 
     if len(value) != size:
@@ -295,9 +285,7 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
             value = [int(i) for i in value]
     except Exception as e:
         raise InputError(
-            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(
-                e, key, fname
-            )
+            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(e, key, fname)
         )
 
     return np.asarray(value)

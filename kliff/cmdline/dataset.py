@@ -23,7 +23,9 @@ class Tree:
         s += '                           KLIFF Dataset Count\n\n'
         s += 'Notation: "──dir_name (a/b)"\n'
         s += 'a: number of .xyz files in the directory "dir_name"\n'
-        s += 'b: number of .xyz files in the directory "dir_name" and its subdirectories\n'
+        s += (
+            'b: number of .xyz files in the directory "dir_name" and its subdirectories\n'
+        )
         s += '\n'
         s += self.string
         s += '\n' + '=' * 80 + '\n'
@@ -40,9 +42,7 @@ class Tree:
                 prefix, directory, self.dirCount, self.dirCount
             )
             self.stack_num_all.append('rpls_num_all_{}'.format(self.dirCount))
-            self.stack_num_current.append(
-                'rpls_num_current_{}'.format(self.dirCount)
-            )
+            self.stack_num_current.append('rpls_num_current_{}'.format(self.dirCount))
             self.dirCount += 1
             self.started = True
 
@@ -68,22 +68,14 @@ class Tree:
                 self.string += '{}{}{} (rpls_num_current_{}/rpls_num_all_{})\n'.format(
                     prefix, connector, path, self.dirCount, self.dirCount
                 )
-                self.stack_num_all.append(
-                    'rpls_num_all_{}'.format(self.dirCount)
-                )
-                self.stack_num_current.append(
-                    'rpls_num_current_{}'.format(self.dirCount)
-                )
+                self.stack_num_all.append('rpls_num_all_{}'.format(self.dirCount))
+                self.stack_num_current.append('rpls_num_current_{}'.format(self.dirCount))
                 self.dirCount += 1
                 sub_current, sub_all = self.walk(absolute, prefix_new)
                 num_all += sub_all
 
-        self.string = self.string.replace(
-            self.stack_num_all.pop(), str(num_all)
-        )
-        self.string = self.string.replace(
-            self.stack_num_current.pop(), str(num_current)
-        )
+        self.string = self.string.replace(self.stack_num_all.pop(), str(num_all))
+        self.string = self.string.replace(self.stack_num_current.pop(), str(num_current))
 
         return num_current, num_all
 

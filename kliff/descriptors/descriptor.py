@@ -152,14 +152,11 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is genereated.',
-                    fname,
+                    'Delete existing fingerprints: %s, new ones is genereated.', fname
                 )
             else:
                 if self.normalize:
-                    logger.info(
-                        'Restore mean and stdev to: %s.', mean_stdev_name
-                    )
+                    logger.info('Restore mean and stdev to: %s.', mean_stdev_name)
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
                 return fname
 
@@ -171,13 +168,9 @@ class Descriptor:
                 self.mean = np.mean(stacked, axis=0)
                 self.stdev = np.std(stacked, axis=0)
             else:
-                self.mean, self.stdev = self.welford_mean_and_stdev(
-                    configs, grad
-                )
+                self.mean, self.stdev = self.welford_mean_and_stdev(configs, grad)
             dump_mean_stdev(self.mean, self.stdev, mean_stdev_name)
-        self.dump_fingerprints(
-            configs, fname, all_zeta, all_dzetadr, grad, nprocs
-        )
+        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
 
         return fname
 
@@ -233,14 +226,11 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is genereated.',
-                    fname,
+                    'Delete existing fingerprints: %s, new ones is genereated.', fname
                 )
             else:
                 if self.normalize and (self.mean is None or self.stdev is None):
-                    logger.info(
-                        'Restore mean and stdev to: %s.', mean_stdev_name
-                    )
+                    logger.info('Restore mean and stdev to: %s.', mean_stdev_name)
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
                 return fname
 
@@ -253,9 +243,7 @@ class Descriptor:
                 'genereate_train_fingerprints().'
             )
         all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
-        self.dump_fingerprints(
-            configs, fname, all_zeta, all_dzetadr, grad, nprocs
-        )
+        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
 
         return fname
 
@@ -293,9 +281,7 @@ class Descriptor:
                 # pickling data
                 name = conf.get_identifier()
                 species = conf.get_species()
-                species = np.asarray(
-                    [atomic_number[i] for i in species], np.intc
-                )
+                species = np.asarray([atomic_number[i] for i in species], np.intc)
                 weight = np.asarray(conf.get_weight(), self.dtype)
                 zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
@@ -320,9 +306,7 @@ class Descriptor:
 
     def calc_zeta_dzetadr(self, configs, grad, nprocs=mp.cpu_count()):
         try:
-            rslt = parallel.parmap1(
-                self.transform, configs, grad, nprocs=nprocs
-            )
+            rslt = parallel.parmap1(self.transform, configs, grad, nprocs=nprocs)
             all_zeta = [pair[0] for pair in rslt]
             all_dzetadr = [pair[1] for pair in rslt]
         except MemoryError as e:

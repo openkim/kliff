@@ -88,9 +88,7 @@ desc_params = {
     ],
 }
 
-desc = Descriptor(
-    desc_params, cutfunc, cutvalue, cutvalue_samelayer=cutvalue, debug=True
-)
+desc = Descriptor(desc_params, cutfunc, cutvalue, cutvalue_samelayer=cutvalue, debug=True)
 num_desc = desc.get_num_descriptors()
 
 
@@ -196,14 +194,10 @@ with tf.Session() as sess:
 
     # output results to a KIM model
     w, b = sess.run([weights, biases])
-    ann.write_kim_ann(
-        desc, w, b, tf.nn.tanh, keep_prob=keep_prob, dtype=tf.float64
-    )
+    ann.write_kim_ann(desc, w, b, tf.nn.tanh, keep_prob=keep_prob, dtype=tf.float64)
 
 
 # write normalized gcc
 tfrecord_name = '/tmp/train.tfrecord'
 text_name = 'gc_normalized.txt'
-ann.tfrecord_to_text(
-    tfrecord_name, text_name, fit_forces=True, dtype=tf.float64
-)
+ann.tfrecord_to_text(tfrecord_name, text_name, fit_forces=True, dtype=tf.float64)

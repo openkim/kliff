@@ -4,10 +4,7 @@ import logging
 from collections import OrderedDict
 import kliff
 from kliff.descriptors.descriptor import Descriptor
-from kliff.descriptors.descriptor import (
-    generate_full_cutoff,
-    generate_species_code,
-)
+from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
 from kliff.neighbor import NeighborList
 from . import sf
 
@@ -129,9 +126,7 @@ class SymmetryFunction(Descriptor):
 
         coords = nei.coords
         image = nei.image
-        species = np.asarray(
-            [self.species_code[i] for i in nei.species], dtype=np.intc
-        )
+        species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
         numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
         Natoms = len(coords)
@@ -140,36 +135,19 @@ class SymmetryFunction(Descriptor):
 
         if grad:
             zeta, dzeta_dr = self._cdesc.get_gen_coords_and_deri(
-                coords,
-                species,
-                neighlist,
-                numneigh,
-                image,
-                Natoms,
-                Ncontrib,
-                Ndesc,
+                coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
             )
             # reshape 3D array to 4D array
             dzeta_dr = dzeta_dr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
         else:
             zeta = self._cdesc.get_gen_coords(
-                coords,
-                species,
-                neighlist,
-                numneigh,
-                image,
-                Natoms,
-                Ncontrib,
-                Ndesc,
+                coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
             )
             dzeta_dr = None
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug(
-                '\n'
-                + '=' * 25
-                + 'descriptor values (no normalization)'
-                + '=' * 25
+                '\n' + '=' * 25 + 'descriptor values (no normalization)' + '=' * 25
             )
             logger.debug('\nconfiguration name: %s', conf.get_identifier())
             logger.debug('\natom id    descriptor values ...')
@@ -211,9 +189,7 @@ class SymmetryFunction(Descriptor):
             elif name == 'set31':
                 self.hyperparams = get_set31()
             else:
-                raise SymmetryFunctionError(
-                    'hyperparams "{}" unrecognized.'.format(name)
-                )
+                raise SymmetryFunctionError('hyperparams "{}" unrecognized.'.format(name))
         if not isinstance(self.hyperparams, OrderedDict):
             self.hyperparams = OrderedDict(self.hyperparams)
 

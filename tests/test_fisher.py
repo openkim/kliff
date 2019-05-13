@@ -40,9 +40,7 @@ def test_fisher(relative_variance=False):
         obj.initialize()
         KIMobjs.append(obj)
 
-    print(
-        'Hello there, started computing Fisher information matrix. It may take a'
-    )
+    print('Hello there, started computing Fisher information matrix. It may take a')
     print('while, so have a cup of coffee.')
     fisher = Fisher(KIMobjs, params)
     Fij, Fij_std = fisher.compute()
@@ -58,9 +56,7 @@ def test_fisher(relative_variance=False):
     # relative variance
     if relative_variance:
         Fij = np.dot(np.dot(np.diag(param_values), Fij), np.diag(param_values))
-        Fij_std = np.dot(
-            np.dot(np.diag(param_values), Fij_std), np.diag(param_values)
-        )
+        Fij_std = np.dot(np.dot(np.diag(param_values), Fij_std), np.diag(param_values))
 
     with open('Fij', 'w') as fout:
         for line in Fij:

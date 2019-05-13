@@ -60,9 +60,7 @@ class Configuration:
             self.stress,
         ) = read_config(path, self.format)
         self.natoms = len(self.species)
-        self.volume = abs(
-            np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2])
-        )
+        self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
 
         if self.do_order:
             self.order_by_species()
@@ -72,8 +70,7 @@ class Configuration:
         if self.forces is not None:
             species, coords, forces = zip(
                 *sorted(
-                    zip(self.species, self.coords, self.forces),
-                    key=lambda pair: pair[0],
+                    zip(self.species, self.coords, self.forces), key=lambda pair: pair[0]
                 )
             )
             self.species = np.asarray(species)
@@ -81,9 +78,7 @@ class Configuration:
             self.forces = np.asarray(forces)
         else:
             species, coords = zip(
-                *sorted(
-                    zip(self.species, self.coords), key=lambda pair: pair[0]
-                )
+                *sorted(zip(self.species, self.coords), key=lambda pair: pair[0])
             )
             self.species = np.asarray(species)
             self.coords = np.asarray(coords)
@@ -269,9 +264,7 @@ class DataSet:
             all_species = set(all_species)
             # find occurence of species in each configuration
             for conf in self.configs:
-                conf.natoms_by_species = conf.count_atoms_by_species(
-                    all_species
-                )
+                conf.natoms_by_species = conf.count_atoms_by_species(all_species)
 
     def get_configs(self):
         """Get the configurations.

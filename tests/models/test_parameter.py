@@ -99,12 +99,8 @@ def test_fitting_parameter():
     for i, nm in enumerate(nms):
         assert fp.get_size(nm) == mp[nm].size
         assert np.allclose(fp.get_value(nm), mp[nm].value)
-        assert np.allclose(
-            fp.get_lower_bound(nm), [v - 0.1 for v in mp[nm].value]
-        )
-        assert np.allclose(
-            fp.get_upper_bound(nm), [v + 0.1 for v in mp[nm].value]
-        )
+        assert np.allclose(fp.get_lower_bound(nm), [v - 0.1 for v in mp[nm].value])
+        assert np.allclose(fp.get_upper_bound(nm), [v + 0.1 for v in mp[nm].value])
         fix = fp.get_fix(nm)
         for x in fix:
             assert not x

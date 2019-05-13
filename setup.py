@@ -25,9 +25,7 @@ class get_pybind11_includes:
         try:
             import pybind11
         except ImportError:
-            if subprocess.call(
-                [sys.executable, '-m', 'pip', 'install', 'pybind11']
-            ):
+            if subprocess.call([sys.executable, '-m', 'pip', 'install', 'pybind11']):
                 raise RuntimeError('pybind11 install failed.')
         self.user = user
 

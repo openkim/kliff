@@ -120,14 +120,11 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
 
         else:
             raise Exception(
-                'Input need to be 2D or 3D tensor, but got a '
-                '{}D tensor.'.format(dim)
+                'Input need to be 2D or 3D tensor, but got a ' '{}D tensor.'.format(dim)
             )
         x = torch.reshape(input, shape_4D)
         x = torch.transpose(x, 1, 2)
-        y = torch.nn.functional.dropout2d(
-            x, self.p, self.training, self.inplace
-        )
+        y = torch.nn.functional.dropout2d(x, self.p, self.training, self.inplace)
         y = torch.transpose(y, 1, 2)
         y = torch.reshape(y, shape)
         return y
@@ -248,8 +245,7 @@ class NeuralNetwork(nn.Module):
         """
         if self.layers is not None:
             raise NeuralNetworkError(
-                '"add_layers" called multiple times. '
-                'It should be called only once.'
+                '"add_layers" called multiple times. ' 'It should be called only once.'
             )
         else:
             self.layers = []
@@ -263,8 +259,7 @@ class NeuralNetwork(nn.Module):
         first = self.layers[0]
         if first.in_features != len(self.descriptor):
             raise InputError(
-                '"in_features" of first layer should be equal to '
-                'descriptor size.'
+                '"in_features" of first layer should be equal to ' 'descriptor size.'
             )
         last = self.layers[-1]
         if last.out_features != 1:
@@ -342,13 +337,9 @@ class NeuralNetwork(nn.Module):
         param_layer = ['Linear']
         activ_layer = ['Sigmoid', 'Tanh', 'ReLU', 'ELU']
         dropout_layer = ['Dropout']
-        layer_groups = self._group_layers(
-            param_layer, activ_layer, dropout_layer
-        )
+        layer_groups = self._group_layers(param_layer, activ_layer, dropout_layer)
 
-        weights, biases = self._get_weights_and_biases(
-            layer_groups, param_layer
-        )
+        weights, biases = self._get_weights_and_biases(layer_groups, param_layer)
         activations = self._get_activations(layer_groups, activ_layer)
         drop_ratios = self._get_drop_ratios(layer_groups, dropout_layer)
 
@@ -356,9 +347,7 @@ class NeuralNetwork(nn.Module):
         dtype = self.dtype
 
         if path is None:
-            path = os.path.join(
-                os.getcwd(), 'NeuralNetwork__MO_000000111111_000'
-            )
+            path = os.path.join(os.getcwd(), 'NeuralNetwork__MO_000000111111_000')
         if path and not os.path.exists(path):
             os.makedirs(path)
 
@@ -394,9 +383,7 @@ class NeuralNetwork(nn.Module):
 
             desc = descriptor.get_hyperparams()
             num_desc = len(desc)
-            fout.write(
-                '{}    #number of symmetry funtion types\n\n'.format(num_desc)
-            )
+            fout.write('{}    #number of symmetry funtion types\n\n'.format(num_desc))
 
             # descriptor values
             fout.write('# sym_function    rows    cols\n')
@@ -410,13 +397,9 @@ class NeuralNetwork(nn.Module):
                     if name == 'g2':
                         for val in values:
                             if dtype == torch.float64:
-                                fout.write(
-                                    '{:.15g} {:.15g}'.format(val[0], val[1])
-                                )
+                                fout.write('{:.15g} {:.15g}'.format(val[0], val[1]))
                             else:
-                                fout.write(
-                                    '{:.7g} {:.7g}'.format(val[0], val[1])
-                                )
+                                fout.write('{:.7g} {:.7g}'.format(val[0], val[1]))
                             fout.write('    # eta  Rs\n')
                         fout.write('\n')
                     elif name == 'g3':
@@ -434,16 +417,10 @@ class NeuralNetwork(nn.Module):
                             eta = val[2]
                             if dtype == torch.float64:
                                 fout.write(
-                                    '{:.15g} {:.15g} {:.15g}'.format(
-                                        zeta, lam, eta
-                                    )
+                                    '{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta)
                                 )
                             else:
-                                fout.write(
-                                    '{:.7g} {:.7g} {:.7g}'.format(
-                                        zeta, lam, eta
-                                    )
-                                )
+                                fout.write('{:.7g} {:.7g} {:.7g}'.format(zeta, lam, eta))
                             fout.write('    # zeta  lambda  eta\n')
                         fout.write('\n')
                     elif name == 'g5':
@@ -453,16 +430,10 @@ class NeuralNetwork(nn.Module):
                             eta = val[2]
                             if dtype == torch.float64:
                                 fout.write(
-                                    '{:.15g} {:.15g} {:.15g}'.format(
-                                        zeta, lam, eta
-                                    )
+                                    '{:.15g} {:.15g} {:.15g}'.format(zeta, lam, eta)
                                 )
                             else:
-                                fout.write(
-                                    '{:.7g} {:.7g} {:.7g}'.format(
-                                        zeta, lam, eta
-                                    )
-                                )
+                                fout.write('{:.7g} {:.7g} {:.7g}'.format(zeta, lam, eta))
                             fout.write('    # zeta  lambda  eta\n')
                         fout.write('\n')
 
@@ -546,9 +517,7 @@ class NeuralNetwork(nn.Module):
                     )
                 else:
                     fout.write(
-                        '# weight of output layer (shape({}, {}))\n'.format(
-                            rows, cols
-                        )
+                        '# weight of output layer (shape({}, {}))\n'.format(rows, cols)
                     )
                 for line in w:
                     for item in line:
@@ -567,9 +536,7 @@ class NeuralNetwork(nn.Module):
                     )
                 else:
                     fout.write(
-                        '# bias of output layer (shape({}, {}))\n'.format(
-                            rows, cols
-                        )
+                        '# bias of output layer (shape({}, {}))\n'.format(rows, cols)
                     )
                 for item in b:
                     if dtype == torch.float64:
@@ -741,9 +708,7 @@ class PytorchANNCalculator(object):
 
         """
         if use_stress:
-            raise NotImplementedError(
-                '"stress" is not supported by NN calculator.'
-            )
+            raise NotImplementedError('"stress" is not supported by NN calculator.')
 
         self.configs = configs
         self.use_energy = use_energy
@@ -785,9 +750,7 @@ class PytorchANNCalculator(object):
     @staticmethod
     def compute_forces(energy, zeta, dzeta_dr):
         denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-        forces = -torch.tensordot(
-            denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1])
-        )
+        forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
         return forces
 
 

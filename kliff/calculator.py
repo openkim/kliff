@@ -24,9 +24,7 @@ class Calculator:
     def __init__(self, model):
         self.model = model
 
-    def create(
-        self, configs, use_energy=True, use_forces=True, use_stress=False
-    ):
+    def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
         """Create compute arguments for a collection of configurations.
 
         By compute argugments, we mean the information needed by a model to carry on
@@ -64,17 +62,11 @@ class Calculator:
             configs = [configs]
 
         if not length_equal(configs, use_energy):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_energy" not equal.'
-            )
+            raise InputError('Lenghs of arguments "configs" and "use_energy" not equal.')
         if not length_equal(configs, use_forces):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_forces" not equal.'
-            )
+            raise InputError('Lenghs of arguments "configs" and "use_forces" not equal.')
         if not length_equal(configs, use_stress):
-            raise InputError(
-                'Lenghs of arguments "configs" and "use_stress" not equal.'
-            )
+            raise InputError('Lenghs of arguments "configs" and "use_stress" not equal.')
 
         N = len(configs)
         if not isinstance(use_energy, Iterable):

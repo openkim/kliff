@@ -3,10 +3,7 @@ import logging
 import numpy as np
 import kliff
 from kliff.descriptors.descriptor import Descriptor
-from kliff.descriptors.descriptor import (
-    generate_full_cutoff,
-    generate_species_code,
-)
+from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
 from kliff.neighbor import NeighborList
 from . import bs
 
@@ -58,12 +55,7 @@ class Bispectrum(Descriptor):
     """
 
     def __init__(
-        self,
-        cut_dists,
-        cut_name=None,
-        hyperparams=None,
-        normalize=True,
-        dtype=np.float32,
+        self, cut_dists, cut_name=None, hyperparams=None, normalize=True, dtype=np.float32
     ):
         super(Bispectrum, self).__init__(
             cut_dists, cut_name, hyperparams, normalize, dtype
@@ -100,9 +92,7 @@ class Bispectrum(Descriptor):
 
         coords = nei.coords
         image = nei.image
-        species = np.asarray(
-            [self.species_code[i] for i in nei.species], dtype=np.intc
-        )
+        species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
         numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
         Natoms = len(coords)
@@ -111,36 +101,19 @@ class Bispectrum(Descriptor):
 
         if grad:
             zeta, dzeta_dr = self._cdesc.compute_zeta_and_dzeta_dr(
-                coords,
-                species,
-                neighlist,
-                numneigh,
-                image,
-                Natoms,
-                Ncontrib,
-                Ndesc,
+                coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
             )
             # reshape to 4D array
             dzeta_dr = dzeta_dr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
         else:
             zeta = self._cdesc.compute_zeta(
-                coords,
-                species,
-                neighlist,
-                numneigh,
-                image,
-                Natoms,
-                Ncontrib,
-                Ndesc,
+                coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
             )
             dzeta_dr = None
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug(
-                '\n'
-                + '=' * 25
-                + 'descriptor values (no normalization)'
-                + '=' * 25
+                '\n' + '=' * 25 + 'descriptor values (no normalization)' + '=' * 25
             )
             logger.debug('\nconfiguration name: %s', conf.get_identifier())
             logger.debug('\natom id    descriptor values ...')

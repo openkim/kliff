@@ -1,5 +1,4 @@
-"""Format all .py and CPP source files using `black` and `clang-format`
-respectively.
+"""Format all .py and CPP source files using `black` and `clang-format` respectively.
 
 This assumes both `black` (https://github.com/python/black) and `clang-format`
 (https://clang.llvm.org/docs/ClangFormat.html) are installed.
@@ -30,14 +29,7 @@ def format_py_code(path):
         '"black"...'.format(path)
     )
     subprocess.call(
-        [
-            'black',
-            '--quiet',
-            '--line-length',
-            '80',
-            '--skip-string-normalization',
-            path,
-        ]
+        ['black', '--quiet', '--line-length', '90', '--skip-string-normalization', path]
     )
     print('Formatting .py files done.')
 

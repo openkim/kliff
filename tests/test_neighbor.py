@@ -63,9 +63,7 @@ def test_neigh():
         assert nei_coords.size == 0
         assert nei_species.size == 0
 
-    numneigh, neighlist = neigh.get_numneigh_and_neighlist_1D(
-        request_padding=False
-    )
+    numneigh, neighlist = neigh.get_numneigh_and_neighlist_1D(request_padding=False)
     np.array_equal(numneigh, all_numneigh)
     np.array_equal(neighlist, np.concatenate(all_indices))
 

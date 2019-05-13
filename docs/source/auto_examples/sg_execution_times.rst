@@ -5,7 +5,7 @@
 
 Computation times
 =================
-**05:54.023** total execution time for **auto_examples** files:
+**06:24.433** total execution time for **auto_examples** files:
 
-- **05:54.023**: :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)
-- **00:00.000**: :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)
+- **05:58.846**: :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)
+- **00:25.587**: :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)
