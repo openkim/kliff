@@ -5,6 +5,7 @@ from dataset import DataSet
 from __future__ import print_function
 import numpy as np
 import sys
+
 sys.path.append('../openkim_fit')
 
 
@@ -18,17 +19,17 @@ def test_fisher(relative_variance=False):
     params = ModelParams(modelname)
     params.echo_avail_params()
     fname = 'input/fitted_params_T150.txt'
-    #fname = '/media/sf_share/mos2_fitted-T{}_interval4'.format(T)
+    # fname = '/media/sf_share/mos2_fitted-T{}_interval4'.format(T)
     params.read(fname)
     params.echo_params()
 
     # read config and reference data
     tset = DataSet()
     fname = 'training_set/training_set_multi_small'
-    #fname = 'training_set/training_set_multi_large'
-    #fname = '/media/sf_share/xyz_interval4/'
-    #fname = '/media/sf_share/training_set_T{}_interval4'.format(T)
-    #fname = '/media/sf_share/T150_training_1000.xyz'
+    # fname = 'training_set/training_set_multi_large'
+    # fname = '/media/sf_share/xyz_interval4/'
+    # fname = '/media/sf_share/training_set_T{}_interval4'.format(T)
+    # fname = '/media/sf_share/T150_training_1000.xyz'
     tset.read(fname)
     configs = tset.get_configs()
 
@@ -39,7 +40,9 @@ def test_fisher(relative_variance=False):
         obj.initialize()
         KIMobjs.append(obj)
 
-    print('Hello there, started computing Fisher information matrix. It may take a')
+    print(
+        'Hello there, started computing Fisher information matrix. It may take a'
+    )
     print('while, so have a cup of coffee.')
     fisher = Fisher(KIMobjs, params)
     Fij, Fij_std = fisher.compute()
@@ -47,7 +50,7 @@ def test_fisher(relative_variance=False):
     # take a look at the SW potential paper
     kB = 8.61733034e-5
     gamma = 0.02
-    Fij = Fij/(2.*kB*T*gamma)
+    Fij = Fij / (2.0 * kB * T * gamma)
 
     # relative variance of Fij
     param_values = params.get_x0()
@@ -55,8 +58,9 @@ def test_fisher(relative_variance=False):
     # relative variance
     if relative_variance:
         Fij = np.dot(np.dot(np.diag(param_values), Fij), np.diag(param_values))
-        Fij_std = np.dot(np.dot(np.diag(param_values),
-                                Fij_std), np.diag(param_values))
+        Fij_std = np.dot(
+            np.dot(np.diag(param_values), Fij_std), np.diag(param_values)
+        )
 
     with open('Fij', 'w') as fout:
         for line in Fij:

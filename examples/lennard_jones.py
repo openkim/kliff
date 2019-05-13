@@ -24,8 +24,9 @@ calc.create(configs)
 
 # loss
 with Loss(calc, nprocs=1) as loss:
-    result = loss.minimize(method='L-BFGS-B',
-                           options={'disp': True, 'maxiter': 10})
+    result = loss.minimize(
+        method='L-BFGS-B', options={'disp': True, 'maxiter': 10}
+    )
 
 
 # print optimized parameters

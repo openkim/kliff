@@ -53,8 +53,9 @@ class Descriptor:
         Standard deviation of the fingerprints.
     """
 
-    def __init__(self, cut_dists, cut_name, hyperparams, normalize=True,
-                 dtype=np.float32):
+    def __init__(
+        self, cut_dists, cut_name, hyperparams, normalize=True, dtype=np.float32
+    ):
 
         self.cut_dists = cut_dists
         self.cut_name = cut_name
@@ -66,55 +67,60 @@ class Descriptor:
         self.mean = None
         self.stdev = None
 
+    #    def set_cutoff(self, name, values):
+    #        """Set the cutoff used in the descriptor.
+    #
+    #        Parameters
+    #        ----------
+    #        name: str
+    #            Name of the cutoff, such as ``cos``, ``P3``, ``P7``.
+    #
+    #        values: dict
+    #            Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
+    #            are atomic species, and value should be a float.
+    #
+    #        Example
+    #        -------
+    #        >>> desc = Descriptor()
+    #        >>> name = 'cos'
+    #        >>> values = {'C-C':4.5,'H-H':3.0,'C-H':4.0}
+    #        >>> desc.set_cutoff(name, values)
+    #        """
+    #
+    #        self.cutname = name
+    #        self.cutoff = generate_full_cutoff(values)
+    #        self.species_code = dict()
+    #
+    #        species = get_species_from_cutoff(values)
+    #        num_species = len(species)
+    #
+    #        rcutsym = np.zeros([num_species, num_species], dtype=np.double)
+    #        try:
+    #            for i, si in enumerate(species):
+    #                self.species_code[si] = i
+    #                for j, sj in enumerate(species):
+    #                    rcutsym[i][j] = self.cutoff[si+'-'+sj]
+    #        except KeyError as e:
+    #            raise InputError('Cutoff for "{}" not provided.'.format(e))
+    #
+    #    def set_hyperparams(self, hyperparams):
+    #        """Set the hyperparameters that the descriptor needs.
+    #
+    #        Parameters
+    #        ----------
+    #        hyperparams: dict
+    #            Hyperparameters of the descriptor.
+    #        """
+    #        self.hyperparams = hyperparams
 
-#    def set_cutoff(self, name, values):
-#        """Set the cutoff used in the descriptor.
-#
-#        Parameters
-#        ----------
-#        name: str
-#            Name of the cutoff, such as ``cos``, ``P3``, ``P7``.
-#
-#        values: dict
-#            Values for the cutoff, with key of the form ``A-B`` where ``A`` and ``B``
-#            are atomic species, and value should be a float.
-#
-#        Example
-#        -------
-#        >>> desc = Descriptor()
-#        >>> name = 'cos'
-#        >>> values = {'C-C':4.5,'H-H':3.0,'C-H':4.0}
-#        >>> desc.set_cutoff(name, values)
-#        """
-#
-#        self.cutname = name
-#        self.cutoff = generate_full_cutoff(values)
-#        self.species_code = dict()
-#
-#        species = get_species_from_cutoff(values)
-#        num_species = len(species)
-#
-#        rcutsym = np.zeros([num_species, num_species], dtype=np.double)
-#        try:
-#            for i, si in enumerate(species):
-#                self.species_code[si] = i
-#                for j, sj in enumerate(species):
-#                    rcutsym[i][j] = self.cutoff[si+'-'+sj]
-#        except KeyError as e:
-#            raise InputError('Cutoff for "{}" not provided.'.format(e))
-#
-#    def set_hyperparams(self, hyperparams):
-#        """Set the hyperparameters that the descriptor needs.
-#
-#        Parameters
-#        ----------
-#        hyperparams: dict
-#            Hyperparameters of the descriptor.
-#        """
-#        self.hyperparams = hyperparams
-
-    def generate_train_fingerprints(self, configs, grad=False, reuse=False,
-                                    prefix='fingerprints', nprocs=mp.cpu_count()):
+    def generate_train_fingerprints(
+        self,
+        configs,
+        grad=False,
+        reuse=False,
+        prefix='fingerprints',
+        nprocs=mp.cpu_count(),
+    ):
         """Convert training set to fingerprints.
 
         Parameters
@@ -146,11 +152,14 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is genereated.', fname)
+                    'Delete existing fingerprints: %s, new ones is genereated.',
+                    fname,
+                )
             else:
                 if self.normalize:
-                    logger.info('Restore mean and stdev to: %s.',
-                                mean_stdev_name)
+                    logger.info(
+                        'Restore mean and stdev to: %s.', mean_stdev_name
+                    )
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
                 return fname
 
@@ -163,16 +172,24 @@ class Descriptor:
                 self.stdev = np.std(stacked, axis=0)
             else:
                 self.mean, self.stdev = self.welford_mean_and_stdev(
-                    configs, grad)
+                    configs, grad
+                )
             dump_mean_stdev(self.mean, self.stdev, mean_stdev_name)
-        self.dump_fingerprints(configs, fname, all_zeta,
-                               all_dzetadr, grad, nprocs)
+        self.dump_fingerprints(
+            configs, fname, all_zeta, all_dzetadr, grad, nprocs
+        )
 
         return fname
 
-    def generate_test_fingerprints(self, configs, grad=False, reuse=False,
-                                   prefix='fingerprints', train_prefix=None,
-                                   nprocs=mp.cpu_count()):
+    def generate_test_fingerprints(
+        self,
+        configs,
+        grad=False,
+        reuse=False,
+        prefix='fingerprints',
+        train_prefix=None,
+        nprocs=mp.cpu_count(),
+    ):
         """Convert test set to fingerprints.
 
         Parameters
@@ -216,11 +233,14 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is genereated.', fname)
+                    'Delete existing fingerprints: %s, new ones is genereated.',
+                    fname,
+                )
             else:
                 if self.normalize and (self.mean is None or self.stdev is None):
-                    logger.info('Restore mean and stdev to: %s.',
-                                mean_stdev_name)
+                    logger.info(
+                        'Restore mean and stdev to: %s.', mean_stdev_name
+                    )
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
                 return fname
 
@@ -230,15 +250,18 @@ class Descriptor:
                 'Cannot proceed to genereate fingerprints for test set without '
                 'that for training set generated when normalization is required. '
                 'Try generating training set fingerprints first by calling: '
-                'genereate_train_fingerprints().')
+                'genereate_train_fingerprints().'
+            )
         all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
-        self.dump_fingerprints(configs, fname, all_zeta,
-                               all_dzetadr, grad, nprocs)
+        self.dump_fingerprints(
+            configs, fname, all_zeta, all_dzetadr, grad, nprocs
+        )
 
         return fname
 
-    def dump_fingerprints(self, configs, fname, all_zeta, all_dzetadr, grad,
-                          nprocs=mp.cpu_count()):
+    def dump_fingerprints(
+        self, configs, fname, all_zeta, all_dzetadr, grad, nprocs=mp.cpu_count()
+    ):
 
         logger.info('Pickle fingerprint images to: %s.', fname)
 
@@ -270,8 +293,9 @@ class Descriptor:
                 # pickling data
                 name = conf.get_identifier()
                 species = conf.get_species()
-                species = np.asarray([atomic_number[i]
-                                      for i in species], np.intc)
+                species = np.asarray(
+                    [atomic_number[i] for i in species], np.intc
+                )
                 weight = np.asarray(conf.get_weight(), self.dtype)
                 zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
@@ -280,11 +304,13 @@ class Descriptor:
                     forces = np.asarray(conf.get_forces(), self.dtype)
 
                 # TODO maybe change num atoms by species to species list or even conf
-                example = {'name': name,
-                           'species': species,
-                           'weight': weight,
-                           'zeta': zeta,
-                           'energy': energy}
+                example = {
+                    'name': name,
+                    'species': species,
+                    'weight': weight,
+                    'zeta': zeta,
+                    'energy': energy,
+                }
                 if grad:
                     example['dzeta_dr'] = dzetadr
                     example['forces'] = forces
@@ -295,12 +321,16 @@ class Descriptor:
     def calc_zeta_dzetadr(self, configs, grad, nprocs=mp.cpu_count()):
         try:
             rslt = parallel.parmap1(
-                self.transform, configs, grad, nprocs=nprocs)
+                self.transform, configs, grad, nprocs=nprocs
+            )
             all_zeta = [pair[0] for pair in rslt]
             all_dzetadr = [pair[1] for pair in rslt]
         except MemoryError as e:
-            logger.info('%s. Occurs in calculating fingerprints using parallel. '
-                        'Will fallback to use a serial version.', str(e))
+            logger.info(
+                '%s. Occurs in calculating fingerprints using parallel. '
+                'Will fallback to use a serial version.',
+                str(e),
+            )
             all_zeta = [None for _ in len(configs)]
             all_dzetadr = [None for _ in len(configs)]
         return all_zeta, all_dzetadr
@@ -329,12 +359,12 @@ class Descriptor:
             for row in zeta:
                 n += 1
                 delta = row - mean
-                mean += delta/n
+                mean += delta / n
                 delta2 = row - mean
-                M2 += delta*delta2
+                M2 += delta * delta2
             if i % 100 == 0:
                 sys.stdout.flush()
-        stdev = np.sqrt(M2/(n-1))
+        stdev = np.sqrt(M2 / (n - 1))
 
         return mean, stdev
 
@@ -365,8 +395,10 @@ class Descriptor:
             DIM = 3 denotes three Cartesian coordinates.
         """
 
-        raise NotImplementedError('Method "transform" not implemented; it has to '
-                                  'be needes to be added by any subclass.')
+        raise NotImplementedError(
+            'Method "transform" not implemented; it has to '
+            'be needes to be added by any subclass.'
+        )
 
     def get_size(self):
         """Retrun the size of the descritpor vector."""
@@ -463,7 +495,7 @@ def generate_full_cutoff(cutoff):
     for key, val in cutoff.items():
         s1, s2 = key.split('-')
         if s1 != s2:
-            rcut2[s2+'-'+s1] = val
+            rcut2[s2 + '-' + s1] = val
     # merge
     rcut2.update(cutoff)
 

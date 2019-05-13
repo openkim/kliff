@@ -74,10 +74,8 @@ model.echo_model_params()
 
 
 model.set_fitting_params(
-    A=[[5.0, 1., 20]],
-    B=[['default']],
-    sigma=[[2.0951, 'fix']],
-    gamma=[[1.5]])
+    A=[[5.0, 1.0, 20]], B=[['default']], sigma=[[2.0951, 'fix']], gamma=[[1.5]]
+)
 
 model.echo_fitting_params()
 

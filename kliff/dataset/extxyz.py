@@ -40,7 +40,8 @@ def read_extxyz(fname):
             natoms = int(lines[0].split()[0])
         except ValueError as e:
             raise InputError(
-                '{}.\nCorrupted data at line 1 of file "{}".'.format(e, fname))
+                '{}.\nCorrupted data at line 1 of file "{}".'.format(e, fname)
+            )
 
         # lattice vector, PBC, energy, and stress
         line = lines[1].replace("'", '"')
@@ -50,7 +51,9 @@ def read_extxyz(fname):
         # energy is optional
         try:
             in_quotes = check_in_quotes(line, 'Energy', fname)
-            energy = parse_key_value(line, 'Energy', 'float', 1, fname, in_quotes)[0]
+            energy = parse_key_value(
+                line, 'Energy', 'float', 1, fname, in_quotes
+            )[0]
         except KeyNotFoundError:
             energy = None
         # stress is optional
@@ -70,7 +73,9 @@ def read_extxyz(fname):
         elif len(line) == 7:
             has_forces = True
         else:
-            raise InputError('Corrupted data at line 3 of file "{}" .'.format(fname))
+            raise InputError(
+                'Corrupted data at line 3 of file "{}" .'.format(fname)
+            )
 
         try:
             num_lines = 0
@@ -78,8 +83,11 @@ def read_extxyz(fname):
                 num_lines += 1
                 line = line.strip().split()
                 if len(line) != 4 and len(line) != 7:
-                    raise InputError('Corrupted data at line {} of file "{}".'
-                                     .format(num_lines+3, fname))
+                    raise InputError(
+                        'Corrupted data at line {} of file "{}".'.format(
+                            num_lines + 3, fname
+                        )
+                    )
                 if has_forces:
                     symbol, x, y, z, fx, fy, fz = line
                     species.append(symbol.lower().capitalize())
@@ -90,13 +98,19 @@ def read_extxyz(fname):
                     species.append(symbol.lower().capitalize())
                     coords.append([float(x), float(y), float(z)])
         except ValueError as e:
-            raise InputError('{}.\nCorrupted data at line {} of file "{}".'
-                             .format(e, num_lines+3, fname))
+            raise InputError(
+                '{}.\nCorrupted data at line {} of file "{}".'.format(
+                    e, num_lines + 3, fname
+                )
+            )
 
         if num_lines != natoms:
-            raise InputError('Corrupted data file "{}". Number of atoms is "{}", '
-                             'whereas number of data lines is "{}".'
-                             .format(fname, natoms, num_lines))
+            raise InputError(
+                'Corrupted data file "{}". Number of atoms is "{}", '
+                'whereas number of data lines is "{}".'.format(
+                    fname, natoms, num_lines
+                )
+            )
 
         species = np.asarray(species)
         coords = np.asarray(coords)
@@ -107,8 +121,9 @@ def read_extxyz(fname):
         return cell, PBC, species, coords, energy, forces, stress
 
 
-def write_extxyz(fname, cell, PBC, species, coords, energy=None, forces=None,
-                 stress=None):
+def write_extxyz(
+    fname, cell, PBC, species, coords, energy=None, forces=None, stress=None
+):
     """
     Write configuration info to a file in extended xyz format.
 
@@ -178,11 +193,17 @@ def write_extxyz(fname, cell, PBC, species, coords, energy=None, forces=None,
         # body
         for i in range(natoms):
             fout.write('{:2s} '.format(species[i]))
-            fout.write('{:23.15e} {:23.15e} {:23.15e} '.format(
-                coords[i][0], coords[i][1], coords[i][2]))
+            fout.write(
+                '{:23.15e} {:23.15e} {:23.15e} '.format(
+                    coords[i][0], coords[i][1], coords[i][2]
+                )
+            )
             if forces is not None:
-                fout.write('{:23.15e} {:23.15e} {:23.15e}'.format(
-                    forces[i][0], forces[i][1], forces[i][2]))
+                fout.write(
+                    '{:23.15e} {:23.15e} {:23.15e}'.format(
+                        forces[i][0], forces[i][1], forces[i][2]
+                    )
+                )
             fout.write('\n')
 
 
@@ -192,7 +213,8 @@ def check_key(line, key, fname):
         key_lower = key.lower()
         if key_lower not in line:
             raise KeyNotFoundError(
-                '"{}" not found at line 2 of file "{}".'.format(key, fname))
+                '"{}" not found at line 2 of file "{}".'.format(key, fname)
+            )
         else:
             key = key_lower
     return key
@@ -201,8 +223,8 @@ def check_key(line, key, fname):
 def check_in_quotes(line, key, fname):
     """Check wheter ``key=value`` or ``key="value"`` in line."""
     key = check_key(line, key, fname)
-    value = line[line.index(key):]
-    value = value[value.index('=')+1:]
+    value = line[line.index(key) :]
+    value = value[value.index('=') + 1 :]
     value = value.lstrip(' ')
     if value[0] == '"':
         return True
@@ -241,31 +263,41 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
     line = line.strip()
     key = check_key(line, key, fname)
     try:
-        value = line[line.index(key):]
+        value = line[line.index(key) :]
         if in_quotes:
-            value = value[value.index('"')+1:]
-            value = value[:value.index('"')]
+            value = value[value.index('"') + 1 :]
+            value = value[: value.index('"')]
         else:
-            value = value[value.index('=')+1:]
+            value = value[value.index('=') + 1 :]
             value = value.lstrip(' ')
-            value += ' '  # add an whitespace at end in case this is the last key
-            value = value[:value.index(' ')]
+            value += (
+                ' '
+            )  # add an whitespace at end in case this is the last key
+            value = value[: value.index(' ')]
         value = value.split()
     except Exception as e:
-        raise InputError('{}.\nCorrupted "{}" data at line 2 of file "{}".'
-                         .format(e, key, fname))
+        raise InputError(
+            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(
+                e, key, fname
+            )
+        )
 
     if len(value) != size:
-        raise InputError('Incorrect size of "{}" at line 2 of file "{}";\n'
-                         'required: {}, provided: {}. Possibly, the quotes do not '
-                         'match.'.format(key, fname, size, len(value)))
+        raise InputError(
+            'Incorrect size of "{}" at line 2 of file "{}";\n'
+            'required: {}, provided: {}. Possibly, the quotes do not '
+            'match.'.format(key, fname, size, len(value))
+        )
     try:
         if dtype == 'float':
             value = [float(i) for i in value]
         elif dtype == 'int':
             value = [int(i) for i in value]
     except Exception as e:
-        raise InputError('{}.\nCorrupted "{}" data at line 2 of file "{}".'
-                         .format(e, key, fname))
+        raise InputError(
+            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(
+                e, key, fname
+            )
+        )
 
     return np.asarray(value)

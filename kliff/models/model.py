@@ -11,11 +11,18 @@ logger = kliff.logger.get_logger(__name__)
 
 class ComputeArguments:
     """Implementation of code to compute energy, forces, and stress."""
+
     implemented_property = []
 
-    def __init__(self, conf, supported_species, influence_distance,
-                 compute_energy=True, compute_forces=True,
-                 compute_stress=False):
+    def __init__(
+        self,
+        conf,
+        supported_species,
+        influence_distance,
+        compute_energy=True,
+        compute_forces=True,
+        compute_stress=False,
+    ):
         self.conf = conf
         self.supported_species = supported_species
         self.influence_distance = influence_distance
@@ -37,7 +44,8 @@ class ComputeArguments:
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
                 raise ParameterError(
-                    '"influence_distance" not provided by calculator."')
+                    '"influence_distance" not provided by calculator."'
+                )
         self.influence_distance = infl_dist
 
         # NOTE to be filled
@@ -48,8 +56,10 @@ class ComputeArguments:
         def add_to_compute_property(compute_property, name):
             if name not in self.implemented_property:
                 raise NotImplementedError(
-                    '"{}" not implemented in calculator.'.format(name))
+                    '"{}" not implemented in calculator.'.format(name)
+                )
             compute_property.append(name)
+
         compute_property = []
         if self.compute_energy:
             add_to_compute_property(compute_property, 'energy')
@@ -80,7 +90,8 @@ class ComputeArguments:
         """
         # NOTE to be filled
         raise NotImplementedError(
-            '"compute" method of "ComputeArguments" not defined.')
+            '"compute" method of "ComputeArguments" not defined.'
+        )
 
     def get_compute_flag(self, name):
         if name in self.compute_property:
@@ -91,7 +102,8 @@ class ComputeArguments:
     def get_property(self, name):
         if name not in self.compute_property:
             raise ModelError(
-                'Calculator not initialized to comptue "{}".'.format(name))
+                'Calculator not initialized to comptue "{}".'.format(name)
+            )
         result = self.results[name]
         if isinstance(result, np.ndarray):
             result = result.copy()
@@ -206,7 +218,8 @@ class Model:
     def write_kim_model(self, path=None):
         # NOTE fill this
         raise SupportError(
-            'This model does not support writing to a KIM model.')
+            'This model does not support writing to a KIM model.'
+        )
 
     def set_params_relation_callback(self, params_relation_callback):
         """Register a function to set the relation between parameters."""
@@ -230,7 +243,8 @@ class Model:
             return self.params[name].get_value()
         else:
             raise ModelError(
-                '"{}" is not a parameter of calculator.'.format(name))
+                '"{}" is not a parameter of calculator.'.format(name)
+            )
 
     def set_model_params(self, name, value, check_shape=True):
         """ Update the parameter values.
@@ -250,23 +264,24 @@ class Model:
             self.params[name].set_value(value, check_shape)
         else:
             raise ModelError(
-                '"{}" is not a parameter of the model.'.format(name))
+                '"{}" is not a parameter of the model.'.format(name)
+            )
 
-#    def save_model_params(self, path):
-#        params = dict()
-#        for i, j in self.params.items():
-#            v = j.value
-#            if isinstance(v, np.ndarray):
-#                v = v.tolist()
-#            params[i] = v
-#        with open(path, 'w') as fout:
-#            yaml.dump(params, fout, default_flow_style=False)
-#
-#    def load_model_params(self, path):
-#        with open(path, 'r') as fin:
-#            params = yaml.safe_load(fin)
-#        for key, value in params.items():
-#            self.set_model_params(key, value, check_shape=False)
+    #    def save_model_params(self, path):
+    #        params = dict()
+    #        for i, j in self.params.items():
+    #            v = j.value
+    #            if isinstance(v, np.ndarray):
+    #                v = v.tolist()
+    #            params[i] = v
+    #        with open(path, 'w') as fout:
+    #            yaml.dump(params, fout, default_flow_style=False)
+    #
+    #    def load_model_params(self, path):
+    #        with open(path, 'r') as fin:
+    #            params = yaml.safe_load(fin)
+    #        for key, value in params.items():
+    #            self.set_model_params(key, value, check_shape=False)
 
     def echo_model_params(self, path=None):
         """Print the optimizable parameters.
@@ -283,7 +298,7 @@ class Model:
             fout = sys.stdout
 
         print(file=fout)
-        print('#'+'='*80, file=fout)
+        print('#' + '=' * 80, file=fout)
         print('# Available parameters to optimize.')
         print(file=fout)
         if self.model_name is None:
@@ -291,7 +306,7 @@ class Model:
         else:
             name = self.model_name
         print('# Model:', name, file=fout)
-        print('#'+'='*80, file=fout)
+        print('#' + '=' * 80, file=fout)
         print(file=fout)
         for name, p in self.params.items():
             print('name:', name, file=fout)
@@ -316,11 +331,11 @@ class Model:
     def set_one_fitting_param(self, name, settings):
         self.fitting_params.set_one(name, settings)
 
-#    def save_fitting_params(self, path):
-#        self.fitting_params.save(path)
-#
-#    def load_fitting_params(self, path):
-#        self.fitting_params.load(path)
+    #    def save_fitting_params(self, path):
+    #        self.fitting_params.save(path)
+    #
+    #    def load_fitting_params(self, path):
+    #        self.fitting_params.load(path)
 
     def echo_fitting_params(self, path=None):
         self.fitting_params.echo_params(path)

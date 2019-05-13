@@ -43,8 +43,12 @@ from kliff.loss import Loss
 # Here, we use the symmetry functions proposed by by Behler and coworkers.
 
 
-descriptor = SymmetryFunction(cut_name='cos', cut_dists={'Si-Si': 5.0},
-                              hyperparams='set31', normalize=True)
+descriptor = SymmetryFunction(
+    cut_name='cos',
+    cut_dists={'Si-Si': 5.0},
+    hyperparams='set31',
+    normalize=True,
+)
 
 ###############################################################################
 # The ``cut_name`` and ``cut_dists`` tells the descriptor what type of cutoff
@@ -68,7 +72,8 @@ model.add_layers(
     nn.Linear(N1, N2),
     nn.Tanh(),
     # output layer
-    nn.Linear(N2, 1))
+    nn.Linear(N2, 1),
+)
 
 ###############################################################################
 # In the above code, we build a NN model with an input layer, two hidden layer, and

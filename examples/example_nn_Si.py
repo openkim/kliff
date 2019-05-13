@@ -42,8 +42,12 @@ from kliff.loss import Loss
 # coworkers.
 
 
-descriptor = SymmetryFunction(cut_name='cos', cut_dists={'Si-Si': 5.0},
-                              hyperparams='set31', normalize=True)
+descriptor = SymmetryFunction(
+    cut_name='cos',
+    cut_dists={'Si-Si': 5.0},
+    hyperparams='set31',
+    normalize=True,
+)
 
 
 ###############################################################################
@@ -68,7 +72,8 @@ model.add_layers(
     nn.Linear(N1, N2),
     nn.Tanh(),
     # output layer
-    nn.Linear(N2, 1))
+    nn.Linear(N2, 1),
+)
 model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
 
 

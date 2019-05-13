@@ -137,12 +137,15 @@ class FittingParameter:
             line = lines[num_line].strip()
             num_line += 1
             if line in self.params:
-                msg = 'file "{}", line {}. Parameter "{}" already set.' .format(
-                    fname, num_line, line)
+                msg = 'file "{}", line {}. Parameter "{}" already set.'.format(
+                    fname, num_line, line
+                )
                 warnings.warn(msg, category=Warning)
             if line not in self.model_params:
-                raise InputError('file "{}", line {}. Parameter "{}" not supported '
-                                 'by calculator.'.format(fname, num_line, line))
+                raise InputError(
+                    'file "{}", line {}. Parameter "{}" not supported '
+                    'by calculator.'.format(fname, num_line, line)
+                )
             name = line
             size = self.model_params[name].get_size()
             settings = []
@@ -200,14 +203,19 @@ class FittingParameter:
         size = self.model_params[name].get_size()
         if len(settings) != size:
             raise InputError(
-                'Incorrect number of initial values for paramter "{}".'.format(name))
+                'Incorrect number of initial values for paramter "{}".'.format(
+                    name
+                )
+            )
 
-        tmp_dict = {'size': size,
-                    'value': [None for _ in range(size)],
-                    'use_default': [False for _ in range(size)],
-                    'fix': [False for _ in range(size)],
-                    'lower_bound': [None for _ in range(size)],
-                    'upper_bound': [None for _ in range(size)]}
+        tmp_dict = {
+            'size': size,
+            'value': [None for _ in range(size)],
+            'use_default': [False for _ in range(size)],
+            'fix': [False for _ in range(size)],
+            'lower_bound': [None for _ in range(size)],
+            'upper_bound': [None for _ in range(size)],
+        }
         self.params[name] = tmp_dict
 
         for j, line in enumerate(settings):
@@ -219,8 +227,10 @@ class FittingParameter:
             elif num_items == 3:
                 self._read_3_item(name, j, line)
             else:
-                raise InputError('More than 3 elements listed at data line '
-                                 '{} for parameter "{}".'.format(j+1, name))
+                raise InputError(
+                    'More than 3 elements listed at data line '
+                    '{} for parameter "{}".'.format(j + 1, name)
+                )
             self._check_bounds(name)
 
         self._set_index(name)
@@ -245,9 +255,9 @@ class FittingParameter:
         else:
             fout = sys.stdout
 
-        print('#'+'='*80, file=fout)
+        print('#' + '=' * 80, file=fout)
         print('# Model parameters that are optimized.', file=fout)
-        print('#'+'='*80, file=fout)
+        print('#' + '=' * 80, file=fout)
         print(file=fout)
 
         for name, attr in self.params.items():
@@ -388,26 +398,35 @@ class FittingParameter:
             self.params[name]['fix'][j] = True
         else:
             raise InputError(
-                'Data at line {} of {} corrupted.'.format(j+1, name))
+                'Data at line {} of {} corrupted.'.format(j + 1, name)
+            )
 
     def _read_3_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
 
         if (line[1] is not None) and (
-                not (isinstance(line[1], str) and line[1].lower() == 'none')):
+            not (isinstance(line[1], str) and line[1].lower() == 'none')
+        ):
             try:
                 self.params[name]['lower_bound'][j] = float(line[1])
             except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(e, j+1, name))
+                    '{}.\nData at line {} of {} corrupted.'.format(
+                        e, j + 1, name
+                    )
+                )
 
         if (line[2] is not None) and (
-                not (isinstance(line[2], str) and line[2].lower() == 'none')):
+            not (isinstance(line[2], str) and line[2].lower() == 'none')
+        ):
             try:
                 self.params[name]['upper_bound'][j] = float(line[2])
             except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(e, j+1, name))
+                    '{}.\nData at line {} of {} corrupted.'.format(
+                        e, j + 1, name
+                    )
+                )
 
     def _read_1st_item(self, name, j, first):
         if isinstance(first, str) and first.lower() == 'default':
@@ -418,8 +437,11 @@ class FittingParameter:
             try:
                 self.params[name]['value'][j] = float(first)
             except ValueError as e:
-                raise InputError('{}.\nData at line {} of parameter "{}" corrupted.'
-                                 .format(e, j+1, name))
+                raise InputError(
+                    '{}.\nData at line {} of parameter "{}" corrupted.'.format(
+                        e, j + 1, name
+                    )
+                )
 
     def _check_bounds(self, name):
         """Check whether the initial guess of a paramter is within its lower and
@@ -432,12 +454,16 @@ class FittingParameter:
             value = attr['value'][i]
             if lower_bound is not None:
                 if value < lower_bound:
-                    raise InputError('Initial guess at line {} of parameter "{}" '
-                                     'out of bounds.'.format(i+1, name))
+                    raise InputError(
+                        'Initial guess at line {} of parameter "{}" '
+                        'out of bounds.'.format(i + 1, name)
+                    )
             if upper_bound is not None:
                 if value > upper_bound:
-                    raise InputError('Initial guess at line {} of parameter "{}" '
-                                     'out of bounds.'.format(i+1, name))
+                    raise InputError(
+                        'Initial guess at line {} of parameter "{}" '
+                        'out of bounds.'.format(i + 1, name)
+                    )
 
     def _set_index(self, name):
         """Check whether a parameter component will be optimized or not (by
@@ -474,7 +500,6 @@ class FittingParameter:
 
 
 class Index(object):
-
     def __init__(self, name, parameter_index=None, component_index=None):
         self.name = name
         self.parameter_index = self.p_idx = parameter_index
@@ -510,7 +535,7 @@ def remove_comments(lines):
         if not line or line[0] == '#':
             continue
         if '#' in line:
-            line = line[0:line.index('#')]
+            line = line[0 : line.index('#')]
         processed_lines.append(line)
     return processed_lines
 

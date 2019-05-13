@@ -67,7 +67,8 @@ class WrapCalculator:
                 v = parsed[k]['source-value']
             except KeyError:
                 raise KeyError(
-                    'Keyword "{}" not found in {}.'.format(k, self.outname))
+                    'Keyword "{}" not found in {}.'.format(k, self.outname)
+                )
             # make it a 1D array
             # we expect v as a python built-in object (if numpy object, this will fail)
             if isinstance(v, collections.Sequence):

@@ -9,24 +9,79 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+
 # pytorch buildin (use them directly)
 from torch.nn.modules.linear import Linear, Bilinear
-from torch.nn.modules.conv import Conv1d, Conv2d, Conv3d,\
-    ConvTranspose1d, ConvTranspose2d, ConvTranspose3d
-from torch.nn.modules.activation import Threshold, ReLU, Hardtanh, ReLU6,\
-    Sigmoid, Tanh, Softmax, Softmax2d, LogSoftmax, ELU, SELU, CELU,\
-    Hardshrink, LeakyReLU, LogSigmoid, Softplus, Softshrink, PReLU,\
-    Softsign, Softmin, Tanhshrink, RReLU, GLU
-from torch.nn.modules.pooling import AvgPool1d, AvgPool2d, AvgPool3d,\
-    MaxPool1d, MaxPool2d, MaxPool3d, MaxUnpool1d, MaxUnpool2d, MaxUnpool3d,\
-    FractionalMaxPool2d, LPPool1d, LPPool2d, AdaptiveMaxPool1d,\
-    AdaptiveMaxPool2d, AdaptiveMaxPool3d, AdaptiveAvgPool1d,\
-    AdaptiveAvgPool2d, AdaptiveAvgPool3d
+from torch.nn.modules.conv import (
+    Conv1d,
+    Conv2d,
+    Conv3d,
+    ConvTranspose1d,
+    ConvTranspose2d,
+    ConvTranspose3d,
+)
+from torch.nn.modules.activation import (
+    Threshold,
+    ReLU,
+    Hardtanh,
+    ReLU6,
+    Sigmoid,
+    Tanh,
+    Softmax,
+    Softmax2d,
+    LogSoftmax,
+    ELU,
+    SELU,
+    CELU,
+    Hardshrink,
+    LeakyReLU,
+    LogSigmoid,
+    Softplus,
+    Softshrink,
+    PReLU,
+    Softsign,
+    Softmin,
+    Tanhshrink,
+    RReLU,
+    GLU,
+)
+from torch.nn.modules.pooling import (
+    AvgPool1d,
+    AvgPool2d,
+    AvgPool3d,
+    MaxPool1d,
+    MaxPool2d,
+    MaxPool3d,
+    MaxUnpool1d,
+    MaxUnpool2d,
+    MaxUnpool3d,
+    FractionalMaxPool2d,
+    LPPool1d,
+    LPPool2d,
+    AdaptiveMaxPool1d,
+    AdaptiveMaxPool2d,
+    AdaptiveMaxPool3d,
+    AdaptiveAvgPool1d,
+    AdaptiveAvgPool2d,
+    AdaptiveAvgPool3d,
+)
 from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
-from torch.nn.modules.normalization import LocalResponseNorm, CrossMapLRN2d,\
-    LayerNorm, GroupNorm
-from torch.nn.modules.rnn import RNNBase, RNN, LSTM, GRU, RNNCellBase, \
-    RNNCell, LSTMCell, GRUCell
+from torch.nn.modules.normalization import (
+    LocalResponseNorm,
+    CrossMapLRN2d,
+    LayerNorm,
+    GroupNorm,
+)
+from torch.nn.modules.rnn import (
+    RNNBase,
+    RNN,
+    LSTM,
+    GRU,
+    RNNCellBase,
+    RNNCell,
+    LSTMCell,
+    GRUCell,
+)
 
 
 @torch._jit_internal.weak_module
@@ -64,12 +119,15 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
             shape_4D = (*shape, 1)
 
         else:
-            raise Exception('Input need to be 2D or 3D tensor, but got a '
-                            '{}D tensor.'.format(dim))
+            raise Exception(
+                'Input need to be 2D or 3D tensor, but got a '
+                '{}D tensor.'.format(dim)
+            )
         x = torch.reshape(input, shape_4D)
         x = torch.transpose(x, 1, 2)
         y = torch.nn.functional.dropout2d(
-            x, self.p, self.training, self.inplace)
+            x, self.p, self.training, self.inplace
+        )
         y = torch.transpose(y, 1, 2)
         y = torch.reshape(y, shape)
         return y
@@ -189,8 +247,10 @@ class NeuralNetwork(nn.Module):
             for a full list of torch.nn layers.
         """
         if self.layers is not None:
-            raise NeuralNetworkError('"add_layers" called multiple times. '
-                                     'It should be called only once.')
+            raise NeuralNetworkError(
+                '"add_layers" called multiple times. '
+                'It should be called only once.'
+            )
         else:
             self.layers = []
 
@@ -202,8 +262,10 @@ class NeuralNetwork(nn.Module):
         # check shape of first layer and last layer
         first = self.layers[0]
         if first.in_features != len(self.descriptor):
-            raise InputError('"in_features" of first layer should be equal to '
-                             'descriptor size.')
+            raise InputError(
+                '"in_features" of first layer should be equal to '
+                'descriptor size.'
+            )
         last = self.layers[-1]
         if last.out_features != 1:
             raise InputError('"out_features" of last layer should be 1.')
@@ -272,7 +334,8 @@ class NeuralNetwork(nn.Module):
             self.eval()
         else:
             raise NeuralNetworkError(
-                'Uncongnized mode "{}" in model.load().'.format(mode))
+                'Uncongnized mode "{}" in model.load().'.format(mode)
+            )
 
     def write_kim_model(self, path=None):
         # supported
@@ -280,10 +343,12 @@ class NeuralNetwork(nn.Module):
         activ_layer = ['Sigmoid', 'Tanh', 'ReLU', 'ELU']
         dropout_layer = ['Dropout']
         layer_groups = self._group_layers(
-            param_layer, activ_layer, dropout_layer)
+            param_layer, activ_layer, dropout_layer
+        )
 
         weights, biases = self._get_weights_and_biases(
-            layer_groups, param_layer)
+            layer_groups, param_layer
+        )
         activations = self._get_activations(layer_groups, activ_layer)
         drop_ratios = self._get_drop_ratios(layer_groups, dropout_layer)
 
@@ -292,7 +357,8 @@ class NeuralNetwork(nn.Module):
 
         if path is None:
             path = os.path.join(
-                os.getcwd(), 'NeuralNetwork__MO_000000111111_000')
+                os.getcwd(), 'NeuralNetwork__MO_000000111111_000'
+            )
         if path and not os.path.exists(path):
             os.makedirs(path)
 
@@ -303,10 +369,12 @@ class NeuralNetwork(nn.Module):
         # write parameter file
         fname = 'kliff_trained.params'
         with open(os.path.join(path, fname), 'w') as fout:
-            fout.write('#' + '='*80 + '\n')
-            fout.write('# KIM ANN potential parameters, generated by `kliff` '
-                       'fitting program.\n')
-            fout.write('#' + '='*80 + '\n\n')
+            fout.write('#' + '=' * 80 + '\n')
+            fout.write(
+                '# KIM ANN potential parameters, generated by `kliff` '
+                'fitting program.\n'
+            )
+            fout.write('#' + '=' * 80 + '\n\n')
 
             # cutoff
             cutname, rcut = descriptor.get_cutoff()
@@ -320,14 +388,15 @@ class NeuralNetwork(nn.Module):
 
             # symmetry functions
             # header
-            fout.write('#' + '='*80 + '\n')
+            fout.write('#' + '=' * 80 + '\n')
             fout.write('# symmetry functions\n')
-            fout.write('#' + '='*80 + '\n\n')
+            fout.write('#' + '=' * 80 + '\n\n')
 
             desc = descriptor.get_hyperparams()
             num_desc = len(desc)
             fout.write(
-                '{}    #number of symmetry funtion types\n\n'.format(num_desc))
+                '{}    #number of symmetry funtion types\n\n'.format(num_desc)
+            )
 
             # descriptor values
             fout.write('# sym_function    rows    cols\n')
@@ -342,10 +411,12 @@ class NeuralNetwork(nn.Module):
                         for val in values:
                             if dtype == torch.float64:
                                 fout.write(
-                                    '{:.15g} {:.15g}'.format(val[0], val[1]))
+                                    '{:.15g} {:.15g}'.format(val[0], val[1])
+                                )
                             else:
                                 fout.write(
-                                    '{:.7g} {:.7g}'.format(val[0], val[1]))
+                                    '{:.7g} {:.7g}'.format(val[0], val[1])
+                                )
                             fout.write('    # eta  Rs\n')
                         fout.write('\n')
                     elif name == 'g3':
@@ -362,11 +433,17 @@ class NeuralNetwork(nn.Module):
                             lam = val[1]
                             eta = val[2]
                             if dtype == torch.float64:
-                                fout.write('{:.15g} {:.15g} {:.15g}'
-                                           .format(zeta, lam, eta))
+                                fout.write(
+                                    '{:.15g} {:.15g} {:.15g}'.format(
+                                        zeta, lam, eta
+                                    )
+                                )
                             else:
-                                fout.write('{:.7g} {:.7g} {:.7g}'
-                                           .format(zeta, lam, eta))
+                                fout.write(
+                                    '{:.7g} {:.7g} {:.7g}'.format(
+                                        zeta, lam, eta
+                                    )
+                                )
                             fout.write('    # zeta  lambda  eta\n')
                         fout.write('\n')
                     elif name == 'g5':
@@ -375,19 +452,25 @@ class NeuralNetwork(nn.Module):
                             lam = val[1]
                             eta = val[2]
                             if dtype == torch.float64:
-                                fout.write('{:.15g} {:.15g} {:.15g}'
-                                           .format(zeta, lam, eta))
+                                fout.write(
+                                    '{:.15g} {:.15g} {:.15g}'.format(
+                                        zeta, lam, eta
+                                    )
+                                )
                             else:
-                                fout.write('{:.7g} {:.7g} {:.7g}'
-                                           .format(zeta, lam, eta))
+                                fout.write(
+                                    '{:.7g} {:.7g} {:.7g}'.format(
+                                        zeta, lam, eta
+                                    )
+                                )
                             fout.write('    # zeta  lambda  eta\n')
                         fout.write('\n')
 
             # data centering and normalization
             # header
-            fout.write('#' + '='*80 + '\n')
+            fout.write('#' + '=' * 80 + '\n')
             fout.write('# Preprocessing data to center and normalize\n')
-            fout.write('#' + '='*80 + '\n')
+            fout.write('#' + '=' * 80 + '\n')
 
             # mean and stdev
             mean = descriptor.get_mean()
@@ -413,21 +496,27 @@ class NeuralNetwork(nn.Module):
 
             # ann structure and parameters
             # header
-            fout.write('#' + '='*80 + '\n')
+            fout.write('#' + '=' * 80 + '\n')
             fout.write('# ANN structure and parameters\n')
             fout.write('#\n')
-            fout.write('# Note that the ANN assumes each row of the input "X" '
-                       'is an observation, i.e.\n')
+            fout.write(
+                '# Note that the ANN assumes each row of the input "X" '
+                'is an observation, i.e.\n'
+            )
             fout.write('# the layer is implemented as\n')
             fout.write('# Y = activation(XW + b).\n')
-            fout.write('# You need to transpose your weight matrix if each '
-                       'column of "X" is an observation.\n')
-            fout.write('#' + '='*80 + '\n\n')
+            fout.write(
+                '# You need to transpose your weight matrix if each '
+                'column of "X" is an observation.\n'
+            )
+            fout.write('#' + '=' * 80 + '\n\n')
 
             # number of layers
             num_layers = len(weights)
-            fout.write('{}    # number of layers (excluding input layer, '
-                       'including output layer)\n'.format(num_layers))
+            fout.write(
+                '{}    # number of layers (excluding input layer, '
+                'including output layer)\n'.format(num_layers)
+            )
 
             # size of layers
             for b in biases:
@@ -449,12 +538,18 @@ class NeuralNetwork(nn.Module):
 
                 # weight
                 rows, cols = w.shape
-                if i != num_layers-1:
-                    fout.write('# weight of hidden layer {} (shape({}, {}))\n'
-                               .format(i+1, rows, cols))
+                if i != num_layers - 1:
+                    fout.write(
+                        '# weight of hidden layer {} (shape({}, {}))\n'.format(
+                            i + 1, rows, cols
+                        )
+                    )
                 else:
-                    fout.write('# weight of output layer (shape({}, {}))\n'
-                               .format(rows, cols))
+                    fout.write(
+                        '# weight of output layer (shape({}, {}))\n'.format(
+                            rows, cols
+                        )
+                    )
                 for line in w:
                     for item in line:
                         if dtype == torch.float64:
@@ -464,12 +559,18 @@ class NeuralNetwork(nn.Module):
                     fout.write('\n')
 
                 # bias
-                if i != num_layers-1:
-                    fout.write('# bias of hidden layer {} (shape({}, {}))\n'
-                               .format(i+1, rows, cols))
+                if i != num_layers - 1:
+                    fout.write(
+                        '# bias of hidden layer {} (shape({}, {}))\n'.format(
+                            i + 1, rows, cols
+                        )
+                    )
                 else:
-                    fout.write('# bias of output layer (shape({}, {}))\n'
-                               .format(rows, cols))
+                    fout.write(
+                        '# bias of output layer (shape({}, {}))\n'.format(
+                            rows, cols
+                        )
+                    )
                 for item in b:
                     if dtype == torch.float64:
                         fout.write('{:23.15e}'.format(item))
@@ -500,20 +601,24 @@ class NeuralNetwork(nn.Module):
             if name not in supported:
                 raise NeuralNetworkError(
                     'Layer "{}" not supported by KIM model. Cannot proceed '
-                    'to write.'.format(name))
+                    'to write.'.format(name)
+                )
             if name in activ_layer:
                 if i == 0:
                     raise NeuralNetworkError(
-                        'First layer cannot be a "{}" layer'.format(name))
-                if self.layers[i-1].__class__.__name__ not in param_layer:
+                        'First layer cannot be a "{}" layer'.format(name)
+                    )
+                if self.layers[i - 1].__class__.__name__ not in param_layer:
                     raise NeuralNetworkError(
                         'Cannot convert to KIM model. a "{}" layer must follow '
-                        'a "Linear" layer.'.format(name))
+                        'a "Linear" layer.'.format(name)
+                    )
             if name[:7] in dropout_layer:
-                if self.layers[i-1].__class__.__name__ not in activ_layer:
+                if self.layers[i - 1].__class__.__name__ not in activ_layer:
                     raise NeuralNetworkError(
                         'Cannot convert to KIM model. a "{}" layer must follow '
-                        'an activation layer.'.format(name))
+                        'an activation layer.'.format(name)
+                    )
             if name in param_layer:
                 groups.append(new_group)
                 new_group = []
@@ -563,7 +668,7 @@ class NeuralNetwork(nn.Module):
                     if name in supported:
                         drop_ratios.append(layer.p)
                 else:
-                    drop_ratios.append(0.)
+                    drop_ratios.append(0.0)
             elif i == len(groups) - 1:
                 pass
             else:
@@ -573,7 +678,7 @@ class NeuralNetwork(nn.Module):
                     if name in supported:
                         drop_ratios.append(layer.p)
                 else:
-                    drop_ratios.append(0.)
+                    drop_ratios.append(0.0)
 
         return drop_ratios
 
@@ -606,8 +711,15 @@ class PytorchANNCalculator(object):
 
         self.results = dict([(i, None) for i in self.implemented_property])
 
-    def create(self, configs, use_energy=True, use_forces=True,
-               use_stress=False, reuse=False, nprocs=mp.cpu_count()):
+    def create(
+        self,
+        configs,
+        use_energy=True,
+        use_forces=True,
+        use_stress=False,
+        reuse=False,
+        nprocs=mp.cpu_count(),
+    ):
         """Preprocess configs into fingerprints.
 
         Parameters
@@ -630,7 +742,8 @@ class PytorchANNCalculator(object):
         """
         if use_stress:
             raise NotImplementedError(
-                '"stress" is not supported by NN calculator.')
+                '"stress" is not supported by NN calculator.'
+            )
 
         self.configs = configs
         self.use_energy = use_energy
@@ -642,7 +755,8 @@ class PytorchANNCalculator(object):
         # generate pickled fingerprints
         print('Start generating fingerprints')
         fname = self.model.descriptor.generate_train_fingerprints(
-            configs, grad=use_forces, reuse=reuse, nprocs=nprocs)
+            configs, grad=use_forces, reuse=reuse, nprocs=nprocs
+        )
         print('Finish generating fingerprints')
         self.train_fingerprints_path = fname
 
@@ -671,13 +785,14 @@ class PytorchANNCalculator(object):
     @staticmethod
     def compute_forces(energy, zeta, dzeta_dr):
         denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-        forces = -torch.tensordot(denergy_dzeta,
-                                  dzeta_dr, dims=([0, 1], [0, 1]))
+        forces = -torch.tensordot(
+            denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1])
+        )
         return forces
 
 
 def cost_single_config(pred_energy, energy=None, forces=None):
-    cost = (pred_energy - energy)**2
+    cost = (pred_energy - energy) ** 2
     return cost
 
 

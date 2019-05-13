@@ -32,15 +32,15 @@ class Configuration:
         self.id = identifier
         self.do_order = order_by_species
         self.weight = 1.0
-        self.natoms = None   # int
-        self.cell = None     # ndarray of shape(3,3)
-        self.PBC = None      # ndarray of shape(3,)
-        self.energy = None   # float
-        self.stress = None   # ndarray of shape(6,)
+        self.natoms = None  # int
+        self.cell = None  # ndarray of shape(3,3)
+        self.PBC = None  # ndarray of shape(3,)
+        self.energy = None  # float
+        self.stress = None  # ndarray of shape(6,)
         self.species = None  # ndarray of shape(N,)
-        self.coords = None   # ndarray of shape(N, 3)
-        self.forces = None   # ndarray of shape(N, 3)
-        self.natoms_by_species = None   # dict
+        self.coords = None  # ndarray of shape(N, 3)
+        self.forces = None  # ndarray of shape(N, 3)
+        self.natoms_by_species = None  # dict
 
     def read(self, path):
         """Read configuration stored in a file.
@@ -50,10 +50,19 @@ class Configuration:
         path: str
             Path to the file that stores the configuration.
         """
-        (self.cell, self.PBC, self.species, self.coords, self.energy, self.forces,
-         self.stress) = read_config(path, self.format)
+        (
+            self.cell,
+            self.PBC,
+            self.species,
+            self.coords,
+            self.energy,
+            self.forces,
+            self.stress,
+        ) = read_config(path, self.format)
         self.natoms = len(self.species)
-        self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
+        self.volume = abs(
+            np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2])
+        )
 
         if self.do_order:
             self.order_by_species()
@@ -61,14 +70,21 @@ class Configuration:
     def order_by_species(self):
         """Order the atoms according to the species."""
         if self.forces is not None:
-            species, coords, forces = zip(*sorted(
-                zip(self.species, self.coords, self.forces), key=lambda pair: pair[0]))
+            species, coords, forces = zip(
+                *sorted(
+                    zip(self.species, self.coords, self.forces),
+                    key=lambda pair: pair[0],
+                )
+            )
             self.species = np.asarray(species)
             self.coords = np.asarray(coords)
             self.forces = np.asarray(forces)
         else:
-            species, coords = zip(*sorted(
-                zip(self.species, self.coords), key=lambda pair: pair[0]))
+            species, coords = zip(
+                *sorted(
+                    zip(self.species, self.coords), key=lambda pair: pair[0]
+                )
+            )
             self.species = np.asarray(species)
             self.coords = np.asarray(coords)
 
@@ -216,7 +232,8 @@ class DataSet:
             extension = implemented_format[format]
         except KeyError as e:
             raise SupportError(
-                '{}\nNot supported data file format "{}".'.format(e, format))
+                '{}\nNot supported data file format "{}".'.format(e, format)
+            )
 
         if os.path.isdir(path):
             dirpath = path
@@ -237,8 +254,11 @@ class DataSet:
 
         size = len(self.configs)
         if size <= 0:
-            raise InputError('No dataset file with format "{}" found in directory: {}.'
-                             .format(format, dirpath))
+            raise InputError(
+                'No dataset file with format "{}" found in directory: {}.'.format(
+                    format, dirpath
+                )
+            )
 
         if self.do_order:
             # find species present in all configurations
@@ -249,7 +269,9 @@ class DataSet:
             all_species = set(all_species)
             # find occurence of species in each configuration
             for conf in self.configs:
-                conf.natoms_by_species = conf.count_atoms_by_species(all_species)
+                conf.natoms_by_species = conf.count_atoms_by_species(
+                    all_species
+                )
 
     def get_configs(self):
         """Get the configurations.
@@ -315,8 +337,17 @@ def read_config(path, format='extxyz'):
     return cell, PBC, species, coords, energy, forces, stress
 
 
-def write_config(path, cell, PBC, species, coords, energy=None, forces=None,
-                 stress=None, format='extxyz'):
+def write_config(
+    path,
+    cell,
+    PBC,
+    species,
+    coords,
+    energy=None,
+    forces=None,
+    stress=None,
+    format='extxyz',
+):
     """
     Write a configuration to a file in the specified format.
 

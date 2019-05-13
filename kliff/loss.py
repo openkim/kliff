@@ -10,6 +10,7 @@ try:
     import torch
     from kliff.neuralnetwork import FingerprintsDataset
     from kliff.neuralnetwork import FingerprintsDataLoader
+
     torch_available = True
 except ImportError:
     torch_available = False
@@ -70,9 +71,10 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     Correspondingly, `reference` is the 3N concatenated reference forces.
     """
 
-    if len(prediction) != 3*natoms + 1:
+    if len(prediction) != 3 * natoms + 1:
         raise ValueError(
-            "len(prediction) != 3N+1, where N is the number of atoms.")
+            "len(prediction) != 3N+1, where N is the number of atoms."
+        )
 
     # prepare weight based on user provided data
     energy_weight = data['energy_weight']
@@ -113,8 +115,13 @@ def energy_residual(conf_id, natoms, prediction, reference, data):
 class Loss(object):
     """Objective function class to conduct the optimization."""
 
-    def __new__(self, calculator, nprocs=1, residual_fn=energy_forces_residual,
-                residual_data=None):
+    def __new__(
+        self,
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=None,
+    ):
         """
         Parameters
         ----------
@@ -138,19 +145,24 @@ class Loss(object):
         if calc_type == 'PytorchANNCalculator':
             return LossNeuralNetworkModel(calculator, nprocs, residual_fn, data)
         else:
-            return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, data)
+            return LossPhysicsMotivatedModel(
+                calculator, nprocs, residual_fn, data
+            )
 
     @staticmethod
     def check_residual_data(data):
-        default = {'energy_weight': 1.0,
-                   'forces_weight': 1.0,
-                   'stress_weight': 1.0,
-                   'normalize_by_natoms': True}
+        default = {
+            'energy_weight': 1.0,
+            'forces_weight': 1.0,
+            'stress_weight': 1.0,
+            'normalize_by_natoms': True,
+        }
         if data is not None:
             for key, value in data.items():
                 if key not in default:
                     raise InputError(
-                        '"{}" not supported by "residual_data".'.format(key))
+                        '"{}" not supported by "residual_data".'.format(key)
+                    )
                 else:
                     default[key] = value
         return default
@@ -173,7 +185,8 @@ class LossPhysicsMotivatedModel(object):
         'dogleg',
         'trust-ncg',
         'trust-exact',
-        'trust-krylov']
+        'trust-krylov',
+    ]
 
     scipy_minimize_methods_not_supported_arguments = ['bounds']
 
@@ -181,8 +194,13 @@ class LossPhysicsMotivatedModel(object):
 
     scipy_least_squares_methods_not_supported_arguments = ['bounds']
 
-    def __init__(self, calculator, nprocs=1, residual_fn=energy_forces_residual,
-                 residual_data=None):
+    def __init__(
+        self,
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=None,
+    ):
         """
         Parameters
         ----------
@@ -204,7 +222,9 @@ class LossPhysicsMotivatedModel(object):
         self.nprocs = nprocs
 
         self.residual_fn = residual_fn
-        self.residual_data = residual_data if residual_data is not None else dict()
+        self.residual_data = (
+            residual_data if residual_data is not None else dict()
+        )
         self.calculator_type = calculator.__class__.__name__
 
         if self.calculator_type == 'WrapperCalculator':
@@ -219,15 +239,16 @@ class LossPhysicsMotivatedModel(object):
                 ca.refresh(infl_dist)
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
-#
-#  def set_nprocs(self, nprocs):
-#    """ Set the number of processors to be used."""
-#    self.nprocs = nprocs
-#
-#  def set_residual_fn_and_data(self, fn, data):
-#    """ Set residual function and data. """
-#    self.residual_fn = fn
-#    self.residual_fn_data = data
+
+    #
+    #  def set_nprocs(self, nprocs):
+    #    """ Set the number of processors to be used."""
+    #    self.nprocs = nprocs
+    #
+    #  def set_residual_fn_and_data(self, fn, data):
+    #    """ Set residual function and data. """
+    #    self.residual_fn = fn
+    #    self.residual_fn_data = data
 
     def minimize(self, method, **kwargs):
         """ Minimize the loss.
@@ -244,21 +265,31 @@ class LossPhysicsMotivatedModel(object):
         if method in self.scipy_least_squares_methods:
             for i in self.scipy_least_squares_methods_not_supported_arguments:
                 if i in kwargs:
-                    raise LossError('Argument "{}" should not be set through the '
-                                    '"minimize" method.'.format(i))
+                    raise LossError(
+                        'Argument "{}" should not be set through the '
+                        '"minimize" method.'.format(i)
+                    )
             bounds = self.calculator.get_opt_params_bounds()
             kwargs['bounds'] = bounds
-            logger.info('Start minimization using scipy least squares method: {}.'
-                        .format(method))
+            logger.info(
+                'Start minimization using scipy least squares method: {}.'.format(
+                    method
+                )
+            )
             result = self._scipy_optimize_least_squares(method, **kwargs)
-            logger.info('Finish minimization using scipy least squares method: {}.'
-                        .format(method))
+            logger.info(
+                'Finish minimization using scipy least squares method: {}.'.format(
+                    method
+                )
+            )
 
         elif method in self.scipy_minimize_methods:
             for i in self.scipy_minimize_methods_not_supported_arguments:
                 if i in kwargs:
-                    raise LossError('Argument "{}" should not be set through the '
-                                    '"minimize" method.'.format(i))
+                    raise LossError(
+                        'Argument "{}" should not be set through the '
+                        '"minimize" method.'.format(i)
+                    )
             bounds = self.calculator.get_opt_params_bounds()
             for i in range(len(bounds)):
                 lb = bounds[i][0]
@@ -268,15 +299,22 @@ class LossPhysicsMotivatedModel(object):
                 if ub is None:
                     bounds[i][1] = np.inf
             kwargs['bounds'] = bounds
-            logger.info('Start minimization using scipy optimize method: {}.'
-                        .format(method))
+            logger.info(
+                'Start minimization using scipy optimize method: {}.'.format(
+                    method
+                )
+            )
             result = self._scipy_optimize_minimize(method, **kwargs)
-            logger.info('Finish minimization using scipy optimize method: {}.'
-                        .format(method))
+            logger.info(
+                'Finish minimization using scipy optimize method: {}.'.format(
+                    method
+                )
+            )
 
         else:
             raise LossError(
-                'minimization method "{}" not supported.'.format(method))
+                'minimization method "{}" not supported.'.format(method)
+            )
 
         # update final optimized paramters
         self.calculator.update_opt_params(result.x)
@@ -310,16 +348,15 @@ class LossPhysicsMotivatedModel(object):
                     self.residual_fn,
                     self.residual_data,
                     nprocs=self.nprocs,
-                    tuple_X=True)
+                    tuple_X=True,
+                )
                 residual = np.concatenate(residuals)
             else:
                 residual = []
                 for ca, calc in X:
                     current_residual = self._get_residual_single_config(
-                        ca,
-                        calc,
-                        self.residual_fn,
-                        self.residual_data)
+                        ca, calc, self.residual_fn, self.residual_data
+                    )
                     residual = np.concatenate((residual, current_residual))
 
         else:
@@ -331,7 +368,8 @@ class LossPhysicsMotivatedModel(object):
                     self.residual_fn,
                     self.residual_data,
                     nprocs=self.nprocs,
-                    tuple_X=False)
+                    tuple_X=False,
+                )
                 residual = np.concatenate(residuals)
             else:
                 residual = []
@@ -340,7 +378,8 @@ class LossPhysicsMotivatedModel(object):
                         ca,
                         self.calculator,
                         self.residual_fn,
-                        self.residual_data)
+                        self.residual_data,
+                    )
                     residual = np.concatenate((residual, current_residual))
 
         return residual
@@ -358,20 +397,24 @@ class LossPhysicsMotivatedModel(object):
           optimizing parameter values
         """
         residual = self.get_residual(x)
-        loss = 0.5*np.linalg.norm(residual)**2
+        loss = 0.5 * np.linalg.norm(residual) ** 2
         return loss
 
     def _scipy_optimize_least_squares(self, method, **kwargs):
         residual = self.get_residual
         x = self.calculator.get_opt_params()
-        return scipy.optimize.least_squares(residual, x, method=method, **kwargs)
+        return scipy.optimize.least_squares(
+            residual, x, method=method, **kwargs
+        )
 
     def _scipy_optimize_minimize(self, method, **kwargs):
         loss = self.get_loss
         x = self.calculator.get_opt_params()
         return scipy.optimize.minimize(loss, x, method=method, **kwargs)
 
-    def _get_residual_single_config(self, ca, calculator, residual_fn, residual_data):
+    def _get_residual_single_config(
+        self, ca, calculator, residual_fn, residual_data
+    ):
 
         # prediction data
         calculator.compute(ca)
@@ -394,7 +437,9 @@ class LossPhysicsMotivatedModel(object):
     def __exit__(self, exec_type, exec_value, trackback):
         # if there is expections, raise it (not for KeyboardInterrupt)
         if exec_type is not None and exec_type is not KeyboardInterrupt:
-            return False  # return False will cause Python to re-raise the expection
+            return (
+                False
+            )  # return False will cause Python to re-raise the expection
 
 
 class LossNeuralNetworkModel(object):
@@ -410,10 +455,16 @@ class LossNeuralNetworkModel(object):
         'LBFGS',
         'RMSprop',
         'Rprop',
-        'SGD']
+        'SGD',
+    ]
 
-    def __init__(self, calculator, nprocs=1, residual_fn=energy_forces_residual,
-                 residual_data=None):
+    def __init__(
+        self,
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=None,
+    ):
         """
         Parameters
         ----------
@@ -433,26 +484,30 @@ class LossNeuralNetworkModel(object):
 
         if not torch_available:
             raise ImportError(
-                'Please install "PyTorch" first. See: https://pytorch.org')
+                'Please install "PyTorch" first. See: https://pytorch.org'
+            )
 
         self.calculator = calculator
         self.nprocs = nprocs
 
         self.residual_fn = residual_fn
-        self.residual_data = residual_data if residual_data is not None else dict()
+        self.residual_data = (
+            residual_data if residual_data is not None else dict()
+        )
 
         self.calculator_type = calculator.__class__.__name__
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
-#
-#  def set_nprocs(self, nprocs):
-#    """ Set the number of processors to be used."""
-#    self.nprocs = nprocs
-#
-#  def set_residual_fn_and_data(self, fn, data):
-#    """ Set residual function and data. """
-#    self.residual_fn = fn
-#    self.residual_fn_data = data
+
+    #
+    #  def set_nprocs(self, nprocs):
+    #    """ Set the number of processors to be used."""
+    #    self.nprocs = nprocs
+    #
+    #  def set_residual_fn_and_data(self, fn, data):
+    #    """ Set residual function and data. """
+    #    self.residual_fn = fn
+    #    self.residual_fn_data = data
 
     def minimize(self, method, batch_size=100, num_epochs=1000, **kwargs):
         """ Minimize the loss.
@@ -469,7 +524,8 @@ class LossNeuralNetworkModel(object):
         """
         if method not in self.torch_minimize_methods:
             raise LossError(
-                'Minimization method "{}" not supported.'.format(method))
+                'Minimization method "{}" not supported.'.format(method)
+            )
         self.method = method
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -478,32 +534,40 @@ class LossNeuralNetworkModel(object):
         fname = self.calculator.get_train_fingerprints_path()
         fp = FingerprintsDataset(fname)
         self.data_loader = FingerprintsDataLoader(
-            dataset=fp, num_epochs=self.num_epochs)
+            dataset=fp, num_epochs=self.num_epochs
+        )
 
         # optimizing
         try:
             optimizer = getattr(torch.optim, method)(
-                self.calculator.model.parameters(), **kwargs)
+                self.calculator.model.parameters(), **kwargs
+            )
         except TypeError as e:
             print(str(e))
             idx = str(e).index("argument '") + 10
             err_arg = str(e)[idx:].strip("'")
-            raise InputError('Argument "{}" not supported by optimizer "{}".'
-                             .format(err_arg, method))
+            raise InputError(
+                'Argument "{}" not supported by optimizer "{}".'.format(
+                    err_arg, method
+                )
+            )
 
         # model save metadata
         save_prefix = self.calculator.model.save_prefix
         save_start = self.calculator.model.save_start
         save_frequency = self.calculator.model.save_frequency
         if save_prefix is None or save_start is None or save_frequency is None:
-            logger.info('Model saving meta data not set by user. Now set it '
-                        'to "prefix=./kliff_saved_model", "start=num_epochs/2",'
-                        ' and "frequency=10".')
+            logger.info(
+                'Model saving meta data not set by user. Now set it '
+                'to "prefix=./kliff_saved_model", "start=num_epochs/2",'
+                ' and "frequency=10".'
+            )
             save_prefix = os.path.join(os.getcwd(), 'kliff_saved_model')
-            save_start = self.num_epochs//2
+            save_start = self.num_epochs // 2
             save_frequency = 10
             self.calculator.model.set_save_metadata(
-                save_prefix, save_start, save_frequency)
+                save_prefix, save_start, save_frequency
+            )
 
         # other metadata
         n = 0
@@ -511,13 +575,15 @@ class LossNeuralNetworkModel(object):
         DATASET_SIZE = len(self.calculator.configs)
 
         msg = 'Start minimization using optimization method: {}.'.format(
-            self.method)
+            self.method
+        )
         logger.info(msg)
         print(msg)
 
         while True:
             try:
                 if self.method in ['LBFGS']:
+
                     def closure():
                         # zero the parameter gradients
                         optimizer.zero_grad()
@@ -525,6 +591,7 @@ class LossNeuralNetworkModel(object):
                         loss = self.get_loss()
                         loss.backward()
                         return loss
+
                     optimizer.step(closure)
                 else:
                     optimizer.zero_grad()
@@ -532,15 +599,17 @@ class LossNeuralNetworkModel(object):
                     loss = self.get_loss()
                     loss.backward()
                     optimizer.step()
-                epoch_new = n*self.batch_size // DATASET_SIZE
+                epoch_new = n * self.batch_size // DATASET_SIZE
 
                 if epoch_new > epoch:
                     epoch = epoch_new
                     print('Epoch = {}, loss = {}'.format(epoch, loss))
                 n += 1
 
-                if (epoch_new >= save_start and
-                        (epoch_new - save_start) % save_frequency == 0):
+                if (
+                    epoch_new >= save_start
+                    and (epoch_new - save_start) % save_frequency == 0
+                ):
                     fname = 'model_epoch{}.pkl'.format(epoch)
                     path = os.path.join(save_prefix, fname)
                     self.calculator.model.save(path)
@@ -555,14 +624,17 @@ class LossNeuralNetworkModel(object):
             # chunk of data whose size is smaller than `batch_size`
             inp = self.data_loader.next_element()
             residual = self._get_residual_single_config(
-                inp, self.calculator, self.residual_fn, self.residual_data)
+                inp, self.calculator, self.residual_fn, self.residual_data
+            )
             c = torch.sum(torch.pow(residual, 2))
             loss += c
         # TODO  maybe divide batch_size elsewhere
         loss /= self.batch_size
         return loss
 
-    def _get_residual_single_config(self, inp, calculator, residual_fn, residual_data):
+    def _get_residual_single_config(
+        self, inp, calculator, residual_fn, residual_data
+    ):
 
         # prediction data
         results = calculator.compute(inp)

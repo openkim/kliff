@@ -6,7 +6,7 @@ import copy
 import sys
 
 
-class Fisher():
+class Fisher:
     """Fisher information matrix.
 
     Compute the Fisher information according to $I_{ij} = \sum_m df_m/dp_i * df_m/dp_j$,
@@ -60,8 +60,10 @@ class Fisher():
         try:
             import numdifftools as nd
         except ImportError as e:
-            raise ImportError(str(e) + '.\nFisher information computation needs '
-                              '"numdifftools". Please install first.')
+            raise ImportError(
+                str(e) + '.\nFisher information computation needs '
+                '"numdifftools". Please install first.'
+            )
 
         derivs = []
         ori_param_vals = self.params.get_x0()

@@ -8,12 +8,12 @@ from kliff.descriptors.descriptor import DescriptorError
 num_atoms = 4
 num_desc = 5
 dim = 3
-_zeta = np.arange(num_atoms*num_desc).reshape(num_atoms, num_desc)
-_dzeta_dr = np.arange(num_atoms*num_desc*num_atoms*dim)
-_dzeta_dr = _dzeta_dr.reshape(num_atoms, num_desc, num_atoms*dim)
+_zeta = np.arange(num_atoms * num_desc).reshape(num_atoms, num_desc)
+_dzeta_dr = np.arange(num_atoms * num_desc * num_atoms * dim)
+_dzeta_dr = _dzeta_dr.reshape(num_atoms, num_desc, num_atoms * dim)
 _mean = np.mean(_zeta, axis=0)
 _stdev = np.std(_zeta, axis=0)
-_normalized_zeta = (_zeta-_mean)/_stdev
+_normalized_zeta = (_zeta - _mean) / _stdev
 _normalized_dzeta_dr = _dzeta_dr / np.atleast_3d(_stdev)
 
 
@@ -42,7 +42,8 @@ class ExampleDescriptor(Descriptor):
         cutname = None
         hyperparams = None
         super(ExampleDescriptor, self).__init__(
-            cutvalues, cutname, hyperparams, normalize)
+            cutvalues, cutname, hyperparams, normalize
+        )
 
     def transform(self, conf, grad):
         if grad:
@@ -106,14 +107,16 @@ def test_descriptor():
     desc.generate_train_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
-    assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
-                         _normalized_zeta, _normalized_dzeta_dr)
+    assert_zeta_dzeta_dr(
+        data['zeta'], data['dzeta_dr'], _normalized_zeta, _normalized_dzeta_dr
+    )
     # test set
     desc.generate_test_fingerprints(configs, grad=grad)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
-    assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
-                         _normalized_zeta, _normalized_dzeta_dr)
+    assert_zeta_dzeta_dr(
+        data['zeta'], data['dzeta_dr'], _normalized_zeta, _normalized_dzeta_dr
+    )
 
     # case 5 allow reuse
     desc = ExampleDescriptor(normalize=True)
@@ -122,14 +125,16 @@ def test_descriptor():
     desc.generate_train_fingerprints(configs, grad=grad, reuse=True)
     data = load_fingerprints('fingerprints/train.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
-    assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
-                         _normalized_zeta, _normalized_dzeta_dr)
+    assert_zeta_dzeta_dr(
+        data['zeta'], data['dzeta_dr'], _normalized_zeta, _normalized_dzeta_dr
+    )
     # test set
     desc.generate_test_fingerprints(configs, grad=grad, reuse=True)
     data = load_fingerprints('fingerprints/test.pkl')[0]
     assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
-    assert_zeta_dzeta_dr(data['zeta'], data['dzeta_dr'],
-                         _normalized_zeta, _normalized_dzeta_dr)
+    assert_zeta_dzeta_dr(
+        data['zeta'], data['dzeta_dr'], _normalized_zeta, _normalized_dzeta_dr
+    )
 
     # try use generate_test_fingerprints() before genereate_train_fingerprints()
     # case 1 (should work, since we do not require normalize)

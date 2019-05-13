@@ -83,9 +83,11 @@ class NeighborList:
 
         # create padding atoms
         species_code_cb = np.asarray(
-            [atomic_number[s] for s in species_cb], dtype=np.intc)
+            [atomic_number[s] for s in species_cb], dtype=np.intc
+        )
         out = nl.create_paddings(
-            self.infl_dist, cell, PBC, coords_cb, species_code_cb)
+            self.infl_dist, cell, PBC, coords_cb, species_code_cb
+        )
         coords_pd, species_code_pd, image_pd, error = out
         check_error(error, 'nl.create_padding')
         species_pd = [atomic_species[i] for i in species_code_pd]
@@ -97,11 +99,13 @@ class NeighborList:
         num_cb = coords_cb.shape[0]
         num_pd = coords_pd.shape[0]
 
-        self.coords = np.asarray(np.concatenate((coords_cb, coords_pd)),
-                                 dtype=np.double)
+        self.coords = np.asarray(
+            np.concatenate((coords_cb, coords_pd)), dtype=np.double
+        )
         self.species = np.concatenate((species_cb, species_pd))
-        self.image = np.asarray(np.concatenate((np.arange(num_cb), image_pd)),
-                                dtype=np.intc)
+        self.image = np.asarray(
+            np.concatenate((np.arange(num_cb), image_pd)), dtype=np.intc
+        )
         # flag to indicate whether to create neighborlist for an atom
         need_neigh = np.ones(num_cb + num_pd, dtype=np.intc)
         if not self.padding_need_neigh:
@@ -109,8 +113,9 @@ class NeighborList:
 
         # create neighbor list
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
-        error = nl.build(self.neigh, self.coords,
-                         self.infl_dist, cutoffs, need_neigh)
+        error = nl.build(
+            self.neigh, self.coords, self.infl_dist, cutoffs, need_neigh
+        )
         check_error(error, 'nl.build')
 
     def get_neigh(self, index):
@@ -135,8 +140,9 @@ class NeighborList:
 
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
         neigh_list_index = 0
-        num_neigh, neigh_indices, error = nl.get_neigh(self.neigh, cutoffs,
-                                                       neigh_list_index, index)
+        num_neigh, neigh_indices, error = nl.get_neigh(
+            self.neigh, cutoffs, neigh_list_index, index
+        )
         check_error(error, 'nl.get_neigh')
 
         neigh_coords = self.coords[neigh_indices]
@@ -168,7 +174,8 @@ class NeighborList:
             if not self.padding_need_neigh:
                 raise NeighborListError(
                     'Request to get neighbors of padding atoms, but '
-                    '"padding_need_neigh" is set to "False" at initializaion.')
+                    '"padding_need_neigh" is set to "False" at initializaion.'
+                )
             N = len(self.coords)
         else:
             N = self.conf.get_number_of_atoms()
@@ -180,7 +187,8 @@ class NeighborList:
         neighlist = []
         for i in range(N):
             num_neigh, neigh_indices, error = nl.get_neigh(
-                self.neigh, cutoffs, neigh_list_index, i)
+                self.neigh, cutoffs, neigh_list_index, i
+            )
             check_error(error, 'nl.get_neigh')
             numneigh.append(num_neigh)
             neighlist.append(neigh_indices)
@@ -235,7 +243,9 @@ class NeighborList:
         1D array
             Integer species code.
         """
-        return np.asarray([mapping[s] for s in self.padding_species], dtype=np.intc)
+        return np.asarray(
+            [mapping[s] for s in self.padding_species], dtype=np.intc
+        )
 
     def get_padding_image(self):
         """Return image of padding atoms."""
@@ -268,7 +278,7 @@ def assemble_forces(forces, n, padding_image):
     """
 
     # numpy slicing does not make a copy !!!
-    total_forces = np.array(forces[: n])
+    total_forces = np.array(forces[:n])
 
     has_padding = True if padding_image.size != 0 else False
 

@@ -21,9 +21,10 @@ def get_all_modules(source='../kliff'):
         $ sphinx-apidoc -f -e -o <outdir> <sourcedir>
     Return a list of modules names.
     """
-    results = subprocess.check_output(['sphinx-apidoc', '-f', '-e', '-o',
-                                       '/tmp/kliff_apidoc', source],
-                                      universal_newlines=True)
+    results = subprocess.check_output(
+        ['sphinx-apidoc', '-f', '-e', '-o', '/tmp/kliff_apidoc', source],
+        universal_newlines=True,
+    )
     results = results.split('\n')
     modules = []
     for line in results:
@@ -46,17 +47,17 @@ def autodoc_package(path, modules):
         fout.write('=================\n\n')
         fout.write('.. toctree::\n')
         for mod in modules:
-            fout.write('    kliff.'+mod+'\n')
+            fout.write('    kliff.' + mod + '\n')
 
 
 def autodoc_module(path, module):
     if path and not os.path.exists(path):
         os.makedirs(path)
-    module_name = 'kliff.'+module
-    fname = os.path.join(path, module_name+'.rst')
+    module_name = 'kliff.' + module
+    fname = os.path.join(path, module_name + '.rst')
     with open(fname, 'w') as fout:
         fout.write('{}\n'.format(module_name))
-        fout.write('-'*len(module_name) + '\n\n')
+        fout.write('-' * len(module_name) + '\n\n')
         fout.write('.. automodule:: {}\n'.format(module_name))
         fout.write('    :members:\n')
         fout.write('    :undoc-members:\n')

@@ -24,7 +24,9 @@ class Calculator:
     def __init__(self, model):
         self.model = model
 
-    def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
+    def create(
+        self, configs, use_energy=True, use_forces=True, use_stress=False
+    ):
         """Create compute arguments for a collection of configurations.
 
         By compute argugments, we mean the information needed by a model to carry on
@@ -63,13 +65,16 @@ class Calculator:
 
         if not length_equal(configs, use_energy):
             raise InputError(
-                'Lenghs of arguments "configs" and "use_energy" not equal.')
+                'Lenghs of arguments "configs" and "use_energy" not equal.'
+            )
         if not length_equal(configs, use_forces):
             raise InputError(
-                'Lenghs of arguments "configs" and "use_forces" not equal.')
+                'Lenghs of arguments "configs" and "use_forces" not equal.'
+            )
         if not length_equal(configs, use_stress):
             raise InputError(
-                'Lenghs of arguments "configs" and "use_stress" not equal.')
+                'Lenghs of arguments "configs" and "use_stress" not equal.'
+            )
 
         N = len(configs)
         if not isinstance(use_energy, Iterable):
@@ -91,10 +96,12 @@ class Calculator:
             if self._is_kim_model():
                 kim_ca = self.model.create_a_kim_compute_argument()
                 ca = self.model.compute_arguments_class(
-                    kim_ca, conf, supported_species, infl_dist, e, f, s)
+                    kim_ca, conf, supported_species, infl_dist, e, f, s
+                )
             else:
                 ca = self.model.compute_arguments_class(
-                    conf, supported_species, infl_dist, e, f, s)
+                    conf, supported_species, infl_dist, e, f, s
+                )
             self.compute_arguments.append(ca)
 
         logger.info('calculator for %d configurations created.', len(configs))
@@ -305,7 +312,7 @@ class _WrapperCalculator(object):
         for calc in self.calculators:
             N = calc.get_number_of_opt_params()
             start = i
-            end = i+N
+            end = i + N
             start_end.append((start, end))
             i += N
         return start_end
@@ -355,5 +362,5 @@ class _WrapperCalculator(object):
         calc_list = []
         for calc in self.calculators:
             N = len(calc.get_compute_arguments())
-            calc_list.extend([calc]*N)
+            calc_list.extend([calc] * N)
         return calc_list

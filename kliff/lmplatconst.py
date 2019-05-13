@@ -71,7 +71,9 @@ def lmp_lat_const(modelname):
         "source-unit" "Angstrom"
         "source-value"  %22.15e
       }
-    }''' % (lat_const)
+    }''' % (
+            lat_const
+        )
 
         fout.write(edn_str)
 

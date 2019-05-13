@@ -32,11 +32,11 @@ def test_parameter():
 
 def create_all_possible_input(v):
     inp = []
-    for ud in ['default', v+0.01]:
+    for ud in ['default', v + 0.01]:
         inp.append([ud])
         inp.append([ud, 'fix'])
-        for lb in [None, v-0.1]:
-            for ub in [None, v+0.1]:
+        for lb in [None, v - 0.1]:
+            for ub in [None, v + 0.1]:
                 inp.append([ud, lb, ub])
     return inp
 
@@ -86,9 +86,9 @@ def test_fitting_parameter():
             assert c == 0
         else:
             assert p == 1
-            assert c == (i-1) % 2
+            assert c == (i - 1) % 2
 
-    bounds = [[i-0.1, i+0.1] for i in x0]
+    bounds = [[i - 0.1, i + 0.1] for i in x0]
     assert np.allclose(fp.get_opt_params_bounds(), bounds)
 
     # interface to calculator
@@ -99,8 +99,12 @@ def test_fitting_parameter():
     for i, nm in enumerate(nms):
         assert fp.get_size(nm) == mp[nm].size
         assert np.allclose(fp.get_value(nm), mp[nm].value)
-        assert np.allclose(fp.get_lower_bound(nm), [v - 0.1 for v in mp[nm].value])
-        assert np.allclose(fp.get_upper_bound(nm), [v + 0.1 for v in mp[nm].value])
+        assert np.allclose(
+            fp.get_lower_bound(nm), [v - 0.1 for v in mp[nm].value]
+        )
+        assert np.allclose(
+            fp.get_upper_bound(nm), [v + 0.1 for v in mp[nm].value]
+        )
         fix = fp.get_fix(nm)
         for x in fix:
             assert not x

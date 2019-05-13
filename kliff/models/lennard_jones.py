@@ -29,11 +29,14 @@ class LJComputeArguments(ComputeArguments):
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
                 raise ParameterError(
-                    '"influence_distance" not provided by calculator."')
+                    '"influence_distance" not provided by calculator."'
+                )
         self.influence_distance = infl_dist
 
         # create neighbor list
-        self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=False)
+        self.neigh = NeighborList(
+            self.conf, infl_dist, padding_need_neigh=False
+        )
 
     def compute(self, params):
         epsilon = params['epsilon'].get_value()[0]
@@ -54,24 +57,30 @@ class LJComputeArguments(ComputeArguments):
                 r = np.linalg.norm(rij)
                 if self.compute_forces:
                     phi, dphi = self.calc_phi_dphi(epsilon, sigma, r, rcut)
-                    energy += 0.5*phi
-                    pair = 0.5*dphi/r*rij
-                    forces_including_padding[i] = forces_including_padding[i] + pair
-                    forces_including_padding[j] = forces_including_padding[j] - pair
+                    energy += 0.5 * phi
+                    pair = 0.5 * dphi / r * rij
+                    forces_including_padding[i] = (
+                        forces_including_padding[i] + pair
+                    )
+                    forces_including_padding[j] = (
+                        forces_including_padding[j] - pair
+                    )
                 elif self.compute_energy:
                     phi = self.calc_phi(epsilon, sigma, r, rcut)
-                    energy += 0.5*phi
+                    energy += 0.5 * phi
 
         if self.compute_energy:
             self.results['energy'] = energy
         if self.compute_forces:
-            forces = assemble_forces(forces_including_padding,
-                                     len(coords), self.neigh.padding_image)
+            forces = assemble_forces(
+                forces_including_padding, len(coords), self.neigh.padding_image
+            )
             self.results['forces'] = forces
         if self.compute_stress:
             volume = self.conf.get_volume()
-            stress = assemble_stress(coords_including_padding,
-                                     forces_including_padding, volume)
+            stress = assemble_stress(
+                coords_including_padding, forces_including_padding, volume
+            )
             self.results['stress'] = stress
 
     @staticmethod
@@ -79,30 +88,29 @@ class LJComputeArguments(ComputeArguments):
         if r > rcut:
             phi = 0
         else:
-            sor = sigma/r
-            sor6 = sor*sor*sor
-            sor6 = sor6*sor6
-            sor12 = sor6*sor6
-            phi = 4*epsilon*(sor12 - sor6)
+            sor = sigma / r
+            sor6 = sor * sor * sor
+            sor6 = sor6 * sor6
+            sor12 = sor6 * sor6
+            phi = 4 * epsilon * (sor12 - sor6)
         return phi
 
     @staticmethod
     def calc_phi_dphi(epsilon, sigma, r, rcut):
         if r > rcut:
-            phi = 0.
-            dphi = 0.
+            phi = 0.0
+            dphi = 0.0
         else:
-            sor = sigma/r
-            sor6 = sor*sor*sor
-            sor6 = sor6*sor6
-            sor12 = sor6*sor6
-            phi = 4*epsilon*(sor12 - sor6)
-            dphi = 24*epsilon*(-2*sor12 + sor6) / r
+            sor = sigma / r
+            sor6 = sor * sor * sor
+            sor6 = sor6 * sor6
+            sor12 = sor6 * sor6
+            phi = 4 * epsilon * (sor12 - sor6)
+            dphi = 24 * epsilon * (-2 * sor12 + sor6) / r
         return phi, dphi
 
 
 class LennardJones(Model):
-
     def __init__(self, model_name=None, params_relation_callback=None):
         super(LennardJones, self).__init__(model_name, params_relation_callback)
 
