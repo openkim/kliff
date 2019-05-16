@@ -1,5 +1,7 @@
 import os
+import sys
 import numpy as np
+import warnings
 import scipy.optimize
 import multiprocessing as mp
 import kliff
@@ -399,12 +401,6 @@ class LossPhysicsMotivatedModel(object):
         return cas
 
     def get_residual_MPI(self, x):
-        if not mpi4py_available:
-            raise ImportError(
-                'Please install "mpi4py" first. See: '
-                'https://mpi4py.readthedocs.io/en/stable/index.html'
-            )
-
         def residual_my_chunk(x):
             # broadcast parameters
             x = comm.bcast(x, root=0)
@@ -464,7 +460,18 @@ class LossPhysicsMotivatedModel(object):
     def _scipy_optimize_minimize(self, method, **kwargs):
         size = parallel.get_MPI_world_size()
         if size > 1:
-            logger.info('Running with "{}" MPI processes.'.format(size))
+            msg = 'Running in MPI mode with {} processes.'.format(size)
+            print(msg + '\n')
+            logger.info(msg)
+            if self.nprocs > 1:
+                msg = (
+                    'Argument "nprocs = {}" provided at initialization is ignored. When '
+                    'running in MPI mode, the number of processes provided along with '
+                    'the "mpiexec" (or "mpirun") command is used.'.format(self.nprocs)
+                )
+                logger.warning(msg)
+                warnings.warn(msg, category=Warning)
+
             comm = MPI.COMM_WORLD
             rank = comm.Get_rank()
             loss_fn = self.get_loss_MPI
@@ -481,8 +488,26 @@ class LossPhysicsMotivatedModel(object):
             result = comm.bcast(result, root=0)
             return result
         else:
-            # this corresponds to two cases:
-            logger.info('Running with "{}" MPI processes.'.format(size))
+            if self.nprocs == 1:
+                msg = 'Running in serial mode.'
+                print(msg + '\n')
+                logger.info(msg)
+            else:
+                msg = 'Running in multiprocessing mode with {} processes.'.format(
+                    self.nprocs
+                )
+                print(msg + '\n')
+                logger.info(msg)
+                # detect the case that one try to run MPI but not use mpiexec and specify
+                # number of processes through "nprocs".
+                if mpi4py_available:
+                    msg = (
+                        '"mpi4y" detected. If you try to run in MPI mode, you should '
+                        'execute your code via "mpiexec" (or "mpirun"). If not, ignore '
+                        'this message.'
+                    )
+                    logger.warning(msg)
+                    warnings.warn(msg, category=Warning)
 
             # 1. running MPI with 1 process
             # 2. running without MPI at all
