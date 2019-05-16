@@ -15,6 +15,14 @@ try:
 except ImportError:
     torch_available = False
 
+try:
+    from mpi4py import MPI
+
+    mpi4py_available = True
+except ImportError:
+    mpi4py_available = False
+
+
 logger = kliff.logger.get_logger(__name__)
 
 
@@ -358,7 +366,7 @@ class LossPhysicsMotivatedModel(object):
     def get_loss(self, x):
         """Compute the loss.
 
-        This is a callable for optimizing method in scipy.optimize,minimize,
+        This is a callable for optimizing method in scipy.optimize.minimize,
         which is passed as the first positional argument.
 
         Parameters
@@ -371,15 +379,118 @@ class LossPhysicsMotivatedModel(object):
         loss = 0.5 * np.linalg.norm(residual) ** 2
         return loss
 
+    def split_data(self):
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+
+        # get a portion of data based on rank
+        cas = self.calculator.get_compute_arguments()
+        # random.shuffle(cas)
+
+        rank_size = len(cas) // size
+        # last rank deal with the case where len(cas) cannot evenly divide size
+        if rank == size - 1:
+            cas = cas[rank_size * rank :]
+        else:
+            cas = cas[rank_size * rank : rank_size * (rank + 1)]
+
+        return cas
+
+    def get_residual_MPI(self, x):
+        if not mpi4py_available:
+            raise ImportError(
+                'Please install "mpi4py" first. See: '
+                'https://mpi4py.readthedocs.io/en/stable/index.html'
+            )
+
+        def residual_my_chunk(x):
+            # broadcast parameters
+            x = comm.bcast(x, root=0)
+            # publish params x to predictor
+            self.calculator.update_opt_params(x)
+
+            residual = []
+            for ca in cas:
+                current_residual = self._get_residual_single_config(
+                    ca, self.calculator, self.residual_fn, self.residual_data
+                )
+                residual.extend(current_residual)
+            return residual
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+
+        # get my chunk of data
+        cas = self.split_data()
+
+        while True:
+
+            if rank == 0:
+                break_flag = False
+                for i in range(1, size):
+                    comm.send(break_flag, dest=i, tag=i)
+                residual = residual_my_chunk(x)
+                all_residuals = comm.gather(residual, root=0)
+                return np.concatenate(all_residuals)
+            else:
+                break_flag = comm.recv(source=0, tag=rank)
+                if break_flag:
+                    break
+                else:
+                    residual = residual_my_chunk(x)
+                    all_residuals = comm.gather(residual, root=0)
+
+    def get_loss_MPI(self, x):
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        residual = self.get_residual_MPI(x)
+        if rank == 0:
+            loss = 0.5 * np.linalg.norm(residual) ** 2
+        else:
+            loss = None
+
+        return loss
+
     def _scipy_optimize_least_squares(self, method, **kwargs):
         residual = self.get_residual
         x = self.calculator.get_opt_params()
         return scipy.optimize.least_squares(residual, x, method=method, **kwargs)
 
     def _scipy_optimize_minimize(self, method, **kwargs):
-        loss = self.get_loss
-        x = self.calculator.get_opt_params()
-        return scipy.optimize.minimize(loss, x, method=method, **kwargs)
+        size = parallel.get_MPI_world_size()
+        if size > 1:
+            logger.info('Running with "{}" MPI processes.'.format(size))
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+            loss_fn = self.get_loss_MPI
+            x = self.calculator.get_opt_params()
+            if rank == 0:
+                result = scipy.optimize.minimize(loss_fn, x, method=method, **kwargs)
+                # notify other process to break loss_fn
+                break_flag = True
+                for i in range(1, size):
+                    comm.send(break_flag, dest=i, tag=i)
+            else:
+                loss_fn(x)
+                result = None
+            result = comm.bcast(result, root=0)
+            return result
+        else:
+            # this corresponds to two cases:
+            logger.info('Running with "{}" MPI processes.'.format(size))
+
+            # 1. running MPI with 1 process
+            # 2. running without MPI at all
+            # both cases are regarded as running without MPI
+            loss = self.get_loss
+            x = self.calculator.get_opt_params()
+            result = scipy.optimize.minimize(loss, x, method=method, **kwargs)
+            return result
 
     def _get_residual_single_config(self, ca, calculator, residual_fn, residual_data):
 

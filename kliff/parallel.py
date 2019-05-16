@@ -163,7 +163,7 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     managers = []
     for i in range(nprocs):
         manager_end, worker_end = mp.Pipe(duplex=False)
-        p = mp.Process(target=_func3, args=(f, groups[i], args, worker_end))
+        p = mp.Process(target=_func2, args=(f, groups[i], args, worker_end))
         p.daemon = True
         p.start()
         processes.append(p)
@@ -177,10 +177,24 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     return [r for i, r in sorted(results)]
 
 
-def _func3(f, iX, args, worker_end):
+def _func2(f, iX, args, worker_end):
     results = []
     for ix in iX:
         i = ix[0]
         x = ix[1:]
         results.append((i, f(*x, *args)))
     worker_end.send(results)
+
+
+def get_MPI_world_size():
+    try:
+        from mpi4py import MPI
+
+        mpi4py_available = True
+    except ImportError as e:
+        mpi4py_available = True
+
+    if mpi4py_available:
+        return MPI.COMM_WORLD.Get_size()
+    else:
+        return 1
