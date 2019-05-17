@@ -10,7 +10,7 @@ import kliff
 logger = kliff.logger.get_logger(__name__)
 
 
-# TODO take a look at proporty decorator
+# TODO take a look at property decorator
 class Parameter:
     """Parameter class.
     """
@@ -56,10 +56,10 @@ class Parameter:
 
 
 class FittingParameter:
-    """Class of model parameters that will be optimzied.
+    """Class of model parameters that will be optimized.
 
     It interacts with optimizer to provide initial guesses of parameters and
-    receive updated paramters from the optimizer.
+    receive updated parameters from the optimizer.
     """
 
     def __init__(self, model_params):
@@ -68,7 +68,7 @@ class FittingParameter:
         ----------
 
         model_params: OrderDict
-            All the paramters of a model(calculator).
+            All the parameters of a model(calculator).
         """
         self.model_params = model_params
 
@@ -87,7 +87,7 @@ class FittingParameter:
 
         1st element: float or `DEFAULT`
             Initial guess of the parameter component. If `DEFAULT` (case insensitive),
-            the value from the calculator is used as the intial guess.
+            the value from the calculator is used as the initial guess.
 
         The 2nd and 3rd elements are optional. If 2 elements are provided:
 
@@ -159,7 +159,7 @@ class FittingParameter:
 
         One or more parameters can be set. Each argument is for one parameter, where
         the argument name is the parameter name, the value of the argument is the
-        settings(including intial value, fix flag, lower bound, and upper bound).
+        settings(including initial value, fix flag, lower bound, and upper bound).
 
         The value of the argument should be a list of list, where each inner list is
         for one component of the parameter, which can contain 1, 2, or 3 elements.
@@ -203,7 +203,7 @@ class FittingParameter:
         size = self.model_params[name].get_size()
         if len(settings) != size:
             raise InputError(
-                'Incorrect number of initial values for paramter "{}".'.format(name)
+                'Incorrect number of initial values for parameter "{}".'.format(name)
             )
 
         tmp_dict = {
@@ -302,7 +302,7 @@ class FittingParameter:
         # restore parameters
         with open(path, 'rb') as f:
             self.params = pickle.load(f)
-        # resotre index
+        # restore index
         self._index = []
         for name in self.params.keys():
             self._index.append(self._set_index(name))
@@ -332,7 +332,7 @@ class FittingParameter:
         return len(self._index)
 
     def update_params(self, opt_x):
-        """ Update parameter values from optimzier. (Interface to optimizer)
+        """ Update parameter values from optimizer. (Interface to optimizer)
 
         This is the opposite operation of get_opt_params().
 
@@ -387,6 +387,14 @@ class FittingParameter:
             bounds.append([lower, upper])
         return bounds
 
+    def has_opt_params_bounds(self):
+        """Whether bounds are set for some parameters."""
+        bounds = self.get_opt_params_bounds()
+        for lb, up in bounds:
+            if lb is not None or up is not None:
+                return True
+        return False
+
     def _read_1_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
 
@@ -436,7 +444,7 @@ class FittingParameter:
                 )
 
     def _check_bounds(self, name):
-        """Check whether the initial guess of a paramter is within its lower and
+        """Check whether the initial guess of a parameter is within its lower and
         upper bounds.
         """
         attr = self.params[name]

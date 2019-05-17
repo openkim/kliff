@@ -62,11 +62,11 @@ class Calculator:
             configs = [configs]
 
         if not length_equal(configs, use_energy):
-            raise InputError('Lenghs of arguments "configs" and "use_energy" not equal.')
+            raise InputError('Lengths of arguments "configs" and "use_energy" not equal.')
         if not length_equal(configs, use_forces):
-            raise InputError('Lenghs of arguments "configs" and "use_forces" not equal.')
+            raise InputError('Lengths of arguments "configs" and "use_forces" not equal.')
         if not length_equal(configs, use_stress):
-            raise InputError('Lenghs of arguments "configs" and "use_stress" not equal.')
+            raise InputError('Lengths of arguments "configs" and "use_stress" not equal.')
 
         N = len(configs)
         if not isinstance(use_energy, Iterable):
@@ -110,7 +110,7 @@ class Calculator:
     # TODO, maybe change the compute_argument.compute api of kim models, such
     # that it accept params as the argument, insteand of kim_model
     def compute(self, compute_arguments):
-        """Compute the properties given the compute arguments assciated with a
+        """Compute the properties given the compute arguments associated with a
         configuration.
 
         Parameters
@@ -180,7 +180,7 @@ class Calculator:
 
         return compute_arguments.get_stress()
 
-    # TODO maybe move this and `get_referene` to loss.
+    # TODO maybe move this and `get_reference` to loss.
     def get_prediction(self, compute_arguments):
         """Get the prediction of all properties that are requested to compute.
 
@@ -257,6 +257,12 @@ class Calculator:
         to carry out the optimization.
         """
         return self.model.get_opt_params()
+
+    def has_opt_params_bounds(self):
+        """Return a bool to indicate whether there are parameters whose bounds are
+        provided.
+        """
+        return self.model.has_opt_params_bounds()
 
     def get_opt_params_bounds(self):
         """Return the lower and upper bounds for the optimizing parameters.

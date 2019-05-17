@@ -337,6 +337,9 @@ class Model:
     def get_opt_param_value_and_indices(self, k):
         return self.fitting_params.get_opt_param_value_and_indices(k)
 
+    def has_opt_params_bounds(self):
+        return self.fitting_params.has_opt_params_bounds()
+
     def get_opt_params_bounds(self):
         return self.fitting_params.get_opt_params_bounds()
 
