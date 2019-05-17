@@ -1,8 +1,8 @@
 import numpy as np
 import kliff
-from kliff.models.model import ComputeArguments, Model
-from kliff.models.parameter import Parameter, ParameterError
-from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
+from .model import ComputeArguments, Model
+from .parameter import Parameter, ParameterError
+from ..neighbor import NeighborList, assemble_forces, assemble_stress
 
 logger = kliff.logger.get_logger(__name__)
 

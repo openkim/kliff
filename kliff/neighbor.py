@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import kimpy
 from kimpy import neighlist as nl
-from kliff.atomic_data import atomic_number, atomic_species
+from .atomic_data import atomic_number, atomic_species
 
 
 class NeighborList:

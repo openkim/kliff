@@ -5,9 +5,9 @@ import pickle
 import numpy as np
 import multiprocessing as mp
 import kliff
-from kliff import parallel
-from kliff.atomic_data import atomic_number
-from kliff.error import InputError
+from .. import parallel
+from ..atomic_data import atomic_number
+from ..error import InputError
 
 logger = kliff.logger.get_logger(__name__)
 

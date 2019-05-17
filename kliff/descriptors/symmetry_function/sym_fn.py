@@ -3,9 +3,8 @@ import sys
 import logging
 from collections import OrderedDict
 import kliff
-from kliff.descriptors.descriptor import Descriptor
-from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
-from kliff.neighbor import NeighborList
+from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
+from ...neighbor import NeighborList
 from . import sf
 
 logger = kliff.logger.get_logger(__name__)

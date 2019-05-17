@@ -5,12 +5,12 @@ from collections import OrderedDict
 import kimpy
 from kimpy import neighlist as nl
 import kliff
-from kliff.dataset import Configuration
-from kliff.models.model import ComputeArguments, Model
-from kliff.models.parameter import Parameter
-from kliff.neighbor import assemble_forces, assemble_stress
-from kliff.utils import length_equal
-from kliff.error import SupportError
+from ..dataset import Configuration
+from .model import ComputeArguments, Model
+from .parameter import Parameter
+from ..neighbor import assemble_forces, assemble_stress
+from ..utils import length_equal
+from ..error import SupportError
 
 logger = kliff.logger.get_logger(__name__)
 

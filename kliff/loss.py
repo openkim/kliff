@@ -5,13 +5,12 @@ import warnings
 import scipy.optimize
 import multiprocessing as mp
 import kliff
-from kliff import parallel
-from kliff.error import InputError
+from . import parallel
+from .error import InputError
 
 try:
     import torch
-    from kliff.neuralnetwork import FingerprintsDataset
-    from kliff.neuralnetwork import FingerprintsDataLoader
+    from .neuralnetwork import FingerprintsDataset, FingerprintsDataLoader
 
     torch_available = True
 except ImportError:
@@ -34,7 +33,7 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     Parameters
     ----------
     identifier: str
-        identifer of the configuration, i.e. path to the file
+        identifier of the configuration, i.e. path to the file
 
     natoms: int
         number of atoms in the configuration
@@ -46,7 +45,7 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
         references data for the prediction
 
     data: dict
-        User provided callback data, and aviailable keys:
+        User provided callback data, and available keys:
             energy_weight: float (default: 1)
             forces_weight: float (default: 1)
 

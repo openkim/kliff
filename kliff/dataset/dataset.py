@@ -2,8 +2,8 @@ import os
 import numpy as np
 import copy
 from collections import OrderedDict
-from kliff.error import SupportError
-from kliff.dataset.extxyz import read_extxyz, write_extxyz
+from ..error import SupportError
+from .extxyz import read_extxyz, write_extxyz
 
 
 implemented_format = dict()

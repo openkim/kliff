@@ -2,9 +2,8 @@ import sys
 import logging
 import numpy as np
 import kliff
-from kliff.descriptors.descriptor import Descriptor
-from kliff.descriptors.descriptor import generate_full_cutoff, generate_species_code
-from kliff.neighbor import NeighborList
+from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
+from ...neighbor import NeighborList
 from . import bs
 
 logger = kliff.logger.get_logger(__name__)

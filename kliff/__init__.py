@@ -1,4 +1,4 @@
-from kliff.log import Logger
+from .log import Logger
 
 __version__ = '0.1.1'
 

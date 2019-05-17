@@ -2,15 +2,15 @@ import numpy as np
 import os
 import multiprocessing as mp
 from collections.abc import Iterable
-from kliff.descriptors.descriptor import load_fingerprints
-from kliff.error import InputError
-from kliff.dataset import Configuration
+from .descriptors.descriptor import load_fingerprints
+from .error import InputError
+from .dataset.dataset import Configuration
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
-# pytorch buildin (use them directly)
+# pytorch built-in (use them directly)
 from torch.nn.modules.linear import Linear, Bilinear
 from torch.nn.modules.conv import (
     Conv1d,
