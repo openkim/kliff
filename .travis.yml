@@ -44,6 +44,7 @@ script:
   - pip install -e .
   - cd tests
   - pytest test_neighbor.py
+  - pytest test_scipy_optimize.py
   - cd dataset
   - pytest
   - cd ../models
