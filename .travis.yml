@@ -45,6 +45,7 @@ script:
   - cd tests
   - pytest test_neighbor.py
   - pytest test_scipy_optimize.py
+  - pytest test_parallel.py
   - cd dataset
   - pytest
   - cd ../models
