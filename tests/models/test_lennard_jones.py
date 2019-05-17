@@ -133,7 +133,7 @@ def test_lj():
     calc = Calculator(model)
 
     dset = DataSet(order_by_species=False)
-    fname = '../configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
+    fname = './configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
     dset.read(fname)
     configs = dset.get_configs()
 

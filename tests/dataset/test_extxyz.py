@@ -10,7 +10,7 @@ def assert_1d_array(a, b):
 
 
 def test_configuration(e=True, f=False, s=False, order=False):
-    fname = '../configs_extxyz/MoS2/MoS2'
+    fname = './configs_extxyz/MoS2/MoS2'
     if e:
         fname += '_energy'
     if f:
@@ -88,12 +88,12 @@ def test_configuration(e=True, f=False, s=False, order=False):
     assert natoms_by_species['Mo'] == 96
     assert natoms_by_species['S'] == 192
 
-    outname = fname.replace('../configs_extxyz/MoS2/MoS2', 'tmp_Mos2')
+    outname = fname.replace('./configs_extxyz/MoS2/MoS2', 'tmp_Mos2')
     write_extxyz(outname, cell, PBC, species, coords, energy, forces, stress)
 
 
 def test_dataset():
-    directory = '../configs_extxyz/MoS2'
+    directory = './configs_extxyz/MoS2'
     tset = DataSet()
     tset.read(directory)
     configs = tset.get_configs()

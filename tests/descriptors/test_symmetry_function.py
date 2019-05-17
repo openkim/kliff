@@ -217,7 +217,7 @@ def get_descriptor():
 def test_desc():
 
     config = Configuration(format='extxyz')
-    config.read('../configs_extxyz/Si.xyz')
+    config.read('./configs_extxyz/Si.xyz')
 
     desc = get_descriptor()
     zeta, grad_zeta = desc.transform(config, grad=True)

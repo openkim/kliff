@@ -182,7 +182,7 @@ dzeta_dr_minus_121 = [
 
 def test_desc():
 
-    fname = '../configs_extxyz/Si.xyz'
+    fname = './configs_extxyz/Si.xyz'
     conf = Configuration(format='extxyz')
     conf.read(fname)
 

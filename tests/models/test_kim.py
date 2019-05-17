@@ -36,7 +36,7 @@ def test_main():
 
     # training set
     tset = DataSet()
-    tset.read('../configs_extxyz/Si_4')
+    tset.read('./configs_extxyz/Si_4')
     configs = tset.get_configs()
 
     # model

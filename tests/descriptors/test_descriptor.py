@@ -53,7 +53,7 @@ class ExampleDescriptor(Descriptor):
 
 
 def test_descriptor():
-    fname = '../configs_extxyz/Si.xyz'
+    fname = './configs_extxyz/Si.xyz'
     conf = Configuration(format='extxyz', identifier=fname)
     conf.read(fname)
     configs = [conf, conf]
