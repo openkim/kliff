@@ -6,8 +6,8 @@ import numpy as np
 def parmap1(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     """Parallelism over data.
 
-    This function mimics ``multiprocessing.Pool.map`` to allow extra arguments
-    to be used for the function ``f``.
+    This function mimics ``multiprocessing.Pool.map`` to allow extra arguments to be used
+    for the function ``f``.
 
     Parameters
     ----------
@@ -21,9 +21,9 @@ def parmap1(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
         Extra positional arguments needed by the function ``f``.
 
     tuple_X: bool
-        This depends on ``X``. It should be set to ``True`` if multiple
-        arguments are parallelized and set to ``False`` if only one argument is
-        parallelized. See ``Example`` below.
+        This depends on ``X``. It should be set to ``True`` if multiple arguments are
+        parallelized and set to ``False`` if only one argument is parallelized. See
+        ``Example`` below.
 
     nprocs: int
         Number of processors to use.
@@ -35,18 +35,16 @@ def parmap1(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
 
     Note
     ----
-    The data is put into a job queue, a worker process gets a piece of the data
-    to work on, the worker pushes the result back to the manager through another
-    queue, and then get another piece of data until the job queue is empty.
-    So, in principle, there will not be idle worker and it should be faster than
-    :meth:`kliff.parallel.parmap2`.
+    The data is put into a job queue, a worker process gets a piece of the data to work
+    on, the worker pushes the result back to the manager through another queue, and then
+    get another piece of data until the job queue is empty.  So, in principle, there will
+    not be idle worker and it should be faster than :meth:`kliff.parallel.parmap2`.
 
     Warning
     -------
-    This is implemented using ``multiprocessing.Queue``, which requires the
-    funciton ``f`` to be picklable. If it is not the case (e.g. use KIM library
-    functions), use :meth:`kliff.parallel.parmap2` that is based on
-    ``multiprocessing.Pipe``.
+    This is implemented using ``multiprocessing.Queue``, which requires the function``f``
+    to be picklable. If it is not the case (e.g. use KIM library functions), use
+    :meth:`kliff.parallel.parmap2` that is based on ``multiprocessing.Pipe``.
 
 
     Example
@@ -101,9 +99,9 @@ def _func1(f, q_in, q_out):
 def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     """Parallelism over data.
 
-    This is to mimic ``multiprocessing.Pool.map``, which requires the function
-    ``f`` to be picklable. This function does not have this restriction and
-    allows extra arguments to be used for the function ``f``.
+    This is to mimic ``multiprocessing.Pool.map``, which requires the function ``f`` to be
+    picklable. This function does not have this restriction and allows extra arguments to
+    be used for the function ``f``.
 
     Parameters
     ----------
@@ -117,9 +115,9 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
         Extra positional arguments needed by the function ``f``.
 
     tuple_X: bool
-        This depends on ``X``. It should be set to ``True`` if multiple
-        arguments are parallelized and set to ``False`` if only one argument is
-        parallelized. See ``Example`` below.
+        This depends on ``X``. It should be set to ``True`` if multiple arguments are
+        parallelized and set to ``False`` if only one argument is parallelized. See
+        ``Example`` below.
 
     nprocs: int
         Number of processors to use.
@@ -131,12 +129,11 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
 
     Note
     ----
-    This function is implemented using ``multiprocessing.Pipe``. The data is
-    subdivided into ``nprocs`` groups and then each group of data is distributed
-    to a process. The results from each group are then assembled together.
-    The data is shuffled to balance the load in each process.
-    See :meth:`kliff.parallel.parmap1` for another implementation that uses
-    ``multiprocessing.Queue``.
+    This function is implemented using ``multiprocessing.Pipe``. The data is subdivided
+    into ``nprocs`` groups and then each group of data is distributed to a process. The
+    results from each group are then assembled together.  The data is shuffled to balance
+    the load in each process.  See :meth:`kliff.parallel.parmap1` for another
+    implementation that uses ``multiprocessing.Queue``.
 
     Example
     -------
@@ -192,7 +189,7 @@ def get_MPI_world_size():
 
         mpi4py_available = True
     except ImportError as e:
-        mpi4py_available = True
+        mpi4py_available = False
 
     if mpi4py_available:
         return MPI.COMM_WORLD.Get_size()
