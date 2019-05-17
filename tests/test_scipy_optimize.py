@@ -12,9 +12,13 @@ def residual_fn(identifier, natoms, prediction, reference, data):
 
 def init():
     model = KIM(model_name='SW_StillingerWeber_1985_Si__MO_405512056662_005')
-    model.set_fitting_params(
-        A=[[5.0]], B=[['default']], sigma=[[2.0951, 'fix']], gamma=[[1.5]]
-    )
+
+    # Cannot set them all by calling this function only once, because the assertion
+    # depends on order
+    model.set_fitting_params(A=[[5.0]])
+    model.set_fitting_params(B=[['default']])
+    model.set_fitting_params(sigma=[[2.0951, 'fix']])
+    model.set_fitting_params(gamma=[[1.5]])
 
     dataset_name = './configs_extxyz/Si_4'
     tset = DataSet()

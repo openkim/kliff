@@ -55,7 +55,7 @@ def test_main():
         assert energy == pytest.approx(ref_energies[i], 1e-6)
         assert np.allclose(forces, ref_forces[i])
 
-    # Cannot set them all by calling this function only once, becase the assertation
+    # Cannot set them all by calling this function only once, because the assertion
     # depends on order
     model.set_fitting_params(sigma=[['default']])
     model.set_fitting_params(A=[['default', 'fix']])
