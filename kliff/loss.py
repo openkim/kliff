@@ -187,32 +187,13 @@ class LossPhysicsMotivatedModel(object):
         'trust-exact',
         'trust-krylov',
     ]
-
-    scipy_minimize_methods_not_supported_arguments = ['bounds']
-
+    scipy_minimize_methods_not_supported_args = ['bounds']
     scipy_least_squares_methods = ['trf', 'dogbox', 'lm']
-
-    scipy_least_squares_methods_not_supported_arguments = ['bounds']
+    scipy_least_squares_methods_not_supported_args = ['bounds']
 
     def __init__(
         self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
     ):
-        """
-        Parameters
-        ----------
-
-        calculator: Calculator object
-
-        nprocs: int
-          Number of processors to parallel to run the predictors.
-
-        residual_fn: function
-          function to compute residual, see `energy_forces_residual` for an example
-
-        residual_data: dict
-          data passed to residual function
-
-        """
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -234,16 +215,6 @@ class LossPhysicsMotivatedModel(object):
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
-    #
-    #  def set_nprocs(self, nprocs):
-    #    """ Set the number of processors to be used."""
-    #    self.nprocs = nprocs
-    #
-    #  def set_residual_fn_and_data(self, fn, data):
-    #    """ Set residual function and data. """
-    #    self.residual_fn = fn
-    #    self.residual_fn_data = data
-
     def minimize(self, method, **kwargs):
         """ Minimize the loss.
 
@@ -253,56 +224,122 @@ class LossPhysicsMotivatedModel(object):
             minimization methods as specified at:
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
-        kwargs: extra keyword arguments that can be used by the scipy optimizer.
+
+        kwargs: dict
+            extra keyword arguments that can be used by the scipy optimizer
         """
 
         if method in self.scipy_least_squares_methods:
-            for i in self.scipy_least_squares_methods_not_supported_arguments:
-                if i in kwargs:
-                    raise LossError(
-                        'Argument "{}" should not be set through the '
-                        '"minimize" method.'.format(i)
-                    )
-            bounds = self.calculator.get_opt_params_bounds()
-            kwargs['bounds'] = bounds
-            logger.info(
-                'Start minimization using scipy least squares method: {}.'.format(method)
-            )
-            result = self._scipy_optimize_least_squares(method, **kwargs)
-            logger.info(
-                'Finish minimization using scipy least squares method: {}.'.format(method)
-            )
-
+            not_supported_args = self.scipy_least_squares_methods_not_supported_args
         elif method in self.scipy_minimize_methods:
-            for i in self.scipy_minimize_methods_not_supported_arguments:
-                if i in kwargs:
-                    raise LossError(
-                        'Argument "{}" should not be set through the '
-                        '"minimize" method.'.format(i)
-                    )
-            bounds = self.calculator.get_opt_params_bounds()
-            for i in range(len(bounds)):
-                lb = bounds[i][0]
-                ub = bounds[i][1]
-                if lb is None:
-                    bounds[i][0] = -np.inf
-                if ub is None:
-                    bounds[i][1] = np.inf
-            kwargs['bounds'] = bounds
-            logger.info(
-                'Start minimization using scipy optimize method: {}.'.format(method)
-            )
-            result = self._scipy_optimize_minimize(method, **kwargs)
-            logger.info(
-                'Finish minimization using scipy optimize method: {}.'.format(method)
-            )
-
+            not_supported_args = self.scipy_minimize_methods_not_supported_args
         else:
             raise LossError('minimization method "{}" not supported.'.format(method))
 
-        # update final optimized paramters
+        for i in not_supported_args:
+            if i in kwargs:
+                raise LossError(
+                    'Argument "{}" should not be set via the "minimize" method. It it '
+                    'set internally.'.format(i)
+                )
+
+        bounds = self.calculator.get_opt_params_bounds()
+        if method in self.scipy_least_squares_methods:
+            lb = [b[0] if b[0] is not None else -np.inf for b in bounds]
+            ub = [b[1] if b[1] is not None else np.inf for b in bounds]
+            bounds = (lb, ub)
+        kwargs['bounds'] = bounds
+
+        logger.info('Start minimization using scipy method: {}.'.format(method))
+        result = self._scipy_optimize(method, **kwargs)
+        logger.info('Finish minimization using scipy method: {}.'.format(method))
+
+        # update final optimized parameters
         self.calculator.update_opt_params(result.x)
         return result
+
+    def _scipy_optimize(self, method, **kwargs):
+
+        if method in self.scipy_least_squares_methods:
+            minimize_fn = scipy.optimize.least_squares
+        elif method in self.scipy_minimize_methods:
+            minimize_fn = scipy.optimize.minimize
+        else:
+            raise LossError('minimization method "{}" not supported.'.format(method))
+
+        size = parallel.get_MPI_world_size()
+
+        if size > 1:
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+
+            msg = 'Running in MPI mode with {} processes.'.format(size)
+            print(msg + '\n')
+            logger.info(msg)
+            if self.nprocs > 1:
+                msg = (
+                    'Argument "nprocs = {}" provided at initialization is ignored. When '
+                    'running in MPI mode, the number of processes provided along with '
+                    'the "mpiexec" (or "mpirun") command is used.'.format(self.nprocs)
+                )
+                logger.warning(msg)
+                warnings.warn(msg, category=Warning)
+
+            x = self.calculator.get_opt_params()
+            if method in self.scipy_least_squares_methods:
+                func = self.get_residual_MPI
+            elif method in self.scipy_minimize_methods:
+                func = self.get_loss_MPI
+            else:
+                raise LossError('minimization method "{}" not supported.'.format(method))
+
+            if rank == 0:
+                result = minimize_fn(func, x, method=method, **kwargs)
+                # notify other process to break func
+                break_flag = True
+                for i in range(1, size):
+                    comm.send(break_flag, dest=i, tag=i)
+            else:
+                func(x)
+                result = None
+            result = comm.bcast(result, root=0)
+            return result
+
+        else:
+            # 1. running MPI with 1 process
+            # 2. running without MPI at all
+            # both cases are regarded as running without MPI
+
+            if self.nprocs == 1:
+                msg = 'Running in serial mode.'
+                print(msg + '\n')
+                logger.info(msg)
+            else:
+                msg = 'Running in multiprocessing mode with {} processes.'.format(
+                    self.nprocs
+                )
+                print(msg + '\n')
+                logger.info(msg)
+                # Maybe one thinks he is using MPI because nprocs is used
+                if mpi4py_available:
+                    msg = (
+                        '"mpi4y" detected. If you try to run in MPI mode, you should '
+                        'execute your code via "mpiexec" (or "mpirun"). If not, ignore '
+                        'this message.'
+                    )
+                    logger.warning(msg)
+                    warnings.warn(msg, category=Warning)
+
+            x = self.calculator.get_opt_params()
+            if method in self.scipy_least_squares_methods:
+                func = self.get_residual
+            elif method in self.scipy_minimize_methods:
+                func = self.get_loss
+            else:
+                raise LossError('minimization method "{}" not supported.'.format(method))
+
+            result = minimize_fn(func, x, method=method, **kwargs)
+            return result
 
     def get_residual(self, x):
         """ Compute the residual.
@@ -381,25 +418,6 @@ class LossPhysicsMotivatedModel(object):
         loss = 0.5 * np.linalg.norm(residual) ** 2
         return loss
 
-    def split_data(self):
-
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-        size = comm.Get_size()
-
-        # get a portion of data based on rank
-        cas = self.calculator.get_compute_arguments()
-        # random.shuffle(cas)
-
-        rank_size = len(cas) // size
-        # last rank deal with the case where len(cas) cannot evenly divide size
-        if rank == size - 1:
-            cas = cas[rank_size * rank :]
-        else:
-            cas = cas[rank_size * rank : rank_size * (rank + 1)]
-
-        return cas
-
     def get_residual_MPI(self, x):
         def residual_my_chunk(x):
             # broadcast parameters
@@ -440,7 +458,6 @@ class LossPhysicsMotivatedModel(object):
                     all_residuals = comm.gather(residual, root=0)
 
     def get_loss_MPI(self, x):
-
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
@@ -451,6 +468,24 @@ class LossPhysicsMotivatedModel(object):
             loss = None
 
         return loss
+
+    def split_data(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+
+        # get a portion of data based on rank
+        cas = self.calculator.get_compute_arguments()
+        # random.shuffle(cas)
+
+        rank_size = len(cas) // size
+        # last rank deal with the case where len(cas) cannot evenly divide size
+        if rank == size - 1:
+            cas = cas[rank_size * rank :]
+        else:
+            cas = cas[rank_size * rank : rank_size * (rank + 1)]
+
+        return cas
 
     def _scipy_optimize_least_squares(self, method, **kwargs):
         residual = self.get_residual
@@ -487,7 +522,12 @@ class LossPhysicsMotivatedModel(object):
                 result = None
             result = comm.bcast(result, root=0)
             return result
+
         else:
+            # 1. running MPI with 1 process
+            # 2. running without MPI at all
+            # both cases are regarded as running without MPI
+
             if self.nprocs == 1:
                 msg = 'Running in serial mode.'
                 print(msg + '\n')
@@ -509,12 +549,9 @@ class LossPhysicsMotivatedModel(object):
                     logger.warning(msg)
                     warnings.warn(msg, category=Warning)
 
-            # 1. running MPI with 1 process
-            # 2. running without MPI at all
-            # both cases are regarded as running without MPI
-            loss = self.get_loss
+            loss_fn = self.get_loss
             x = self.calculator.get_opt_params()
-            result = scipy.optimize.minimize(loss, x, method=method, **kwargs)
+            result = scipy.optimize.minimize(loss_fn, x, method=method, **kwargs)
             return result
 
     def _get_residual_single_config(self, ca, calculator, residual_fn, residual_data):
