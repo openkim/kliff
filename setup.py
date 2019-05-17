@@ -13,8 +13,8 @@ for key, value in cfg_vars.items():
 class get_pybind11_includes:
     """Helper class to determine the pybind11 include path.
 
-    The purpose of this class is to postpone importing pybind11 until it is
-    actually installed, so that the ``get_include()`` method can be invoked.
+    The purpose of this class is to postpone importing pybind11 until it is actually
+    installed, so that the ``get_include()`` method can be invoked.
 
     See:
     https://github.com/pybind/python_example/blob/master/setup.py

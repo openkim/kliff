@@ -19,7 +19,7 @@ class Configuration:
         Format of the file that stores the configuration. Currently, supported format
         includes: `extxyz`.
 
-    identifer: str
+    identifier: str
         A unique identifier of the configuration.
 
     order_by_species: bool
@@ -94,8 +94,8 @@ class Configuration:
 
         Return
         ------
-        Return an OrderedDict with `keys` the species string specified in `symbols`,
-        and `values` the number of atoms with each species.
+        Return an OrderedDict with `keys` the species string specified in `symbols`, and
+        `values` the number of atoms with each species.
         """
 
         unique, counts = np.unique(self.species, return_counts=True)
@@ -127,8 +127,8 @@ class Configuration:
     def get_cell(self):
         """Return a 3x3 matrix of the lattice vectors of the configurations.
 
-        The first, second, and third rows are :math:`a_1`, :math:`a_2`, and
-        :math:`a_3`, respetively.
+        The first, second, and third rows are :math:`a_1`, :math:`a_2`, and :math:`a_3`,
+        respectively.
         """
         return self.cell.copy()
 
@@ -137,9 +137,8 @@ class Configuration:
         return self.volume
 
     def get_PBC(self):
-        """Return a list with 3 components indicating whether periodic boundary
-        condiction is used along the directions of the first, second, and third
-        lattice vectors.
+        """Return a list with 3 components indicating whether periodic boundary condition
+        is used along the directions of the first, second, and third lattice vectors.
         """
         return self.PBC.copy()
 
@@ -148,7 +147,7 @@ class Configuration:
         return self.species.copy()
 
     def get_coordinates(self):
-        """Return a `Nx3` matrix of the Cartesian coordiantes of all atoms."""
+        """Return a `Nx3` matrix of the Cartesian coordinates of all atoms."""
         return self.coords.copy()
 
     def get_energy(self):
@@ -169,7 +168,8 @@ class Configuration:
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
         \sigma_{xy}]`.
 
-        .. seealso::
+        See Also
+        --------
             https://en.wikipedia.org/wiki/Voigt_notation
         """
         if self.stress is not None:
@@ -208,17 +208,17 @@ class DataSet:
         self.do_order = order_by_species
         self.configs = []
 
+    # TODO chose another word for format, since it is a python built-in function
     def read(self, path, format='extxyz'):
         """Read an atomic configuration.
 
         Parameters
         ----------
-
         path: str
             Path of a file storing a configuration or path to a directory containing
-            multiple files. If given a directory, all the files in this directory and
-            its subdirectories with the extension corresponding to the specified
-            format will be read.
+            multiple files. If given a directory, all the files in this directory and its
+            subdirectories with the extension corresponding to the specified format will
+            be read.
 
         format: str
             Format of the file that stores the configuration (e.g. 'extxyz').
@@ -262,7 +262,7 @@ class DataSet:
                 conf_species = set(conf.get_species())
                 all_species.extend(conf_species)
             all_species = set(all_species)
-            # find occurence of species in each configuration
+            # find occurrence of species in each configuration
             for conf in self.configs:
                 conf.natoms_by_species = conf.count_atoms_by_species(all_species)
 
@@ -280,6 +280,7 @@ class DataSet:
         return len(self.configs)
 
 
+# TODO chose another word for format, since it is a python built-in function
 def read_config(path, format='extxyz'):
     """Read configuration stored in a file.
 
@@ -295,25 +296,25 @@ def read_config(path, format='extxyz'):
     -------
     cell: array
         A 3x3 matrix of the lattice vectors.  The first, second, and third rows are
-        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respetively.
+        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
 
     PBC: list
-        A list with 3 components indicating whether periodic boundary condiction is
-        used along the directions of the first, second, and third lattice vectors.
+        A list with 3 components indicating whether periodic boundary condition is used
+        along the directions of the first, second, and third lattice vectors.
 
     species: list
-        A list of string with N componment, where N is the number of atoms.
+        A list of string with N component, where N is the number of atoms.
 
     coords: array
         A Nx3 matrix of the coordinates of the atoms, where N is the number of atoms.
 
     energy: float or None
-        Potential energy of the configuration. If it is not provided in the file,
-        return `None`.
+        Potential energy of the configuration. If it is not provided in the file, return
+        `None`.
 
     forces: array or None
-        A Nx3 array of the forces on atoms, where N is the number of atoms.
-        If the forces are not provided in the file, return `None`.
+        A Nx3 array of the forces on atoms, where N is the number of atoms. If the forces
+        are not provided in the file, return `None`.
 
     stress: list or None
         A list with 6 components in Voigt notation, i.e. it returns
@@ -330,6 +331,7 @@ def read_config(path, format='extxyz'):
     return cell, PBC, species, coords, energy, forces, stress
 
 
+# TODO chose another word for format, since it is a python built-in function
 def write_config(
     path,
     cell,
@@ -354,30 +356,29 @@ def write_config(
 
     cell: array
         A 3x3 matrix of the lattice vectors.  The first, second, and third rows are
-        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respetively.
+        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
 
     PBC: list
-        A list with 3 components indicating whether periodic boundary condiction is
-        used along the directions of the first, second, and third lattice vectors.
+        A list with 3 components indicating whether periodic boundary condition is used
+        along the directions of the first, second, and third lattice vectors.
 
     species: list
-        A list of string with N componment, where N is the number of atoms.
+        A list of string with N component, where N is the number of atoms.
 
     coords: array
         A Nx3 matrix of the coordinates of the atoms, where N is the number of atoms.
 
     energy: float (optional)
-        Potential energy of the configuration. If `None`, skip writting this
-        information.
+        Potential energy of the configuration. If `None`, skip writing this information.
 
     forces: array (optional)
-        A Nx3 array of the forces on atoms, where N is the number of atoms.
-        If `None`, skip writting this information.
+        A Nx3 array of the forces on atoms, where N is the number of atoms. If `None`,
+        skip writing this information.
 
     stress: list (optional)
         A list with 6 components in Voigt notation, i.e. it returns
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
-        \sigma_{xy}]`. If `None`, skip writting this information.
+        \sigma_{xy}]`. If `None`, skip writing this information.
     """
 
     if format not in implemented_format:

@@ -24,11 +24,10 @@ class SymmetryFunction(Descriptor):
         Name of the cutoff function.
 
     hyperparams: dict or str
-        A dictionary of the hyper parameters of that define the descriptor. We
-        provide two sets of hyperparams that can be used by setting
-        ``hyperparams='set51'`` or ``hyperparams='set31'``, which are taken from
-        [Artrith2012]_ and [Artrith2013]_, respectively. To see what they are, one
-        can do:
+        A dictionary of the hyper parameters of that define the descriptor. We provide two
+        sets of hyperparams that can be used by setting ``hyperparams='set51'`` or
+        ``hyperparams='set31'``, which are taken from [Artrith2012]_ and [Artrith2013]_,
+        respectively. To see what they are, one can do:
 
         >>> cut_name = 'cos'  # just for init purpose
         >>> cut_dists = {'C-C': 5.}  # just for init purpose
@@ -93,7 +92,7 @@ class SymmetryFunction(Descriptor):
         logger.info('"SymmetryFunction" descriptor initialized.')
 
     def transform(self, conf, grad=False):
-        """Transform atomic coords to atomic enviroment descriptor values.
+        """Transform atomic coords to atomic environment descriptor values.
 
         Parameters
         ----------
@@ -197,7 +196,7 @@ class SymmetryFunction(Descriptor):
         for key, values in self.hyperparams.items():
             if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
                 raise SymmetryFunctionError(
-                    'Symmetry function "{}" unrognized.'.format(key)
+                    'Symmetry function "{}" unrecognized.'.format(key)
                 )
 
             # g1 needs no hyperparams, put a placeholder
@@ -303,7 +302,7 @@ def get_set51():
         {'zeta': 16, 'lambda': 1, 'eta': 0.08},
     ]
 
-    # tranfer units from bohr to angstrom
+    # transfer units from bohr to angstrom
     bhor2ang = 0.529177
     for key, values in params.items():
         for val in values:
@@ -360,7 +359,7 @@ def get_set31():
         {'zeta': 16, 'lambda': 1, 'eta': 0.045},
     ]
 
-    # tranfer units from bohr to angstrom
+    # transfer units from bohr to angstrom
     bhor2ang = 0.529177
     for key, values in params.items():
         for val in values:

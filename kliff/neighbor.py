@@ -9,12 +9,10 @@ class NeighborList:
     """Neighbor list class based on kimpy.neighlist.
 
     This uses the same approach that `LAMMPS` and `KIM` adopt: The atoms in the
-    configuration (assuming a total of N atoms) are named contributing atoms, and
-    padding atoms are created to satisfy the boundary conditions. The contributing
-    atoms are numbered as 1, 2, ... N-1, and the padding atoms are numbered as N,
-    N+1, N+2... Neighbors of atom can include both contributing atoms and padding
-    atoms.
-
+    configuration (assuming a total of N atoms) are named contributing atoms, and padding
+    atoms are created to satisfy the boundary conditions. The contributing atoms are
+    numbered as 1, 2, ... N-1, and the padding atoms are numbered as N, N+1, N+2...
+    Neighbors of atom can include both contributing atoms and padding atoms.
 
     Parameters
     ----------
@@ -22,8 +20,8 @@ class NeighborList:
         It stores the atoms information.
 
     infl_dist: float
-        Influence distance, within which atoms are interacting with each other.
-        In literatures, this is usually refered as `cutoff`.
+        Influence distance, within which atoms are interacting with each other. In
+        literatures, this is usually referred as `cutoff`.
 
     padding_need_neigh: bool
         Whether to generate neighbors for padding atoms.
@@ -37,8 +35,8 @@ class NeighborList:
         Species string of contributing and padding atoms.
 
     iamge: 1D array
-        Atom index, of which an atom is an image. The image of a contributing
-        atom is itself.
+        Atom index, of which an atom is an image. The image of a contributing atom is
+        itself.
 
     padding_coords: 2D array
         Coordinates of padding atoms.
@@ -51,9 +49,8 @@ class NeighborList:
 
     Note
     ----
-    To get the total force on a contributing atom, the forces on all padding atoms
-    who are images of the contributing atom should be added back to the contirbuting
-    atom.
+    To get the total force on a contributing atom, the forces on all padding atoms who are
+    images of the contributing atom should be added back to the contributing atom.
     """
 
     def __init__(self, conf, infl_dist, padding_need_neigh=False):
@@ -113,7 +110,7 @@ class NeighborList:
         check_error(error, 'nl.build')
 
     def get_neigh(self, index):
-        """Get the indices, coordiantes, and speices string of a given atom.
+        """Get the indices, coordinates, and species string of a given atom.
 
         Parameters
         ----------
@@ -144,13 +141,13 @@ class NeighborList:
         return neigh_indices, neigh_coords, neigh_species
 
     def get_numneigh_and_neighlist_1D(self, request_padding=False):
-        """Get the number of neighbrs and neighbor list for all atoms.
+        """Get the number of neighbors and neighbor list for all atoms.
 
         Parameters
         ----------
         request_padding: bool
             If ``True``, the returned number of neighbors and neighbor list include
-            those for padding atoms; If ``False``, only return these for contirbuting
+            those for padding atoms; If ``False``, only return these for contributing
             atoms.
 
         Return
@@ -159,16 +156,16 @@ class NeighborList:
             Number of neighbors for all atoms.
 
         neighlist: 1D array
-            Indicies of the neighbors for all atoms stacked into a 1D array.
-            Its total length is ``sum(numneigh)``, and the first ``numneigh[0]``
-            components are the neighbors of atom `0`, the next ``numneigh[1]``
-            componemnts are the neighbors of atom `1` ....
+            Indices of the neighbors for all atoms stacked into a 1D array. Its total
+            length is ``sum(numneigh)``, and the first ``numneigh[0]`` components are the
+            neighbors of atom `0`, the next ``numneigh[1]`` components are the neighbors
+            of atom `1` ....
         """
         if request_padding:
             if not self.padding_need_neigh:
                 raise NeighborListError(
                     'Request to get neighbors of padding atoms, but '
-                    '"padding_need_neigh" is set to "False" at initializaion.'
+                    '"padding_need_neigh" is set to "False" at initialization.'
                 )
             N = len(self.coords)
         else:
@@ -196,7 +193,7 @@ class NeighborList:
         return self.coords.copy()
 
     def get_species(self):
-        """Return speices of both contributing and padding atoms."""
+        """Return species of both contributing and padding atoms."""
         return self.species[:]
 
     def get_species_code(self, mapping):
@@ -253,7 +250,6 @@ def assemble_forces(forces, n, padding_image):
 
     Parameters
     ----------
-
     forces: 2D array
       forces on both contributing and padding atoms
 
@@ -262,7 +258,6 @@ def assemble_forces(forces, n, padding_image):
 
     padding_image: 1D int array
       atom number, of which the padding atom is an image
-
 
     Return
     ------

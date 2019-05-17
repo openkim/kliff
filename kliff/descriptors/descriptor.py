@@ -13,19 +13,19 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class Descriptor:
-    """Base class of atomic enviroment descriptors.
+    """Base class of atomic environment descriptors.
 
-    Preprocess dataset to generate fingerprints. This is the base class for all
-    descriptors, so it should not be used directly. Instead, descriptors built on top
-    of this such as :class:`~kliff.descriptors.SymmetryFunction` and
-    :class:`~kliff.descriptors.Bispectrum` can be used to transform the atomic
-    enviroment information into fingerprints.
+    Process dataset to generate fingerprints. This is the base class for all descriptors,
+    so it should not be used directly. Instead, descriptors built on top of this such as
+    :class:`~kliff.descriptors.SymmetryFunction` and
+    :class:`~kliff.descriptors.Bispectrum` can be used to transform the atomic environment
+    information into fingerprints.
 
     Parameters
     ----------
     cut_dists: dict
-        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are
-        atomic species string, and value should be a float.
+        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are atomic
+        species string, and value should be a float.
 
     cut_name: str
         Name of the cutoff function, such as ``cos``, ``P3``, ``P7``.
@@ -34,8 +34,8 @@ class Descriptor:
         A dictionary of the hyperparams of the descriptor.
 
     normalize: bool (optional)
-        If ``True``, the fingerprints is centered and normalized according to:
-        ``zeta = (zeta - mean(zeta)) / stdev(zeta)``
+        If ``True``, the fingerprints is centered and normalized according to: ``zeta =
+        (zeta - mean(zeta)) / stdev(zeta)``
 
     dtype: np.dtype
         Data type for the generated fingerprints, such as ``np.float32`` and
@@ -44,7 +44,7 @@ class Descriptor:
     Attributes
     ----------
     size: int
-        Lengh of the fingerprint vector.
+        Length of the fingerprint vector.
 
     mean: list
         Mean of the fingerprints.
@@ -135,11 +135,11 @@ class Descriptor:
             Whether to reuse the fingerprints if one is found at: {prefix}/train.pkl.
 
         prefix: str
-            Directory name where the generated fingerprints are stored.
-            Path to the generated fingerprints is: is: {prefix}/train.pkl
+            Directory name where the generated fingerprints are stored. Path to the
+            generated fingerprints is: is: {prefix}/train.pkl
 
         nprocs: int
-          Number of processors to be used.
+            Number of processes to invoke.
         """
 
         fname = os.path.join(prefix, 'train.pkl')
@@ -152,7 +152,7 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is genereated.', fname
+                    'Delete existing fingerprints: %s, new ones is generated.', fname
                 )
             else:
                 if self.normalize:
@@ -204,13 +204,13 @@ class Descriptor:
             Defaults to `prefix`.
             This effects only when:
             1) `normalize` is `True` in the initializer; and
-            2) self.genereate_train_fingerprints() has not been called,
+            2) self.generate_train_fingerprints() has not been called,
             because in this case we need to find the mean and stdev of the fingerprints
             of the training set, which is saved as a file name `mean_stdev.pkl` in the
-            derectory specified by `train_prefix`.
+            directory specified by `train_prefix`.
 
         nprocs: int
-            Number of processors to be used.
+            Number of processors to invoke.
         """
 
         if train_prefix is None:
@@ -226,7 +226,7 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is genereated.', fname
+                    'Delete existing fingerprints: %s, new ones is generated.', fname
                 )
             else:
                 if self.normalize and (self.mean is None or self.stdev is None):
@@ -237,10 +237,10 @@ class Descriptor:
         # generate data
         if self.normalize and (self.mean is None or self.stdev is None):
             raise DescriptorError(
-                'Cannot proceed to genereate fingerprints for test set without '
+                'Cannot proceed to generate fingerprints for test set without '
                 'that for training set generated when normalization is required. '
                 'Try generating training set fingerprints first by calling: '
-                'genereate_train_fingerprints().'
+                'generate_train_fingerprints().'
             )
         all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
         self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
@@ -323,10 +323,12 @@ class Descriptor:
         """Compute the mean and standard deviation of fingerprints.
 
         This running mean and standard method proposed by Welford is memory-efficient.
-        Besides, it outperforms the naive method from suffering numerical instability
-        for large dataset.
+        Besides, it outperforms the naive method from suffering numerical instability for
+        large dataset.
 
-        see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+        See Also
+        --------
+            https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         """
 
         # number of features
@@ -353,7 +355,7 @@ class Descriptor:
         return mean, stdev
 
     def transform(self, conf, grad=False):
-        """Transform atomic coords to atomic enviroment descriptor values.
+        """Transform atomic coords to atomic environment descriptor values.
 
         Parameters
         ----------
@@ -361,31 +363,30 @@ class Descriptor:
             A configuration of atoms.
 
         grad: bool (optional)
-            Whether to compute the gradient of descriptor values w.r.t. atomic
-            coordinates.
+            Whether to compute gradient of descriptor values w.r.t. atomic coordinates.
 
         Returns
         -------
         zeta: 2D array
             Descriptor values, each row for one atom.
-            zeta has shape (num_atoms, num_descriptors), where num_atoms is the
-            number of atoms in the configuration, and num_descriptors is the size
-            of the descriptor vector (depending on the the choice of hyper-parameters).
+            zeta has shape (num_atoms, num_descriptors), where num_atoms is the number of
+            atoms in the configuration, and num_descriptors is the size of the descriptor
+            vector (depending on the choice of hyper-parameters).
 
         dzeta_dr: 4D array if grad is ``True``, otherwise ``None``
-            Gradient of descriptor values w.r.t. atomic coordinates.
-            dzeta_dr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
-            num_atoms and num_descriptors has the same meanings as described in zeta.
-            DIM = 3 denotes three Cartesian coordinates.
+            Gradient of descriptor values w.r.t. atomic coordinates.  dzeta_dr has shape
+            (num_atoms, num_descriptors, num_atoms, DIM), where num_atoms and
+            num_descriptors has the same meanings as described in zeta. DIM = 3 denotes
+            three Cartesian coordinates.
         """
 
         raise NotImplementedError(
-            'Method "transform" not implemented; it has to '
-            'be needes to be added by any subclass.'
+            'Method "transform" not implemented; it has to be needs to be '
+            'added by any subclass.'
         )
 
     def get_size(self):
-        """Retrun the size of the descritpor vector."""
+        """Return the size of the descriptor vector."""
         return self.size
 
     def get_mean(self):
@@ -455,14 +456,14 @@ def load_fingerprints(fname):
 def generate_full_cutoff(cutoff):
     """Generate a full binary cutoff dictionary.
 
-    For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it,
-    whih the same value as `S1-S2`.
+    For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it, which
+    the same value as `S1-S2`.
 
     Parameters
     ----------
     cutoff: dict
-        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B``
-        are atomic species, and value should be a float.
+        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B`` are atomic
+        species, and value should be a float.
 
     Return
     ------
@@ -487,19 +488,19 @@ def generate_full_cutoff(cutoff):
 
 
 def generate_species_code(cutoff):
-    """Genereate species code info from cutoff dictionary.
+    """Generate species code info from cutoff dictionary.
 
     Parameters
     ----------
     cutoff: dict
-        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B``
-        are atomic species, and value should be a float.
+        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B`` are atomic
+        species, and value should be a float.
 
     Return
     ------
     species: dict
-        A dictionary of species and the integer code, with keys the species in
-        ``cutoff`` keys, and values integer code for species.
+        A dictionary of species and the integer code, with keys the species in ``cutoff``
+        keys, and values integer code for species.
 
     Example
     -------

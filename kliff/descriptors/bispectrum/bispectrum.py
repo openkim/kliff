@@ -13,14 +13,14 @@ logger = kliff.logger.get_logger(__name__)
 class Bispectrum(Descriptor):
     """Bispectrum descriptor.
 
-    Preprocess dataset to generate fingerprints using the Bispectrum descriptor
-    as discussed in [Bartok2010]_ and [Thompson2015]_.
+    Process dataset to generate fingerprints using the Bispectrum descriptor as discussed
+    in [Bartok2010]_ and [Thompson2015]_.
 
     Parameters
     ----------
     cut_dists: dict
-        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are
-        atomic species string, and value should be a float.
+        Cutoff distances, with key of the form ``A-B`` where ``A`` and ``B`` are atomic
+        species string, and value should be a float.
 
     cut_name: str
         Name of the cutoff function.
@@ -126,8 +126,7 @@ class Bispectrum(Descriptor):
         return zeta, dzeta_dr
 
     def update_hyperparams(self, params):
-        """Update the hyperparameters based on the input at initialization.
-        """
+        """Update the hyperparameters based on the input at initialization."""
         default_hyperparams = {
             'jmax': 4,
             'rfac0': 0.99363,
@@ -142,7 +141,7 @@ class Bispectrum(Descriptor):
             for key, value in params.items():
                 if key not in default_hyperparams:
                     raise BispectrumError(
-                        'Hyperparameter "{}" not supported by this descirptor.'.format(
+                        'Hyperparameter "{}" not supported by this descriptor.'.format(
                             key
                         )
                     )

@@ -7,13 +7,13 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class Calculator:
-    """ Calcualtor class to exchange information between model and an optimizer.
+    """ Calculator class to exchange information between model and an optimizer.
 
-    It computes the `energy`, `forces`, etc. using a potential model, and provides
-    these properties, together with the corresponding reference data, to
-    :class:`~kliff.loss.Loss` to construct a cost function for the optimizer.
-    In the reverse direction, it grab the new parameters from the optimizer and
-    update the model with the new parameters.
+    It computes the `energy`, `forces`, etc. using a potential model, and provides these
+    properties, together with the corresponding reference data, to
+    :class:`~kliff.loss.Loss` to construct a cost function for the optimizer.  In the
+    reverse direction, it grab the new parameters from the optimizer and update the model
+    with the new parameters.
 
     Parameters
     ----------
@@ -27,11 +27,10 @@ class Calculator:
     def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
         """Create compute arguments for a collection of configurations.
 
-        By compute argugments, we mean the information needed by a model to carry on
-        a calculation, such as the coordiantes, speices, cutoff distance, neighbor
-        list, etc. Each configuration has its own compute arguments, and this
-        function creates the compute arguments for all the configurations in
-        ``configs``.
+        By compute arguments, we mean the information needed by a model to carry on a
+        calculation, such as the coordinates, species, cutoff distance, neighbor list,
+        etc. Each configuration has its own compute arguments, and this function creates
+        the compute arguments for all the configurations in ``configs``.
 
         Parameters
         ----------
@@ -39,19 +38,19 @@ class Calculator:
             A list of :class:`~kliff.dataset.Configuration` instances.
 
         use_energy: list of bools (optional)
-            Whether to require the calculator to compute energy. Each component is
-            for one configuration in ``configs``. If a bool instead of a list is
-            provided, it is applied to all configurations.
+            Whether to require the calculator to compute energy. Each component is for one
+            configuration in ``configs``. If a bool instead of a list is provided, it is
+            applied to all configurations.
 
         use_forces: list of bools (optional)
-            Whether to require the calculator to compute forces. Each component is
-            for one configuration in ``configs``. If a bool instead of a list is
-            provided, it is applied to all configurations.
+            Whether to require the calculator to compute forces. Each component is for one
+            configuration in ``configs``. If a bool instead of a list is provided, it is
+            applied to all configurations.
 
         use_stress: list of bools (optional)
-            Whether to require the calculator to compute stress. Each component is
-            for one configuration in ``configs``. If a bool instead of a list is
-            provided, it is applied to all configurations.
+            Whether to require the calculator to compute stress. Each component is for one
+            configuration in ``configs``. If a bool instead of a list is provided, it is
+            applied to all configurations.
         """
 
         self.use_energy = use_energy
@@ -172,8 +171,8 @@ class Calculator:
         Return
         ------
         1D array
-            The stress of the configuration associated with the compute arguments.
-            The returned stress is in Voigt notation, i.e. this function returns:
+            The stress of the configuration associated with the compute arguments. The
+            returned stress is in Voigt notation, i.e. this function returns:
             [:math:`\sigma_{xx}, \sigma_{yy}, \sigma_{zz}, \sigma_{yz}, \sigma_{xy},
             \sigma_{xz}`]
         """
@@ -184,12 +183,11 @@ class Calculator:
     def get_prediction(self, compute_arguments):
         """Get the prediction of all properties that are requested to compute.
 
-        The `energy`, `forces`, and `stress` are each flattened to a 1D array, and
-        then concatenated (in the order of `energy`, `forces`, and `stress`) to form
-        the prediction.
-        Depending on the values of ``use_energy``, ``use_forces``, and ``use_stress``
-        that are provided in :meth:`create`, one or more of `energy`, `forces` and
-        `stress` may not be included in the prediction.
+        The `energy`, `forces`, and `stress` are each flattened to a 1D array, and then
+        concatenated (in the order of `energy`, `forces`, and `stress`) to form the
+        prediction.  Depending on the values of ``use_energy``, ``use_forces``, and
+        ``use_stress`` that are provided in :meth:`create`, one or more of `energy`,
+        `forces` and `stress` may not be included in the prediction.
 
         Parameters
         ----------
@@ -201,16 +199,16 @@ class Calculator:
         1D array
             For a configuration of N atoms:
 
-            - If ``use_energy``, ``use_forces``, and ``use_stress`` are all ``True``,
-              the size of prediction is `1+3N+6`, with the 1st component the
-              `energy`, the 2nd to 1+3N components the flattened `forces` on N atoms,
-              and the remaining 6 components the Voigt `stress`.
+            - If ``use_energy``, ``use_forces``, and ``use_stress`` are all ``True``, the
+              size of prediction is `1+3N+6`, with the 1st component the `energy`, the 2nd
+              to 1+3N components the flattened `forces` on N atoms, and the remaining 6
+              components the Voigt `stress`.
             - If one or more of ``use_energy``, ``use_forces``, and ``use_stress`` is
-              ``False``, its corresponding value is removed from prediction, and
-              the size of prediction shrinks accordingly. For example, if both
-              ``use_energy`` and ``use_stress`` are ``True`` but ``use_forces`` is
-              ``False``, then the size of prediction is `1+6`, with the 1st
-              component the `energy`, and the 2nd to 7th components the Voigt stress.
+              ``False``, its corresponding value is removed from prediction, and the size
+              of prediction shrinks accordingly. For example, if both ``use_energy`` and
+              ``use_stress`` are ``True`` but ``use_forces`` is ``False``, then the size
+              of prediction is `1+6`, with the 1st component the `energy`, and the 2nd to
+              7th components the Voigt stress.
         """
         return compute_arguments.get_prediction()
 
@@ -219,10 +217,10 @@ class Calculator:
 
         Same as :meth:`get_prediction`, the `energy`, `forces`, and `stress` are each
         flattened to a 1D array, and then concatenated (in the order of `energy`,
-        `forces`, and `stress`) to form the reference.
-        Depending on the values of ``use_energy``, ``use_forces``, and ``use_stress``
-        that are provided in :meth:`create`, one or more of `energy`, `forces` and
-        `stress` may not be included in the reference.
+        `forces`, and `stress`) to form the reference. Depending on the values of
+        ``use_energy``, ``use_forces``, and ``use_stress`` that are provided in
+        :meth:`create`, one or more of `energy`, `forces` and `stress` may not be included
+        in the reference.
 
         Parameters
         ----------
@@ -234,16 +232,16 @@ class Calculator:
         1D array
             For a configuration of N atoms:
 
-            - If ``use_energy``, ``use_forces``, and ``use_stress`` are all ``True``,
-              the size of reference is `1+3N+6`, with the 1st component the
-              `energy`, the 2nd to 1+3N components the flattened `forces` on N atoms,
-              and the remaining 6 components the Voigt `stress`.
+            - If ``use_energy``, ``use_forces``, and ``use_stress`` are all ``True``, the
+              size of reference is `1+3N+6`, with the 1st component the `energy`, the 2nd
+              to 1+3N components the flattened `forces` on N atoms, and the remaining 6
+              components the Voigt `stress`.
             - If one or more of ``use_energy``, ``use_forces``, and ``use_stress`` is
-              ``False``, its corresponding value is removed from reference, and
-              the size of reference shrinks accordingly. For example, if both
-              ``use_energy`` and ``use_stress`` are ``True`` but ``use_forces`` is
-              ``False``, then the size of reference is `1+6`, with the 1st
-              component the `energy`, and the 2nd to 7th components the Voigt stress.
+              ``False``, its corresponding value is removed from reference, and the size
+              of reference shrinks accordingly. For example, if both ``use_energy`` and
+              ``use_stress`` are ``True`` but ``use_forces`` is ``False``, then the size
+              of reference is `1+6`, with the 1st component the `energy`, and the 2nd to
+              7th components the Voigt stress.
         """
         return compute_arguments.get_reference()
 
@@ -251,10 +249,9 @@ class Calculator:
         """Return a list of optimizing parameters.
 
         The optimizing parameters is a list consisting of the values of the model
-        parameters that is set to fit via :meth:`kliff.models.Model.set_fitting_params`
-        or :meth:`kliff.models.Model.set_one_fitting_param`.
-        The returned value is typically passed to an optimizer as the initial values
-        to carry out the optimization.
+        parameters that is set to fit via :meth:`kliff.models.Model.set_fitting_params` or
+        :meth:`kliff.models.Model.set_one_fitting_param`.  The returned value is typically
+        passed to an optimizer as the initial values to carry out the optimization.
         """
         return self.model.get_opt_params()
 
@@ -267,10 +264,10 @@ class Calculator:
     def get_opt_params_bounds(self):
         """Return the lower and upper bounds for the optimizing parameters.
 
-        The returnd value is a list of (lower, upper) tuples. Each tuple contains the
+        The returned value is a list of (lower, upper) tuples. Each tuple contains the
         lower and upper bounds for the corresponding parameter obtained from
-        :meth:`get_opt_params`. ``None`` for ``lower`` or ``upper`` means that no
-        bound should be applied.
+        :meth:`get_opt_params`. ``None`` for ``lower`` or ``upper`` means that no bound
+        should be applied.
         """
         return self.model.get_opt_params_bounds()
 
@@ -303,8 +300,8 @@ class _WrapperCalculator(object):
         self._start_end = self._set_start_end()
 
     def _set_start_end(self):
-        """Compute the start and end indices of the `opt_params` of each calculator
-        in the `opt_params` of the wrapper calculator."""
+        """Compute the start and end indices of the `opt_params` of each calculator in the
+        `opt_params` of the wrapper calculator."""
         start_end = []
         i = 0
         for calc in self.calculators:

@@ -16,20 +16,19 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class KIMComputeArguments(ComputeArguments):
-    """ A Lennard-Jones 6-12 potential.
+    """KIM potentials arguments
+
+    Parameters
+    ----------
+    kim_ca: KIM compute argument
+
+    supported_species: dict
+        Key and value are species string and integer code, respectively.
     """
 
     implemented_property = []
 
     def __init__(self, kim_ca, *args, **kwargs):
-        """
-        Parameters
-        ----------
-        kim_ca: KIM compute argument
-
-        supported_species: dict
-            Key and value are species string and integer code, respectively.
-        """
         self.kim_ca = kim_ca
         super(KIMComputeArguments, self).__init__(*args, **kwargs)
 
@@ -369,8 +368,8 @@ class KIM(Model):
         # refresh model
         self.kim_model.clear_then_refresh()
 
-        # TODO this seems uncessary
-        # the correct way is to reimplemeent set_model_param, get_model_param,
+        # TODO this seems unnecessary
+        # the correct way is to reimplement set_model_param, get_model_param,
         # and echo_model_param. Also, inquire_model_params seems could be used as
         # get_model_params.
         # this consideration is that we need a parameters object to be passed to
@@ -405,11 +404,7 @@ class KIM(Model):
     #        return cutoff
 
     def get_influence_distance(self):
-        """Get the influence distance of a model.
-
-        Return: float
-            influence distance
-        """
+        """Return the influence distance of a model."""
         return self.kim_model.get_influence_distance()
 
     def get_supported_species(self):
@@ -417,7 +412,7 @@ class KIM(Model):
 
         Return
         ------
-        species: dictionary
+        species: dict
             Key and value are species string and integer code, respectively.
         """
         species = {}
@@ -438,17 +433,15 @@ class KIM(Model):
     def write_kim_model(self, path=None):
         """Write out a KIM model that can be used directly with the kim-api.
 
-        This function typically write two files to `path`: (1) CMakeLists.txt, and
-        (2) kliff_trained.params. `path` will be created if it does not exist.
-
+        This function typically write two files to `path`: (1) CMakeLists.txt, and (2)
+        kliff_trained.params. `path` will be created if it does not exist.
 
         Parameters
         ----------
         path: str (optional)
-            Path to the newly trained model.
-            If `None`, it is set to `./$(MODEL_NAME)_kliff_trained`, where
-            `MODEL_NAME` is the `model_name` that is provided at the instanization of
-            this class.
+            Path to the newly trained model.  If `None`, it is set to
+            `./$(MODEL_NAME)_kliff_trained`, where `MODEL_NAME` is the `model_name` that
+            is provided at the instantiation of this class.
 
         Note
         ----
@@ -460,9 +453,7 @@ class KIM(Model):
         )
         check_error(error, 'kim_model.is_routine_is_routine_present')
         if not present:
-            raise SupportError(
-                'This KIM model does not support the writing of parameters.'
-            )
+            raise SupportError('This KIM model does not support writing parameters.')
 
         if path is None:
             path = os.path.join(os.getcwd(), self.model_name + '_kliff_trained')
@@ -486,7 +477,7 @@ class KIMModelError(Exception):
 def check_error(error, msg):
     if error != 0 and error is not None:
         raise KIMModelError(
-            'Calling "{}" failed.\nSee "kim.log" for more infomation.'.format(msg)
+            'Calling "{}" failed.\nSee "kim.log" for more information.'.format(msg)
         )
 
 

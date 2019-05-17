@@ -8,7 +8,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class LJComputeArguments(ComputeArguments):
-    """ A Lennard-Jones 6-12 potential.
+    """Lennard-Jones 6-12 potential.
     """
 
     implemented_property = ['energy', 'forces', 'stress']

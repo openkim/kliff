@@ -22,10 +22,8 @@ class Tree:
         s = '\n' + '=' * 80 + '\n'
         s += '                           KLIFF Dataset Count\n\n'
         s += 'Notation: "──dir_name (a/b)"\n'
-        s += 'a: number of .xyz files in the directory "dir_name"\n'
-        s += (
-            'b: number of .xyz files in the directory "dir_name" and its subdirectories\n'
-        )
+        s += 'a: number of .xyz files in directory "dir_name"\n'
+        s += 'b: number of .xyz files in directory "dir_name" and its subdirectories\n'
         s += '\n'
         s += self.string
         s += '\n' + '=' * 80 + '\n'

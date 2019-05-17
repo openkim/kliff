@@ -12,11 +12,11 @@ def read_extxyz(fname):
 
     Returns
     -------
-    cell: 2D darray of shape(3,3)
+    cell: 2D array of shape(3,3)
         supercell lattice vectors
 
     PBC: list of 3 bool
-        periodic boundary condictions
+        periodic boundary conditions
 
     species: list of N str, where N is the number of atoms
         species of atoms
@@ -118,19 +118,18 @@ def read_extxyz(fname):
 def write_extxyz(
     fname, cell, PBC, species, coords, energy=None, forces=None, stress=None
 ):
-    """
-    Write configuration info to a file in extended xyz format.
+    """Write configuration info to a file in extended xyz format.
 
     Parameters
     ----------
     fname: str
         name of the written file
 
-    cell: 2D darray of shape(3,3)
+    cell: 2D array of shape(3,3)
         supercell lattice vectors
 
     PBC: list of 3 bool
-        periodic boundary condictions
+        periodic boundary conditions
 
     species: list of N str, where N is the number of atoms
         species of atoms
@@ -215,7 +214,7 @@ def check_key(line, key, fname):
 
 
 def check_in_quotes(line, key, fname):
-    """Check wheter ``key=value`` or ``key="value"`` in line."""
+    """Check whether ``key=value`` or ``key="value"`` in line."""
     key = check_key(line, key, fname)
     value = line[line.index(key) :]
     value = value[value.index('=') + 1 :]
@@ -227,8 +226,8 @@ def check_in_quotes(line, key, fname):
 
 
 def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
-    """Given key, parse a string like ``other stuff key="value" other stuff``
-    to get value.
+    """Given key, parse a string like ``other stuff key="value" other stuff`` to get
+    value.
 
     If there is not space in value, the quotes `"` can be omitted.
 
@@ -275,8 +274,9 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
     if len(value) != size:
         raise InputError(
             'Incorrect size of "{}" at line 2 of file "{}";\n'
-            'required: {}, provided: {}. Possibly, the quotes do not '
-            'match.'.format(key, fname, size, len(value))
+            'required: {}, provided: {}. Possibly, the quotes do not match.'.format(
+                key, fname, size, len(value)
+            )
         )
     try:
         if dtype == 'float':

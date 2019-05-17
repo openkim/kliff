@@ -12,8 +12,7 @@ logger = kliff.logger.get_logger(__name__)
 
 # TODO take a look at property decorator
 class Parameter:
-    """Parameter class.
-    """
+    """Parameter class."""
 
     def __init__(self, value, dtype='double', description=None):
         self.set_value(value)
@@ -58,18 +57,16 @@ class Parameter:
 class FittingParameter:
     """Class of model parameters that will be optimized.
 
-    It interacts with optimizer to provide initial guesses of parameters and
-    receive updated parameters from the optimizer.
+    It interacts with optimizer to provide initial guesses of parameters and receive
+    updated parameters from the optimizer.
+
+    Parameters
+    ----------
+    model_params: OrderDict
+        All the parameters of a model(calculator).
     """
 
     def __init__(self, model_params):
-        """
-        Parameters
-        ----------
-
-        model_params: OrderDict
-            All the parameters of a model(calculator).
-        """
         self.model_params = model_params
 
         # key: parameter name
@@ -82,12 +79,12 @@ class FittingParameter:
     def read(self, fname):
         """Read the parameters that will be optimized. (Interface to user)
 
-        Each parameter is a 1D array, and each component of the parameter array should
-        be listed in a new line. Each line can contains 1, 2, or 3 elements.
+        Each parameter is a 1D array, and each component of the parameter array should be
+        listed in a new line. Each line can contains 1, 2, or 3 elements.
 
         1st element: float or `DEFAULT`
-            Initial guess of the parameter component. If `DEFAULT` (case insensitive),
-            the value from the calculator is used as the initial guess.
+            Initial guess of the parameter component. If `DEFAULT` (case insensitive), the
+            value from the calculator is used as the initial guess.
 
         The 2nd and 3rd elements are optional. If 2 elements are provided:
 
@@ -108,7 +105,6 @@ class FittingParameter:
 
         Parameters
         ----------
-
         fname: str
           name of file that includes the fitting parameters
 
@@ -143,8 +139,9 @@ class FittingParameter:
                 warnings.warn(msg, category=Warning)
             if line not in self.model_params:
                 raise InputError(
-                    'file "{}", line {}. Parameter "{}" not supported '
-                    'by calculator.'.format(fname, num_line, line)
+                    'file "{}", line {}. Parameter "{}" not supported.'.format(
+                        fname, num_line, line
+                    )
                 )
             name = line
             size = self.model_params[name].get_size()
@@ -157,13 +154,13 @@ class FittingParameter:
     def set(self, **kwargs):
         """Set the parameters that will be optimized. (Interface to user)
 
-        One or more parameters can be set. Each argument is for one parameter, where
-        the argument name is the parameter name, the value of the argument is the
+        One or more parameters can be set. Each argument is for one parameter, where the
+        argument name is the parameter name, the value of the argument is the
         settings(including initial value, fix flag, lower bound, and upper bound).
 
-        The value of the argument should be a list of list, where each inner list is
-        for one component of the parameter, which can contain 1, 2, or 3 elements.
-        See self.read() for the options of the elements.
+        The value of the argument should be a list of list, where each inner list is for
+        one component of the parameter, which can contain 1, 2, or 3 elements.  See
+        self.read() for the options of the elements.
 
         Example
         -------
@@ -181,8 +178,8 @@ class FittingParameter:
     def set_one(self, name, settings):
         """Set one parameter that will be optimized.
 
-        The name of the parameter should be given as the first entry of a list
-        (or tuple), and then each data line should be given in in a list.
+        The name of the parameter should be given as the first entry of a list (or tuple),
+        and then each data line should be given in in a list.
 
         Parameters
         ----------
@@ -190,8 +187,7 @@ class FittingParameter:
             name of a fitting parameter
 
         settings: list of list
-            initial value, flag to fix a parameter, lower and upper bounds of a
-            parameter
+            initial value, flag to fix a parameter, lower and upper bounds of a parameter
 
         Example
         -------
@@ -238,14 +234,13 @@ class FittingParameter:
 
         Parameters
         ----------
-
         fname: str
-          Name of the file to print the optimizing parameters. If None, printing
-          to stdout.
+            Name of the file to print the optimizing parameters. If None, printing to
+            stdout.
 
         print_size: bool
-          Flag to indicate whether print the size of parameter. Recall that a
-          parameter may have one or more values.
+            Flag to indicate whether print the size of parameter. Recall that a parameter
+            may have one or more values.
         """
 
         if fname is not None:
@@ -338,10 +333,8 @@ class FittingParameter:
 
         Parameters
         ----------
-
-        opt_x, list of floats
-          parameter values from the optimizer.
-
+        opt_x: list of floats
+            parameter values from the optimizer.
         """
         for k, val in enumerate(opt_x):
             name = self._index[k].name
@@ -356,7 +349,7 @@ class FittingParameter:
 
         Return
         ------
-          A list of nested optimizing parameter values.
+            A list of nested optimizing parameter values.
         """
         opt_x0 = []
         for idx in self._index:
@@ -377,7 +370,7 @@ class FittingParameter:
         return value, p_idx, c_idx
 
     def get_opt_params_bounds(self):
-        """ Get the lower and upper parameter bounds. """
+        """Get the lower and upper parameter bounds."""
         bounds = []
         for idx in self._index:
             name = idx.name
@@ -466,8 +459,8 @@ class FittingParameter:
                     )
 
     def _set_index(self, name):
-        """Check whether a parameter component will be optimized or not (by
-        checking its 'fix' attribute). If yes, include it in the index list.
+        """Check whether a parameter component will be optimized or not (by checking its
+        'fix' attribute). If yes, include it in the index list.
 
         Given a parameter and its values such as:
 
