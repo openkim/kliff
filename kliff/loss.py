@@ -487,73 +487,6 @@ class LossPhysicsMotivatedModel(object):
 
         return cas
 
-    def _scipy_optimize_least_squares(self, method, **kwargs):
-        residual = self.get_residual
-        x = self.calculator.get_opt_params()
-        return scipy.optimize.least_squares(residual, x, method=method, **kwargs)
-
-    def _scipy_optimize_minimize(self, method, **kwargs):
-        size = parallel.get_MPI_world_size()
-        if size > 1:
-            msg = 'Running in MPI mode with {} processes.'.format(size)
-            print(msg + '\n')
-            logger.info(msg)
-            if self.nprocs > 1:
-                msg = (
-                    'Argument "nprocs = {}" provided at initialization is ignored. When '
-                    'running in MPI mode, the number of processes provided along with '
-                    'the "mpiexec" (or "mpirun") command is used.'.format(self.nprocs)
-                )
-                logger.warning(msg)
-                warnings.warn(msg, category=Warning)
-
-            comm = MPI.COMM_WORLD
-            rank = comm.Get_rank()
-            loss_fn = self.get_loss_MPI
-            x = self.calculator.get_opt_params()
-            if rank == 0:
-                result = scipy.optimize.minimize(loss_fn, x, method=method, **kwargs)
-                # notify other process to break loss_fn
-                break_flag = True
-                for i in range(1, size):
-                    comm.send(break_flag, dest=i, tag=i)
-            else:
-                loss_fn(x)
-                result = None
-            result = comm.bcast(result, root=0)
-            return result
-
-        else:
-            # 1. running MPI with 1 process
-            # 2. running without MPI at all
-            # both cases are regarded as running without MPI
-
-            if self.nprocs == 1:
-                msg = 'Running in serial mode.'
-                print(msg + '\n')
-                logger.info(msg)
-            else:
-                msg = 'Running in multiprocessing mode with {} processes.'.format(
-                    self.nprocs
-                )
-                print(msg + '\n')
-                logger.info(msg)
-                # detect the case that one try to run MPI but not use mpiexec and specify
-                # number of processes through "nprocs".
-                if mpi4py_available:
-                    msg = (
-                        '"mpi4y" detected. If you try to run in MPI mode, you should '
-                        'execute your code via "mpiexec" (or "mpirun"). If not, ignore '
-                        'this message.'
-                    )
-                    logger.warning(msg)
-                    warnings.warn(msg, category=Warning)
-
-            loss_fn = self.get_loss
-            x = self.calculator.get_opt_params()
-            result = scipy.optimize.minimize(loss_fn, x, method=method, **kwargs)
-            return result
-
     def _get_residual_single_config(self, ca, calculator, residual_fn, residual_data):
 
         # prediction data
@@ -570,14 +503,6 @@ class LossPhysicsMotivatedModel(object):
         residual = residual_fn(identifier, natoms, pred, ref, residual_data)
 
         return residual
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exec_type, exec_value, trackback):
-        # if there is expections, raise it (not for KeyboardInterrupt)
-        if exec_type is not None and exec_type is not KeyboardInterrupt:
-            return False  # return False will cause Python to re-raise the expection
 
 
 class LossNeuralNetworkModel(object):
