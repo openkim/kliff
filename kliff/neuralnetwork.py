@@ -138,7 +138,7 @@ class FingerprintsDataset(Dataset):
     fname: string
         Name of the fingerprints file.
 
-    transform: callable (optional):
+    transform: callable (optional)
         Optional transform to be applied on a sample.
     """
 
@@ -161,7 +161,7 @@ class FingerprintsDataLoader(DataLoader):
     """A dataset loader that incorporate the support the number of epochs.
 
     The dataset loader will load an element from the next batch if a batch is
-    fully iterarated. This, in effect, looks like concatenating the dataset the
+    fully iterated. This, in effect, looks like concatenating the dataset the
     number of epochs times.
 
     Parameters
@@ -596,8 +596,7 @@ class NeuralNetwork(nn.Module):
 
     @staticmethod
     def _get_weights_and_biases(groups, supported):
-        """Get weights and biases of all layers that have weights and biases.
-        """
+        """Get weights and biases of all layers that have weights and biases."""
         weights = []
         biases = []
         for i, g in enumerate(groups):

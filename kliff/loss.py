@@ -10,7 +10,6 @@ from .error import InputError
 
 try:
     import torch
-    from .neuralnetwork import FingerprintsDataset, FingerprintsDataLoader
 
     torch_available = True
 except ImportError:
@@ -603,9 +602,7 @@ class LossNeuralNetworkModel(object):
         self.num_epochs = num_epochs
 
         # data loader
-        fname = self.calculator.get_train_fingerprints_path()
-        fp = FingerprintsDataset(fname)
-        self.data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=self.num_epochs)
+        self.data_loader = self.calculator.get_data_loader(self.num_epochs)
 
         # optimizing
         try:

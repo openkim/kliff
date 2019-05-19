@@ -152,9 +152,10 @@ class Descriptor:
             if not reuse:
                 os.remove(fname)
                 logger.info(
-                    'Delete existing fingerprints: %s, new ones is generated.', fname
+                    'Delete existing fingerprints: %s; generating new ones.', fname
                 )
             else:
+                logger.info('Reuse existing fingerprints.')
                 if self.normalize:
                     logger.info('Restore mean and stdev to: %s.', mean_stdev_name)
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
