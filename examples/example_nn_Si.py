@@ -40,7 +40,7 @@ from kliff.loss import Loss
 # symmetry functions proposed by by Behler and coworkers.
 
 descriptor = SymmetryFunction(
-    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set31', normalize=True
+    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
 )
 
 

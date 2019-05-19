@@ -25,7 +25,7 @@ class SymmetryFunction(Descriptor):
     hyperparams: dict or str
         A dictionary of the hyper parameters of that define the descriptor. We provide two
         sets of hyperparams that can be used by setting ``hyperparams='set51'`` or
-        ``hyperparams='set31'``, which are taken from [Artrith2012]_ and [Artrith2013]_,
+        ``hyperparams='set30'``, which are taken from [Artrith2012]_ and [Artrith2013]_,
         respectively. To see what they are, one can do:
 
         >>> cut_name = 'cos'  # just for init purpose
@@ -45,7 +45,7 @@ class SymmetryFunction(Descriptor):
     Example
     -------
 
-    If ``set51`` or ``set31`` hyperparams are used, the cutoff distances should be
+    If ``set51`` or ``set30`` hyperparams are used, the cutoff distances should be
     given in ``Angstrom``.
 
     >>> cut_name = 'cos'
@@ -184,8 +184,8 @@ class SymmetryFunction(Descriptor):
             name = self.hyperparams.lower()
             if name == 'set51':
                 self.hyperparams = get_set51()
-            elif name == 'set31':
-                self.hyperparams = get_set31()
+            elif name == 'set30':
+                self.hyperparams = get_set30()
             else:
                 raise SymmetryFunctionError('hyperparams "{}" unrecognized.'.format(name))
         if not isinstance(self.hyperparams, OrderedDict):
@@ -240,6 +240,11 @@ class SymmetryFunction(Descriptor):
 
 
 def get_set51():
+    """Hyperparameters for symmetry functions, as discussed in:
+    Nongnuch Artrith and Jorg Behler. "High-dimensional neural network potentials for
+    metal surfaces: A prototype study for copper." Physical Review B 85, no. 4 (2012):
+    045439.
+    """
 
     params = OrderedDict()
 
@@ -313,11 +318,11 @@ def get_set51():
     return params
 
 
-def get_set31():
+def get_set30():
     """Hyperparameters for symmetry functions, as discussed in:
-    Nongnuch Artrith and Jorg Behler. "High-dimensional neural network potentials
-    for metal surfaces: A prototype study for copper." Physical Review B 85, no. 4
-    (2012): 045439.
+    Artrith, N., Hiller, B. and Behler, J., 2013. Neural network potentials for metals and
+    oxides–First applications to copper clusters at zinc oxide. physica status solidi (b),
+    250(6), pp.1191-1203.
     """
 
     params = OrderedDict()
