@@ -115,8 +115,6 @@ class LinearRegression(ModelPyTorch):
         self.layer = nn.Linear(desc_size, 1)
 
     def forward(self, x):
-        intercept = torch.ones(x.size()[0], 1)
-        x = torch.cat((intercept, x), dim=1)
         return self.layer(x)
 
     def fit(self, data_loader):
