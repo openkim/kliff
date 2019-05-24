@@ -728,6 +728,13 @@ class PytorchANNCalculator(object):
         """Return the path to the training set fingerprints: `train.pkl`."""
         return self.train_fingerprints_path
 
+    # TODO due to this func, the above `get_train_fingerprints_path` could be deleted
+    def get_data_loader(self, num_epochs=1):
+        fname = self.train_fingerprints_path
+        fp = FingerprintsDataset(fname)
+        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
+        return data_loader
+
     def compute(self, x):
 
         grad = self.use_forces

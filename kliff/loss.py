@@ -144,7 +144,8 @@ class Loss(object):
 
         calc_type = calculator.__class__.__name__
 
-        if calc_type == 'PytorchANNCalculator':
+        torch_calculators = ['PytorchANNCalculator', 'CalculatorPyTorch']
+        if calc_type in torch_calculators:
             return LossNeuralNetworkModel(calculator, nprocs, residual_fn, data)
         else:
             return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, data)
@@ -686,18 +687,16 @@ class LossNeuralNetworkModel(object):
             # raise StopIteration error if out of bounds; This will ignore the last
             # chunk of data whose size is smaller than `batch_size`
             inp = self.data_loader.next_element()
-            residual = self.get_residual_single_config(
+            loss_single = self.get_loss_single_config(
                 inp, self.calculator, self.residual_fn, self.residual_data
             )
-            c = torch.sum(torch.pow(residual, 2))
-            loss += c
+            loss += loss_single
         # TODO  maybe divide batch_size elsewhere
         loss /= self.batch_size
         return loss
 
-    def get_residual_single_config(self, inp, calculator, residual_fn, residual_data):
+    def get_loss_single_config(self, inp, calculator, residual_fn, residual_data):
 
-        # prediction data
         results = calculator.compute(inp)
         pred_energy = results['energy']
         pred_forces = results['forces']
@@ -719,8 +718,9 @@ class LossNeuralNetworkModel(object):
         natoms = len(species)
 
         residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+        loss = torch.sum(torch.pow(residual, 2))
 
-        return residual
+        return loss
 
 
 class LossError(Exception):
