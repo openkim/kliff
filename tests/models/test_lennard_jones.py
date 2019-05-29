@@ -4,7 +4,7 @@ import pytest
 from kliff.calculator import Calculator
 from kliff.models import LennardJones
 from kliff.error import ModelError
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 
 
 def params_relation(params):
@@ -132,7 +132,7 @@ def test_lj():
 
     calc = Calculator(model)
 
-    dset = DataSet(order_by_species=False)
+    dset = Dataset(order_by_species=False)
     fname = './configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
     dset.read(fname)
     configs = dset.get_configs()

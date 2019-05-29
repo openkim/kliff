@@ -2,7 +2,7 @@ import numpy as np
 from kliff.models import KIM
 from kliff.loss import Loss
 from kliff.calculator import Calculator
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 
 
 def residual_fn(identifier, natoms, prediction, reference, data):
@@ -21,7 +21,7 @@ def init():
     model.set_fitting_params(gamma=[[1.5]])
 
     dataset_name = './configs_extxyz/Si_4'
-    tset = DataSet()
+    tset = Dataset()
     tset.read(dataset_name)
     configs = tset.get_configs()
 

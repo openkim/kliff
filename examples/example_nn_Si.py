@@ -26,7 +26,7 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # Let's first import the modules that will be used in this example.
 
 from kliff.descriptors import SymmetryFunction
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 import kliff.neuralnetwork as nn
 from kliff.loss import Loss
 
@@ -103,7 +103,7 @@ model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
 
 # training set
 dataset_name = 'Si_training_set/varying_alat'
-tset = DataSet()
+tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
 print('Number of configurations:', len(configs))

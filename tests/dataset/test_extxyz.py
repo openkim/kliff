@@ -1,6 +1,6 @@
 import numpy as np
 from kliff.dataset import Configuration
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 from kliff.dataset.extxyz import write_extxyz
 
 
@@ -94,7 +94,7 @@ def test_configuration(e=True, f=False, s=False, order=False):
 
 def test_dataset():
     directory = './configs_extxyz/MoS2'
-    tset = DataSet()
+    tset = Dataset()
     tset.read(directory)
     configs = tset.get_configs()
     assert len(configs) == 3

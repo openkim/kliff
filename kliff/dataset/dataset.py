@@ -193,7 +193,7 @@ class Configuration:
         return self.weight
 
 
-class DataSet:
+class Dataset:
     """Dataset class to deal with multiple :class:`~kliff.dataset.Configuration`.
 
     Parameters

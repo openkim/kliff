@@ -1,5 +1,5 @@
 import kliff
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 from kliff.calculator import Calculator
 from kliff.models import LennardJones
 from kliff.loss import Loss
@@ -7,7 +7,7 @@ from kliff.loss import Loss
 kliff.logger.set_level('debug')
 
 # training set
-tset = DataSet()
+tset = Dataset()
 tset.read('../tests/configs_extxyz/Si_4/')
 configs = tset.get_configs()
 

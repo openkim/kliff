@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import pytest
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 from kliff.calculator import Calculator
 from kliff.models import KIM
 
@@ -35,7 +35,7 @@ ref_forces = [
 def test_main():
 
     # training set
-    tset = DataSet()
+    tset = Dataset()
     tset.read('./configs_extxyz/Si_4')
     configs = tset.get_configs()
 

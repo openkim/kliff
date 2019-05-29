@@ -37,7 +37,7 @@ on OpenKIM_.
 from kliff.models import KIM
 from kliff.loss import Loss
 from kliff.calculator import Calculator
-from kliff.dataset import DataSet
+from kliff.dataset import Dataset
 
 
 ##########################################################################################
@@ -105,11 +105,11 @@ model.echo_fitting_params()
 # Training set
 # ------------
 #
-# KLIFF has a :class:`~kliff.dataset.DataSet` to deal with the training data (and possibly
+# KLIFF has a :class:`~kliff.dataset.Dataset` to deal with the training data (and possibly
 # test data). For the silicon training set, we can read and process the files by:
 
 dataset_name = 'Si_training_set'
-tset = DataSet()
+tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
 

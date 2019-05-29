@@ -107,7 +107,7 @@
   of -1 is inferred. Check and do the replacement.                               Done
 
 13. 08/23/2017:
-  Change class TrainingSet to DataSet. It can contain validation, test
+  Change class TrainingSet to Dataset. It can contain validation, test
   data as well.                                                                  Done
 
 14. 08/02/2018:                                                                  Not yet
