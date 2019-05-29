@@ -1,14 +1,11 @@
 import numpy as np
 import os
 import multiprocessing as mp
-from collections.abc import Iterable
-from .descriptors.descriptor import load_fingerprints
 from .error import InputError
 from .dataset.dataset import Configuration
+from .dataset.dataset_torch import FingerprintsDataset, FingerprintsDataLoader
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
 
 # pytorch built-in (use them directly)
 from torch.nn.modules.linear import Linear, Bilinear
@@ -128,73 +125,6 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
         y = torch.transpose(y, 1, 2)
         y = torch.reshape(y, shape)
         return y
-
-
-class FingerprintsDataset(Dataset):
-    """Atomic environment fingerprints dataset.
-
-    Parameters
-    ----------
-    fname: string
-        Name of the fingerprints file.
-
-    transform: callable (optional)
-        Optional transform to be applied on a sample.
-    """
-
-    def __init__(self, fname, transform=None):
-        self.fp = load_fingerprints(fname)
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.fp)
-
-    def __getitem__(self, index):
-        sample = self.fp[index]
-        if self.transform:
-            sample = self.transform(sample)
-        return sample
-
-
-# TODO implement here GPU options
-class FingerprintsDataLoader(DataLoader):
-    """A dataset loader that incorporate the support the number of epochs.
-
-    The dataset loader will load an element from the next batch if a batch is
-    fully iterated. This, in effect, looks like concatenating the dataset the
-    number of epochs times.
-
-    Parameters
-    ----------
-    num_epochs: int
-        Number of epochs to iterate through the dataset.
-    """
-
-    def __init__(self, num_epochs=1, *args, **kwargs):
-        super(FingerprintsDataLoader, self).__init__(*args, **kwargs)
-        self.num_epochs = num_epochs
-        self.epoch = 0
-        self.iterable = None
-
-    def next_element(self):
-        """ Get the next data element.
-        """
-        if self.iterable is None:
-            self.iterable = self._make_iterable()
-        try:
-            element = self.iterable.next()
-        except StopIteration:
-            self.epoch += 1
-            if self.epoch == self.num_epochs:
-                raise StopIteration
-            else:
-                self.iterable = self._make_iterable()
-                element = self.next_element()
-        return element
-
-    def _make_iterable(self):
-        iterable = iter(self)
-        return iterable
 
 
 class NeuralNetwork(nn.Module):
