@@ -70,7 +70,10 @@ class FingerprintsDataLoader(DataLoader):
 
 
 def fingerprints_collate_fn(batch):
-    """Merges a list of samples to form a mini-batch. Used by DataLoader.
+    """Convert a batch of samples into tensor.
+
+    Unlike the default_collate_fn(), which stack samples in the batch (requiring each
+    sample having the same dimension), this function does not do the stack.
 
     Parameters
     ----------
@@ -81,24 +84,14 @@ def fingerprints_collate_fn(batch):
     -------
     tensor_batch: list
         Transform each sample into a tensor.
-
-    zeta_batch: tensor
-        Concatenate `zeta` (2D Tensor) of all samples along dimension 0 into one tensor
-        (2D Tensor).
     """
+    tensor_batch = []
     for i, sample in enumerate(batch):
         tensor_sample = {}
         for key, value in sample.items():
             if type(value).__module__ == 'numpy':
                 value = torch.from_numpy(value)
             tensor_sample[key] = value
+        tensor_batch.append(tensor_sample)
 
-        zeta = tensor_sample['zeta']
-        if i == 0:
-            tensor_batch = [tensor_sample]
-            zeta_batch = zeta
-        else:
-            tensor_batch.append(tensor_sample)
-            zeta_batch = torch.cat((zeta_batch, zeta), dim=0)
-
-    return tensor_batch, zeta_batch
+    return tensor_batch

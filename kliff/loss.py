@@ -4,10 +4,12 @@ import warnings
 import scipy.optimize
 import kliff
 from . import parallel
+from .dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 from .error import InputError, report_import_error
 
 try:
     import torch
+    from torch.utils.data import DataLoader
 
     torch_available = True
 except ImportError:
@@ -142,7 +144,7 @@ class Loss(object):
 
         calc_type = calculator.__class__.__name__
 
-        torch_calculators = ['PytorchANNCalculator', 'CalculatorPyTorch']
+        torch_calculators = ['PytorchANNCalculator', 'CalculatorTorch']
         if calc_type in torch_calculators:
             return LossNeuralNetworkModel(calculator, nprocs, residual_fn, data)
         else:
@@ -605,7 +607,9 @@ class LossNeuralNetworkModel(object):
         # data loader
         fname = self.calculator.get_train_fingerprints_path()
         fp = FingerprintsDataset(fname)
-        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
+        loader = DataLoader(
+            dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
+        )
 
         # optimizing
         try:
@@ -637,98 +641,136 @@ class LossNeuralNetworkModel(object):
                 save_prefix, save_start, save_frequency
             )
 
-        # other metadata
-        n = 0
-        epoch = 0
-        DATASET_SIZE = len(self.calculator.configs)
+        #        # other metadata
+        #        n = 0
+        #        epoch = 0
+        #        DATASET_SIZE = len(self.calculator.configs)
+        #
+        #        msg = 'Start minimization using optimization method: {}.'.format(self.method)
+        #        logger.info(msg)
+        #        print(msg)
+        #
+        #        def closure():
+        #            optimizer.zero_grad()
+        #            loss = self.get_loss()
+        #            loss.backward()
+        #            return loss
+        #
+        #        while True:
+        #            try:
+        #                if self.method in ['LBFGS']:
+        #                    optimizer.step(closure)
+        #                else:
+        #                    loss = closure()
+        #                    optimizer.step()
+        #                epoch_new = n * self.batch_size // DATASET_SIZE
+        #
+        #                if epoch_new > epoch:
+        #                    epoch = epoch_new
+        #                    print('Epoch = {}, loss = {}'.format(epoch, loss))
+        #                n += 1
+        #
+        #                if (
+        #                    epoch_new >= save_start
+        #                    and (epoch_new - save_start) % save_frequency == 0
+        #                ):
+        #                    fname = 'model_epoch{}.pkl'.format(epoch)
+        #                    path = os.path.join(save_prefix, fname)
+        #                    self.calculator.model.save(path)
+        #
+        #            except StopIteration:
+        #                break
 
         msg = 'Start minimization using optimization method: {}.'.format(self.method)
         logger.info(msg)
         print(msg)
 
-        def closure():
-            optimizer.zero_grad()
-            loss = self.get_loss()
-            loss.backward()
-            return loss
+        for epoch in range(self.num_epochs):
+            for ib, batch in enumerate(loader):
 
-        while True:
-            try:
+                def closure():
+                    optimizer.zero_grad()
+                    loss = self.get_loss_batch(batch)
+                    loss.backward()
+                    return loss
+
                 if self.method in ['LBFGS']:
                     optimizer.step(closure)
                 else:
+                    # TODO use optimzier.step(closure) only, not need the below one
                     loss = closure()
                     optimizer.step()
-                epoch_new = n * self.batch_size // DATASET_SIZE
 
-                if epoch_new > epoch:
-                    epoch = epoch_new
-                    print('Epoch = {}, loss = {}'.format(epoch, loss))
-                n += 1
+            print('Epoch = {}, loss = {}'.format(epoch, loss))
 
-                if (
-                    epoch_new >= save_start
-                    and (epoch_new - save_start) % save_frequency == 0
-                ):
-                    fname = 'model_epoch{}.pkl'.format(epoch)
-                    path = os.path.join(save_prefix, fname)
-                    self.calculator.model.save(path)
+            if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
+                fname = 'model_epoch{}.pkl'.format(epoch)
+                path = os.path.join(save_prefix, fname)
+                self.calculator.model.save(path)
 
-            except StopIteration:
-                break
+    def get_loss_batch(self, batch):
+        results = self.calculator.compute(batch)
+        energy_batch = results['energy']
+        forces_batch = results['forces']
+        if forces_batch is None:
+            forces_batch = [None] * len(batch)
 
-    def get_loss(self):
-        loss = 0
-        for _ in range(self.batch_size):
-            # raise StopIteration error if out of bounds; This will ignore the last
-            # chunk of data whose size is smaller than `batch_size`
-            inp = self.data_loader.next_element()
-            loss_single = self.get_loss_single_config(
-                inp, self.calculator, self.residual_fn, self.residual_data
-            )
-            loss += loss_single
-        # TODO  maybe divide batch_size elsewhere
-        loss /= self.batch_size
-        return loss
+        losses = []
+        for sample, energy, forces in zip(batch, energy_batch, forces_batch):
+            loss = self.get_loss_single_config(sample, energy, forces)
+            losses.append(loss)
 
-    def get_loss_DDP(self):
-        loss = 0
-        for _ in range(self.batch_size):
-            inp = self.data_loader.next_element()
-            loss_single = self.get_loss_single_config(
-                inp, self.calculator, self.residual_fn, self.residual_data
-            )
-            loss += loss_single
-        # TODO  maybe divide batch_size elsewhere
-        loss /= self.batch_size
-        return loss
+        return torch.sum(loss)
 
-    def get_loss_single_config(self, inp, calculator, residual_fn, residual_data):
+    def get_loss_single_config(self, sample, pred_energy, pred_forces):
 
-        results = calculator.compute(inp)
-        pred_energy = results['energy']
-        pred_forces = results['forces']
-
-        if calculator.use_energy:
+        if self.calculator.use_energy:
             pred = torch.tensor([pred_energy])
-            ref = torch.tensor([inp['energy'][0]])
-        if calculator.use_forces:
-            ref_forces = inp['forces'][0]
-            if calculator.use_energy:
+            ref = torch.tensor([sample['energy']])
+        if self.calculator.use_forces:
+            ref_forces = sample['forces']
+            if self.calculator.use_energy:
                 pred = torch.cat((pred, pred_forces.reshape((-1,))))
                 ref = torch.cat((ref, ref_forces.reshape((-1,))))
             else:
                 pred = pred_forces.reshape((-1,))
                 ref = ref_forces.reshape((-1,))
 
-        identifier = inp['name'][0]
-        species = inp['species'][0]
+        identifier = sample['name']
+        species = sample['species']
         natoms = len(species)
 
-        residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+        residual = self.residual_fn(identifier, natoms, pred, ref, self.residual_data)
         loss = torch.sum(torch.pow(residual, 2))
 
         return loss
+
+
+#    def get_loss(self):
+#        loss = 0
+#        for _ in range(self.batch_size):
+#            # raise StopIteration error if out of bounds; This will ignore the last
+#            # chunk of data whose size is smaller than `batch_size`
+#            inp = self.data_loader.next_element()
+#            loss_single = self.get_loss_single_config(
+#                inp, self.calculator, self.residual_fn, self.residual_data
+#            )
+#            loss += loss_single
+#        # TODO  maybe divide batch_size elsewhere
+#        loss /= self.batch_size
+#        return loss
+#
+#    def get_loss_DDP(self):
+#        loss = 0
+#        for _ in range(self.batch_size):
+#            inp = self.data_loader.next_element()
+#            loss_single = self.get_loss_single_config(
+#                inp, self.calculator, self.residual_fn, self.residual_data
+#            )
+#            loss += loss_single
+#        # TODO  maybe divide batch_size elsewhere
+#        loss /= self.batch_size
+#        return loss
 
 
 class LossError(Exception):
