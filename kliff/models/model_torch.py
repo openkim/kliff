@@ -1,20 +1,22 @@
-import numpy as np
 import os
+import numpy as np
 import multiprocessing as mp
-from collections.abc import Iterable
-from ..descriptors.descriptor import load_fingerprints
-from ..neuralnetwork import FingerprintsDataset, FingerprintsDataLoader
-from ..error import InputError
+import kliff
 from ..dataset.dataset import Configuration
-import torch.nn as nn
+from ..dataset.dataset_torch import FingerprintsDataset, FingerprintsDataLoader
 import torch
+import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallelCPU as DDPCPU
 
 
-class ModelPyTorch(nn.Module):
+logger = kliff.logger.get_logger(__name__)
+
+
+class ModelTorch(nn.Module):
     """Base class for machine learning models."""
 
     def __init__(self, descriptor, seed=35):
-        super(ModelPyTorch, self).__init__()
+        super(ModelTorch, self).__init__()
 
         self.seed = seed
         torch.manual_seed(seed)
@@ -26,17 +28,17 @@ class ModelPyTorch(nn.Module):
         elif dtype == np.float64:
             self.dtype = torch.float64
         else:
-            raise ModelPyTorchError('Not support dtype "{}".'.format(dtype))
+            raise ModelTorchError('Not support dtype "{}".'.format(dtype))
 
         self.save_prefix = None
         self.save_start = None
         self.save_frequency = None
 
     def forward(self, x):
-        raise ModelPyTorchError('"forward" not implemented.')
+        raise ModelTorchError('"forward" not implemented.')
 
-    def fit(self):
-        raise ModelPyTorchError(
+    def fit(self, path):
+        raise ModelTorchError(
             '"fit" not supported by this model. Minimize a loss function to train the '
             'model instead.'
         )
@@ -96,15 +98,13 @@ class ModelPyTorch(nn.Module):
         elif mode == 'eval':
             self.eval()
         else:
-            raise NeuralNetworkError(
-                'Unrecognized mode "{}" in model.load().'.format(mode)
-            )
+            raise ModelTorchError('Unrecognized mode "{}" in model.load().'.format(mode))
 
     def write_kim_model(self, path=None):
-        raise ModelPyTorchError('"write_kim_model" not implemented.')
+        raise ModelTorchError('"write_kim_model" not implemented.')
 
 
-class LinearRegression(ModelPyTorch):
+class LinearRegression(ModelTorch):
     """Linear regression model.
     """
 
@@ -117,13 +117,19 @@ class LinearRegression(ModelPyTorch):
     def forward(self, x):
         return self.layer(x)
 
-    def fit(self, data_loader):
+    def fit(self, path):
         """Fit the model using analytic solution."""
+        fp = FingerprintsDataset(path)
+        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=1)
         X, y = self.prepare_data(data_loader)
         A = torch.inverse(torch.mm(X.t(), X))
         beta = torch.mv(torch.mm(A, X.t()), y)
 
         self.set_params(beta)
+
+        msg = 'fit model "{}" finished.'.format(self.__class__.__name__)
+        logger.info(msg)
+        print(msg)
 
     def set_params(self, beta):
         """Set linear linear weight and bias.
@@ -186,7 +192,7 @@ class LinearRegression(ModelPyTorch):
         return X, y
 
 
-class CalculatorPyTorch:
+class CalculatorTorch:
     """ A neural network calculator.
 
     Parameters
@@ -265,13 +271,6 @@ class CalculatorPyTorch:
         """Return the path to the training set fingerprints: `train.pkl`."""
         return self.train_fingerprints_path
 
-    # TODO due to this func, the above `get_train_fingerprints_path` could be deleted
-    def get_data_loader(self, num_epochs=1):
-        fname = self.train_fingerprints_path
-        fp = FingerprintsDataset(fname)
-        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
-        return data_loader
-
     def compute(self, x):
 
         grad = self.use_forces
@@ -297,13 +296,34 @@ class CalculatorPyTorch:
         return forces
 
     def fit(self):
-        data_loader = self.get_data_loader(num_epochs=1)
-        self.model.fit(data_loader)
+        path = self.get_train_fingerprints_path()
+        self.model.fit(path)
 
 
-class ModelPyTorchError(Exception):
+class CalculatorTorchDDPCPU(CalculatorTorch):
+    def compute(self, x):
+        grad = self.use_forces
+        zeta = x['zeta'][0]
+
+        if grad:
+            zeta.requires_grad = True
+
+        model = DDPCPU(self.model)
+        y = model(zeta)
+        pred_energy = y.sum()
+        if grad:
+            dzeta_dr = x['dzeta_dr'][0]
+            forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
+            zeta.requires_grad = False
+        else:
+            forces = None
+
+        return {'energy': pred_energy, 'forces': forces}
+
+
+class ModelTorchError(Exception):
     def __init__(self, msg):
-        super(NeuralNetworkError, self).__init__(msg)
+        super(ModelTorchError, self).__init__(msg)
         self.msg = msg
 
     def __expr__(self):

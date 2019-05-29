@@ -603,7 +603,9 @@ class LossNeuralNetworkModel(object):
         self.num_epochs = num_epochs
 
         # data loader
-        self.data_loader = self.calculator.get_data_loader(self.num_epochs)
+        fname = self.calculator.get_train_fingerprints_path()
+        fp = FingerprintsDataset(fname)
+        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
 
         # optimizing
         try:

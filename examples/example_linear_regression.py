@@ -10,10 +10,8 @@ symmetry functions.
 """
 
 from kliff.descriptors import SymmetryFunction
-from kliff.dataset import DataSet
-import kliff.neuralnetwork as nn
-from kliff.models.model_ml import LinearRegression, CalculatorPyTorch
-from kliff.loss import Loss
+from kliff.dataset import Dataset
+from kliff.models.model_torch import LinearRegression, CalculatorTorch
 
 
 descriptor = SymmetryFunction(
@@ -25,14 +23,14 @@ model = LinearRegression(descriptor)
 
 # training set
 dataset_name = 'Si_training_set/varying_alat'
-tset = DataSet()
+tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
 print('Number of configurations:', len(configs))
 
 # calculator
-calc = CalculatorPyTorch(model)
+calc = CalculatorTorch(model)
 calc.create(configs, reuse=True)
 
-# fit the omodel
+# fit the model
 calc.fit()
