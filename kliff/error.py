@@ -40,3 +40,10 @@ class InitializationError(Exception):
 
     def __expr__(self):
         return repr(self.value) + ' initialization failed'
+
+
+def report_import_error(name):
+    raise ImportError(
+        'Optional module "{}" needed by "KLIFF" not found. Please install it '
+        'manually.'.format(name)
+    )

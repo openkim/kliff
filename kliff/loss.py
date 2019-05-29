@@ -1,12 +1,10 @@
 import os
-import sys
 import numpy as np
 import warnings
 import scipy.optimize
-import multiprocessing as mp
 import kliff
 from . import parallel
-from .error import InputError
+from .error import InputError, report_import_error
 
 try:
     import torch
@@ -67,7 +65,7 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
 
     2) If `use_energy == False` and `use_forces == True`, then `S = 3N`.
     `prediction[3*i+0]`, `prediction[3*i+1]`, and `prediction[3*i+2]` are the
-    x, y, and z component of the forces on atom i in the configuration, respecrively.
+    x, y, and z component of the forces on atom i in the configuration, respectively.
     Correspondingly, `reference` is the 3N concatenated reference forces.
 
 
@@ -75,7 +73,7 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     `prediction[0]` is the potential energy computed by the calculator, and
     `reference[0]` is the reference energy.
     `prediction[3*i+1]`, `prediction[3*i+2]`, and `prediction[3*i+3]` are the
-    x, y, and z component of the forces on atom i in the configuration, respecrively.
+    x, y, and z component of the forces on atom i in the configuration, respectively.
     Correspondingly, `reference` is the 3N concatenated reference forces.
     """
 
@@ -488,6 +486,8 @@ class LossPhysicsMotivatedModel(object):
 
         return loss
 
+    # NOTE this function can be called only once, not need to call each time
+    # get_residual_MPI is called
     def split_data(self):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -561,7 +561,7 @@ class LossNeuralNetworkModel(object):
         """
 
         if not torch_available:
-            raise ImportError('Please install "PyTorch" first. See: https://pytorch.org')
+            report_import_error('pytorch')
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -644,24 +644,18 @@ class LossNeuralNetworkModel(object):
         logger.info(msg)
         print(msg)
 
+        def closure():
+            optimizer.zero_grad()
+            loss = self.get_loss()
+            loss.backward()
+            return loss
+
         while True:
             try:
                 if self.method in ['LBFGS']:
-
-                    def closure():
-                        # zero the parameter gradients
-                        optimizer.zero_grad()
-                        # forward + backward + optimize
-                        loss = self.get_loss()
-                        loss.backward()
-                        return loss
-
                     optimizer.step(closure)
                 else:
-                    optimizer.zero_grad()
-                    # forward + backward + optimize
-                    loss = self.get_loss()
-                    loss.backward()
+                    loss = closure()
                     optimizer.step()
                 epoch_new = n * self.batch_size // DATASET_SIZE
 
@@ -686,6 +680,18 @@ class LossNeuralNetworkModel(object):
         for _ in range(self.batch_size):
             # raise StopIteration error if out of bounds; This will ignore the last
             # chunk of data whose size is smaller than `batch_size`
+            inp = self.data_loader.next_element()
+            loss_single = self.get_loss_single_config(
+                inp, self.calculator, self.residual_fn, self.residual_data
+            )
+            loss += loss_single
+        # TODO  maybe divide batch_size elsewhere
+        loss /= self.batch_size
+        return loss
+
+    def get_loss_DDP(self):
+        loss = 0
+        for _ in range(self.batch_size):
             inp = self.data_loader.next_element()
             loss_single = self.get_loss_single_config(
                 inp, self.calculator, self.residual_fn, self.residual_data
