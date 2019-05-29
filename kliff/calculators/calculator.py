@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 import kliff
-from .dataset import Configuration
-from .utils import length_equal
+from ..dataset import Configuration
+from ..utils import length_equal
 
 logger = kliff.logger.get_logger(__name__)
 

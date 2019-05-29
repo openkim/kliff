@@ -11,7 +11,8 @@ symmetry functions.
 
 from kliff.descriptors import SymmetryFunction
 from kliff.dataset import Dataset
-from kliff.models.model_torch import LinearRegression, CalculatorTorch
+from kliff.models import LinearRegression
+from kliff.calculators import CalculatorTorch
 
 
 descriptor = SymmetryFunction(

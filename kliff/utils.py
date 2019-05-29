@@ -11,3 +11,12 @@ def length_equal(a, b):
     # can be broadcasted
     else:
         return True
+
+
+def check_torch_available():
+    try:
+        import torch
+
+        return True
+    except ImportError:
+        return False

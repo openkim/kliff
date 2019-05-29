@@ -1,11 +1,11 @@
 import numpy as np
 import os
 import multiprocessing as mp
-from .error import InputError
-from .dataset.dataset import Configuration
-from .dataset.dataset_torch import FingerprintsDataset, FingerprintsDataLoader
 import torch
 import torch.nn as nn
+from ..error import InputError
+from ..dataset.dataset import Configuration
+from ..dataset.dataset_torch import FingerprintsDataset, FingerprintsDataLoader
 
 # pytorch built-in (use them directly)
 from torch.nn.modules.linear import Linear, Bilinear
