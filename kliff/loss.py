@@ -4,12 +4,12 @@ import warnings
 import scipy.optimize
 import kliff
 from . import parallel
-from .dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 from .error import InputError, report_import_error
 
 try:
     import torch
     from torch.utils.data import DataLoader
+    from .dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 
     torch_available = True
 except ImportError:

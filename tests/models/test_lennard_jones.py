@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import pytest
-from kliff.calculator import Calculator
+from kliff.calculators import Calculator
 from kliff.models import LennardJones
 from kliff.error import ModelError
 from kliff.dataset import Dataset

@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import pytest
 from kliff.dataset import Dataset
-from kliff.calculator import Calculator
+from kliff.calculators import Calculator
 from kliff.models import KIM
 
 ref_energies = [-277.409737571, -275.597759276, -276.528342759, -275.482988187]
