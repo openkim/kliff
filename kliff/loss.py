@@ -592,11 +592,12 @@ class LossNeuralNetworkModel(object):
         ----------
         method: str
             PyTorch optimization methods, and aviliable ones are:
-            [`Adadelta`, `Adagrad`, `Adam`, `SparseAdam`, `Adamax`, `ASGD`,
-            `LBFGS`, `RMSprop`, `Rprop`, `SGD`]
+            [`Adadelta`, `Adagrad`, `Adam`, `SparseAdam`, `Adamax`, `ASGD`, `LBFGS`,
+            `RMSprop`, `Rprop`, `SGD`]
             See also: https://pytorch.org/docs/stable/optim.html
 
-        kwargs: extra keyword arguments that can be used by the PyTorch optimizer.
+        kwargs: dict
+            Extra keyword arguments that can be used by the PyTorch optimizer.
         """
         if method not in self.torch_minimize_methods:
             raise LossError('Minimization method "{}" not supported.'.format(method))
@@ -640,46 +641,6 @@ class LossNeuralNetworkModel(object):
             self.calculator.model.set_save_metadata(
                 save_prefix, save_start, save_frequency
             )
-
-        #        # other metadata
-        #        n = 0
-        #        epoch = 0
-        #        DATASET_SIZE = len(self.calculator.configs)
-        #
-        #        msg = 'Start minimization using optimization method: {}.'.format(self.method)
-        #        logger.info(msg)
-        #        print(msg)
-        #
-        #        def closure():
-        #            optimizer.zero_grad()
-        #            loss = self.get_loss()
-        #            loss.backward()
-        #            return loss
-        #
-        #        while True:
-        #            try:
-        #                if self.method in ['LBFGS']:
-        #                    optimizer.step(closure)
-        #                else:
-        #                    loss = closure()
-        #                    optimizer.step()
-        #                epoch_new = n * self.batch_size // DATASET_SIZE
-        #
-        #                if epoch_new > epoch:
-        #                    epoch = epoch_new
-        #                    print('Epoch = {}, loss = {}'.format(epoch, loss))
-        #                n += 1
-        #
-        #                if (
-        #                    epoch_new >= save_start
-        #                    and (epoch_new - save_start) % save_frequency == 0
-        #                ):
-        #                    fname = 'model_epoch{}.pkl'.format(epoch)
-        #                    path = os.path.join(save_prefix, fname)
-        #                    self.calculator.model.save(path)
-        #
-        #            except StopIteration:
-        #                break
 
         msg = 'Start minimization using optimization method: {}.'.format(self.method)
         logger.info(msg)

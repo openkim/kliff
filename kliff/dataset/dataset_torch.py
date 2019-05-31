@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from ..descriptors.descriptor import load_fingerprints
 
 
@@ -27,46 +27,6 @@ class FingerprintsDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
         return sample
-
-
-class FingerprintsDataLoader(DataLoader):
-    """A dataset loader that incorporate the support the number of epochs.
-
-    The dataset loader will load an element from the next batch if a batch is
-    fully iterated. This, in effect, looks like concatenating the dataset the
-    number of epochs times.
-
-    Parameters
-    ----------
-    num_epochs: int
-        Number of epochs to iterate through the dataset.
-    """
-
-    def __init__(self, num_epochs=1, *args, **kwargs):
-        super(FingerprintsDataLoader, self).__init__(*args, **kwargs)
-        self.num_epochs = num_epochs
-        self.epoch = 0
-        self.iterable = None
-
-    def next_element(self):
-        """ Get the next data element.
-        """
-        if self.iterable is None:
-            self.iterable = self._make_iterable()
-        try:
-            element = self.iterable.next()
-        except StopIteration:
-            self.epoch += 1
-            if self.epoch == self.num_epochs:
-                raise StopIteration
-            else:
-                self.iterable = self._make_iterable()
-                element = self.next_element()
-        return element
-
-    def _make_iterable(self):
-        iterable = iter(self)
-        return iterable
 
 
 def fingerprints_collate_fn(batch):
