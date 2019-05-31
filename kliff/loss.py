@@ -701,26 +701,45 @@ class LossNeuralNetworkModel(object):
                     loss = closure()
                     optimizer.step()
 
-            print('Epoch = {}, loss = {}'.format(epoch, loss))
+            print('Epoch = {}, loss = {}'.format(epoch + 1, loss))
 
             if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
                 fname = 'model_epoch{}.pkl'.format(epoch)
                 path = os.path.join(save_prefix, fname)
                 self.calculator.model.save(path)
 
-    def get_loss_batch(self, batch):
+    def get_loss_batch(self, batch, normalize=True):
+        """Compute the loss of a batch of samples.
+
+        Parameters
+        ----------
+        batch: list
+            A list of samples.
+
+        normalize: bool
+            If `True`, normalize the loss of the batch by the size of the batch.
+            Note, how to normalize the loss of a single configuration is determined by the
+            `normalize` flag of the `residual_data` argument of :mod:`kliff.Loss`.
+        """
         results = self.calculator.compute(batch)
         energy_batch = results['energy']
         forces_batch = results['forces']
+
         if forces_batch is None:
             forces_batch = [None] * len(batch)
 
+        # Instead of loss_batch = 0 and loss_batch += loss in the loop, the below one may
+        # be faster, considering chain rule it needs to take derivatives.
+        # Anyway, it is minimal. Don't worry about it.
         losses = []
         for sample, energy, forces in zip(batch, energy_batch, forces_batch):
             loss = self.get_loss_single_config(sample, energy, forces)
             losses.append(loss)
+        loss_batch = torch.stack(losses).sum()
+        if normalize:
+            loss_batch /= len(batch)
 
-        return torch.sum(loss)
+        return loss_batch
 
     def get_loss_single_config(self, sample, pred_energy, pred_forces):
 
