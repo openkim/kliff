@@ -44,12 +44,12 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
         references data for the prediction
 
     data: dict
-        User provided callback data, and available keys:
-            energy_weight: float (default: 1)
-            forces_weight: float (default: 1)
+        Additional data to be used to calculate the residual. Supported key value pairs
+        are:
 
-    normalize: bool (default: False)
-        Whether to normalize the residual by the number of atoms
+        - energy_weight: float (default: 1)
+        - forces_weight: float (default: 1)
+        - normalize_by_atoms: bool (default: True)
 
     Return
     ------

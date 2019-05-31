@@ -2,7 +2,7 @@
 
 To run:
     $ python genereate_apidoc.py
-which generates a directory named `tmp_apidoc`. Do a comparsion of this file
+which generates a directory named `tmp_apidoc`. Do a comparison of this file
 
 You can provide an `exclude` list.
 
@@ -67,8 +67,8 @@ def autodoc_module(path, module):
 
 if __name__ == '__main__':
 
-    # this will not be included
-    excludes = ['scripts']
+    # this will not be included, e.g. excludes = ['models']
+    excludes = ['cmdline', 'lmplatconst', 'wrapcalculator']
 
     modules = get_all_modules()
     for exc in excludes:

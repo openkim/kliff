@@ -6,17 +6,15 @@ Package Reference
 .. toctree::
     kliff.analysis
     kliff.atomic_data
-    kliff.calculator
+    kliff.calculators
     kliff.dataset
     kliff.descriptors
     kliff.error
     kliff.fisher
-    kliff.lmplatconst
     kliff.log
     kliff.loss
     kliff.models
     kliff.neighbor
-    kliff.neuralnetwork
+    kliff.nn
     kliff.parallel
     kliff.utils
-    kliff.wrapcalculator

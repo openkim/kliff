@@ -1,7 +1,7 @@
-kliff.neuralnetwork
--------------------
+kliff.nn
+--------
 
-.. automodule:: kliff.neuralnetwork
+.. automodule:: kliff.nn
     :members:
     :undoc-members:
     :show-inheritance:

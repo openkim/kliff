@@ -1,7 +1,7 @@
-kliff.calculator
-----------------
+kliff.calculators
+-----------------
 
-.. automodule:: kliff.calculator
+.. automodule:: kliff.calculators
     :members:
     :undoc-members:
     :show-inheritance:

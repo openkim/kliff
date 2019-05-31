@@ -53,6 +53,12 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
+.PHONY: clean_all
+clean_all:
+	rm -rf $(BUILDDIR)/* source/auto_examples/*
+
+
+
 .PHONY: html
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

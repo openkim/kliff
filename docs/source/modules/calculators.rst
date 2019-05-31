@@ -24,7 +24,7 @@ A calculator for the physics-motivated potential can be created by:
 
 .. code-block:: python
 
-    from kliff.calculator import Calculator
+    from kliff.calculators import Calculator
 
     model = ...  # create a model
     configs = ...  # get a list of configurations
@@ -44,22 +44,22 @@ If the potential is to be trained on `energy` only, it would be better to set
 Other methods of the calculator include:
 
 - `Initialization`:
-  :meth:`~kliff.calculator.Calculator.get_compute_arguments`.
+  :meth:`~kliff.calculators.Calculator.get_compute_arguments`.
 - `Property calculation using a model`:
-  :meth:`~kliff.calculator.Calculator.compute`,
-  :meth:`~kliff.calculator.Calculator.get_compute_arguments`,
-  :meth:`~kliff.calculator.Calculator.compute`,
-  :meth:`~kliff.calculator.Calculator.get_energy`,
-  :meth:`~kliff.calculator.Calculator.get_forces`,
-  :meth:`~kliff.calculator.Calculator.get_stress`,
-  :meth:`~kliff.calculator.Calculator.get_prediction`,
-  :meth:`~kliff.calculator.Calculator.get_reference`.
+  :meth:`~kliff.calculators.Calculator.compute`,
+  :meth:`~kliff.calculators.Calculator.get_compute_arguments`,
+  :meth:`~kliff.calculators.Calculator.compute`,
+  :meth:`~kliff.calculators.Calculator.get_energy`,
+  :meth:`~kliff.calculators.Calculator.get_forces`,
+  :meth:`~kliff.calculators.Calculator.get_stress`,
+  :meth:`~kliff.calculators.Calculator.get_prediction`,
+  :meth:`~kliff.calculators.Calculator.get_reference`.
 - `Optimizing parameters`:
-  :meth:`~kliff.calculator.Calculator.get_opt_params`,
-  :meth:`~kliff.calculator.Calculator.get_opt_params_bounds`,
-  :meth:`~kliff.calculator.Calculator.update_opt_params`.
+  :meth:`~kliff.calculators.Calculator.get_opt_params`,
+  :meth:`~kliff.calculators.Calculator.get_opt_params_bounds`,
+  :meth:`~kliff.calculators.Calculator.update_opt_params`.
 
 .. seealso::
-    See :class:`kliff.calculator.Calculator` for a complete list of the member
+    See :class:`kliff.calculators.Calculator` for a complete list of the member
     functions and
     their docs.
