@@ -6,7 +6,7 @@ from .model_torch import ModelTorch
 class NeuralNetwork(ModelTorch):
     """Neural Network model.
 
-    A feed-forward neural network model built using PyTorch.
+    A feed-forward neural network model.
 
     Parameters
     ----------

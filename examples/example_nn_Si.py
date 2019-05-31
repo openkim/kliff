@@ -25,9 +25,11 @@ In this tutorial, we train a neural network (NN) potential for silicon
 #
 # Let's first import the modules that will be used in this example.
 
-from kliff.descriptors import SymmetryFunction
 from kliff.dataset import Dataset
-import kliff.neuralnetwork as nn
+from kliff.descriptors import SymmetryFunction
+from kliff.models import NeuralNetwork
+from kliff.calculators import CalculatorTorch
+from kliff import nn
 from kliff.loss import Loss
 
 
@@ -57,7 +59,7 @@ descriptor = SymmetryFunction(
 
 N1 = 10
 N2 = 10
-model = nn.NeuralNetwork(descriptor)
+model = NeuralNetwork(descriptor)
 model.add_layers(
     # first hidden layer
     nn.Linear(descriptor.get_size(), N1),
@@ -109,7 +111,7 @@ configs = tset.get_configs()
 print('Number of configurations:', len(configs))
 
 # calculator
-calc = nn.PytorchANNCalculator(model)
+calc = CalculatorTorch(model)
 calc.create(configs, reuse=True)
 
 
