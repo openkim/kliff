@@ -1,133 +1,9 @@
-import numpy as np
 import os
-import multiprocessing as mp
 import torch
-import torch.nn as nn
-from ..error import InputError
-from ..dataset.dataset import Configuration
-from ..dataset.dataset_torch import FingerprintsDataset, FingerprintsDataLoader
-
-# pytorch built-in (use them directly)
-from torch.nn.modules.linear import Linear, Bilinear
-from torch.nn.modules.conv import (
-    Conv1d,
-    Conv2d,
-    Conv3d,
-    ConvTranspose1d,
-    ConvTranspose2d,
-    ConvTranspose3d,
-)
-from torch.nn.modules.activation import (
-    Threshold,
-    ReLU,
-    Hardtanh,
-    ReLU6,
-    Sigmoid,
-    Tanh,
-    Softmax,
-    Softmax2d,
-    LogSoftmax,
-    ELU,
-    SELU,
-    CELU,
-    Hardshrink,
-    LeakyReLU,
-    LogSigmoid,
-    Softplus,
-    Softshrink,
-    PReLU,
-    Softsign,
-    Softmin,
-    Tanhshrink,
-    RReLU,
-    GLU,
-)
-from torch.nn.modules.pooling import (
-    AvgPool1d,
-    AvgPool2d,
-    AvgPool3d,
-    MaxPool1d,
-    MaxPool2d,
-    MaxPool3d,
-    MaxUnpool1d,
-    MaxUnpool2d,
-    MaxUnpool3d,
-    FractionalMaxPool2d,
-    LPPool1d,
-    LPPool2d,
-    AdaptiveMaxPool1d,
-    AdaptiveMaxPool2d,
-    AdaptiveMaxPool3d,
-    AdaptiveAvgPool1d,
-    AdaptiveAvgPool2d,
-    AdaptiveAvgPool3d,
-)
-from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
-from torch.nn.modules.normalization import (
-    LocalResponseNorm,
-    CrossMapLRN2d,
-    LayerNorm,
-    GroupNorm,
-)
-from torch.nn.modules.rnn import (
-    RNNBase,
-    RNN,
-    LSTM,
-    GRU,
-    RNNCellBase,
-    RNNCell,
-    LSTMCell,
-    GRUCell,
-)
+from .model_torch import ModelTorch
 
 
-@torch._jit_internal.weak_module
-class Dropout(torch.nn.modules.dropout._DropoutNd):
-    """A Dropout layer that zeros the same element of descriptor values for all
-    atoms.
-
-    Note `torch.nn.Dropout` dropout each component independently.
-
-    Parameters
-    ----------
-    p: float
-        probability of an element to be zeroed. Default: 0.5
-
-    inplace: bool
-        If set to `True`, will do this operation in-place. Default: `False`
-
-    Shapes
-    ------
-        Input: [N, D] or [1, N, D]
-        Outut: [N, D] or [1, N, D] (same as Input)
-        The first dimension 1 is beause the dataloader provides only sample each
-        iteration.
-    """
-
-    @torch._jit_internal.weak_script_method
-    def forward(self, input):
-        dim = input.dim()
-        shape = input.shape
-        if dim == 2:
-            shape_4D = (1, *shape, 1)
-        elif dim == 3:
-            if shape[0] != 1:
-                raise Exception('Shape[0] needs to be 1 for a 3D tensor.')
-            shape_4D = (*shape, 1)
-
-        else:
-            raise Exception(
-                'Input need to be 2D or 3D tensor, but got a ' '{}D tensor.'.format(dim)
-            )
-        x = torch.reshape(input, shape_4D)
-        x = torch.transpose(x, 1, 2)
-        y = torch.nn.functional.dropout2d(x, self.p, self.training, self.inplace)
-        y = torch.transpose(y, 1, 2)
-        y = torch.reshape(y, shape)
-        return y
-
-
-class NeuralNetwork(nn.Module):
+class NeuralNetwork(ModelTorch):
     """Neural Network model.
 
     A feed-forward neural network model built using PyTorch.
@@ -143,23 +19,9 @@ class NeuralNetwork(nn.Module):
     """
 
     def __init__(self, descriptor, seed=35):
-        super(NeuralNetwork, self).__init__()
-        self.descriptor = descriptor
-        self.seed = seed
+        super(NeuralNetwork, self).__init__(descriptor, seed)
 
-        dtype = self.descriptor.get_dtype()
-        if dtype == np.float32:
-            self.dtype = torch.float32
-        elif dtype == np.float64:
-            self.dtype = torch.float64
-        else:
-            raise NeuralNetworkError('Not support dtype "{}".'.format(dtype))
-
-        torch.manual_seed(seed)
         self.layers = None
-        self.save_prefix = None
-        self.save_start = None
-        self.save_frequency = None
 
     def add_layers(self, *layers):
         """Add layers to the sequential model.
@@ -175,7 +37,7 @@ class NeuralNetwork(nn.Module):
         """
         if self.layers is not None:
             raise NeuralNetworkError(
-                '"add_layers" called multiple times. ' 'It should be called only once.'
+                '"add_layers" called multiple times. It should be called only once.'
             )
         else:
             self.layers = []
@@ -188,12 +50,12 @@ class NeuralNetwork(nn.Module):
         # check shape of first layer and last layer
         first = self.layers[0]
         if first.in_features != len(self.descriptor):
-            raise InputError(
-                '"in_features" of first layer should be equal to ' 'descriptor size.'
+            raise NeuralNetworkError(
+                '"in_features" of first layer should be equal to descriptor size.'
             )
         last = self.layers[-1]
         if last.out_features != 1:
-            raise InputError('"out_features" of last layer should be 1.')
+            raise NeuralNetworkError('"out_features" of last layer should be 1.')
 
         # cast types
         self.type(self.dtype)
@@ -203,65 +65,8 @@ class NeuralNetwork(nn.Module):
             x = layer(x)
         return x
 
-    def set_save_metadata(self, prefix, start, frequency):
-        """Set metadata that controls how the model are saved during training.
-
-        If this function is called before minimization starts, the model will be
-        saved to the directory specified by ``prefix`` every ``frequency``
-        epochs, beginning at the ``start`` epoch.
-
-        Parameters
-        ----------
-        prefix: str
-            Directory where the models are saved.
-            Model will be named as `{prefix}/model_epoch{ep}.pt`, where `ep` is
-            the epoch number.
-
-        start: int
-            Eopch number at which begins to save the model.
-
-        frequency: int
-            Save the model every ``frequency`` epochs.
-        """
-        self.save_prefix = str(prefix)
-        self.save_start = int(start)
-        self.save_frequency = int(frequency)
-
-    def save(self, path):
-        """Save a model to disk.
-
-        Parameters
-        ----------
-        path: str
-            Path where to store the model.
-        """
-        dirname = os.path.dirname(path)
-        if dirname and not os.path.exists(dirname):
-            os.makedirs(dirname)
-        torch.save(self.state_dict(), path)
-
-    def load(self, path, mode):
-        """Load a model on disk into memory.
-
-        Parameters
-        ----------
-        path: str
-            Path where the model is stored.
-
-        mode: str
-            Purpose of the loaded model. Should be either ``train`` or ``eval``.
-        """
-
-        self.load_state_dict(torch.load(path))
-        if mode == 'train':
-            self.train()
-        elif mode == 'eval':
-            self.eval()
-        else:
-            raise NeuralNetworkError(
-                'Uncongnized mode "{}" in model.load().'.format(mode)
-            )
-
+    # TODO check whether transposed applied to linear layer weight matrix
+    # see https://pytorch.org/docs/stable/nn.html#linear
     def write_kim_model(self, path=None):
         # supported
         param_layer = ['Linear']
@@ -577,122 +382,6 @@ class NeuralNetwork(nn.Module):
                     drop_ratios.append(0.0)
 
         return drop_ratios
-
-
-class PytorchANNCalculator(object):
-    """ A neural network calculator.
-
-    Parameters
-    ----------
-    model: obj
-        Instance of :class:`~kliff.neuralnetwork.NeuralNetwork`.
-
-    Attributes
-    ----------
-    attr1: list
-        This is an example attribute.
-    """
-
-    # TODO should be moved to Model
-    implemented_property = ['energy', 'forces']
-
-    def __init__(self, model):
-
-        self.model = model
-        self.dtype = self.model.descriptor.dtype
-        self.train_fingerprints_path = None
-
-        self.use_energy = None
-        self.use_forces = None
-
-        self.results = dict([(i, None) for i in self.implemented_property])
-
-    def create(
-        self,
-        configs,
-        use_energy=True,
-        use_forces=True,
-        use_stress=False,
-        reuse=False,
-        nprocs=mp.cpu_count(),
-    ):
-        """Preprocess configs into fingerprints.
-
-        Parameters
-        ----------
-
-        configs: list of Configuration object
-
-        use_energy: bool (optional)
-            Whether to require the calculator to compute energy.
-
-        use_forces: bool (optional)
-            Whether to require the calculator to compute forces.
-
-        use_stress: bool (optional)
-            Whether to require the calculator to compute stress.
-
-        nprocs: int (optional)
-            Number if processors.
-
-        """
-        if use_stress:
-            raise NotImplementedError('"stress" is not supported by NN calculator.')
-
-        self.configs = configs
-        self.use_energy = use_energy
-        self.use_forces = use_forces
-
-        if isinstance(configs, Configuration):
-            configs = [configs]
-
-        # generate pickled fingerprints
-        print('Start generating fingerprints')
-        fname = self.model.descriptor.generate_train_fingerprints(
-            configs, grad=use_forces, reuse=reuse, nprocs=nprocs
-        )
-        print('Finish generating fingerprints')
-        self.train_fingerprints_path = fname
-
-    def get_train_fingerprints_path(self):
-        """Return the path to the training set fingerprints: `train.pkl`."""
-        return self.train_fingerprints_path
-
-    # TODO due to this func, the above `get_train_fingerprints_path` could be deleted
-    def get_data_loader(self, num_epochs=1):
-        fname = self.train_fingerprints_path
-        fp = FingerprintsDataset(fname)
-        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=num_epochs)
-        return data_loader
-
-    def compute(self, x):
-
-        grad = self.use_forces
-        zeta = x['zeta'][0]
-
-        if grad:
-            zeta.requires_grad = True
-        y = self.model(zeta)
-        pred_energy = y.sum()
-        if grad:
-            dzeta_dr = x['dzeta_dr'][0]
-            forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
-            zeta.requires_grad = False
-        else:
-            forces = None
-
-        return {'energy': pred_energy, 'forces': forces}
-
-    @staticmethod
-    def compute_forces(energy, zeta, dzeta_dr):
-        denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-        forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
-        return forces
-
-
-def cost_single_config(pred_energy, energy=None, forces=None):
-    cost = (pred_energy - energy) ** 2
-    return cost
 
 
 class NeuralNetworkError(Exception):
