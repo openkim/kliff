@@ -1,4 +1,5 @@
 import os
+import multiprocessing as mp
 import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallelCPU
@@ -43,7 +44,7 @@ class CalculatorTorch:
         use_forces=True,
         use_stress=False,
         reuse=False,
-        nprocs=None,
+        nprocs=mp.cpu_count(),
     ):
         """Process configs into fingerprints.
 
