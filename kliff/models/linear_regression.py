@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import kliff
-from ..dataset.dataset_torch import FingerprintsDataset, FingerprintsDataLoader
+from torch.utils.data import DataLoader
+from ..dataset.dataset_torch import FingerprintsDataset
 from .model_torch import ModelTorch
 
 logger = kliff.logger.get_logger(__name__)
@@ -23,7 +24,9 @@ class LinearRegression(ModelTorch):
     def fit(self, path):
         """Fit the model using analytic solution."""
         fp = FingerprintsDataset(path)
-        data_loader = FingerprintsDataLoader(dataset=fp, num_epochs=1)
+
+        # TODO update
+        data_loader = DataLoader(dataset=fp, num_epochs=1)
         X, y = self.prepare_data(data_loader)
         A = torch.inverse(torch.mm(X.t(), X))
         beta = torch.mv(torch.mm(A, X.t()), y)

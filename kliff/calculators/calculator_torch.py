@@ -1,5 +1,7 @@
+import os
 import torch
-from torch.nn.parallel import DistributedDataParallelCPU as DDPCPU
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallelCPU
 import kliff
 from ..dataset.dataset import Configuration
 
@@ -89,30 +91,6 @@ class CalculatorTorch:
         path = self.get_train_fingerprints_path()
         self.model.fit(path)
 
-    #    def compute(self, x):
-    #
-    #        grad = self.use_forces
-    #        zeta = x['zeta'][0]
-    #
-    #        if grad:
-    #            zeta.requires_grad = True
-    #        y = self.model(zeta)
-    #        pred_energy = y.sum()
-    #        if grad:
-    #            dzeta_dr = x['dzeta_dr'][0]
-    #            forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
-    #            zeta.requires_grad = False
-    #        else:
-    #            forces = None
-    #
-    #        return {'energy': pred_energy, 'forces': forces}
-    #
-    #    @staticmethod
-    #    def compute_forces(energy, zeta, dzeta_dr):
-    #        denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-    #        forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
-    #        return forces
-
     def compute(self, batch):
         grad = self.use_forces
 
@@ -163,21 +141,50 @@ class CalculatorTorch:
 
 
 class CalculatorTorchDDPCPU(CalculatorTorch):
-    def compute(self, x):
+    def __init__(self, model, rank, world_size):
+        super(CalculatorTorchDDPCPU, self).__init__(model)
+        self.set_up(rank, world_size)
+
+    def set_up(self, rank, world_size):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12355'
+        dist.init_process_group('gloo', rank=rank, world_size=world_size)
+
+    def clean_up(self):
+        dist.destroy_process_group()
+
+    def compute(self, batch):
         grad = self.use_forces
-        zeta = x['zeta'][0]
 
+        # collate batch input to NN
+        zeta_config = self._collate(batch, 'zeta')
         if grad:
-            zeta.requires_grad = True
+            for zeta in zeta_config:
+                zeta.requires_grad_(True)
+        zeta_batch = torch.cat(zeta_config, dim=0)
 
-        model = DDPCPU(self.model)
-        y = model(zeta)
-        pred_energy = y.sum()
+        # evaluate model
+        model = DistributedDataParallelCPU(self.model)
+        energy_atom = model(zeta_batch)
+
+        # energy
+        natoms_config = [len(zeta) for zeta in zeta_config]
+        energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
+
+        # forces
         if grad:
-            dzeta_dr = x['dzeta_dr'][0]
-            forces = self.compute_forces(pred_energy, zeta, dzeta_dr)
-            zeta.requires_grad = False
+            dzeta_dr_config = self._collate(batch, 'dzeta_dr')
+            forces_config = self.get_forces_config(
+                energy_config, zeta_config, dzeta_dr_config
+            )
+            for zeta in zeta_config:
+                zeta.requires_grad_(False)
+            # zeta_batch.requires_grad_(False)
         else:
-            forces = None
+            forces_config = None
 
-        return {'energy': pred_energy, 'forces': forces}
+        return {'energy': energy_config, 'forces': forces_config}
+
+    def __del__(self):
+        super(CalculatorTorchDDPCPU, self).__del__()
+        self.clean_up()
