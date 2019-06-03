@@ -144,8 +144,7 @@ class Loss(object):
 
         calc_type = calculator.__class__.__name__
 
-        torch_calculators = ['PytorchANNCalculator', 'CalculatorTorch']
-        if calc_type in torch_calculators:
+        if 'Torch' in calc_type:
             return LossNeuralNetworkModel(calculator, nprocs, residual_fn, data)
         else:
             return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, data)
