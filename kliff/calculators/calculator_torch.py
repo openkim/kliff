@@ -187,5 +187,4 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
         return {'energy': energy_config, 'forces': forces_config}
 
     def __del__(self):
-        super(CalculatorTorchDDPCPU, self).__del__()
         self.clean_up()
