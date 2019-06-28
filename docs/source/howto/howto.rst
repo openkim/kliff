@@ -12,5 +12,6 @@ Some (incomplete) examples demonstrating how to use KLIFF.
     save_load_model
     install_kim_model
     new_model
+    parallelize
 
 

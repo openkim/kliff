@@ -25,6 +25,7 @@ libs/geodesicLMv1.1
 tests/echo*
 tests/fingerprints/
 tmp_*
+*_kliff_trained/
 
 # special for docs
 docs/build
