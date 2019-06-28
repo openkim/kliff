@@ -13,7 +13,7 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # We are going to fit the NN potential to a training set of energies and forces from
 # compressed and stretched diamond silicon structures (the same training set used in
 # :ref:`tut_kim_sw`).
-# Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/pytorch/examples/Si_training_set.tar.gz>`
+# Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
 # and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``.
 # The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
 # information of this format.
@@ -130,7 +130,7 @@ calc.create(configs, reuse=True)
 # drives the loss down in a reasonable time.
 
 loss = Loss(calc, residual_data={'forces_weight': 0.3})
-result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.01)
+result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.001)
 
 
 ##########################################################################################

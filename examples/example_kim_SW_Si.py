@@ -23,7 +23,7 @@ on OpenKIM_.
 # silicon structures, as well as configurations drawn from molecular dynamics trajectories
 # at different temperatures.
 # Download the training set :download:`Si_training_set.tar.gz
-# <https://raw.githubusercontent.com/mjwen/kliff/pytorch/examples/Si_training_set.tar.gz>`
+# <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
 # and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``. The data is stored in
 # **extended xyz** format, and see :ref:`doc.dataset` for more information of this format.
 #

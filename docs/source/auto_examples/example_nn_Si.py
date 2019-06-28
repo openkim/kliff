@@ -13,7 +13,7 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # We are going to fit the NN potential to a training set of energies and forces from
 # compressed and stretched diamond silicon structures (the same training set used in
 # :ref:`tut_kim_sw`).
-# Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/pytorch/examples/Si_training_set.tar.gz>`
+# Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
 # and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``.
 # The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
 # information of this format.
@@ -25,9 +25,11 @@ In this tutorial, we train a neural network (NN) potential for silicon
 #
 # Let's first import the modules that will be used in this example.
 
+from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
-from kliff.dataset import DataSet
-import kliff.neuralnetwork as nn
+from kliff.models import NeuralNetwork
+from kliff.calculators import CalculatorTorch
+from kliff import nn
 from kliff.loss import Loss
 
 
@@ -36,28 +38,28 @@ from kliff.loss import Loss
 # -----
 #
 # For a NN model, we need to specify the descriptor that transforms atomic environment
-# information to the fingerprints, which the NN modle uses as the input. Here, we use the
+# information to the fingerprints, which the NN model uses as the input. Here, we use the
 # symmetry functions proposed by by Behler and coworkers.
 
 descriptor = SymmetryFunction(
-    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set31', normalize=True
+    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
 )
 
 
 ##########################################################################################
 # The ``cut_name`` and ``cut_dists`` tells the descriptor what type of cutoff function to
-# use and what the cutoff distances are. ``hyperparams`` specifies the the set of
+# use and what the cutoff distances are. ``hyperparams`` specifies the set of
 # hyperparameters used in the symmetry function descriptor. If you prefer, you can provide
 # a dictionary of your own hyperparameters. And finally, ``normalize`` informs that the
-# genereated fingerprints should be normalized by first subtracting the mean and then
+# generated fingerprints should be normalized by first subtracting the mean and then
 # dividing the standard deviation. This normalization typically makes it easier to
-# optimzie  NN model.
+# optimize NN model.
 #
 # We can then build the NN model on top of the descriptor.
 
 N1 = 10
 N2 = 10
-model = nn.NeuralNetwork(descriptor)
+model = NeuralNetwork(descriptor)
 model.add_layers(
     # first hidden layer
     nn.Linear(descriptor.get_size(), N1),
@@ -74,12 +76,12 @@ model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
 ##########################################################################################
 # In the above code, we build a NN model with an input layer, two hidden layer, and an
 # output layer. The ``descriptor`` carries the information of the input layer, so it is
-# not needed to be spcified explicitly. For each hidden layer, we first do a linear
+# not needed to be specified explicitly. For each hidden layer, we first do a linear
 # transformation using ``nn.Linear(size_in, size_out)`` (essentially carrying out :math:`y
 # = xW+b`, where :math:`W` is the weight matrix of size ``size_in`` by ``size_out``, and
 # :math:`b` is a vector of size ``size_out``. Then we apply the hyperbolic tangent
 # activation function ``nn.Tanh()`` to the output of the Linear layer (i.e. :math:`y`) so
-# as to add the nonlinearty. We use a Linear layer for the output layer as well, but
+# as to add the nonlinearity. We use a Linear layer for the output layer as well, but
 # unlike the hidden layer, no activation function is applied here. The input size
 # ``size_in`` of the first hidden layer must be the size of the descriptor, which is
 # obtained using ``descriptor.get_size()``. For all other layers (hidden or output), the
@@ -95,21 +97,21 @@ model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
 # Training set and calculator
 # ---------------------------
 #
-# The training set and the calculator are the same as explaned in :ref:`tut_kim_sw`. The
+# The training set and the calculator are the same as explained in :ref:`tut_kim_sw`. The
 # only difference is that we need use the
-# :mod:`~kliff.neuralnetwork.PytorchANNCalculator()`, which is targeted for the NN model.
+# :mod:`~kliff.calculators.CalculatorTorch()`, which is targeted for the NN model.
 # Also, its ``create()`` method takes an argument ``reuse`` to inform whether to reuse the
 # fingerprints generated from the descriptor if it is present.
 
 # training set
 dataset_name = 'Si_training_set/varying_alat'
-tset = DataSet()
+tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
 print('Number of configurations:', len(configs))
 
 # calculator
-calc = nn.PytorchANNCalculator(model)
+calc = CalculatorTorch(model)
 calc.create(configs, reuse=True)
 
 
@@ -120,15 +122,15 @@ calc.create(configs, reuse=True)
 # KLIFF uses a loss function to quantify the difference between the training data and
 # potential predictions and uses minimization algorithms to reduce the loss as much as
 # possible. In the following code snippet, we create a loss function that uses the
-# ``Adam`` optimzier to minimize it. The Adam optimizer supports minimization using
+# ``Adam`` optimizer to minimize it. The Adam optimizer supports minimization using
 # `mini-batches` of data, and here we use ``100`` configurations in each minimization step
-# (the training set has a total of 400 configuraions as can be seen above), and run
+# (the training set has a total of 400 configurations as can be seen above), and run
 # through the training set for ``10`` epochs. The learning rate ``lr`` used here is
 # ``0.01``, and typically, one may need to play with this to find an acceptable one that
 # drives the loss down in a reasonable time.
 
 loss = Loss(calc, residual_data={'forces_weight': 0.3})
-result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.01)
+result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.001)
 
 
 ##########################################################################################
