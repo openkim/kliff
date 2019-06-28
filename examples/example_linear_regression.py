@@ -6,7 +6,6 @@ Train a linear regression potential
 
 In this tutorial, we train a linear regression model on the descriptors obtained using the
 symmetry functions.
-
 """
 
 from kliff.descriptors import SymmetryFunction
@@ -33,5 +32,17 @@ print('Number of configurations:', len(configs))
 calc = CalculatorTorch(model)
 calc.create(configs, reuse=True)
 
+
+##########################################################################################
+# We can train a linear regression model by minimizing a loss function as discussed in
+# :ref:`tut_nn`. But linear regression model has analytic solutions, and thus we can train
+# the model directly by using this feature. This can be achieved by calling the `fit()`
+# function of its calculator.
+#
+
 # fit the model
 calc.fit()
+
+
+# save model
+model.save('linear_model.pkl')

@@ -715,7 +715,7 @@ class LossNeuralNetworkModel(object):
         return loss_batch
 
     def get_loss_single_config(self, sample, pred_energy, pred_forces):
-
+        # TODO seems no need to convert to tensor here
         if self.calculator.use_energy:
             pred = torch.tensor([pred_energy])
             ref = torch.tensor([sample['energy']])

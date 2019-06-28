@@ -34,6 +34,7 @@ class CalculatorTorch:
 
         self.use_energy = None
         self.use_forces = None
+        self.use_stress = None
 
         self.results = dict([(i, None) for i in self.implemented_property])
 

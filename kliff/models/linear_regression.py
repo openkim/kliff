@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import kliff
 from torch.utils.data import DataLoader
-from ..dataset.dataset_torch import FingerprintsDataset
 from .model_torch import ModelTorch
+from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -25,9 +25,9 @@ class LinearRegression(ModelTorch):
         """Fit the model using analytic solution."""
         fp = FingerprintsDataset(path)
 
-        # TODO update
-        data_loader = DataLoader(dataset=fp, num_epochs=1)
-        X, y = self.prepare_data(data_loader)
+        loader = DataLoader(dataset=fp, batch_size=1, collate_fn=fingerprints_collate_fn)
+
+        X, y = self.prepare_data(loader)
         A = torch.inverse(torch.mm(X.t(), X))
         beta = torch.mv(torch.mm(A, X.t()), y)
 
@@ -38,7 +38,7 @@ class LinearRegression(ModelTorch):
         print(msg)
 
     def set_params(self, beta):
-        """Set linear linear weight and bias.
+        """Set linear weight and bias.
 
         Parameters
         ----------
@@ -48,51 +48,57 @@ class LinearRegression(ModelTorch):
         self.layer.weight = torch.nn.Parameter(beta[1:])
         self.layer.bias = torch.nn.Parameter(beta[0:1])
 
-    def prepare_data(self, data_loader, use_energy=True, use_forces=False):
-        def get_next():
-            inp = data_loader.next_element()
-
+    def prepare_data(self, loader, use_energy=True, use_forces=False):
+        X = []
+        y = []
+        for batch in loader:
+            sample = batch[0]
             if use_energy:
-                zeta = inp['zeta'][0]  # 2D tensor
+                zeta = sample['zeta']
                 intercept = torch.ones(zeta.size()[0], 1)
                 zeta = torch.cat((intercept, zeta), dim=1)
 
                 # sum to get energy of the configuration; we can do this because the model
                 # is linear
                 zeta = torch.sum(zeta, 0, keepdim=True)  # 2D tensor
-                e = torch.tensor([inp['energy'][0]])  # 1D tensor
+                e = torch.tensor([sample['energy']])  # 1D tensor
 
             if use_forces:
-                dzeta = inp['dzeta_dr'][0]  # 3D tensor (atom, desc, coords)
+                dzeta = sample['dzeta_dr']  # 3D tensor (atom, desc, coords)
                 # torch.zeros because derivative of intercept is 0
                 intercept = torch.zeros(dzeta.size()[0], dzeta.size()[2])
                 dzeta = torch.cat((intercept, dzeta), dim=1)
 
                 dzeta = torch.sum(dzeta, 0)  # 2D tensor
-                f = inp['forces'][0]  # 1D tensor
+                f = sample['forces'][0]  # 1D tensor
 
             if use_energy and use_forces:
-                x = torch.cat((zeta, torch.transpose(dzeta)))
-                y = torch.cat((e, f))
+                x_ = torch.cat((zeta, torch.transpose(dzeta)))
+                y_ = torch.cat((e, f))
             elif use_energy:
-                x = zeta
-                y = e
+                x_ = zeta
+                y_ = e
+            elif use_forces:
+                x_ = torch.transpose(dzeta)
+                y_ = f
             else:
-                x = torch.transpose(dzeta)
-                y = f
+                raise LinearRegressionError(
+                    'Both "use_energy" and "use_forces" are "False".'
+                )
 
-            return x, y
+            X.append(x_)
+            y.append(y_)
 
-        x_, y_ = get_next()
-        X = x_
-        y = y_
-
-        while True:
-            try:
-                x_, y_ = get_next()
-                X = torch.cat((X, x_))
-                y = torch.cat((y, y_))
-            except StopIteration:
-                break
+        X = torch.cat(X)
+        y = torch.cat(y)
 
         return X, y
+
+
+class LinearRegressionError(Exception):
+    def __init__(self, msg):
+        super(LinearRegressionError, self).__init__(msg)
+        self.msg = msg
+
+    def __expr__(self):
+        return self.msg

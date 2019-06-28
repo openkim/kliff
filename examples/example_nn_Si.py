@@ -38,7 +38,7 @@ from kliff.loss import Loss
 # -----
 #
 # For a NN model, we need to specify the descriptor that transforms atomic environment
-# information to the fingerprints, which the NN modle uses as the input. Here, we use the
+# information to the fingerprints, which the NN model uses as the input. Here, we use the
 # symmetry functions proposed by by Behler and coworkers.
 
 descriptor = SymmetryFunction(
@@ -48,7 +48,7 @@ descriptor = SymmetryFunction(
 
 ##########################################################################################
 # The ``cut_name`` and ``cut_dists`` tells the descriptor what type of cutoff function to
-# use and what the cutoff distances are. ``hyperparams`` specifies the the set of
+# use and what the cutoff distances are. ``hyperparams`` specifies the set of
 # hyperparameters used in the symmetry function descriptor. If you prefer, you can provide
 # a dictionary of your own hyperparameters. And finally, ``normalize`` informs that the
 # generated fingerprints should be normalized by first subtracting the mean and then
