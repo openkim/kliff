@@ -4,6 +4,23 @@
 Change Log
 ==========
 
+
+v0.1.2 (2019/6/27)
+==================
+
+- MPI parallelization for physics-based models
+
+- reorganize machine learning related files
+
+- various bug fixes
+
+- API changes
+
+  * class ``DataSet`` renamed to ``Dataset``
+
+  * class ``Calculator`` moved to module ``calculators`` from module ``calculator``
+
+
 v0.1.1 (2019/5/13)
 ==================
 
