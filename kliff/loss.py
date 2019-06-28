@@ -79,9 +79,6 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     Correspondingly, `reference` is the 3N concatenated reference forces.
     """
 
-    if len(prediction) != 3 * natoms + 1:
-        raise ValueError("len(prediction) != 3N+1, where N is the number of atoms.")
-
     # prepare weight based on user provided data
     energy_weight = data['energy_weight']
     forces_weight = data['forces_weight']
@@ -103,18 +100,12 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
 
 
 def forces_residual(conf_id, natoms, prediction, reference, data):
-    if data is not None:
-        data['energy_weight'] = 0
-    else:
-        data = {'energy_weight': 0}
+    data['energy_weight'] = 0
     return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
 def energy_residual(conf_id, natoms, prediction, reference, data):
-    if data is not None:
-        data['forces_weight'] = 0
-    else:
-        data = {'forces_weight': 0}
+    data['forces_weight'] = 0
     return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
@@ -141,6 +132,7 @@ class Loss(object):
 
         """
         data = self.check_residual_data(residual_data)
+        self.check_computation_flag(calculator, data)
 
         calc_type = calculator.__class__.__name__
 
@@ -164,6 +156,27 @@ class Loss(object):
                 else:
                     default[key] = value
         return default
+
+    @staticmethod
+    def check_computation_flag(calculator, data):
+        ew = data['energy_weight']
+        fw = data['forces_weight']
+        sw = data['stress_weight']
+        msg = (
+            '"{0}_weight" set to "{1}". Seems you do not want to use {0} in the fitting. '
+            'You can set "use_{0}" of "calculator.create()" to "False" to speed up the '
+            'fitting.'
+        )
+
+        if calculator.use_energy and ew < 1e-12:
+            m = msg.format('energy', ew)
+            warnings.warn(m, category=Warning)
+        if calculator.use_forces and fw < 1e-12:
+            m = msg.format('forces', fw)
+            warnings.warn(m, category=Warning)
+        if calculator.use_stress and sw < 1e-12:
+            m = msg.format('stress', sw)
+            warnings.warn(m, category=Warning)
 
 
 class LossPhysicsMotivatedModel(object):
