@@ -30,7 +30,7 @@ KLIFF -- KIM-based Learning-Integrated Fitting Framework
 
     howto/howto
     command_line
-    builddoc
+    contributing_guide
 
 
 .. toctree::

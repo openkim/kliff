@@ -55,7 +55,7 @@ to collect sufficient number of material properties for the training set.
 
 The reference :math:`\bm q` and the prediction :math:`\bm p` are typically
 represented as vectors such that
-:math:`p[m]` is the :math:`m`-th reference property and :math:`p[m]` is the
+:math:`q[m]` is the :math:`m`-th reference property and :math:`p[m]` is the
 corresponding :math:`m`-th prediction obtained from the potential.
 Assuming we want to fit a potential to energy and forces, then :math:`\bm q`
 is a vector of size :math:`1+3N_a`, in which :math:`N_a` is the number
