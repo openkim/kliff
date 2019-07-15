@@ -37,7 +37,7 @@
   directly. So remove the above settings.                                        Done
 
 3.10/10/2016:
-  Include a standard OpenKIM test to ensure that the edn parsing works.          Not yet
+  Include a standard OpenKIM test to ensure that the edn parsing works.          N/A
 
 4.10/12/2016:
   A helper function (may be placed in utils) is needed to check the input
@@ -81,12 +81,12 @@
   these two. One way is that the constrained params will not be used as
   optimizing params, but just a way for model to do computations. Then, for
   this type of constraint, only "A=func(B,C)" is allowed, but "A>func(B,C)"
-  is not.                                                                        Not yet
+  is not.                                                                        N/A
 
 
 9. 02/08/2017:
   Add a flag to normalize the forces (energy etc) by the reference values
-  when computing the cost.                                                       Not yet
+  when computing the cost.                                                       N/A
 
 10. 02/08/2017:
   In the force calculator, create an argument `weight_energy = None', then
@@ -127,3 +127,46 @@
 
 16. 03/23/2019:
   Add test to kliff command line tools.                                          Not yet
+
+17. 07/15/2019:
+  GPU support for NN models.
+                                                                                 Not yet
+
+17. 07/15/2019:
+  Rewrite the C++ implementation of the descriptors such that it can be used
+  directly by the KIM driver. Add a function ``read_parameters'' for each
+  descriptor to process parameter files (needed to KIM driver).
+                                                                                 Not yet
+
+17. 07/15/2019:
+  Support the geodesic LM optimizer by Mark.
+                                                                                 Not yet
+
+17. 07/15/2019:
+  Extend to support more descriptors (e.g. many-body tensor and SOAP) and more
+  machine learning regression methods (e.g. Kernel ridge regression and
+  Gaussian process.)
+                                                                                 Not yet
+
+17. 07/15/2019:
+   Extend to support more analyzers, such as RMSE of energy and forces.
+                                                                                 Not yet
+17. 07/15/2019:
+  Models like EAM have a large number of parameters. It is not a good idea to
+  ask the user to specify the initial guesses of them one by one. Maybe provide
+  an interface to enable the use of default values for all parameters.
+  In practice, people typically fit EAM only use tens of spline knots (at least
+  Baskes did so), so we may want to create a parameter file with fewer spline
+  knots. One way to do this could be: (1) inquire the original model to get all
+  spline knots; (2) select a subset of the knots and create a new model; and
+  (3) fitting use the new model with smaller number of knots. In such, the
+  initial guesses should be reasonable.
+                                                                                 Not yet
+
+17. 07/15/2019:
+  Use KIM tests to compute properties (e.g. equilibrium lattice constant and
+  elastic constants) as the predictions of a model. In such, we can fit to
+  other properties in addition to the currently supported energy, forces, and
+  stresses. As a prerequisite, KIM tests need to be updated to provide an
+  interface to change model parameters and stay alive during the fitting.
+                                                                                 Not yet
