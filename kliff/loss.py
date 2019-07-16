@@ -655,6 +655,8 @@ class LossNeuralNetworkModel(object):
             )
 
         for epoch in range(self.num_epochs):
+
+            epoch_loss = 0
             for ib, batch in enumerate(loader):
 
                 def closure():
@@ -664,8 +666,9 @@ class LossNeuralNetworkModel(object):
                     return loss
 
                 loss = optimizer.step(closure)
+                epoch_loss += loss
 
-            print('Epoch = {}, loss = {}'.format(epoch + 1, loss))
+            print('Epoch = {}, loss = {}'.format(epoch + 1, epoch_loss))
 
             if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
                 fname = 'model_epoch{}.pkl'.format(epoch)
