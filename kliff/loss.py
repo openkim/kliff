@@ -83,10 +83,6 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     energy_weight = data['energy_weight']
     forces_weight = data['forces_weight']
     normalize = data['normalize_by_natoms']
-    if energy_weight is None:
-        energy_weight = 1.0
-    if forces_weight is None:
-        forces_weight = 1.0
     if normalize:
         energy_weight /= natoms
         forces_weight /= natoms
@@ -624,19 +620,6 @@ class LossNeuralNetworkModel(object):
             dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
         )
 
-        # optimizing
-        try:
-            optimizer = getattr(torch.optim, method)(
-                self.calculator.model.parameters(), **kwargs
-            )
-        except TypeError as e:
-            print(str(e))
-            idx = str(e).index("argument '") + 10
-            err_arg = str(e)[idx:].strip("'")
-            raise InputError(
-                'Argument "{}" not supported by optimizer "{}".'.format(err_arg, method)
-            )
-
         # model save metadata
         save_prefix = self.calculator.model.save_prefix
         save_start = self.calculator.model.save_start
@@ -658,6 +641,19 @@ class LossNeuralNetworkModel(object):
         logger.info(msg)
         print(msg)
 
+        # optimizing
+        try:
+            optimizer = getattr(torch.optim, method)(
+                self.calculator.model.parameters(), **kwargs
+            )
+        except TypeError as e:
+            print(str(e))
+            idx = str(e).index("argument '") + 10
+            err_arg = str(e)[idx:].strip("'")
+            raise InputError(
+                'Argument "{}" not supported by optimizer "{}".'.format(err_arg, method)
+            )
+
         for epoch in range(self.num_epochs):
             for ib, batch in enumerate(loader):
 
@@ -667,12 +663,7 @@ class LossNeuralNetworkModel(object):
                     loss.backward()
                     return loss
 
-                if self.method in ['LBFGS']:
-                    optimizer.step(closure)
-                else:
-                    # TODO use optimzier.step(closure) only, not need the below one
-                    loss = closure()
-                    optimizer.step()
+                loss = optimizer.step(closure)
 
             print('Epoch = {}, loss = {}'.format(epoch + 1, loss))
 
@@ -736,33 +727,6 @@ class LossNeuralNetworkModel(object):
         loss = torch.sum(torch.pow(residual, 2))
 
         return loss
-
-
-#    def get_loss(self):
-#        loss = 0
-#        for _ in range(self.batch_size):
-#            # raise StopIteration error if out of bounds; This will ignore the last
-#            # chunk of data whose size is smaller than `batch_size`
-#            inp = self.data_loader.next_element()
-#            loss_single = self.get_loss_single_config(
-#                inp, self.calculator, self.residual_fn, self.residual_data
-#            )
-#            loss += loss_single
-#        # TODO  maybe divide batch_size elsewhere
-#        loss /= self.batch_size
-#        return loss
-#
-#    def get_loss_DDP(self):
-#        loss = 0
-#        for _ in range(self.batch_size):
-#            inp = self.data_loader.next_element()
-#            loss_single = self.get_loss_single_config(
-#                inp, self.calculator, self.residual_fn, self.residual_data
-#            )
-#            loss += loss_single
-#        # TODO  maybe divide batch_size elsewhere
-#        loss /= self.batch_size
-#        return loss
 
 
 class LossError(Exception):
