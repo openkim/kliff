@@ -8,15 +8,15 @@ A calculator is the central agent that exchanges information between a model and
 the minimizer.
 
 - It uses the computation methods provided by a model to calculate the energy,
-  forces, etc. and pass these the properties, together with the corresponding
-  reference data, to :class:`~kliff.loss.Loss` to construct a cost function to be
+  forces, etc. and pass these properties, together with the corresponding
+  reference data, to :class:`~kliff.loss.Loss` to construct a loss function to be
   minimized by the optimizer.
 - It also inquires the model to get parameters that are going to be optimized, and
   provide these parameters to the optimizer, which will be used as the initial values
   by the optimizer to carry out the optimization.
 - In the reverse direction, at each optimization step, the calculator grabs the new
   parameters from the optimizer and update the model parameters with the new ones.
-  So, in the next minimization step, the cost function will be calculated using the
+  So, in the next minimization step, the loss function will be calculated using the
   new parameters.
 
 

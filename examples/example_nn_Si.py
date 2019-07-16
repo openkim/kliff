@@ -39,7 +39,7 @@ from kliff.loss import Loss
 #
 # For a NN model, we need to specify the descriptor that transforms atomic environment
 # information to the fingerprints, which the NN model uses as the input. Here, we use the
-# symmetry functions proposed by by Behler and coworkers.
+# symmetry functions proposed by Behler and coworkers.
 
 descriptor = SymmetryFunction(
     cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
@@ -47,7 +47,7 @@ descriptor = SymmetryFunction(
 
 
 ##########################################################################################
-# The ``cut_name`` and ``cut_dists`` tells the descriptor what type of cutoff function to
+# The ``cut_name`` and ``cut_dists`` tell the descriptor what type of cutoff function to
 # use and what the cutoff distances are. ``hyperparams`` specifies the set of
 # hyperparameters used in the symmetry function descriptor. If you prefer, you can provide
 # a dictionary of your own hyperparameters. And finally, ``normalize`` informs that the
@@ -86,7 +86,7 @@ model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
 # ``size_in`` of the first hidden layer must be the size of the descriptor, which is
 # obtained using ``descriptor.get_size()``. For all other layers (hidden or output), the
 # input size must be equal to the output size of the previous layer. The ``out_size`` of
-# the output layer much be 1 such that the output of the NN model is gives the energy of
+# the output layer must be 1 such that the output of the NN model gives the energy of the
 # atom.
 #
 # The ``set_save_metadata`` function call informs where to save intermediate models during
@@ -98,7 +98,7 @@ model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
 # ---------------------------
 #
 # The training set and the calculator are the same as explained in :ref:`tut_kim_sw`. The
-# only difference is that we need use the
+# only difference is that we need to use the
 # :mod:`~kliff.calculators.CalculatorTorch()`, which is targeted for the NN model.
 # Also, its ``create()`` method takes an argument ``reuse`` to inform whether to reuse the
 # fingerprints generated from the descriptor if it is present.
@@ -126,7 +126,7 @@ calc.create(configs, reuse=True)
 # `mini-batches` of data, and here we use ``100`` configurations in each minimization step
 # (the training set has a total of 400 configurations as can be seen above), and run
 # through the training set for ``10`` epochs. The learning rate ``lr`` used here is
-# ``0.01``, and typically, one may need to play with this to find an acceptable one that
+# ``0.001``, and typically, one may need to play with this to find an acceptable one that
 # drives the loss down in a reasonable time.
 
 loss = Loss(calc, residual_data={'forces_weight': 0.3})

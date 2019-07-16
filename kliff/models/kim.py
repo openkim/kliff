@@ -5,11 +5,9 @@ from collections import OrderedDict
 import kimpy
 from kimpy import neighlist as nl
 import kliff
-from ..dataset import Configuration
 from .model import ComputeArguments, Model
 from .parameter import Parameter
 from ..neighbor import assemble_forces, assemble_stress
-from ..utils import length_equal
 from ..error import SupportError
 
 logger = kliff.logger.get_logger(__name__)
@@ -455,11 +453,11 @@ class KIM(Model):
         if not present:
             raise SupportError('This KIM model does not support writing parameters.')
 
+        fname = self.model_name + '_kliff_trained'
         if path is None:
-            path = os.path.join(os.getcwd(), self.model_name + '_kliff_trained')
+            path = os.path.join(os.getcwd(), fname)
         if path and not os.path.exists(path):
             os.makedirs(path)
-        fname = 'kliff_trained'
 
         error = self.kim_model.write_parameterized_model(path, fname)
         check_error(error, 'kim_model.write_parameterized_model')

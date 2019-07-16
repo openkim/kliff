@@ -125,7 +125,7 @@ the extended XYZ format supported by KLIFF::
   space (e.g. ``Lattice``), it should be placed in the quotation marks ``" "``.
   The supported keys are:
 
-  - ``Lattice`` represents the there Cartesian lattice vectors: the first 3
+  - ``Lattice`` represents the three Cartesian lattice vectors: the first 3
     numbers denote :math:`\bm a_1`, the next three numbers denote :math:`\bm a_2`,
     and the last 3 numbers denote :math:`\bm a_3`. Note that :math:`\bm a_1`,
     :math:`\bm a_2`, and :math:`\bm a_3` should follow the right-hand rule such that
@@ -146,7 +146,7 @@ second line, for one atom in the system, taking the form::
     species  x  y  z  fx  fy  fz
 
 The coordinates ``x  y  z`` should be given in Cartesian values, not fractional
-values.
+values. The forces ``fx fy fz`` can be skipped if you do not want to use them.
 
 .. note::
     An atomic configuration stored in the extended XYZ format can be visualized

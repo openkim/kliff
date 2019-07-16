@@ -93,7 +93,7 @@ Built-in residual function
 ==========================
 KLIFF provides a number of residual functions readily to be plugged into ``Loss``
 and let the wheel spin. For example, the :func:`~kliff.loss.energy_forces_residual`
-that construct the residual using energy and forces is defined as (in a nutshell):
+that constructs the residual using energy and forces is defined as (in a nutshell):
 
 .. code-block:: python
 
@@ -133,7 +133,7 @@ prefer.
 
 
 One can provide a ``residual_data`` instead of using the default one to control
-tune the loss. In the below example, the `energy` is weighted 10 times as the
+tune the loss. In the below example, the `energy` is weighed 10 times as the
 `forces`.
 
 .. code-block:: python
@@ -152,7 +152,7 @@ tune the loss. In the below example, the `energy` is weighted 10 times as the
 
 .. warning::
     Even though ``residual_fn`` and ``residual_data`` is optional, we strongly
-    recommend the users to explicitly provide them to remainder themselves what
+    recommend the users to explicitly provide them to reminder themselves what
     they are doing as done above.
 
 .. seealso::
