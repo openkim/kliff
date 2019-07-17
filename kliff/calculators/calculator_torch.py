@@ -116,9 +116,9 @@ class CalculatorTorch:
             forces_config = self.get_forces_config(
                 energy_config, zeta_config, dzeta_dr_config
             )
+            # no need of grad any more
             for zeta in zeta_config:
                 zeta.requires_grad_(False)
-            # zeta_batch.requires_grad_(False)
         else:
             forces_config = None
 

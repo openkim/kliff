@@ -669,9 +669,10 @@ class LossNeuralNetworkModel(object):
                     return loss
 
                 loss = optimizer.step(closure)
-                epoch_loss += loss
+                # float() such that do not accumulate history, more memory friendly
+                epoch_loss += float(loss)
 
-            print('Epoch = {}, loss = {}'.format(epoch + 1, epoch_loss))
+            print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch + 1, epoch_loss))
             if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
                 fname = 'model_epoch{}.pkl'.format(epoch)
                 path = os.path.join(save_prefix, fname)
@@ -714,18 +715,18 @@ class LossNeuralNetworkModel(object):
         return loss_batch
 
     def get_loss_single_config(self, sample, pred_energy, pred_forces):
-        # TODO seems no need to convert to tensor here
+
         if self.calculator.use_energy:
-            pred = torch.tensor([pred_energy])
-            ref = torch.tensor([sample['energy']])
+            pred = pred_energy.reshape(-1)  # reshape scalar as 1D tensor
+            ref = sample['energy'].reshape(-1)
         if self.calculator.use_forces:
             ref_forces = sample['forces']
             if self.calculator.use_energy:
-                pred = torch.cat((pred, pred_forces.reshape((-1,))))
-                ref = torch.cat((ref, ref_forces.reshape((-1,))))
+                pred = torch.cat((pred, pred_forces.reshape(-1)))
+                ref = torch.cat((ref, ref_forces.reshape(-1)))
             else:
-                pred = pred_forces.reshape((-1,))
-                ref = ref_forces.reshape((-1,))
+                pred = pred_forces.reshape(-1)
+                ref = ref_forces.reshape(-1)
 
         identifier = sample['name']
         species = sample['species']
