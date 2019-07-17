@@ -1,12 +1,3 @@
-class ModelError(Exception):
-    def __init__(self, msg):
-        super(ModelError, self).__init__(msg)
-        self.msg = msg
-
-    def __expr__(self):
-        return self.msg
-
-
 class InputError(Exception):
     def __init__(self, msg):
         super(InputError, self).__init__(msg)

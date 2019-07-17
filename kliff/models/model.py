@@ -1,10 +1,9 @@
 import sys
-import os
 import numpy as np
 from collections import OrderedDict
 import kliff
 from .parameter import FittingParameter
-from ..error import ModelError, SupportError
+from ..log import log_entry
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -43,19 +42,18 @@ class ComputeArguments:
             try:
                 infl_dist = params['influence_distance'].get_value()[0]
             except KeyError:
-                raise ParameterError('"influence_distance" not provided by calculator."')
+                report_error('"influence_distance" not provided by "params".')
+
         self.influence_distance = infl_dist
 
         # NOTE to be filled
         # create neighbor list based on `infl_dist`
 
-    # TODO check also that the conf provide these properties
+    # TODO also check that the conf provide these properties
     def check_compute_property(self):
         def add_to_compute_property(compute_property, name):
             if name not in self.implemented_property:
-                raise NotImplementedError(
-                    '"{}" not implemented in calculator.'.format(name)
-                )
+                raise NotImplementedError('"{}" not implemented in model.'.format(name))
             compute_property.append(name)
 
         compute_property = []
@@ -68,8 +66,8 @@ class ComputeArguments:
         return compute_property
 
     def compute(self, params):
-        """Compute the properties required by the compute flags, and store them
-        in self.results.
+        """Compute the properties required by the compute flags, and store them in
+        self.results.
 
         Parameters
         ----------
@@ -97,7 +95,7 @@ class ComputeArguments:
 
     def get_property(self, name):
         if name not in self.compute_property:
-            raise ModelError('Calculator not initialized to comptue "{}".'.format(name))
+            report_error('Model not initialized to comptue "{}".'.format(name))
         result = self.results[name]
         if isinstance(result, np.ndarray):
             result = result.copy()
@@ -155,7 +153,7 @@ class Model:
     model_name: str (optional)
         Name of the model.
 
-    param_relations_callback: function (optional)
+    params_relation_callback: function (optional)
         A callback function to set the relations between parameters, which are
         called each minimization step after the optimizer updates the
         parameters.
@@ -177,11 +175,16 @@ class Model:
     """
 
     def __init__(self, model_name=None, params_relation_callback=None):
-        # TODO paras_relation_callbacks may not work for some minimization
+        # TODO params_relation_callbacks may not work for some minimization
         # algorithms since abruptly change the parameter relation may result in
         # loss to go up, then the optimization method can fail. So to a check to
         # implement this only for the minimization methods that support it
         # natively.
+        # Update: 2019/07/19
+        # This should be fine as long as the dependent parameter is not in the `fitting
+        # parameters` vector passed to an optimizer. The dependent parameter can just be
+        # thought as a implicit parameter.
+
         self.model_name = model_name
         if self.model_name is not None:
             self.model_name = self.model_name.rstrip('/')
@@ -211,7 +214,7 @@ class Model:
 
     def write_kim_model(self, path=None):
         # NOTE fill this
-        raise SupportError('This model does not support writing to a KIM model.')
+        report_error('This model does not support writing to a KIM model.')
 
     def set_params_relation_callback(self, params_relation_callback):
         """Register a function to set the relation between parameters."""
@@ -234,7 +237,7 @@ class Model:
         if name in self.params:
             return self.params[name].get_value()
         else:
-            raise ModelError('"{}" is not a parameter of calculator.'.format(name))
+            report_error('"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params(self, name, value, check_shape=True):
         """ Update the parameter values.
@@ -253,7 +256,7 @@ class Model:
         if name in self.params:
             self.params[name].set_value(value, check_shape)
         else:
-            raise ModelError('"{}" is not a parameter of the model.'.format(name))
+            report_error('"{}" is not a parameter of the model.'.format(name))
 
     #    def save_model_params(self, path):
     #        params = dict()
@@ -348,6 +351,7 @@ class Model:
         self.fitting_params.update_params(opt_params)
 
     # TODO if parameters relation set, remove the parameters from fitting params
+    # or at least check it is not in the fitting params
     def apply_params_relation(self):
         """Force user-specified relation between parameters."""
         if self.params_relation_callback is not None:
@@ -378,3 +382,17 @@ class Model:
         """
         self.fitting_params.load(path)
         self.update_model_params()
+
+
+class ModelError(Exception):
+    def __init__(self, msg):
+        super(ModelError, self).__init__(msg)
+        self.msg = msg
+
+    def __expr__(self):
+        return self.msg
+
+
+def report_error(msg):
+    log_entry(logger, msg, level='error')
+    raise ModelError(msg)

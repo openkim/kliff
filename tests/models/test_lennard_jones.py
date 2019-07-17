@@ -3,7 +3,7 @@ import os
 import pytest
 from kliff.calculators import Calculator
 from kliff.models import LennardJones
-from kliff.error import ModelError
+from kliff.models.model import ModelError
 from kliff.dataset import Dataset
 
 
