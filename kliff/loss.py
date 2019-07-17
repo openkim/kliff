@@ -1,9 +1,9 @@
 import os
 import numpy as np
-import warnings
 import scipy.optimize
 import kliff
 from . import parallel
+from .log import log_entry
 from .error import InputError, report_import_error
 
 try:
@@ -58,7 +58,7 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
     Note
     ----
     The length of `prediction` and `reference` (call it `S`) are the same, and it
-    depends on `use_energy` and `use_forces` in KIMCalculator. Assume the
+    depends on `use_energy` and `use_forces` in Calculator. Assume the
     configuration contains of `N` atoms.
 
     1) If `use_energy == True` and `use_forces == False`, then `S = 1`.
@@ -148,7 +148,9 @@ class Loss(object):
         if data is not None:
             for key, value in data.items():
                 if key not in default:
-                    raise InputError('"{}" not supported by "residual_data".'.format(key))
+                    msg = '"{}" not supported by "residual_data".'.format(key)
+                    log_entry(logger, msg, level='error')
+                    raise InputError(msg)
                 else:
                     default[key] = value
         return default
@@ -165,14 +167,14 @@ class Loss(object):
         )
 
         if calculator.use_energy and ew < 1e-12:
-            m = msg.format('energy', ew)
-            warnings.warn(m, category=Warning)
+            msg = msg.format('energy', ew)
+            log_entry(logger, msg, level='warning')
         if calculator.use_forces and fw < 1e-12:
-            m = msg.format('forces', fw)
-            warnings.warn(m, category=Warning)
+            msg = msg.format('forces', fw)
+            log_entry(logger, msg, level='warning')
         if calculator.use_stress and sw < 1e-12:
-            m = msg.format('stress', sw)
-            warnings.warn(m, category=Warning)
+            msg = msg.format('stress', sw)
+            log_entry(logger, msg, level='warning')
 
 
 class LossPhysicsMotivatedModel(object):
@@ -216,7 +218,6 @@ class LossPhysicsMotivatedModel(object):
         for calc in calculators:
             infl_dist = calc.model.get_influence_distance()
             cas = calc.get_compute_arguments()
-            # TODO can be parallelized
             for ca in cas:
                 ca.refresh(infl_dist)
 
@@ -237,24 +238,33 @@ class LossPhysicsMotivatedModel(object):
         """
         kwargs = self.adjust_kwargs(method, **kwargs)
 
-        logger.info('Start minimization using method: {}.'.format(method))
+        msg = 'Start minimization using method: {}.'.format(method)
+        log_entry(logger, msg, level='info')
+
         result = self.scipy_optimize(method, **kwargs)
-        logger.info('Finish minimization using method: {}.'.format(method))
+
+        msg = 'Finish minimization using method: {}.'.format(method)
+        log_entry(logger, msg, level='info')
 
         # update final optimized parameters
         self.calculator.update_opt_params(result.x)
+
         return result
 
     def adjust_kwargs(self, method, **kwargs):
 
         if method in self.scipy_least_squares_methods:
+
             # check support status
             for i in self.scipy_least_squares_methods_not_supported_args:
                 if i in kwargs:
-                    raise LossError(
+                    msg = (
                         'Argument "{}" should not be set via the "minimize" method. '
                         'It it set internally.'.format(i)
                     )
+                    log_entry(logger, msg, level='error')
+                    raise LossError(msg)
+
             # adjust bounds
             if self.calculator.has_opt_params_bounds():
                 if method in ['trf', 'dogbox']:
@@ -264,35 +274,39 @@ class LossPhysicsMotivatedModel(object):
                     bounds = (lb, ub)
                     kwargs['bounds'] = bounds
                 else:
-                    raise LossError('Method "{}" cannot handle bounds.'.format(method))
+                    msg = 'Method "{}" cannot handle bounds.'.format(method)
+                    log_entry(logger, msg, level='error')
+                    raise LossError(msg)
+
         elif method in self.scipy_minimize_methods:
+
             # check support status
             for i in self.scipy_minimize_methods_not_supported_args:
                 if i in kwargs:
-                    raise LossError(
+                    msg = (
                         'Argument "{}" should not be set via the "minimize" method. '
                         'It it set internally.'.format(i)
                     )
+                    log_entry(logger, msg, level='error')
+                    raise LossError(msg)
+
             # adjust bounds
             if self.calculator.has_opt_params_bounds():
                 if method in ['L-BFGS-B', 'TNC', 'SLSQP']:
                     bounds = self.calculator.get_opt_params_bounds()
                     kwargs['bounds'] = bounds
                 else:
-                    raise LossError('Method "{}" cannot handle bounds.'.format(method))
+                    msg = 'Method "{}" cannot handle bounds.'.format(method)
+                    log_entry(logger, msg, level='error')
+                    raise LossError(msg)
         else:
-            raise LossError('minimization method "{}" not supported.'.format(method))
+            msg = 'minimization method "{}" not supported.'.format(method)
+            log_entry(logger, msg, level='error')
+            raise LossError(msg)
 
         return kwargs
 
     def scipy_optimize(self, method, **kwargs):
-
-        if method in self.scipy_least_squares_methods:
-            minimize_fn = scipy.optimize.least_squares
-        elif method in self.scipy_minimize_methods:
-            minimize_fn = scipy.optimize.minimize
-        else:
-            raise LossError('minimization method "{}" not supported.'.format(method))
 
         size = parallel.get_MPI_world_size()
 
@@ -301,24 +315,23 @@ class LossPhysicsMotivatedModel(object):
             rank = comm.Get_rank()
 
             msg = 'Running in MPI mode with {} processes.'.format(size)
-            print(msg + '\n')
-            logger.info(msg)
+            log_entry(logger, msg, level='info', print_end='\n\n')
+
             if self.nprocs > 1:
                 msg = (
                     'Argument "nprocs = {}" provided at initialization is ignored. When '
                     'running in MPI mode, the number of processes provided along with '
                     'the "mpiexec" (or "mpirun") command is used.'.format(self.nprocs)
                 )
-                logger.warning(msg)
-                warnings.warn(msg, category=Warning)
+                log_entry(logger, msg, level='warning')
 
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
+                minimize_fn = scipy.optimize.least_squares
                 func = self.get_residual_MPI
             elif method in self.scipy_minimize_methods:
+                minimize_fn = scipy.optimize.minimize
                 func = self.get_loss_MPI
-            else:
-                raise LossError('minimization method "{}" not supported.'.format(method))
 
             if rank == 0:
                 result = minimize_fn(func, x, method=method, **kwargs)
@@ -339,14 +352,13 @@ class LossPhysicsMotivatedModel(object):
 
             if self.nprocs == 1:
                 msg = 'Running in serial mode.'
-                print(msg + '\n')
-                logger.info(msg)
+                log_entry(logger, msg, level='info', print_end='\n\n')
             else:
                 msg = 'Running in multiprocessing mode with {} processes.'.format(
                     self.nprocs
                 )
-                print(msg + '\n')
-                logger.info(msg)
+                log_entry(logger, msg, level='info', print_end='\n\n')
+
                 # Maybe one thinks he is using MPI because nprocs is used
                 if mpi4py_available:
                     msg = (
@@ -354,16 +366,15 @@ class LossPhysicsMotivatedModel(object):
                         'execute your code via "mpiexec" (or "mpirun"). If not, ignore '
                         'this message.'
                     )
-                    logger.warning(msg)
-                    warnings.warn(msg, category=Warning)
+                    log_entry(logger, msg, level='warning')
 
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
+                minimize_fn = scipy.optimize.least_squares
                 func = self.get_residual
             elif method in self.scipy_minimize_methods:
+                minimize_fn = scipy.optimize.minimize
                 func = self.get_loss
-            else:
-                raise LossError('minimization method "{}" not supported.'.format(method))
 
             result = minimize_fn(func, x, method=method, **kwargs)
             return result
@@ -583,16 +594,6 @@ class LossNeuralNetworkModel(object):
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
-    #
-    #  def set_nprocs(self, nprocs):
-    #    """ Set the number of processors to be used."""
-    #    self.nprocs = nprocs
-    #
-    #  def set_residual_fn_and_data(self, fn, data):
-    #    """ Set residual function and data. """
-    #    self.residual_fn = fn
-    #    self.residual_fn_data = data
-
     def minimize(self, method, batch_size=100, num_epochs=1000, **kwargs):
         """ Minimize the loss.
 
@@ -608,7 +609,10 @@ class LossNeuralNetworkModel(object):
             Extra keyword arguments that can be used by the PyTorch optimizer.
         """
         if method not in self.torch_minimize_methods:
-            raise LossError('Minimization method "{}" not supported.'.format(method))
+            msg = 'Minimization method "{}" not supported.'.format(method)
+            log_entry(logger, msg, level='error')
+            raise LossError(msg)
+
         self.method = method
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -638,8 +642,7 @@ class LossNeuralNetworkModel(object):
             )
 
         msg = 'Start minimization using optimization method: {}.'.format(self.method)
-        logger.info(msg)
-        print(msg)
+        log_entry(logger, msg, level='info')
 
         # optimizing
         try:
@@ -650,9 +653,9 @@ class LossNeuralNetworkModel(object):
             print(str(e))
             idx = str(e).index("argument '") + 10
             err_arg = str(e)[idx:].strip("'")
-            raise InputError(
-                'Argument "{}" not supported by optimizer "{}".'.format(err_arg, method)
-            )
+            msg = 'Argument "{}" not supported by optimizer "{}".'.format(err_arg, method)
+            log_entry(logger, msg, level='error')
+            raise InputError(msg)
 
         for epoch in range(self.num_epochs):
 
@@ -669,11 +672,13 @@ class LossNeuralNetworkModel(object):
                 epoch_loss += loss
 
             print('Epoch = {}, loss = {}'.format(epoch + 1, epoch_loss))
-
             if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
                 fname = 'model_epoch{}.pkl'.format(epoch)
                 path = os.path.join(save_prefix, fname)
                 self.calculator.model.save(path)
+
+        msg = 'Finish minimization using optimization method: {}.'.format(self.method)
+        log_entry(logger, msg, level='info')
 
     def get_loss_batch(self, batch, normalize=True):
         """Compute the loss of a batch of samples.
