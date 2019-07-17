@@ -34,13 +34,16 @@ For example,
 MPI
 ---
 The MPI scheme is targeted for HPCs (of course, it can be used on desktops) and we
-use the mpi4py_ Python wrapper of MPI. See the mpi4py_ package documentation for
-information on how to install it. Once it is successfully installed, we can run KLIFF
-in parallel. For example, for the tutorial example :ref:`tut_kim_sw`, we can do:
+use the mpi4py_ Python wrapper of MPI. mpi4py_ supports ``OpenMPI`` and ``MPICH``. Once
+you have one of the two working, mpi4py_ can be installed by::
 
-.. code-block:: bash
+    $ pip install mpi4py
 
-    mpiexec  -np 2  python example_kim_SW_Si.py
+See the mpi4py_ package documentation for more information on how to install it.
+Once it is successfully installed, we can run KLIFF in parallel. For example, for the
+tutorial example :ref:`tut_kim_sw`, we can do::
+
+    $ mpiexec  -np 2  python example_kim_SW_Si.py
 
 .. note::
     When using this MPI scheme, the ``nprocs`` argument passed to
