@@ -8,6 +8,7 @@ import kliff
 from .model import ComputeArguments, Model
 from .parameter import Parameter
 from ..neighbor import assemble_forces, assemble_stress
+from ..log import log_entry
 from ..error import SupportError
 
 logger = kliff.logger.get_logger(__name__)
@@ -299,6 +300,8 @@ class KIM(Model):
         self.compute_arguments_class = KIMComputeArguments
         self.fitting_params = self.init_fitting_params(self.params)
 
+        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
+
     def _initialize(self):
         """ Initialize the KIM object"""
         units_accepted, model, error = kimpy.model.create(
@@ -349,20 +352,12 @@ class KIM(Model):
     def update_model_params(self):
         """ Update from fitting params to model params. """
 
-        # update kim parameters
-        #        # update all components
-        #        param_names = self.fitting_params.get_names()
-        #        for name in param_names:
-        #            i = self.fitting_params.get_index(name)
-        #            new_value = self.fitting_params.get_value(name)
-        #            for j, v in enumerate(new_value):
-        #                self.kim_model.set_parameter(i, j, v)
-
         # only update optimizing components
         num_params = self.get_number_of_opt_params()
         for i in range(num_params):
             v, p, c = self.get_opt_param_value_and_indices(i)
             self.kim_model.set_parameter(p, c, v)
+
         # refresh model
         self.kim_model.clear_then_refresh()
 
@@ -370,7 +365,7 @@ class KIM(Model):
         # the correct way is to reimplement set_model_param, get_model_param,
         # and echo_model_param. Also, inquire_model_params seems could be used as
         # get_model_params.
-        # this consideration is that we need a parameters object to be passed to
+        # the consideration is that we need a parameters object to be passed to
         # FittingParams. This should not be a problem.
         # update model params of the model class
         for name, attr in self.fitting_params.params.items():
@@ -382,24 +377,7 @@ class KIM(Model):
             for name, p in params.items():
                 s += '\nname: {}\n'.format(name)
                 s += p.to_string()
-            logger.debug(s)
-
-    #    def get_cutoff(self):
-    #        """Get the largest cutoff of a model.
-    #
-    #        Return: float
-    #          cutoff
-    #        """
-    #
-    #        cutoff = self.kim_model.get_influence_distance()
-    #
-    #        # TODO we need to make changes to support multiple cutoffs
-    #        # TODO modify kimpy to change the function name
-    #        model_cutoffs, padding_hints = self.kim_model.get_neighbor_list_cutoffs_and_hints()
-    #        if model_cutoffs.size != 1:
-    #            report_error('too many cutoffs')
-    #
-    #        return cutoff
+            log_entry(logger, s, level='debug')
 
     def get_influence_distance(self):
         """Return the influence distance of a model."""
@@ -462,6 +440,9 @@ class KIM(Model):
         error = self.kim_model.write_parameterized_model(path, fname)
         check_error(error, 'kim_model.write_parameterized_model')
 
+        msg = 'KLIFF trained model write to "{}"'.format(path)
+        log_entry(logger, msg, level='info')
+
 
 class KIMModelError(Exception):
     def __init__(self, msg):
@@ -474,10 +455,11 @@ class KIMModelError(Exception):
 
 def check_error(error, msg):
     if error != 0 and error is not None:
-        raise KIMModelError(
-            'Calling "{}" failed.\nSee "kim.log" for more information.'.format(msg)
-        )
+        msg = 'Calling "{}" failed.\nSee "kim.log" for more information.'.format(msg)
+        log_entry(logger, msg, level='error')
+        raise KIMModelError(msg)
 
 
 def report_error(msg):
+    log_entry(logger, msg, level='error')
     raise KIMModelError(msg)

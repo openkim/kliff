@@ -157,7 +157,7 @@ class Descriptor:
             else:
                 logger.info('Reuse existing fingerprints.')
                 if self.normalize:
-                    logger.info('Restore mean and stdev to: %s.', mean_stdev_name)
+                    logger.info('Restore mean and stdev from: %s.', mean_stdev_name)
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
                 return fname
 
@@ -231,7 +231,7 @@ class Descriptor:
                 )
             else:
                 if self.normalize and (self.mean is None or self.stdev is None):
-                    logger.info('Restore mean and stdev to: %s.', mean_stdev_name)
+                    logger.info('Restore mean and stdev from: %s.', mean_stdev_name)
                     self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
                 return fname
 

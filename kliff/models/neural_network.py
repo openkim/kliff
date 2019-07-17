@@ -1,6 +1,10 @@
 import os
 import torch
+import kliff
 from .model_torch import ModelTorch
+from ..log import log_entry
+
+logger = kliff.logger.get_logger(__name__)
 
 
 class NeuralNetwork(ModelTorch):
@@ -11,8 +15,8 @@ class NeuralNetwork(ModelTorch):
     Parameters
     ----------
     descriptor: object
-        A descriptor that transforms atomic environment information to the
-        fingerprints, which are used as the input for the neural network.
+        A descriptor that transforms atomic environment information to the fingerprints,
+        which are used as the input for the neural network.
 
     seed: int (optional)
         Global seed for random numbers.
@@ -23,20 +27,21 @@ class NeuralNetwork(ModelTorch):
 
         self.layers = None
 
+        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
+
     def add_layers(self, *layers):
         """Add layers to the sequential model.
 
         Parameters
         ----------
         layers: torch.nn layers
-            ``torch.nn`` layers that are used to build a sequential model.
-            Available ones including: torch.nn.Linear, torch.nn.Dropout, and
-            torch.nn.Sigmoid among others. See
-            https://pytorch.org/docs/stable/nn.html
-            for a full list of torch.nn layers.
+            ``torch.nn`` layers that are used to build a sequential model.  Available ones
+            including: torch.nn.Linear, torch.nn.Dropout, and torch.nn.Sigmoid among
+            others. See https://pytorch.org/docs/stable/nn.html for a full list of
+            torch.nn layers.
         """
         if self.layers is not None:
-            raise NeuralNetworkError(
+            report_error(
                 '"add_layers" called multiple times. It should be called only once.'
             )
         else:
@@ -50,12 +55,12 @@ class NeuralNetwork(ModelTorch):
         # check shape of first layer and last layer
         first = self.layers[0]
         if first.in_features != len(self.descriptor):
-            raise NeuralNetworkError(
+            report_error(
                 '"in_features" of first layer should be equal to descriptor size.'
             )
         last = self.layers[-1]
         if last.out_features != 1:
-            raise NeuralNetworkError('"out_features" of last layer should be 1.')
+            report_error('"out_features" of last layer should be 1.')
 
         # cast types
         self.type(self.dtype)
@@ -82,7 +87,7 @@ class NeuralNetwork(ModelTorch):
         dtype = self.dtype
 
         if path is None:
-            path = os.path.join(os.getcwd(), 'NeuralNetwork__MO_000000111111_000')
+            path = os.path.join(os.getcwd(), 'NeuralNetwork_KLIFF__MO_000000111111_000')
         if path and not os.path.exists(path):
             os.makedirs(path)
 
@@ -280,14 +285,16 @@ class NeuralNetwork(ModelTorch):
                         fout.write('{:15.7e}'.format(item))
                 fout.write('\n\n')
 
+        msg = 'KLIFF trained model write to "{}"'.format(path)
+        log_entry(logger, msg, level='info')
+
     def _group_layers(self, param_layer, activ_layer, dropout_layer):
         """Divide all the layers into groups.
 
-        The first group is either an empty list or a `Dropout` layer for the
-        input layer. The last group typically contains only a `Linear` layer.
-        For other groups, each group contains two, or three layers. `Linear`
-        layer and an activation layer are mandatory, and a third `Dropout` layer
-        is optional.
+        The first group is either an empty list or a `Dropout` layer for the input layer.
+        The last group typically contains only a `Linear` layer.  For other groups, each
+        group contains two, or three layers. `Linear` layer and an activation layer are
+        mandatory, and a third `Dropout` layer is optional.
 
         Return
         ------
@@ -301,23 +308,22 @@ class NeuralNetwork(ModelTorch):
         for i, layer in enumerate(self.layers):
             name = layer.__class__.__name__
             if name not in supported:
-                raise NeuralNetworkError(
+                report_error(
                     'Layer "{}" not supported by KIM model. Cannot proceed '
                     'to write.'.format(name)
                 )
+
             if name in activ_layer:
                 if i == 0:
-                    raise NeuralNetworkError(
-                        'First layer cannot be a "{}" layer'.format(name)
-                    )
+                    report_error('First layer cannot be a "{}" layer'.format(name))
                 if self.layers[i - 1].__class__.__name__ not in param_layer:
-                    raise NeuralNetworkError(
+                    report_error(
                         'Cannot convert to KIM model. a "{}" layer must follow '
                         'a "Linear" layer.'.format(name)
                     )
             if name[:7] in dropout_layer:
                 if self.layers[i - 1].__class__.__name__ not in activ_layer:
-                    raise NeuralNetworkError(
+                    report_error(
                         'Cannot convert to KIM model. a "{}" layer must follow '
                         'an activation layer.'.format(name)
                     )
@@ -391,3 +397,8 @@ class NeuralNetworkError(Exception):
 
     def __expr__(self):
         return self.msg
+
+
+def report_error(msg):
+    log_entry(logger, msg, level='error')
+    raise NeuralNetworkError(msg)
