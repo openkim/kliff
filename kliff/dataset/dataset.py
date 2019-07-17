@@ -1,9 +1,11 @@
 import os
 import numpy as np
-import copy
 from collections import OrderedDict
-from ..error import SupportError
+import kliff
 from .extxyz import read_extxyz, write_extxyz
+from ..log import log_entry
+
+logger = kliff.logger.get_logger(__name__)
 
 
 implemented_format = dict()
@@ -208,8 +210,9 @@ class Dataset:
         self.do_order = order_by_species
         self.configs = []
 
-    # TODO chose another word for format, since it is a python built-in function
-    def read(self, path, format='extxyz'):
+        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
+
+    def read(self, path, fmt='extxyz'):
         """Read an atomic configuration.
 
         Parameters
@@ -220,15 +223,13 @@ class Dataset:
             subdirectories with the extension corresponding to the specified format will
             be read.
 
-        format: str
+        fmt: str
             Format of the file that stores the configuration (e.g. 'extxyz').
         """
         try:
-            extension = implemented_format[format]
+            extension = implemented_format[fmt]
         except KeyError as e:
-            raise SupportError(
-                '{}\nNot supported data file format "{}".'.format(e, format)
-            )
+            report_error('{}\nNot supported data file format "{}".'.format(e, fmt))
 
         if os.path.isdir(path):
             dirpath = path
@@ -242,18 +243,18 @@ class Dataset:
             dirpath = os.path.dirname(path)
             all_files = [path]
 
+        configs = []
         for f in all_files:
-            conf = Configuration(format, f, self.do_order)
+            conf = Configuration(fmt, f, self.do_order)
             conf.read(f)
-            self.configs.append(conf)
+            configs.append(conf)
 
-        size = len(self.configs)
+        size = len(configs)
         if size <= 0:
-            raise InputError(
-                'No dataset file with format "{}" found in directory: {}.'.format(
-                    format, dirpath
-                )
+            report_error(
+                'No dataset file with format "{}" found "{}".'.format(fmt, dirpath)
             )
+        self.configs.extend(configs)
 
         if self.do_order:
             # find species present in all configurations
@@ -265,6 +266,9 @@ class Dataset:
             # find occurrence of species in each configuration
             for conf in self.configs:
                 conf.natoms_by_species = conf.count_atoms_by_species(all_species)
+
+        msg = '{} configurations read from "{}"'.format(len(configs), path)
+        log_entry(logger, msg, level='info')
 
     def get_configs(self):
         """Get the configurations.
@@ -280,8 +284,7 @@ class Dataset:
         return len(self.configs)
 
 
-# TODO chose another word for format, since it is a python built-in function
-def read_config(path, format='extxyz'):
+def read_config(path, fmt='extxyz'):
     """Read configuration stored in a file.
 
     Parameters
@@ -289,7 +292,7 @@ def read_config(path, format='extxyz'):
     path: str
         Path to the file that stores the configuration.
 
-    format: str
+    fmt: str
         Format of the file that stores the configuration (e.g. `extxyz`).
 
     Returns
@@ -322,26 +325,17 @@ def read_config(path, format='extxyz'):
         \sigma_{xy}]`. If the stresses are not provided in the file, return `None`.
     """
 
-    if format not in implemented_format:
-        raise SupportError('Data file format "{}" not recognized.')
+    if fmt not in implemented_format:
+        report_error('Data file format "{}" not recognized.')
 
-    if format == 'extxyz':
+    if fmt == 'extxyz':
         cell, PBC, species, coords, energy, forces, stress = read_extxyz(path)
 
     return cell, PBC, species, coords, energy, forces, stress
 
 
-# TODO chose another word for format, since it is a python built-in function
 def write_config(
-    path,
-    cell,
-    PBC,
-    species,
-    coords,
-    energy=None,
-    forces=None,
-    stress=None,
-    format='extxyz',
+    path, cell, PBC, species, coords, energy=None, forces=None, stress=None, fmt='extxyz'
 ):
     """
     Write a configuration to a file in the specified format.
@@ -351,7 +345,7 @@ def write_config(
     path: str
         Path to the file that stores the configuration.
 
-    format: str
+    fmt: str
         Format of the file that stores the configuration (e.g. `extxyz`).
 
     cell: array
@@ -381,8 +375,22 @@ def write_config(
         \sigma_{xy}]`. If `None`, skip writing this information.
     """
 
-    if format not in implemented_format:
-        raise SupportError('Data file format "{}" not recognized.')
+    if fmt not in implemented_format:
+        report_error('Data file format "{}" not recognized.')
 
-    if format == 'extxyz':
+    if fmt == 'extxyz':
         write_extxyz(path, cell, PBC, species, coords, energy, forces, stress)
+
+
+class DatasetError(Exception):
+    def __init__(self, msg):
+        super(DatasetError, self).__init__(msg)
+        self.msg = msg
+
+    def __expr__(self):
+        return self.msg
+
+
+def report_error(msg):
+    log_entry(logger, msg, level='error')
+    raise DatasetError(msg)
