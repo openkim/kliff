@@ -386,6 +386,9 @@ class Descriptor:
             'added by any subclass.'
         )
 
+    def write_kim_params(self, path, fname='descriptor.params'):
+        raise NotImplementedError('"write_kim_params" not implemented.')
+
     def get_size(self):
         """Return the size of the descriptor vector."""
         return self.size
