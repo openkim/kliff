@@ -410,14 +410,14 @@ class KIM(Model):
         """Write out a KIM model that can be used directly with the kim-api.
 
         This function typically write two files to `path`: (1) CMakeLists.txt, and (2)
-        kliff_trained.params. `path` will be created if it does not exist.
+        a parameter file like A.params. `path` will be created if it does not exist.
 
         Parameters
         ----------
         path: str (optional)
             Path to the newly trained model.  If `None`, it is set to
-            `./$(MODEL_NAME)_kliff_trained`, where `MODEL_NAME` is the `model_name` that
-            is provided at the instantiation of this class.
+            `./MODEL_NAME_kliff_trained`, where `MODEL_NAME` is the `model_name` that
+            provided at the instantiation of this class.
 
         Note
         ----
@@ -431,13 +431,16 @@ class KIM(Model):
         if not present:
             raise SupportError('This KIM model does not support writing parameters.')
 
-        fname = self.model_name + '_kliff_trained'
         if path is None:
-            path = os.path.join(os.getcwd(), fname)
-        if path and not os.path.exists(path):
+            model_name = self.model_name + '_kliff_trained'
+            path = os.path.join(os.getcwd(), model_name)
+        else:
+            path = os.path.abspath(path)
+            model_name = os.path.basename(path)
+        if not os.path.exists(path):
             os.makedirs(path)
 
-        error = self.kim_model.write_parameterized_model(path, fname)
+        error = self.kim_model.write_parameterized_model(path, model_name)
         check_error(error, 'kim_model.write_parameterized_model')
 
         msg = 'KLIFF trained model write to "{}"'.format(path)
