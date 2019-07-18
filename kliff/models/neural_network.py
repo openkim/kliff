@@ -172,7 +172,7 @@ class NeuralNetwork(ModelTorch):
                         '# bias of hidden layer {}, shape({}, )\n'.format(i + 1, cols)
                     )
                 else:
-                    fout.write('# bias of output layer, shape({}, {})\n'.format(cols))
+                    fout.write('# bias of output layer, shape({}, )\n'.format(cols))
                 for item in b:
                     if self.dtype == torch.float64:
                         fout.write('{:23.15e}'.format(item))

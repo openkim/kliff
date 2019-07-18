@@ -78,11 +78,9 @@ class CalculatorTorch:
             configs = [configs]
 
         # generate pickled fingerprints
-        print('Start generating fingerprints')
         fname = self.model.descriptor.generate_train_fingerprints(
             configs, grad=use_forces, reuse=reuse, nprocs=nprocs
         )
-        print('Finish generating fingerprints')
         self.train_fingerprints_path = fname
 
     def get_train_fingerprints_path(self):

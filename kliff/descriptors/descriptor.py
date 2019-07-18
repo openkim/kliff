@@ -1,13 +1,12 @@
 import os
 import sys
-import logging
 import pickle
 import numpy as np
 import multiprocessing as mp
 import kliff
 from .. import parallel
+from ..log import log_entry
 from ..atomic_data import atomic_number
-from ..error import InputError
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -148,20 +147,26 @@ class Descriptor:
         # TODO need to do additional check for the loaded data
         # restore data
         if os.path.exists(fname):
-            logger.info('Found existing fingerprints: %s.', fname)
+            msg = 'Found existing fingerprints "{}".'.format(fname)
+            log_entry(logger, msg, level='info')
             if not reuse:
                 os.remove(fname)
-                logger.info(
-                    'Delete existing fingerprints: %s; generating new ones.', fname
-                )
+                msg = 'Delete existing fingerprints "{}"; Generating new.'.foramt(fname)
+                log_entry(logger, msg, level='info')
             else:
-                logger.info('Reuse existing fingerprints.')
+                msg = 'Reuse existing fingerprints.'
+                log_entry(logger, msg, level='info')
                 if self.normalize:
-                    logger.info('Restore mean and stdev from: %s.', mean_stdev_name)
-                    self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
+                    self.load_mean_stdev(mean_stdev_name)
+                    msg = 'Restore mean and stdev from "{}".'.format(mean_stdev_name)
+                    log_entry(logger, msg, level='info')
                 return fname
 
         # generate data
+
+        msg = 'Start generating fingerprints.'
+        log_entry(logger, msg, level='info')
+
         all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
         if self.normalize:
             if all_zeta is not None:
@@ -170,8 +175,11 @@ class Descriptor:
                 self.stdev = np.std(stacked, axis=0)
             else:
                 self.mean, self.stdev = self.welford_mean_and_stdev(configs, grad)
-            dump_mean_stdev(self.mean, self.stdev, mean_stdev_name)
+            self.dump_mean_stdev(mean_stdev_name)
         self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
+
+        msg = 'Finish generating fingerprints.'
+        log_entry(logger, msg, level='info')
 
         return fname
 
@@ -232,7 +240,7 @@ class Descriptor:
             else:
                 if self.normalize and (self.mean is None or self.stdev is None):
                     logger.info('Restore mean and stdev from: %s.', mean_stdev_name)
-                    self.mean, self.stdev = load_mean_stdev(mean_stdev_name)
+                    self.mean, self.stdev = self.load_mean_stdev(mean_stdev_name)
                 return fname
 
         # generate data
@@ -342,7 +350,7 @@ class Descriptor:
         mean = np.zeros(size)
         M2 = np.zeros(size)
         for i, conf in enumerate(configs):
-            zeta, _ = transform(conf, grad=grad)
+            zeta, _ = self.transform(conf, grad=grad)
             for row in zeta:
                 n += 1
                 delta = row - mean
@@ -413,22 +421,21 @@ class Descriptor:
         """Return the hyperparameters of descriptors. """
         return self.hyperparams
 
+    def dump_mean_stdev(self, fname):
+        dirname = os.path.dirname(fname)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        data = {'mean': self.mean, 'stdev': self.stdev}
+        with open(fname, 'wb') as f:
+            pickle.dump(data, f)
 
-def dump_mean_stdev(mean, stdev, fname):
-    dirname = os.path.dirname(fname)
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-    data = {'mean': mean, 'stdev': stdev}
-    with open(fname, 'wb') as f:
-        pickle.dump(data, f)
-
-
-def load_mean_stdev(fname):
-    with open(fname, 'rb') as f:
-        data = pickle.load(f)
-        mean = data['mean']
-        stdev = data['stdev']
-    return mean, stdev
+    def load_mean_stdev(self, fname):
+        with open(fname, 'rb') as f:
+            data = pickle.load(f)
+            mean = data['mean']
+            stdev = data['stdev']
+        self.mean, self.stdev = mean, stdev
+        return mean, stdev
 
 
 def load_fingerprints(fname):

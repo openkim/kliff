@@ -630,12 +630,11 @@ class LossNeuralNetworkModel(object):
         save_frequency = self.calculator.model.save_frequency
         if save_prefix is None or save_start is None or save_frequency is None:
             logger.info(
-                'Model saving meta data not set by user. Now set it '
-                'to "prefix=./kliff_saved_model", "start=num_epochs/2",'
-                ' and "frequency=10".'
+                'Model saving meta data not set by user. Now set it to '
+                '"prefix=./kliff_saved_model", "start=1", and "frequency=10".'
             )
             save_prefix = os.path.join(os.getcwd(), 'kliff_saved_model')
-            save_start = self.num_epochs // 2
+            save_start = 1
             save_frequency = 10
             self.calculator.model.set_save_metadata(
                 save_prefix, save_start, save_frequency

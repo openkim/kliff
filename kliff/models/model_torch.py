@@ -75,6 +75,10 @@ class ModelTorch(nn.Module):
             os.makedirs(dirname)
         torch.save(self.state_dict(), path)
 
+        # save descriptor mean and stdev
+        fname = os.path.join(dirname, 'mean_and_stdev.pkl')
+        self.descriptor.dump_mean_stdev(fname)
+
     def load(self, path, mode):
         """Load a model on disk into memory.
 
@@ -94,6 +98,11 @@ class ModelTorch(nn.Module):
             self.eval()
         else:
             raise ModelTorchError('Unrecognized mode "{}" in model.load().'.format(mode))
+
+        # load descriptor mean and stdev
+        dirname = os.path.dirname(path)
+        fname = os.path.join(dirname, 'mean_and_stdev.pkl')
+        self.descriptor.load_mean_stdev(fname)
 
     def write_kim_model(self, path=None):
         raise ModelTorchError('"write_kim_model" not implemented.')
