@@ -300,7 +300,7 @@ class FittingParameter:
         # restore index
         self._index = []
         for name in self.params.keys():
-            self._index.append(self._set_index(name))
+            self._set_index(name)
 
     def get_names(self):
         return self.params.keys()

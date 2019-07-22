@@ -170,6 +170,7 @@ loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': steps})
 model.echo_fitting_params()
 model.save('kliff_model.pkl')
 model.write_kim_model()
+model.load('kliff_model.pkl')
 
 
 ##########################################################################################

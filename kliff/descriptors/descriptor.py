@@ -151,7 +151,7 @@ class Descriptor:
             log_entry(logger, msg, level='info')
             if not reuse:
                 os.remove(fname)
-                msg = 'Delete existing fingerprints "{}"; Generating new.'.foramt(fname)
+                msg = 'Delete existing fingerprints "{}"'.format(fname)
                 log_entry(logger, msg, level='info')
             else:
                 msg = 'Reuse existing fingerprints.'

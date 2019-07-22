@@ -154,14 +154,15 @@ class Configuration:
 
     def get_energy(self):
         """Return the potential energy of the configuration."""
+        if self.energy is None:
+            raise DatasetError('Configuration does not contain forces.')
         return self.energy
 
     def get_forces(self):
         """Return a `Nx3` matrix of the forces on each atoms."""
-        if self.forces is not None:
-            return self.forces.copy()
-        else:
-            return None
+        if self.forces is None:
+            raise DatasetError('Configuration does not contain forces.')
+        return self.forces.copy()
 
     def get_stress(self):
         """Return the stress of the configuration.
@@ -174,10 +175,9 @@ class Configuration:
         --------
             https://en.wikipedia.org/wiki/Voigt_notation
         """
-        if self.stress is not None:
-            return self.stress.copy()
-        else:
-            return None
+        if self.stress is None:
+            raise DatasetError('Configuration does not contain stress.')
+        return self.stress.copy()
 
     def set_weight(self, weight):
         """Set the weight of the configuration if the loss function.
@@ -377,6 +377,10 @@ def write_config(
 
     if fmt not in implemented_format:
         report_error('Data file format "{}" not recognized.')
+
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
 
     if fmt == 'extxyz':
         write_extxyz(path, cell, PBC, species, coords, energy, forces, stress)

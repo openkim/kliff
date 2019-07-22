@@ -20,3 +20,28 @@ def check_torch_available():
         return True
     except ImportError:
         return False
+
+
+def split_string(string, length=80, starter=None):
+    """Insert `\n` into long string such that each line has size no more than `length`.
+    """
+
+    if starter is not None:
+        target_end = length - len(starter) - 1
+    else:
+        target_end = length
+
+    sub_string = []
+    while string:
+        end = target_end
+        if len(string) > end:
+            while end >= 0 and string[end] != ' ':
+                end -= 1
+            end += 1
+        sub = string[:end].strip()
+        if starter is not None:
+            sub = starter + ' ' + sub
+        sub_string.append(sub)
+        string = string[end:]
+
+    return '\n'.join(sub_string)
