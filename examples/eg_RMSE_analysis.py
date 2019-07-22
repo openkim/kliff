@@ -20,4 +20,4 @@ calc.create(configs)
 
 analyzer = energy_forces_RMSE(calc)
 
-analyzer.run(verbose=2, sort='energy', path='./result.txt')
+analyzer.run(verbose=2, sort='energy')

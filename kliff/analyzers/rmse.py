@@ -1,4 +1,5 @@
 import os
+
 import sys
 import numpy as np
 from ..dataset import write_config
@@ -11,6 +12,40 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class energy_forces_RMSE:
+    """Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
+
+    The `energy difference norm` for a configuration is defined as:
+
+    .. math::
+        e_\text{norm} = |e_\text{pred} - e_\text{ref}| / N,
+
+    where :math:`e_\text{pred}` is the prediction of the total energy from the model,
+    :math:`e_\text{ref}` is the corresponding reference energy, and :math:`N` is the
+    number of atoms in the configuration. The division by :math:`N` is applied only when
+    ``normalize = True`` in ``run``.
+    Similarly, the `forces difference norm` for a configuration is defined as:
+
+    .. math::
+        f_\text{norm} = ||e_\text{pred} - e_\text{ref}|| / N,
+
+    where :math:`f_\text{pred}` is the prediction of the forces on atoms from the model
+    and :math:`f_\text{ref}` is the corresponding reference forces, :math:`N` is the
+    number of atoms in the configuration. The division by :math:`N` is applied only when
+    ``normalize = True`` in ``run``.
+
+    The RMSEs for energy and forces are defined as:
+
+    .. math::
+        e_\text{RMSE} = \sqrt{ [frac{\sum_{m=1}^M e_\text{norm}^2}{M}}
+
+    and
+
+    .. math::
+        f_\text{RMSE} = \sqrt{ [frac{\sum_{m=1}^M f_\text{norm}^2}{M}},
+
+    in which :math:`M` is the total number of configurations in the dataset.
+    """
+
     def __init__(self, calculator, energy=True, forces=True):
         self.calculator = calculator
         self.compute_energy = energy
@@ -27,6 +62,12 @@ class energy_forces_RMSE:
 
         verbose: int (optional)
             Verbose level of the output info. Available values are: 0, 1, 2.
+            If ``verbose=0``, only output the energy and forces RMSEs for the dataset.
+            If ``verbose==1``, output the norms of the energy and forces for each
+            configuration additionally.
+            If ``verbose==2``, output the difference of the energy and forces for each
+            atom, and the information is written to extended XYZ files with the location
+            specified by ``path``.
 
         sort: str (optional)
             Sort per configuration information according to `energy` or `forces`.
@@ -36,6 +77,8 @@ class energy_forces_RMSE:
         path: str (optional)
             Path to write out the results. If `None`, write to stdout, otherwise, write to
             the file specified by `path`.
+            Note, if ``verbose==3``, the difference of energy and forces will be written
+            to a directory named `energy_forces_RMSE-difference`.
 
         """
         cas = self.calculator.get_compute_arguments()
@@ -43,8 +86,16 @@ class energy_forces_RMSE:
         all_enorm = []
         all_fnorm = []
         all_identifier = []
+
+        # common path of dataset
+        ids = [ca.conf.get_identifier() for ca in cas]
+        common = _get_common_path(ids)
+
         for ca in cas:
-            enorm, fnorm = self.compute_single_config(ca, normalize, verbose)
+            prefix = 'energy_forces_RMSE-difference'
+            enorm, fnorm = self.compute_single_config(
+                ca, normalize, verbose, common, prefix
+            )
             all_enorm.append(enorm)
             all_fnorm.append(fnorm)
             all_identifier.append(ca.conf.get_identifier())
@@ -76,39 +127,42 @@ class energy_forces_RMSE:
         print('#', file=fout)
         print('# Root-mean-square errors for energy and forces', file=fout)
         print('#', file=fout)
-        if normalize:
-            msg = (
-                'Values reported is per atom quantify, e.g. "eV/atom" for energy and '
-                '"(eV/Angstrom)/atom" if "eV" is the units for energy and "Angstrom" '
-                'is the units for forces.'
-            )
-            print(split_string(msg, length=80, starter='#'), file=fout)
-            print('#', file=fout)
+        msg = (
+            'Values reported is per atom quantify if "normalize=True". For example, '
+            '"eV/atom" for energy and "(eV/Angstrom)/atom" if "eV" is the units for '
+            'energy and "Angstrom" is the units for forces.'
+        )
+        print(split_string(msg, length=80, starter='#'), file=fout)
+        print('#', file=fout)
+        print(
+            '# See (TODO insert url of doc) for the meaning of the reported values.',
+            file=fout,
+        )
         print('#' * 80 + '\n', file=fout)
 
+        # norms of each config
         if verbose >= 1:
-
-            # header
             print('#' * 80, file=fout)
             print('Per configuration quantify\n', file=fout)
-            print('# config     ', end=' ', file=fout)
+            print('# config', end=' ' * 4, file=fout)
             if self.compute_energy:
-                print('energy RMSE     ', end=' ', file=fout)
+                print('energy difference norm', end=' ' * 4, file=fout)
             if self.compute_forces:
-                print('forces RMSE     ', end=' ', file=fout)
+                print('forces difference norm', end=' ' * 4, file=fout)
             print('config identifier', file=fout)
 
             for i, (enorm, fnorm, identifier) in enumerate(
                 zip(all_enorm, all_fnorm, all_identifier)
             ):
-                print('{:<10d}  '.format(i), end='', file=fout)
+                print('{:<10d}'.format(i), end=' ' * 4, file=fout)
                 if self.compute_energy:
-                    print('{:.10e}  '.format(enorm), end='', file=fout)
+                    print('{:.10e}'.format(enorm), end=' ' * 10, file=fout)
                 if self.compute_forces:
-                    print('{:.10e}  '.format(fnorm), end='', file=fout)
+                    print('{:.10e}'.format(fnorm), end=' ' * 10, file=fout)
                 print(identifier, file=fout)
             print('\n', file=fout)
 
+        # RMSE of all configs
         print('#' * 80, file=fout)
         print('RMSE for the dataset (all configurations).', file=fout)
         if self.compute_energy:
@@ -119,11 +173,21 @@ class energy_forces_RMSE:
             print('{:.10e}    # forces RMSE'.format(f_rmse), file=fout)
         print('\n', file=fout)
 
-    def compute_single_config(self, ca, normalize, verbose):
+        # difference of each atom
+        if verbose >= 2:
+            print('#' * 80, file=fout)
+            msg = (
+                'The differences of energy and forces are written to the directory '
+                '"energy_forces_RMSE-difference" in extended XYZ format.'
+            )
+            print(split_string(msg, length=80, starter='#'), file=fout)
+            print('\n', file=fout)
+
+    def compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 
         self.calculator.compute(ca)
         conf = ca.conf
-        identifier = conf.get_identifier()
+        identifier = os.path.abspath(conf.get_identifier())
         natoms = conf.get_number_of_atoms()
 
         if self.compute_energy:
@@ -150,9 +214,16 @@ class energy_forces_RMSE:
 
         # write the difference to extxyz files
         if verbose >= 2:
-            path = os.path.join(
-                'energy_forces_RMSE-difference', os.path.basename(identifier)
-            )
+            if identifier.startswith(common_path):
+                base = identifier[len(common_path) :]
+            else:
+                raise AnalyzerError(
+                    'identifier "{}" not start with common_path "{}".'.format(
+                        identifier, common_path
+                    )
+                )
+
+            path = os.path.join(prefix, base)
             cell = conf.get_cell()
             PBC = conf.get_PBC()
             species = conf.get_species()
@@ -170,6 +241,33 @@ class energy_forces_RMSE:
             )
 
         return enorm, fnorm
+
+
+def _get_common_path(paths):
+    """Find the common path of a list of paths.
+
+    For example, given paths = ['/A/B/c.x', '/A/B/D/e.x'], the returns `/A/B/`.
+    """
+    paths = [os.path.abspath(p) for p in paths]
+    common = ''
+
+    i = 0
+    while True:
+        if i < len(paths[0]):
+            c = paths[0][i]
+        else:
+            break
+        not_same = False
+        for p in paths:
+            if not p[i] == c:
+                not_same = True
+                break
+        if not_same:
+            break
+        common += c
+        i += 1
+
+    return common
 
 
 class AnalyzerError(Exception):
