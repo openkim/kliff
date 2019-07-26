@@ -3,8 +3,11 @@ import multiprocessing as mp
 import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallelCPU
+from torch.utils.data import DataLoader
 import kliff
 from ..dataset.dataset import Configuration
+from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
+
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -86,6 +89,18 @@ class CalculatorTorch:
     def get_train_fingerprints_path(self):
         """Return the path to the training set fingerprints: `train.pkl`."""
         return self.train_fingerprints_path
+
+    def get_compute_arguments(self, batch_size=1):
+        """Return a list of compute arguments, each associated with a configuration.
+        """
+
+        fname = self.get_train_fingerprints_path()
+        fp = FingerprintsDataset(fname)
+        loader = DataLoader(
+            dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
+        )
+
+        return loader
 
     def fit(self):
         path = self.get_train_fingerprints_path()

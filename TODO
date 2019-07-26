@@ -135,26 +135,26 @@
   GPU support for NN models.
                                                                                  Not yet
 
-17. 07/15/2019:
+18. 07/15/2019:
   Rewrite the C++ implementation of the descriptors such that it can be used
   directly by the KIM driver. Add a function ``read_parameters'' for each
   descriptor to process parameter files (needed to KIM driver).
                                                                                  Not yet
 
-17. 07/15/2019:
+19. 07/15/2019:
   Support the geodesic LM optimizer by Mark.
                                                                                  Not yet
 
-17. 07/15/2019:
+20. 07/15/2019:
   Extend to support more descriptors (e.g. many-body tensor and SOAP) and more
   machine learning regression methods (e.g. Kernel ridge regression and
   Gaussian process.)
                                                                                  Not yet
 
-17. 07/15/2019:
+21. 07/15/2019:
    Extend to support more analyzers, such as RMSE of energy and forces.
                                                                                  Not yet
-17. 07/15/2019:
+22. 07/15/2019:
   Models like EAM have a large number of parameters. It is not a good idea to
   ask the user to specify the initial guesses of them one by one. Maybe provide
   an interface to enable the use of default values for all parameters.
@@ -166,10 +166,25 @@
   initial guesses should be reasonable.
                                                                                  Not yet
 
-17. 07/15/2019:
+23. 07/15/2019:
   Use KIM tests to compute properties (e.g. equilibrium lattice constant and
   elastic constants) as the predictions of a model. In such, we can fit to
   other properties in addition to the currently supported energy, forces, and
   stresses. As a prerequisite, KIM tests need to be updated to provide an
   interface to change model parameters and stay alive during the fitting.
                                                                                  Not yet
+
+24. 07/15/2019:
+  Allow passing `mean_and_std_path` to method `create` of torch calculators.
+  Then, avoid differentiating training set and test set. This is needed by
+  analyzers, where one cannot distinguish training and testing set.
+                                                                                 Not yet
+
+25. 07/25/2019:
+  Two models can be regarded as one in the sense that the combination of them
+  give the total energy, forces ... The Purpose of wrapcalcualtor.py was to
+  support the fitting of two models together. The code (wrapcalcualtor.py itself
+  and loss.py) is out of data. Need to be updated. Otherwise, we need to clean
+  up loss.py to remove the support for it.
+                                                                                 Not yet
+
