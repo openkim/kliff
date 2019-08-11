@@ -302,12 +302,12 @@ def assemble_stress(coords, forces, volume):
     """
 
     stress = np.zeros(6)
-    stress[0] = np.sum(np.multiply(coords[:, 0], forces[:, 0])) / volume
-    stress[1] = np.sum(np.multiply(coords[:, 1], forces[:, 1])) / volume
-    stress[2] = np.sum(np.multiply(coords[:, 2], forces[:, 2])) / volume
-    stress[3] = np.sum(np.multiply(coords[:, 1], forces[:, 2])) / volume
-    stress[4] = np.sum(np.multiply(coords[:, 0], forces[:, 2])) / volume
-    stress[5] = np.sum(np.multiply(coords[:, 0], forces[:, 1])) / volume
+    stress[0] = -np.sum(np.multiply(coords[:, 0], forces[:, 0])) / volume
+    stress[1] = -np.sum(np.multiply(coords[:, 1], forces[:, 1])) / volume
+    stress[2] = -np.sum(np.multiply(coords[:, 2], forces[:, 2])) / volume
+    stress[3] = -np.sum(np.multiply(coords[:, 1], forces[:, 2])) / volume
+    stress[4] = -np.sum(np.multiply(coords[:, 2], forces[:, 0])) / volume
+    stress[5] = -np.sum(np.multiply(coords[:, 0], forces[:, 1])) / volume
 
     return stress
 

@@ -42,7 +42,7 @@ def format_cpp_code(path):
     )
     files = get_files(path)
     for f in files:
-        subprocess.call(['clang-format', '-i', f])
+        subprocess.call(['clang-format', '-style=file', '-i', f])
     print('Formatting CPP files done.')
 
 
