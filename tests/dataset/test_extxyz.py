@@ -27,9 +27,12 @@ def test_configuration(e=True, f=False, s=False, order=False):
     PBC = config.get_PBC()
     species = config.get_species()
     coords = config.get_coordinates()
-    energy = config.get_energy()
-    forces = config.get_forces()
-    stress = config.get_stress()
+    if e:
+        energy = config.get_energy()
+    if f:
+        forces = config.get_forces()
+    if s:
+        stress = config.get_stress()
 
     assert natoms == 288
     assert np.allclose(
@@ -44,13 +47,9 @@ def test_configuration(e=True, f=False, s=False, order=False):
 
     if e:
         assert energy == -5.302666
-    else:
-        assert energy == None
 
     if s:
         assert np.allclose(stress, [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
-    else:
-        assert stress == None
 
     if order:
         ref_species = ['Mo', 'Mo', 'Mo', 'Mo', 'Mo', 'Mo']
@@ -81,13 +80,17 @@ def test_configuration(e=True, f=False, s=False, order=False):
     assert np.allclose(coords[:3], ref_coords)
     if f:
         assert np.allclose(forces[:3], ref_forces)
-    else:
-        assert forces == None
 
     natoms_by_species = config.count_atoms_by_species()
     assert natoms_by_species['Mo'] == 96
     assert natoms_by_species['S'] == 192
 
+    if not e:
+        energy = None
+    if not f:
+        forces = None
+    if not s:
+        stress = None
     outname = fname.replace('./configs_extxyz/MoS2/MoS2', 'tmp_Mos2')
     write_extxyz(outname, cell, PBC, species, coords, energy, forces, stress)
 

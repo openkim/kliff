@@ -378,7 +378,7 @@ def write_config(
     if fmt not in implemented_format:
         report_error('Data file format "{}" not recognized.')
 
-    dirname = os.path.dirname(path)
+    dirname = os.path.dirname(os.path.abspath(path))
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 

@@ -302,7 +302,7 @@ class Descriptor:
                 else:
                     zeta = all_zeta[i]
                     dzetadr_f = all_dzetadr_forces[i]
-                    dzetadr_s = all_dzetadr_forces[i]
+                    dzetadr_s = all_dzetadr_stress[i]
 
                 # centering and normalization
                 if self.normalize:

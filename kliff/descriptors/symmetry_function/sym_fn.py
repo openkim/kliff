@@ -225,16 +225,17 @@ class SymmetryFunction(Descriptor):
             if grad:
                 # last 3 elements dzetadr is associated with atom i
                 atom_ids = np.concatenate((neigh_indices, [i]))
+                dzetadr = dzetadr.reshape(Ndesc, -1, 3)
 
             if fit_forces:
-                dzetadr_forces = np.zeros(Ndesc, Ncontrib * 3)
+                dzetadr_forces = np.zeros((Ndesc, Ncontrib, 3))
                 for ii, idx in enumerate(atom_ids):
                     org_idx = image[idx]
                     dzetadr_forces[:, org_idx, :] += dzetadr[:, ii, :]
-                dzetadr_forces_config.append(dzetadr_forces)
+                dzetadr_forces_config.append(dzetadr_forces.reshape(Ndesc, -1))
 
             if fit_stress:
-                dzetadr_stress = np.zeros(Ndesc, 6)
+                dzetadr_stress = np.zeros((Ndesc, 6))
                 for ii, idx in enumerate(atom_ids):
                     dzetadr_stress[:, 0] += dzetadr[:, ii, 0] * coords[idx][0]
                     dzetadr_stress[:, 1] += dzetadr[:, ii, 1] * coords[idx][1]
