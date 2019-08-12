@@ -87,6 +87,7 @@ class SymmetryFunction(Descriptor):
         self._cdesc = sf.Descriptor()
         self._set_cutoff()
         self._set_hyperparams()
+        self.size = self.get_size()
 
         logger.info('"SymmetryFunction" descriptor initialized.')
 

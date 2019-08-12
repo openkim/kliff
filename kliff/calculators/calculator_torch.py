@@ -26,14 +26,13 @@ class CalculatorTorch:
         This is an example attribute.
     """
 
-    # TODO should be moved to Model
-    implemented_property = ['energy', 'forces']
+    implemented_property = ['energy', 'forces', 'stress']
 
     def __init__(self, model):
 
         self.model = model
         self.dtype = self.model.descriptor.dtype
-        self.train_fingerprints_path = None
+        self.fingerprints_path = None
 
         self.use_energy = None
         self.use_forces = None
@@ -48,6 +47,9 @@ class CalculatorTorch:
         use_forces=True,
         use_stress=False,
         reuse=False,
+        fingerprints_path=None,
+        fingerprints_mean_and_stdev_path=None,
+        serial=False,
         nprocs=mp.cpu_count(),
     ):
         """Process configs into fingerprints.
@@ -66,9 +68,27 @@ class CalculatorTorch:
         use_stress: bool (optional)
             Whether to require the calculator to compute stress.
 
-        nprocs: int (optional)
-            Number if processors.
+        reuse: bool (optional)
+            If ``True``, reuse the fingerprints if found existing one. If ``False``,
+            generate fingerprints from scratch no matter there is existing one or not.
 
+        fingerprints_path: string (optional)
+            Path to the generated fingerprints. If ``None``, default to
+            ``./fingerprint.pkl``.
+
+        fingerprints_mean_and_stdev_path: string (optional)
+            Path to the mean and standard deviation of the fingerprints. If ``normalize``
+            is not required by a descriptor, this is ignored. Otherwise, the mean and
+            standard deviation read from ``fingerprints_mean_and_stdev_path``, are used to
+            normalize the fingerprints. If ``None``, mean and standard deviation will be
+            calculated from the descriptors and write to
+            ``./fingerprints_mean_and_stdev.pkl``;
+
+        serial: bool (optional)
+            Compute fingerprints in serial mode. Memory efficient.
+
+        nprocs: int (optional)
+            Number of processes to use. If ``serial`` is ``True``, this is ignored..
         """
 
         self.configs = configs
@@ -80,24 +100,20 @@ class CalculatorTorch:
             configs = [configs]
 
         # generate pickled fingerprints
-        fname = self.model.descriptor.generate_train_fingerprints(
+        self.fingerprints_path = self.model.descriptor.generate_fingerprints(
             configs,
-            fit_forces=use_forces,
-            fit_stress=use_stress,
-            reuse=reuse,
-            nprocs=nprocs,
+            use_forces,
+            use_stress,
+            reuse,
+            fingerprints_path,
+            fingerprints_mean_and_stdev_path,
+            serial,
+            nprocs,
         )
-        self.train_fingerprints_path = fname
-
-    def get_train_fingerprints_path(self):
-        """Return the path to the training set fingerprints: `train.pkl`."""
-        return self.train_fingerprints_path
 
     def get_compute_arguments(self, batch_size=1):
-        """Return a list of compute arguments, each associated with a configuration.
-        """
-
-        fname = self.get_train_fingerprints_path()
+        """Return a list of compute arguments, each associated with a configuration."""
+        fname = self.fingerprints_path
         fp = FingerprintsDataset(fname)
         loader = DataLoader(
             dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
@@ -106,7 +122,7 @@ class CalculatorTorch:
         return loader
 
     def fit(self):
-        path = self.get_train_fingerprints_path()
+        path = self.fingerprints_path
         self.model.fit(path)
 
     def compute(self, batch):

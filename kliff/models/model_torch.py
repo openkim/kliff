@@ -70,8 +70,9 @@ class ModelTorch(nn.Module):
         path: str
             Path where to store the model.
         """
+        path = os.path.abspath(path)
         dirname = os.path.dirname(path)
-        if dirname and not os.path.exists(dirname):
+        if not os.path.exists(dirname):
             os.makedirs(dirname)
         torch.save(self.state_dict(), path)
 

@@ -8,8 +8,6 @@ from .error import InputError, report_import_error
 
 try:
     import torch
-    from torch.utils.data import DataLoader
-    from .dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 
     torch_available = True
 except ImportError:
@@ -618,11 +616,7 @@ class LossNeuralNetworkModel(object):
         self.num_epochs = num_epochs
 
         # data loader
-        fname = self.calculator.get_train_fingerprints_path()
-        fp = FingerprintsDataset(fname)
-        loader = DataLoader(
-            dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
-        )
+        loader = self.calculator.get_compute_arguments(batch_size)
 
         # model save metadata
         save_prefix = self.calculator.model.save_prefix

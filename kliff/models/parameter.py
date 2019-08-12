@@ -287,8 +287,9 @@ class FittingParameter:
             fout.close()
 
     def save(self, path):
+        path = os.path.abspath(path)
         dirname = os.path.dirname(path)
-        if dirname and not os.path.exists(dirname):
+        if not os.path.exists(dirname):
             os.makedirs(dirname)
         with open(path, 'wb') as f:
             pickle.dump(self.params, f)
