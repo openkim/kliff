@@ -857,7 +857,7 @@ void Descriptor::sym_d_g5(double zeta,
     double costerm;
     double dcosterm_dcos;
     double base = 1 + lambda * cos_ijk;
-// prevent numerical instability (when lambda=-1 and cos_ijk=1)
+    // prevent numerical instability (when lambda=-1 and cos_ijk=1)
     if (base <= 0)
     {
       costerm = 0.0;

@@ -48,6 +48,7 @@ sym_fn = Extension(
     sources=[
         'kliff/descriptors/symmetry_function/sym_fn_bind.cpp',
         'kliff/descriptors/symmetry_function/sym_fn.cpp',
+        'kliff/descriptors/symmetry_function/helper.cpp',
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
@@ -57,9 +58,9 @@ sym_fn = Extension(
 bispectrum = Extension(
     'kliff.descriptors.bispectrum.bs',
     sources=[
+        'kliff/descriptors/bispectrum/bispectrum_bind.cpp',
         'kliff/descriptors/bispectrum/bispectrum.cpp',
         'kliff/descriptors/bispectrum/helper.cpp',
-        'kliff/descriptors/bispectrum/bispectrum_bind.cpp',
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
