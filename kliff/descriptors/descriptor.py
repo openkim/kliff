@@ -115,7 +115,8 @@ class Descriptor:
     def generate_train_fingerprints(
         self,
         configs,
-        grad=False,
+        fit_forces=False,
+        fit_stress=False,
         reuse=False,
         prefix='fingerprints',
         nprocs=mp.cpu_count(),
@@ -127,8 +128,13 @@ class Descriptor:
 
         configs: list of Configuration objects
 
-        grad: bool (optional)
-            Whether to compute the gradient of fingerprints w.r.t. atomic coordinates.
+        fit_forces: bool (optional)
+            Whether to compute the gradient of fingerprints w.r.t. atomic coordinates so
+            as to compute forces.
+
+        fit_stress: bool (optional)
+            Whether to compute the gradient of fingerprints w.r.t. atomic coordinates so
+            as to compute stress.
 
         reuse: bool
             Whether to reuse the fingerprints if one is found at: {prefix}/train.pkl.
@@ -163,20 +169,30 @@ class Descriptor:
                 return fname
 
         # generate data
-
         msg = 'Start generating fingerprints.'
         log_entry(logger, msg, level='info')
 
-        all_zeta, all_dzetadr = self.calc_zeta_dzetadr(configs, grad, nprocs)
+        all_zeta, all_dzetadr_forces, all_dzetadr_stress = self.calc_zeta_dzetadr(
+            configs, fit_forces, fit_stress, nprocs
+        )
         if self.normalize:
             if all_zeta is not None:
                 stacked = np.concatenate(all_zeta)
                 self.mean = np.mean(stacked, axis=0)
                 self.stdev = np.std(stacked, axis=0)
             else:
-                self.mean, self.stdev = self.welford_mean_and_stdev(configs, grad)
+                self.mean, self.stdev = self.welford_mean_and_stdev(configs)
             self.dump_mean_stdev(mean_stdev_name)
-        self.dump_fingerprints(configs, fname, all_zeta, all_dzetadr, grad, nprocs)
+        self.dump_fingerprints(
+            configs,
+            fname,
+            all_zeta,
+            all_dzetadr_forces,
+            all_dzetadr_stress,
+            fit_forces,
+            fit_stress,
+            nprocs,
+        )
 
         msg = 'Finish generating fingerprints.'
         log_entry(logger, msg, level='info')
@@ -257,7 +273,15 @@ class Descriptor:
         return fname
 
     def dump_fingerprints(
-        self, configs, fname, all_zeta, all_dzetadr, grad, nprocs=mp.cpu_count()
+        self,
+        configs,
+        fname,
+        all_zeta,
+        all_dzetadr_forces,
+        all_dzetadr_stress,
+        fit_forces,
+        fit_stress,
+        nprocs=mp.cpu_count(),
     ):
 
         logger.info('Pickle fingerprint images to: %s.', fname)
@@ -270,22 +294,25 @@ class Descriptor:
             for i, conf in enumerate(configs):
                 if i % 100 == 0:
                     logger.info('Processing configuration: %d.', i)
-                zeta = all_zeta[i]
-                dzetadr = all_dzetadr[i]
-                if zeta is None:
-                    zeta, dzetadr = self.transform(conf, grad=grad)
 
-                # reshape dzeta from a 4D to a 3D array (combining the last two dims)
-                if grad:
-                    new_shape = (dzetadr.shape[0], dzetadr.shape[1], -1)
-                    dzetadr = dzetadr.reshape(new_shape)
+                if all_zeta is None:
+                    zeta, dzetadr_f, dzetadr_s = self.transform(
+                        conf, fit_forces, fit_stress
+                    )
+                else:
+                    zeta = all_zeta[i]
+                    dzetadr_f = all_dzetadr_forces[i]
+                    dzetadr_s = all_dzetadr_forces[i]
 
                 # centering and normalization
                 if self.normalize:
                     zeta = (zeta - self.mean) / self.stdev
-                    if grad:
+                    if fit_forces or fit_stress:
                         stdev_3d = np.atleast_3d(self.stdev)
-                        dzetadr = dzetadr / stdev_3d
+                    if fit_forces:
+                        dzetadr_f = dzetadr_f / stdev_3d
+                    if fit_stress:
+                        dzetadr_s = dzetadr_s / stdev_3d
 
                 # pickling data
                 name = conf.get_identifier()
@@ -294,11 +321,14 @@ class Descriptor:
                 weight = np.asarray(conf.get_weight(), self.dtype)
                 zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
-                if grad:
-                    dzetadr = np.asarray(dzetadr, self.dtype)
+                if fit_forces:
+                    dzetadr_f = np.asarray(dzetadr_f, self.dtype)
                     forces = np.asarray(conf.get_forces(), self.dtype)
+                if fit_stress:
+                    dzetadr_s = np.asarray(dzetadr_s, self.dtype)
+                    stress = np.asarray(conf.get_stress(), self.dtype)
+                    volume = np.asarray(conf.get_volume(), self.dtype)
 
-                # TODO maybe change num atoms by species to species list or even conf
                 example = {
                     'name': name,
                     'species': species,
@@ -306,29 +336,38 @@ class Descriptor:
                     'zeta': zeta,
                     'energy': energy,
                 }
-                if grad:
-                    example['dzeta_dr'] = dzetadr
+                if fit_forces:
+                    example['dzetadr_forces'] = dzetadr_f
                     example['forces'] = forces
+                if fit_stress:
+                    example['dzetadr_stress'] = dzetadr_s
+                    example['stress'] = stress
+                    example['volume'] = volume
+
                 pickle.dump(example, f)
 
         logger.info('Processing %d configurations finished.', len(configs))
 
-    def calc_zeta_dzetadr(self, configs, grad, nprocs=mp.cpu_count()):
+    def calc_zeta_dzetadr(self, configs, fit_forces, fit_stress, nprocs=mp.cpu_count()):
         try:
-            rslt = parallel.parmap1(self.transform, configs, grad, nprocs=nprocs)
-            all_zeta = [pair[0] for pair in rslt]
-            all_dzetadr = [pair[1] for pair in rslt]
+            rslt = parallel.parmap1(
+                self.transform, configs, fit_forces, fit_stress, nprocs=nprocs
+            )
+            zeta = [pair[0] for pair in rslt]
+            dzetadr_forces = [pair[1] for pair in rslt]
+            dzetadr_stress = [pair[2] for pair in rslt]
         except MemoryError as e:
             logger.info(
                 '%s. Occurs in calculating fingerprints using parallel. '
                 'Will fallback to use a serial version.',
                 str(e),
             )
-            all_zeta = [None for _ in len(configs)]
-            all_dzetadr = [None for _ in len(configs)]
-        return all_zeta, all_dzetadr
+            zeta = None
+            dzetadr_forces = None
+            dzetadr_stress = None
+        return zeta, dzetadr_forces, dzetadr_stress
 
-    def welford_mean_and_stdev(self, configs, grad):
+    def welford_mean_and_stdev(self, configs):
         """Compute the mean and standard deviation of fingerprints.
 
         This running mean and standard method proposed by Welford is memory-efficient.
@@ -342,7 +381,7 @@ class Descriptor:
 
         # number of features
         conf = configs[0]
-        zeta, _ = self.transform(conf, grad=grad)
+        zeta, _, _ = self.transform(conf, fit_forces=False, fit_stress=False)
         size = zeta.shape[1]
 
         # starting Welford's method
@@ -350,13 +389,14 @@ class Descriptor:
         mean = np.zeros(size)
         M2 = np.zeros(size)
         for i, conf in enumerate(configs):
-            zeta, _ = self.transform(conf, grad=grad)
+            zeta, _ = self.transform(conf, fit_forces=False, fit_stress=False)
             for row in zeta:
                 n += 1
                 delta = row - mean
                 mean += delta / n
                 delta2 = row - mean
                 M2 += delta * delta2
+            # TODO add processing information
             if i % 100 == 0:
                 sys.stdout.flush()
         stdev = np.sqrt(M2 / (n - 1))
@@ -382,7 +422,7 @@ class Descriptor:
             atoms in the configuration, and num_descriptors is the size of the descriptor
             vector (depending on the choice of hyper-parameters).
 
-        dzeta_dr: 4D array if grad is ``True``, otherwise ``None``
+        dzetadr: 4D array if grad is ``True``, otherwise ``None``
             Gradient of descriptor values w.r.t. atomic coordinates.  dzeta_dr has shape
             (num_atoms, num_descriptors, num_atoms, DIM), where num_atoms and
             num_descriptors has the same meanings as described in zeta. DIM = 3 denotes

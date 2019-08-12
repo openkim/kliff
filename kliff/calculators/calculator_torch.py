@@ -70,19 +70,22 @@ class CalculatorTorch:
             Number if processors.
 
         """
-        if use_stress:
-            raise NotImplementedError('"stress" is not supported by NN calculator.')
 
         self.configs = configs
         self.use_energy = use_energy
         self.use_forces = use_forces
+        self.use_stress = use_stress
 
         if isinstance(configs, Configuration):
             configs = [configs]
 
         # generate pickled fingerprints
         fname = self.model.descriptor.generate_train_fingerprints(
-            configs, grad=use_forces, reuse=reuse, nprocs=nprocs
+            configs,
+            fit_forces=use_forces,
+            fit_stress=use_stress,
+            reuse=reuse,
+            nprocs=nprocs,
         )
         self.train_fingerprints_path = fname
 
@@ -107,51 +110,61 @@ class CalculatorTorch:
         self.model.fit(path)
 
     def compute(self, batch):
-        grad = self.use_forces
+
+        grad = self.use_forces or self.use_stress
 
         # collate batch input to NN
-        zeta_config = self._collate(batch, 'zeta')
+        zeta_config = [sample['zeta'] for sample in batch]
         if grad:
             for zeta in zeta_config:
                 zeta.requires_grad_(True)
-        zeta_batch = torch.cat(zeta_config, dim=0)
 
-        # evaluate model
-        energy_atom = self.model(zeta_batch)
+        # evaluate model (forward pass)
+        zeta_stacked = torch.cat(zeta_config, dim=0)
+        energy_atom = self.model(zeta_stacked)
 
         # energy
         natoms_config = [len(zeta) for zeta in zeta_config]
         energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
 
-        # forces
+        # forces and stress (backward propagation)
+        forces_config = []
+        stress_config = []
         if grad:
-            dzeta_dr_config = self._collate(batch, 'dzeta_dr')
-            forces_config = self.get_forces_config(
-                energy_config, zeta_config, dzeta_dr_config
-            )
-            # no need of grad any more
-            for zeta in zeta_config:
-                zeta.requires_grad_(False)
-        else:
+            for i, sample in enumerate(batch):
+
+                # derivative of energy w.r.t. zeta
+                energy = energy_config[i]
+                zeta = zeta_config[i]
+                dedz = torch.autograd.grad(energy, zeta, create_graph=True)[0]
+                zeta.requires_grad_(False)  # no need of grad any more
+
+                if self.use_forces:
+                    dzetadr_forces = sample['dzetadr_forces']
+                    f = self.compute_forces(dedz, dzetadr_forces)
+                    forces_config.append(f)
+
+                if self.use_stress:
+                    dzetadr_stress = sample['dzetadr_stress']
+                    volume = sample['dzetadr_volume']
+                    s = self.compute_stress(dedz, dzetadr_stress, volume)
+                    stress_config.append(s)
+
+        if not self.use_forces:
             forces_config = None
+        if not self.use_stress:
+            stress_config = None
 
-        return {'energy': energy_config, 'forces': forces_config}
-
-    @staticmethod
-    def _collate(batch, key):
-        return [sample[key] for sample in batch]
+        return {'energy': energy_config, 'forces': forces_config, 'stress': stress_config}
 
     @staticmethod
-    def get_forces_config(energy_config, zeta_config, dzeta_dr_config):
-        def compute_forces(energy, zeta, dzeta_dr):
-            denergy_dzeta = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-            forces = -torch.tensordot(denergy_dzeta, dzeta_dr, dims=([0, 1], [0, 1]))
-            return forces
+    def compute_forces(denergy_dzeta, dzetadr):
+        forces = -torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1]))
+        return forces
 
-        forces = []
-        for energy, zeta, dzeta_dr in zip(energy_config, zeta_config, dzeta_dr_config):
-            f = compute_forces(energy, zeta, dzeta_dr)
-            forces.append(f)
+    @staticmethod
+    def compute_stress(denergy_dzeta, dzetadr, volume):
+        forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
         return forces
 
 
@@ -176,11 +189,11 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
         if grad:
             for zeta in zeta_config:
                 zeta.requires_grad_(True)
-        zeta_batch = torch.cat(zeta_config, dim=0)
+        zeta_stacked = torch.cat(zeta_config, dim=0)
 
         # evaluate model
         model = DistributedDataParallelCPU(self.model)
-        energy_atom = model(zeta_batch)
+        energy_atom = model(zeta_stacked)
 
         # energy
         natoms_config = [len(zeta) for zeta in zeta_config]
@@ -188,13 +201,13 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
 
         # forces
         if grad:
-            dzeta_dr_config = self._collate(batch, 'dzeta_dr')
-            forces_config = self.get_forces_config(
-                energy_config, zeta_config, dzeta_dr_config
+            dzetadr_config = self._collate(batch, 'dzetadr')
+            forces_config = self.compute_forces_config(
+                energy_config, zeta_config, dzetadr_config
             )
             for zeta in zeta_config:
                 zeta.requires_grad_(False)
-            # zeta_batch.requires_grad_(False)
+            # zeta_stacked.requires_grad_(False)
         else:
             forces_config = None
 

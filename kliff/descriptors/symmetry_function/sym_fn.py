@@ -110,9 +110,9 @@ class SymmetryFunction(Descriptor):
     #         number of atoms in the configuration, and num_descriptors is the size
     #         of the descriptor vector (depending on the the choice of hyper-parameters).
 
-    #     dzeta_dr: 4D array if grad is ``True``, otherwise ``None``
+    #     dzetadr: 4D array if grad is ``True``, otherwise ``None``
     #         Gradient of descriptor values w.r.t. atomic coordinates.
-    #         dzeta_dr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
+    #         dzetadr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
     #         num_atoms and num_descriptors has the same meanings as described in zeta.
     #         DIM = 3 denotes three Cartesian coordinates.
     #     """
@@ -131,16 +131,16 @@ class SymmetryFunction(Descriptor):
     #     Ndesc = len(self)
 
     #     if grad:
-    #         zeta, dzeta_dr = self._cdesc.get_gen_coords_and_deri(
+    #         zeta, dzetadr = self._cdesc.get_gen_coords_and_deri(
     #             coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
     #         )
     #         # reshape 3D array to 4D array
-    #         dzeta_dr = dzeta_dr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
+    #         dzetadr = dzetadr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
     #     else:
     #         zeta = self._cdesc.get_gen_coords(
     #             coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
     #         )
-    #         dzeta_dr = None
+    #         dzetadr = None
 
     #     if logger.getEffectiveLevel() == logging.DEBUG:
     #         logger.debug(
@@ -154,7 +154,7 @@ class SymmetryFunction(Descriptor):
     #                 s += '{:.15g} '.format(j)
     #             logger.debug(s)
 
-    #     return zeta, dzeta_dr
+    #     return zeta, dzetadr
 
     def transform(self, conf, fit_forces=False, fit_stress=False):
         """Transform atomic coords to atomic environment descriptor values.
@@ -181,16 +181,16 @@ class SymmetryFunction(Descriptor):
             number of atoms in the configuration, and num_descriptors is the size
             of the descriptor vector (depending on the the choice of hyper-parameters).
 
-        dzeta_dr_forces: 4D array if fit_forces is ``True``, otherwise ``None``
+        dzetadr_forces: 3D array if fit_forces is ``True``, otherwise ``None``
             Gradient of descriptor values w.r.t. atomic coordinates for forces
             computation.
-            dzeta_dr_forces has shape (num_atoms, num_descriptors, num_atoms, DIM), where
+            dzetadr_forces has shape (num_atoms, num_descriptors, num_atoms*DIM), where
             num_atoms and num_descriptors has the same meanings as described in zeta.
             DIM = 3 denotes three Cartesian coordinates.
 
-        dzeta_dr_stress: 3D array if fit_stress is ``True``, otherwise ``None``
+        dzetadr_stress: 3D array if fit_stress is ``True``, otherwise ``None``
             Gradient of descriptor values w.r.t. atomic coordinates for stress computation.
-            dzeta_dr_stress has shape (num_atoms, num_descriptors, 6), where
+            dzetadr_stress has shape (num_atoms, num_descriptors, 6), where
             num_atoms and num_descriptors has the same meanings as described in zeta.
             The last dimension is the 6 component associated with virial stress in the
             order of 11, 22, 33, 23, 31, 12.
@@ -215,7 +215,6 @@ class SymmetryFunction(Descriptor):
 
         for i in range(Ncontrib):
             neigh_indices, _, _ = nei.get_neigh(i)
-            numneigh = len(neigh_indices)
             neighlist = np.asarray(neigh_indices, dtype=np.intc)
             zeta, dzetadr = self._cdesc.generate_one_atom(
                 i, coords, species, neighlist, grad
@@ -224,12 +223,11 @@ class SymmetryFunction(Descriptor):
             zeta_config.append(zeta)
 
             if grad:
-                # last element of the 2nd dimension is associated with the targeting atom
-                dzetadr = np.reshape(Ndesc, (numneigh + 1), 3)
+                # last 3 elements dzetadr is associated with atom i
                 atom_ids = np.concatenate((neigh_indices, [i]))
 
             if fit_forces:
-                dzetadr_forces = np.zeros(Ndesc, Ncontrib, 3)
+                dzetadr_forces = np.zeros(Ndesc, Ncontrib * 3)
                 for ii, idx in enumerate(atom_ids):
                     org_idx = image[idx]
                     dzetadr_forces[:, org_idx, :] += dzetadr[:, ii, :]
