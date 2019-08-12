@@ -696,16 +696,21 @@ class LossNeuralNetworkModel(object):
         results = self.calculator.compute(batch)
         energy_batch = results['energy']
         forces_batch = results['forces']
+        stress_batch = results['stress']
 
         if forces_batch is None:
             forces_batch = [None] * len(batch)
+        if stress_batch is None:
+            stress_batch = [None] * len(batch)
 
         # Instead of loss_batch = 0 and loss_batch += loss in the loop, the below one may
         # be faster, considering chain rule it needs to take derivatives.
         # Anyway, it is minimal. Don't worry about it.
         losses = []
-        for sample, energy, forces in zip(batch, energy_batch, forces_batch):
-            loss = self.get_loss_single_config(sample, energy, forces)
+        for sample, energy, forces, stress in zip(
+            batch, energy_batch, forces_batch, stress_batch
+        ):
+            loss = self.get_loss_single_config(sample, energy, forces, stress)
             losses.append(loss)
         loss_batch = torch.stack(losses).sum()
         if normalize:
@@ -713,11 +718,12 @@ class LossNeuralNetworkModel(object):
 
         return loss_batch
 
-    def get_loss_single_config(self, sample, pred_energy, pred_forces):
+    def get_loss_single_config(self, sample, pred_energy, pred_forces, pred_stress):
 
         if self.calculator.use_energy:
             pred = pred_energy.reshape(-1)  # reshape scalar as 1D tensor
             ref = sample['energy'].reshape(-1)
+
         if self.calculator.use_forces:
             ref_forces = sample['forces']
             if self.calculator.use_energy:
@@ -726,6 +732,15 @@ class LossNeuralNetworkModel(object):
             else:
                 pred = pred_forces.reshape(-1)
                 ref = ref_forces.reshape(-1)
+
+        if self.calculator.use_stress:
+            ref_stress = sample['stress']
+            if self.calculator.use_energy or self.calculator.use_stress:
+                pred = torch.cat((pred, pred_stress.reshape(-1)))
+                ref = torch.cat((ref, ref_stress.reshape(-1)))
+            else:
+                pred = pred_stress.reshape(-1)
+                ref = ref_stress.reshape(-1)
 
         identifier = sample['name']
         species = sample['species']

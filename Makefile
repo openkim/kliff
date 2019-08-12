@@ -9,7 +9,8 @@ install:
 clean:
 	python setup.py clean
 clean_all:
-	rm -rf build/ dist/ *.egg-info/ */*.so \
-  */__pycache__/ */*/__pycache__/ */*/*/__pycache__/ \
-  kliff.log  */kliff.log  */*/kliff.log
+	rm -rf build/ dist/ \
+	*.egg-info/ */*.so */*/*.so  */*/*/*.so \
+   */__pycache__/ */*/__pycache__/ */*/*/__pycache__/ \
+   kliff.log  */kliff.log  */*/kliff.log  */*/*/kliff.log
 

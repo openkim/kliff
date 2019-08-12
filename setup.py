@@ -103,12 +103,12 @@ setup(
     url='https://github.com/mjwen/kliff',
     description='KLIFF: KIM-based Learning-Integrated Fitting Framework',
     long_description='KLIFF: KIM-based Learning-Integrated Fitting Framework',
-    classifiers=(
+    classifiers=[
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'License :: OSI Approved :: Common Development and Distribution License 1.0 (CDDL-1.0)',
         'Operating System :: OS Independent',
-    ),
+    ],
     zip_safe=False,
 )
