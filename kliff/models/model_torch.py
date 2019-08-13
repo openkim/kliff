@@ -83,7 +83,7 @@ class ModelTorch(nn.Module):
         fname = os.path.join(dirname, 'mean_and_stdev.pkl')
         self.descriptor.dump_mean_stdev(fname)
 
-    def load(self, path, mode):
+    def load(self, path, mode='train'):
         r"""Load a model on disk into memory.
 
         Parameters

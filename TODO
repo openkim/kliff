@@ -139,7 +139,7 @@
   Rewrite the C++ implementation of the descriptors such that it can be used
   directly by the KIM driver. Add a function ``read_parameters'' for each
   descriptor to process parameter files (needed to KIM driver).
-                                                                                 Not yet
+                                                                                 Done for symmetry functions
 
 19. 07/15/2019:
   Support the geodesic LM optimizer by Mark.
@@ -153,7 +153,7 @@
 
 21. 07/15/2019:
    Extend to support more analyzers, such as RMSE of energy and forces.
-                                                                                 Not yet
+                                                                                 Done
 22. 07/15/2019:
   Models like EAM have a large number of parameters. It is not a good idea to
   ask the user to specify the initial guesses of them one by one. Maybe provide
@@ -178,7 +178,7 @@
   Allow passing `mean_and_std_path` to method `create` of torch calculators.
   Then, avoid differentiating training set and test set. This is needed by
   analyzers, where one cannot distinguish training and testing set.
-                                                                                 Not yet
+                                                                                 Done
 
 25. 07/25/2019:
   Two models can be regarded as one in the sense that the combination of them
@@ -186,5 +186,19 @@
   support the fitting of two models together. The code (wrapcalcualtor.py itself
   and loss.py) is out of data. Need to be updated. Otherwise, we need to clean
   up loss.py to remove the support for it.
+                                                                                 Not yet
+
+26. 08/15/2019:
+  For torch models, to fully resume training from a checkout, it is not enough
+  to save and load state_dict() of model parameters only. We also need to set
+  save and load the sate_dict() of the optimizer (not done yet).
+  See for example: https://discuss.pytorch.org/t/restoring-optimizer-and-model-from-saved-state-not-fully-reproducing-training-results/9463
+  Two problems:
+  (1) The optimizer is hidden from the user, then how to load? A possible
+  solution is when calling the load function we do not actually load the
+  optimizer, but just keep a record of the path. Then load it later.
+  (2) Can be combined save model and save optimizer as one function call and
+  where to put it.
+
                                                                                  Not yet
 
