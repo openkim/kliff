@@ -6,7 +6,10 @@ Code style
 
 - KLIFF uses black_ to format the code. It adopts the default style of black_
   with only one exception: we use line length 90 instead of of the black_default (88).
-  To format the code, one can use::
+  To format the code, one can use:
+
+  .. code-block:: bash
+
     black --line-length 90 <filename>.py
 
   Supply ``--skip-string-normalization`` to ``black`` to avoid changing single
@@ -32,7 +35,10 @@ Docs
 
 - The above commands will not only parse the docstring in the tutorials, but also
   run the codes in the tutorials. Running the codes may take a long time. So, if
-  you just want to generate the docs, do::
+  you just want to generate the docs, do:
+
+  .. code-block:: bash
+
     $ cd kliff/docs
     $ make html-notutorial
 

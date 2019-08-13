@@ -217,14 +217,14 @@ autodoc_member_order = 'bysource'
 # -- Math setup --------------------------------------------------------------
 # imgmath settings
 imgmath_image_format = 'svg'
-imgmath_latex_preamble = '\usepackage{bm}\n'
+imgmath_latex_preamble = '\usepackage{bm}\n\usepackage{amsmath}\n'
 
 
 # -- sphinx-galley setup ------------------------------------------------------
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',  # path to your example scripts
     'gallery_dirs': 'auto_examples',  # path where to save gallery generated examples
-    'filename_pattern': '/example_',  # incldue files with names 'example_'; '/'
+    'filename_pattern': '/example_',  # include files with names 'example_'; '/'
                                       # matches the directory name separator
     # exclude files without name '/example_'
     'ignore_pattern': '^((?!/example_).)*$',

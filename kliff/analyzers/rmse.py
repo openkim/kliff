@@ -12,7 +12,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class energy_forces_RMSE:
-    """Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
+    r"""Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
 
     The `energy difference norm` for a configuration is defined as:
 
@@ -26,7 +26,7 @@ class energy_forces_RMSE:
     Similarly, the `forces difference norm` for a configuration is defined as:
 
     .. math::
-        f_\text{norm} = ||e_\text{pred} - e_\text{ref}|| / N,
+        f_\text{norm} = || \bm f_\text{pred} - \bm f_\text{ref}|| / N,
 
     where :math:`f_\text{pred}` is the prediction of the forces on atoms from the model
     and :math:`f_\text{ref}` is the corresponding reference forces, :math:`N` is the
@@ -36,12 +36,12 @@ class energy_forces_RMSE:
     The RMSEs for energy and forces are defined as:
 
     .. math::
-        e_\text{RMSE} = \sqrt{ [frac{\sum_{m=1}^M e_\text{norm}^2}{M}}
+        e_\text{RMSE} = \sqrt{ \frac{\sum_{m=1}^M e_\text{norm}^2}{M}}
 
     and
 
     .. math::
-        f_\text{RMSE} = \sqrt{ [frac{\sum_{m=1}^M f_\text{norm}^2}{M}},
+        f_\text{RMSE} = \sqrt{ \frac{\sum_{m=1}^M f_\text{norm}^2}{M}},
 
     in which :math:`M` is the total number of configurations in the dataset.
     """
@@ -93,7 +93,7 @@ class energy_forces_RMSE:
 
         for ca in cas:
             prefix = 'energy_forces_RMSE-difference'
-            enorm, fnorm = self.compute_single_config(
+            enorm, fnorm = self._compute_single_config(
                 ca, normalize, verbose, common, prefix
             )
             all_enorm.append(enorm)
@@ -182,7 +182,7 @@ class energy_forces_RMSE:
             print(split_string(msg, length=80, starter='#'), file=fout)
             print('\n', file=fout)
 
-    def compute_single_config(self, ca, normalize, verbose, common_path, prefix):
+    def _compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 
         self.calculator.compute(ca)
         conf = _get_config(ca)

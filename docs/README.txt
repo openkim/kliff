@@ -8,4 +8,4 @@
    $ make html
    or
    # not generating sphinx-gallery examples (much faster)
-   $ make html-noplot
+   $ make html-notutorial
