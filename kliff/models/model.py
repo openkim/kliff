@@ -9,7 +9,11 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class ComputeArguments:
-    """Implementation of code to compute energy, forces, and stress."""
+    r"""Implementation of code to compute energy, forces, and stress.
+
+    This is the base class for other compute arguments. Typically, a user will not
+    directly use this.
+    """
 
     implemented_property = []
 
@@ -32,7 +36,7 @@ class ComputeArguments:
         self.results = dict([(i, None) for i in self.implemented_property])
 
     def refresh(self, influence_distance=None, params=None):
-        """Refresh settings.
+        r"""Refresh settings.
 
         Such as recreating the neighbor list due to the change of cutoff.
         """
@@ -66,7 +70,7 @@ class ComputeArguments:
         return compute_property
 
     def compute(self, params):
-        """Compute the properties required by the compute flags, and store them in
+        r"""Compute the properties required by the compute flags, and store them in
         self.results.
 
         Parameters
@@ -146,7 +150,9 @@ class ComputeArguments:
 
 
 class Model:
-    """Base class for all physics-motivated models.
+    r"""Base class for all physics-motivated models.
+
+    Typically, a user will not directly use this.
 
     Parameters
     ----------
@@ -217,7 +223,7 @@ class Model:
         report_error('This model does not support writing to a KIM model.')
 
     def set_params_relation_callback(self, params_relation_callback):
-        """Register a function to set the relation between parameters."""
+        r"""Register a function to set the relation between parameters."""
         self.params_relation_callback = params_relation_callback
 
     def get_influence_distance(self):
@@ -227,7 +233,7 @@ class Model:
         return self.supported_species
 
     def get_model_params(self, name):
-        """ Return a copy of the values of parameter.
+        r"""Return a copy of the values of parameter.
 
         Parameters
         ----------
@@ -240,7 +246,7 @@ class Model:
             report_error('"{}" is not a parameter of calculator.'.format(name))
 
     def set_model_params(self, name, value, check_shape=True):
-        """ Update the parameter values.
+        r"""Update the parameter values.
 
         Parameters
         ----------
@@ -275,7 +281,7 @@ class Model:
     #            self.set_model_params(key, value, check_shape=False)
 
     def echo_model_params(self, path=None):
-        """Print the optimizable parameters.
+        r"""Print the optimizable parameters.
 
         Parameters
         ----------
@@ -347,23 +353,23 @@ class Model:
         return self.fitting_params.get_opt_params_bounds()
 
     def update_fitting_params(self, opt_params):
-        """Update from optimzier to fitting params."""
+        r"""Update from optimzier to fitting params."""
         self.fitting_params.update_params(opt_params)
 
     # TODO if parameters relation set, remove the parameters from fitting params
     # or at least check it is not in the fitting params
     def apply_params_relation(self):
-        """Force user-specified relation between parameters."""
+        r"""Force user-specified relation between parameters."""
         if self.params_relation_callback is not None:
             self.params_relation_callback(self.fitting_params)
 
     def update_model_params(self):
-        """Update from fitting params to model params."""
+        r"""Update from fitting params to model params."""
         for name, attr in self.fitting_params.params.items():
             self.set_model_params(name, attr['value'], check_shape=False)
 
     def save(self, path):
-        """Save a model to disk.
+        r"""Save a model to disk.
 
         Parameters
         ----------
@@ -373,7 +379,7 @@ class Model:
         self.fitting_params.save(path)
 
     def load(self, path):
-        """Load a model on disk into memory.
+        r"""Load a model on disk into memory.
 
         Parameters
         ----------

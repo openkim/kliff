@@ -1,12 +1,12 @@
 import numpy as np
-import sys
-import kimpy
 from kimpy import neighlist as nl
 from .atomic_data import atomic_number, atomic_species
 
 
 class NeighborList:
-    """Neighbor list class based on kimpy.neighlist.
+    r"""Neighbor list class .
+
+    This is based on kimpy.neighlist.
 
     This uses the same approach that `LAMMPS` and `KIM` adopt: The atoms in the
     configuration (assuming a total of N atoms) are named contributing atoms, and padding
@@ -34,7 +34,7 @@ class NeighborList:
     species: list
         Species string of contributing and padding atoms.
 
-    iamge: 1D array
+    image: 1D array
         Atom index, of which an atom is an image. The image of a contributing atom is
         itself.
 
@@ -44,7 +44,7 @@ class NeighborList:
     padding_species: list
         Species string and padding atoms.
 
-    padding_iamge: 1D array
+    padding_image: 1D array
         Atom index, of which a padding atom is an image.
 
     Note
@@ -110,7 +110,7 @@ class NeighborList:
         check_error(error, 'nl.build')
 
     def get_neigh(self, index):
-        """Get the indices, coordinates, and species string of a given atom.
+        r"""Get the indices, coordinates, and species string of a given atom.
 
         Parameters
         ----------
@@ -125,7 +125,7 @@ class NeighborList:
         neigh_coords: 2D array
             Coordinates of neighbor atoms.
 
-        neigh_speices: list
+        neigh_species: list
             Species symbol of neighbor atoms.
         """
 
@@ -141,7 +141,7 @@ class NeighborList:
         return neigh_indices, neigh_coords, neigh_species
 
     def get_numneigh_and_neighlist_1D(self, request_padding=False):
-        """Get the number of neighbors and neighbor list for all atoms.
+        r"""Get the number of neighbors and neighbor list for all atoms.
 
         Parameters
         ----------
@@ -189,15 +189,15 @@ class NeighborList:
         return numneigh, neighlist
 
     def get_coords(self):
-        """Return coords of both contributing and padding atoms."""
+        r"""Return coords of both contributing and padding atoms."""
         return self.coords.copy()
 
     def get_species(self):
-        """Return species of both contributing and padding atoms."""
+        r"""Return species of both contributing and padding atoms."""
         return self.species[:]
 
     def get_species_code(self, mapping):
-        """Integer species code of both contributing and padding atoms.
+        r"""Integer species code of both contributing and padding atoms.
 
         Parameters
         ----------
@@ -211,19 +211,19 @@ class NeighborList:
         return np.asarray([mapping[s] for s in self.species], dtype=np.intc)
 
     def get_image(self):
-        """Return image of both contributing and padding atoms."""
+        r"""Return image of both contributing and padding atoms."""
         return self.image.copy()
 
     def get_padding_coords(self):
-        """Return coords of padding atoms."""
+        r"""Return coords of padding atoms."""
         return self.padding_coords.copy()
 
     def get_padding_speices(self):
-        """Return species string of padding atoms."""
+        r"""Return species string of padding atoms."""
         return self.padding_speices[:]
 
     def get_padding_species_code(self, mapping):
-        """Integer species code of padding atoms.
+        r"""Integer species code of padding atoms.
 
         Parameters
         ----------
@@ -231,13 +231,14 @@ class NeighborList:
             A mapping between species string and its code.
 
         Return
+        ------
         1D array
             Integer species code.
         """
         return np.asarray([mapping[s] for s in self.padding_species], dtype=np.intc)
 
     def get_padding_image(self):
-        """Return image of padding atoms."""
+        r"""Return image of padding atoms."""
         return self.padding_image.copy()
 
     def __del__(self):
@@ -245,8 +246,7 @@ class NeighborList:
 
 
 def assemble_forces(forces, n, padding_image):
-    """
-    Assemble forces on padding atoms back to contributing atoms.
+    r"""Assemble forces on padding atoms back to contributing atoms.
 
     Parameters
     ----------
@@ -287,7 +287,7 @@ def assemble_forces(forces, n, padding_image):
 
 
 def assemble_stress(coords, forces, volume):
-    """ Calculate the stress using the f dor r method.
+    r"""Calculate the stress using the negative f dot r method.
 
     Parameters
     ----------

@@ -13,17 +13,13 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class CalculatorTorch:
-    """ A neural network calculator.
+    r"""A calculator based on PyTorch.
 
     Parameters
     ----------
     model: obj
         Instance of :class:`~kliff.neuralnetwork.NeuralNetwork`.
 
-    Attributes
-    ----------
-    attr1: list
-        This is an example attribute.
     """
 
     implemented_property = ['energy', 'forces', 'stress']
@@ -52,7 +48,7 @@ class CalculatorTorch:
         serial=False,
         nprocs=mp.cpu_count(),
     ):
-        """Process configs into fingerprints.
+        r"""Process configs into fingerprints.
 
         Parameters
         ----------
@@ -112,7 +108,7 @@ class CalculatorTorch:
         )
 
     def get_compute_arguments(self, batch_size=1):
-        """Return a list of compute arguments, each associated with a configuration."""
+        r"""Return a list of compute arguments, each associated with a configuration."""
         fname = self.fingerprints_path
         fp = FingerprintsDataset(fname)
         loader = DataLoader(

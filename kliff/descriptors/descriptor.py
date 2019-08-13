@@ -12,7 +12,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class Descriptor:
-    """Base class of atomic environment descriptors.
+    r"""Base class of atomic environment descriptors.
 
     Process dataset to generate fingerprints. This is the base class for all descriptors,
     so it should not be used directly. Instead, descriptors built on top of this such as
@@ -77,7 +77,7 @@ class Descriptor:
         serial=False,
         nprocs=mp.cpu_count(),
     ):
-        """Convert training set to fingerprints.
+        r"""Convert data set to fingerprints.
 
         Parameters
         ----------
@@ -292,11 +292,16 @@ class Descriptor:
         return zeta, dzetadr_forces, dzetadr_stress
 
     def welford_mean_and_stdev(self, configs):
-        """Compute the mean and standard deviation of fingerprints.
+        r"""Compute the mean and standard deviation of fingerprints.
 
         This running mean and standard method proposed by Welford is memory-efficient.
         Besides, it outperforms the naive method from suffering numerical instability for
         large dataset.
+
+        Parameters
+        ----------
+        configs: list
+            A list of class:`~kliff.dataset.Configuration` objects.
 
         See Also
         --------
@@ -336,7 +341,7 @@ class Descriptor:
         return mean, stdev
 
     def transform(self, conf, grad=False):
-        """Transform atomic coords to atomic environment descriptor values.
+        r"""Transform atomic coords to atomic environment descriptor values.
 
         Parameters
         ----------
@@ -370,54 +375,54 @@ class Descriptor:
         raise NotImplementedError('"write_kim_params" not implemented.')
 
     def get_size(self):
-        """Return the size of the descriptor vector."""
+        r"""Return the size of the descriptor vector."""
         return self.size
 
     def get_mean(self):
-        """Return a list of the mean of the fingerprints."""
+        r"""Return a list of the mean of the fingerprints."""
         return self.mean.copy()
 
     def get_stdev(self):
-        """Return a list of the standard deviation of the fingerprints."""
+        r"""Return a list of the standard deviation of the fingerprints."""
         return self.stdev.copy()
 
     def get_dtype(self):
-        """Return the data type of the fingerprints."""
+        r"""Return the data type of the fingerprints."""
         return self.dtype
 
     def get_cutoff(self):
-        """Return the name and values of cutoff. """
+        r"""Return the name and values of cutoff. """
         return self.cut_name, self.cut_dists
 
     def get_hyperparams(self):
-        """Return the hyperparameters of descriptors. """
+        r"""Return the hyperparameters of descriptors. """
         return self.hyperparams
 
-    def dump_mean_stdev(self, fname):
-        dirname = os.path.dirname(os.path.abspath(fname))
+    def dump_mean_stdev(self, path):
+        dirname = os.path.dirname(os.path.abspath(path))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         data = {'mean': self.mean, 'stdev': self.stdev}
-        with open(fname, 'wb') as f:
+        with open(path, 'wb') as f:
             pickle.dump(data, f)
 
-    def load_mean_stdev(self, fname):
+    def load_mean_stdev(self, path):
         try:
-            with open(fname, 'rb') as f:
+            with open(path, 'rb') as f:
                 data = pickle.load(f)
                 mean = data['mean']
                 stdev = data['stdev']
         except Exception as e:
-            msg = 'Cannot load mean and standard data from "{}". {}'.format(fname, str(e))
+            msg = 'Cannot load mean and standard data from "{}". {}'.format(path, str(e))
             log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
 
         if len(mean.shape) != 1 or mean.shape[0] != self.get_size():
-            msg = 'Corrupted mean data from "{}".'.format(fname)
+            msg = 'Corrupted mean data from "{}".'.format(path)
             log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
         if len(stdev.shape) != 1 or stdev.shape[0] != self.get_size():
-            msg = 'Corrupted standard deviation data from "{}".'.format(fname)
+            msg = 'Corrupted standard deviation data from "{}".'.format(path)
             log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
 
@@ -426,13 +431,13 @@ class Descriptor:
         return mean, stdev
 
 
-def load_fingerprints(fname):
-    """Read preprocessed data.
+def load_fingerprints(path):
+    r"""Read preprocessed data.
 
     Parameters
     ----------
-    fname: str
-        Names of the pickled data file.
+    path: str
+        Path to the pickled data file.
 
     fit_forces: bool
         Whether to fit to forces.
@@ -442,7 +447,7 @@ def load_fingerprints(fname):
     Instance of tf.data.
     """
     data = []
-    with open(fname, 'rb') as f:
+    with open(path, 'rb') as f:
         try:
             while True:
                 x = pickle.load(f)
@@ -450,7 +455,7 @@ def load_fingerprints(fname):
         except EOFError:
             pass
         except Exception as e:
-            msg = 'Cannot fingerprints from "{}". {}'.format(fname, str(e))
+            msg = 'Cannot fingerprints from "{}". {}'.format(path, str(e))
             log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
 
@@ -458,7 +463,7 @@ def load_fingerprints(fname):
 
 
 def generate_full_cutoff(cutoff):
-    """Generate a full binary cutoff dictionary.
+    r"""Generate a full binary cutoff dictionary.
 
     For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it, which
     the same value as `S1-S2`.
@@ -492,7 +497,7 @@ def generate_full_cutoff(cutoff):
 
 
 def generate_species_code(cutoff):
-    """Generate species code info from cutoff dictionary.
+    r"""Generate species code info from cutoff dictionary.
 
     Parameters
     ----------

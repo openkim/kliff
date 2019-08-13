@@ -10,9 +10,8 @@ import kliff
 logger = kliff.logger.get_logger(__name__)
 
 
-# TODO take a look at property decorator
 class Parameter:
-    """Parameter class."""
+    r"""Parameter class."""
 
     def __init__(self, value, dtype='double', description=None):
         self.set_value(value)
@@ -55,7 +54,7 @@ class Parameter:
 
 
 class FittingParameter:
-    """Class of model parameters that will be optimized.
+    r"""Class of model parameters that will be optimized.
 
     It interacts with optimizer to provide initial guesses of parameters and receive
     updated parameters from the optimizer.
@@ -77,7 +76,7 @@ class FittingParameter:
         self._index = []
 
     def read(self, fname):
-        """Read the parameters that will be optimized. (Interface to user)
+        r"""Read the parameters that will be optimized. (Interface to user)
 
         Each parameter is a 1D array, and each component of the parameter array should be
         listed in a new line. Each line can contains 1, 2, or 3 elements.
@@ -152,7 +151,7 @@ class FittingParameter:
             self.set_one(name, settings)
 
     def set(self, **kwargs):
-        """Set the parameters that will be optimized. (Interface to user)
+        r"""Set the parameters that will be optimized. (Interface to user)
 
         One or more parameters can be set. Each argument is for one parameter, where the
         argument name is the parameter name, the value of the argument is the
@@ -176,7 +175,7 @@ class FittingParameter:
             self.set_one(name, settings)
 
     def set_one(self, name, settings):
-        """Set one parameter that will be optimized.
+        r"""Set one parameter that will be optimized.
 
         The name of the parameter should be given as the first entry of a list (or tuple),
         and then each data line should be given in in a list.
@@ -230,7 +229,7 @@ class FittingParameter:
         self._set_index(name)
 
     def echo_params(self, fname=None, print_size=True):
-        """Print the optimizing parameters to stdout or file.
+        r"""Print the optimizing parameters to stdout or file.
 
         Parameters
         ----------
@@ -328,7 +327,7 @@ class FittingParameter:
         return len(self._index)
 
     def update_params(self, opt_x):
-        """ Update parameter values from optimizer. (Interface to optimizer)
+        r"""Update parameter values from optimizer. (Interface to optimizer)
 
         This is the opposite operation of get_opt_params().
 
@@ -343,7 +342,7 @@ class FittingParameter:
             self.params[name]['value'][c_idx] = val
 
     def get_opt_params(self):
-        """Nest all parameter values (except the fix ones) to a list.
+        r"""Nest all parameter values (except the fix ones) to a list.
 
         This is the opposite operation of update_params(). This can be fed to the
         optimizer as the starting parameters.
@@ -362,8 +361,9 @@ class FittingParameter:
         return np.asarray(opt_x0)
 
     def get_opt_param_value_and_indices(self, k):
-        """Get the `value`, `parameter_index`, and `component_index` of an optimizing
-        parameter given the slot `k`."""
+        r"""Get the `value`, `parameter_index`, and `component_index` of an optimizing
+        parameter given the slot `k`.
+        """
         name = self._index[k].name
         p_idx = self._index[k].p_idx
         c_idx = self._index[k].c_idx
@@ -371,7 +371,7 @@ class FittingParameter:
         return value, p_idx, c_idx
 
     def get_opt_params_bounds(self):
-        """Get the lower and upper parameter bounds."""
+        r"""Get the lower and upper parameter bounds."""
         bounds = []
         for idx in self._index:
             name = idx.name
@@ -382,7 +382,7 @@ class FittingParameter:
         return bounds
 
     def has_opt_params_bounds(self):
-        """Whether bounds are set for some parameters."""
+        r"""Whether bounds are set for some parameters."""
         bounds = self.get_opt_params_bounds()
         for lb, up in bounds:
             if lb is not None or up is not None:
@@ -438,7 +438,7 @@ class FittingParameter:
                 )
 
     def _check_bounds(self, name):
-        """Check whether the initial guess of a parameter is within its lower and
+        r"""Check whether the initial guess of a parameter is within its lower and
         upper bounds.
         """
         attr = self.params[name]
@@ -460,7 +460,7 @@ class FittingParameter:
                     )
 
     def _set_index(self, name):
-        """Check whether a parameter component will be optimized or not (by checking its
+        r"""Check whether a parameter component will be optimized or not (by checking its
         'fix' attribute). If yes, include it in the index list.
 
         Given a parameter and its values such as:
@@ -522,7 +522,7 @@ class Index(object):
 
 
 def remove_comments(lines):
-    """Remove lines in a string list that start with # and content after #."""
+    r"""Remove lines in a string list that start with # and content after #."""
     processed_lines = []
     for line in lines:
         line = line.strip()

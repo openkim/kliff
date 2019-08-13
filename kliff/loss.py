@@ -25,7 +25,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 def energy_forces_residual(identifier, natoms, prediction, reference, data):
-    """A residual function using both energy and forces.
+    r"""A residual function using both energy and forces.
 
     Parameters
     ----------
@@ -104,7 +104,7 @@ def energy_residual(conf_id, natoms, prediction, reference, data):
 
 
 class Loss(object):
-    """Objective function class to conduct the optimization."""
+    r"""Objective function class to conduct the optimization."""
 
     def __new__(
         self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
@@ -176,7 +176,7 @@ class Loss(object):
 
 
 class LossPhysicsMotivatedModel(object):
-    """Objective function class to conduct the optimization for PM models."""
+    r"""Objective function class to conduct the optimization for PM models."""
 
     scipy_minimize_methods = [
         'Nelder-Mead',
@@ -222,7 +222,7 @@ class LossPhysicsMotivatedModel(object):
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
     def minimize(self, method, **kwargs):
-        """ Minimize the loss.
+        r"""Minimize the loss.
 
         Parameters
         ----------
@@ -378,7 +378,7 @@ class LossPhysicsMotivatedModel(object):
             return result
 
     def get_residual(self, x):
-        """ Compute the residual.
+        r"""Compute the residual.
 
         This is a callable for optimizing method in scipy.optimize.least_squares,
         which is passed as the first positional argument.
@@ -439,7 +439,7 @@ class LossPhysicsMotivatedModel(object):
         return residual
 
     def get_loss(self, x):
-        """Compute the loss.
+        r"""Compute the loss.
 
         This is a callable for optimizing method in scipy.optimize.minimize,
         which is passed as the first positional argument.
@@ -544,7 +544,21 @@ class LossPhysicsMotivatedModel(object):
 
 
 class LossNeuralNetworkModel(object):
-    """Objective function class to conduct the optimization for ML models."""
+    r"""Objective function class to conduct the optimization for ML models.
+
+    Parameters
+    ----------
+    calculator: Calculator object
+
+    nprocs: int
+      Number of processors to parallel to run the predictors.
+
+    residual_fn: function
+      Function to compute residual, see `energy_forces_residual` for an example.
+
+    residual_data: dict
+      Data passed to residual function.
+    """
 
     torch_minimize_methods = [
         'Adadelta',
@@ -562,22 +576,6 @@ class LossNeuralNetworkModel(object):
     def __init__(
         self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
     ):
-        """
-        Parameters
-        ----------
-
-        calculator: Calculator object
-
-        nprocs: int
-          Number of processors to parallel to run the predictors.
-
-        residual_fn: function
-          Function to compute residual, see `energy_forces_residual` for an example.
-
-        residual_data: dict
-          Data passed to residual function.
-
-        """
 
         if not torch_available:
             report_import_error('pytorch')
@@ -593,15 +591,21 @@ class LossNeuralNetworkModel(object):
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
     def minimize(self, method, batch_size=100, num_epochs=1000, **kwargs):
-        """ Minimize the loss.
+        r"""Minimize the loss.
 
         Parameters
         ----------
         method: str
-            PyTorch optimization methods, and aviliable ones are:
+            PyTorch optimization methods, and available ones are:
             [`Adadelta`, `Adagrad`, `Adam`, `SparseAdam`, `Adamax`, `ASGD`, `LBFGS`,
             `RMSprop`, `Rprop`, `SGD`]
             See also: https://pytorch.org/docs/stable/optim.html
+
+        batch_size: int
+            Number of configurations used in in each minimization step.
+
+        num_epochs: int
+            Number of epochs to carry out the minimization.
 
         kwargs: dict
             Extra keyword arguments that can be used by the PyTorch optimizer.
@@ -675,7 +679,7 @@ class LossNeuralNetworkModel(object):
         log_entry(logger, msg, level='info')
 
     def get_loss_batch(self, batch, normalize=True):
-        """Compute the loss of a batch of samples.
+        r"""Compute the loss of a batch of samples.
 
         Parameters
         ----------

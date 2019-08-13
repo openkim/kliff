@@ -3,7 +3,7 @@ from ..error import InputError, KeyNotFoundError
 
 
 def read_extxyz(fname):
-    """Read atomic configuration stored in extended xyz format.
+    r"""Read atomic configuration stored in extended xyz format.
 
     Parameters
     ----------
@@ -118,7 +118,7 @@ def read_extxyz(fname):
 def write_extxyz(
     fname, cell, PBC, species, coords, energy=None, forces=None, stress=None
 ):
-    """Write configuration info to a file in extended xyz format.
+    r"""Write configuration info to a file in extended xyz format.
 
     Parameters
     ----------
@@ -201,7 +201,7 @@ def write_extxyz(
 
 
 def check_key(line, key, fname):
-    """Check whether a key or its lowercase counter part is in line."""
+    r"""Check whether a key or its lowercase counter part is in line."""
     if key not in line:
         key_lower = key.lower()
         if key_lower not in line:
@@ -214,7 +214,7 @@ def check_key(line, key, fname):
 
 
 def check_in_quotes(line, key, fname):
-    """Check whether ``key=value`` or ``key="value"`` in line."""
+    r"""Check whether ``key=value`` or ``key="value"`` in line."""
     key = check_key(line, key, fname)
     value = line[line.index(key) :]
     value = value[value.index('=') + 1 :]
@@ -226,7 +226,7 @@ def check_in_quotes(line, key, fname):
 
 
 def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
-    """Given key, parse a string like ``other stuff key="value" other stuff`` to get
+    r"""Given key, parse a string like ``other stuff key="value" other stuff`` to get
     value.
 
     If there is not space in value, the quotes `"` can be omitted.

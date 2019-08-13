@@ -4,7 +4,7 @@ from torch.nn import *
 # redefine Dropout layer
 @torch._jit_internal.weak_module
 class Dropout(torch.nn.modules.dropout._DropoutNd):
-    """A Dropout layer that zeros the same element of descriptor values for all
+    r"""A Dropout layer that zeros the same element of descriptor values for all
     atoms.
 
     Note `torch.nn.Dropout` dropout each component independently.

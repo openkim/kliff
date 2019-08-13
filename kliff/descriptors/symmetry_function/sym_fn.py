@@ -11,7 +11,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class SymmetryFunction(Descriptor):
-    """Atom-centered symmetry functions descriptor as discussed in [Behler2011]_.
+    r"""Atom-centered symmetry functions descriptor as discussed in [Behler2011]_.
 
     Parameters
     ----------
@@ -91,74 +91,8 @@ class SymmetryFunction(Descriptor):
 
         logger.info('"SymmetryFunction" descriptor initialized.')
 
-    # def transform(self, conf, grad=False):
-    #     """Transform atomic coords to atomic environment descriptor values.
-
-    #     Parameters
-    #     ----------
-    #     conf: :class:`~kliff.dataset.Configuration` object
-    #         A configuration of atoms.
-
-    #     grad: bool (optional)
-    #         Whether to compute the gradient of descriptor values w.r.t. atomic
-    #         coordinates.
-
-    #     Returns
-    #     -------
-    #     zeta: 2D array
-    #         Descriptor values, each row for one atom.
-    #         zeta has shape (num_atoms, num_descriptors), where num_atoms is the
-    #         number of atoms in the configuration, and num_descriptors is the size
-    #         of the descriptor vector (depending on the the choice of hyper-parameters).
-
-    #     dzetadr: 4D array if grad is ``True``, otherwise ``None``
-    #         Gradient of descriptor values w.r.t. atomic coordinates.
-    #         dzetadr has shape (num_atoms, num_descriptors, num_atoms, DIM), where
-    #         num_atoms and num_descriptors has the same meanings as described in zeta.
-    #         DIM = 3 denotes three Cartesian coordinates.
-    #     """
-
-    #     # create neighbor list
-    #     infl_dist = max(self.cutoff.values())
-    #     nei = NeighborList(conf, infl_dist, padding_need_neigh=False)
-
-    #     coords = nei.coords
-    #     image = nei.image
-    #     species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
-    #     numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
-
-    #     Natoms = len(coords)
-    #     Ncontrib = conf.get_number_of_atoms()
-    #     Ndesc = len(self)
-
-    #     if grad:
-    #         zeta, dzetadr = self._cdesc.get_gen_coords_and_deri(
-    #             coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
-    #         )
-    #         # reshape 3D array to 4D array
-    #         dzetadr = dzetadr.reshape(Ncontrib, Ndesc, Ncontrib, 3)
-    #     else:
-    #         zeta = self._cdesc.get_gen_coords(
-    #             coords, species, neighlist, numneigh, image, Natoms, Ncontrib, Ndesc
-    #         )
-    #         dzetadr = None
-
-    #     if logger.getEffectiveLevel() == logging.DEBUG:
-    #         logger.debug(
-    #             '\n' + '=' * 25 + 'descriptor values (no normalization)' + '=' * 25
-    #         )
-    #         logger.debug('\nconfiguration name: %s', conf.get_identifier())
-    #         logger.debug('\natom id    descriptor values ...')
-    #         for i, line in enumerate(zeta):
-    #             s = '\n{}    '.format(i)
-    #             for j in line:
-    #                 s += '{:.15g} '.format(j)
-    #             logger.debug(s)
-
-    #     return zeta, dzetadr
-
     def transform(self, conf, fit_forces=False, fit_stress=False):
-        """Transform atomic coords to atomic environment descriptor values.
+        r"""Transform atomic coords to atomic environment descriptor values.
 
         Parameters
         ----------
@@ -462,7 +396,7 @@ class SymmetryFunction(Descriptor):
 
 
 def get_set51():
-    """Hyperparameters for symmetry functions, as discussed in:
+    r"""Hyperparameters for symmetry functions, as discussed in:
     Nongnuch Artrith and Jorg Behler. "High-dimensional neural network potentials for
     metal surfaces: A prototype study for copper." Physical Review B 85, no. 4 (2012):
     045439.
@@ -541,7 +475,7 @@ def get_set51():
 
 
 def get_set30():
-    """Hyperparameters for symmetry functions, as discussed in:
+    r"""Hyperparameters for symmetry functions, as discussed in:
     Artrith, N., Hiller, B. and Behler, J., 2013. Neural network potentials for metals and
     oxides–First applications to copper clusters at zinc oxide. physica status solidi (b),
     250(6), pp.1191-1203.

@@ -13,7 +13,7 @@ implemented_format['extxyz'] = '.xyz'
 
 
 class Configuration:
-    """Class of atomic configuration.
+    r"""Class of atomic configuration.
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ class Configuration:
         self.natoms_by_species = None  # dict
 
     def read(self, path):
-        """Read configuration stored in a file.
+        r"""Read configuration stored in a file.
 
         Parameters
         ----------
@@ -68,7 +68,7 @@ class Configuration:
             self.order_by_species()
 
     def order_by_species(self):
-        """Order the atoms according to the species."""
+        r"""Order the atoms according to the species."""
         if self.forces is not None:
             species, coords, forces = zip(
                 *sorted(
@@ -86,7 +86,7 @@ class Configuration:
             self.coords = np.asarray(coords)
 
     def count_atoms_by_species(self, symbols=None):
-        """Count the number of atoms with species `symbols` in the configuration.
+        r"""Count the number of atoms with species `symbols` in the configuration.
 
         Parameters
         ----------
@@ -114,20 +114,20 @@ class Configuration:
         return natoms_by_species
 
     def get_identifier(self):
-        """Return the identifier of the configuration, which is specified at the
+        r"""Return the identifier of the configuration, which is specified at the
         initialization of the class."""
         return self.id
 
     def get_number_of_atoms(self):
-        """Return the total number of atoms in the configuration."""
+        r"""Return the total number of atoms in the configuration."""
         return self.natoms
 
     def get_number_of_atoms_by_species(self):
-        """Return a dictionary of the number of atoms with each species."""
+        r"""Return a dictionary of the number of atoms with each species."""
         return self.count_atoms_by_species()
 
     def get_cell(self):
-        """Return a 3x3 matrix of the lattice vectors of the configurations.
+        r"""Return a 3x3 matrix of the lattice vectors of the configurations.
 
         The first, second, and third rows are :math:`a_1`, :math:`a_2`, and :math:`a_3`,
         respectively.
@@ -135,37 +135,37 @@ class Configuration:
         return self.cell.copy()
 
     def get_volume(self):
-        """Return the volume of the configuration."""
+        r"""Return the volume of the configuration."""
         return self.volume
 
     def get_PBC(self):
-        """Return a list with 3 components indicating whether periodic boundary condition
+        r"""Return a list with 3 components indicating whether periodic boundary condition
         is used along the directions of the first, second, and third lattice vectors.
         """
         return self.PBC.copy()
 
     def get_species(self):
-        """Return a list of species string of all atoms."""
+        r"""Return a list of species string of all atoms."""
         return self.species.copy()
 
     def get_coordinates(self):
-        """Return a `Nx3` matrix of the Cartesian coordinates of all atoms."""
+        r"""Return a `Nx3` matrix of the Cartesian coordinates of all atoms."""
         return self.coords.copy()
 
     def get_energy(self):
-        """Return the potential energy of the configuration."""
+        r"""Return the potential energy of the configuration."""
         if self.energy is None:
             raise DatasetError('Configuration does not contain forces.')
         return self.energy
 
     def get_forces(self):
-        """Return a `Nx3` matrix of the forces on each atoms."""
+        r"""Return a `Nx3` matrix of the forces on each atoms."""
         if self.forces is None:
             raise DatasetError('Configuration does not contain forces.')
         return self.forces.copy()
 
     def get_stress(self):
-        """Return the stress of the configuration.
+        r"""Return the stress of the configuration.
 
         It returns a list with 6 components in Voigt notation, i.e. it returns
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
@@ -180,7 +180,7 @@ class Configuration:
         return self.stress.copy()
 
     def set_weight(self, weight):
-        """Set the weight of the configuration if the loss function.
+        r"""Set the weight of the configuration if the loss function.
 
         Parameters
         ----------
@@ -190,13 +190,12 @@ class Configuration:
         self.weight = weight
 
     def get_weight(self):
-        """Get the weight of the configuration if the loss function.
-        """
+        r"""Get the weight of the configuration if the loss function."""
         return self.weight
 
 
 class Dataset:
-    """Dataset class to deal with multiple :class:`~kliff.dataset.Configuration`.
+    r"""Dataset class to deal with multiple :class:`~kliff.dataset.Configuration`.
 
     Parameters
     ----------
@@ -213,7 +212,7 @@ class Dataset:
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
     def read(self, path, fmt='extxyz'):
-        """Read an atomic configuration.
+        r"""Read an atomic configuration.
 
         Parameters
         ----------
@@ -271,7 +270,7 @@ class Dataset:
         log_entry(logger, msg, level='info')
 
     def get_configs(self):
-        """Get the configurations.
+        r"""Get the configurations.
 
         Return
         ------
@@ -285,7 +284,7 @@ class Dataset:
 
 
 def read_config(path, fmt='extxyz'):
-    """Read configuration stored in a file.
+    r"""Read configuration stored in a file.
 
     Parameters
     ----------
@@ -337,7 +336,7 @@ def read_config(path, fmt='extxyz'):
 def write_config(
     path, cell, PBC, species, coords, energy=None, forces=None, stress=None, fmt='extxyz'
 ):
-    """
+    r"""
     Write a configuration to a file in the specified format.
 
     Parameters

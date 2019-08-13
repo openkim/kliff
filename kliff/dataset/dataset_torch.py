@@ -4,7 +4,7 @@ from ..descriptors.descriptor import load_fingerprints
 
 
 class FingerprintsDataset(Dataset):
-    """Atomic environment fingerprints dataset.
+    r"""Atomic environment fingerprints dataset.
 
     Parameters
     ----------
@@ -30,7 +30,7 @@ class FingerprintsDataset(Dataset):
 
 
 def fingerprints_collate_fn(batch):
-    """Convert a batch of samples into tensor.
+    r"""Convert a batch of samples into tensor.
 
     Unlike the default_collate_fn(), which stack samples in the batch (requiring each
     sample having the same dimension), this function does not do the stack.

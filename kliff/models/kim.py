@@ -15,7 +15,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class KIMComputeArguments(ComputeArguments):
-    """KIM potentials arguments
+    r"""KIM potentials arguments.
 
     Parameters
     ----------
@@ -119,7 +119,7 @@ class KIMComputeArguments(ComputeArguments):
         self.register_data(self.compute_energy, self.compute_forces)
 
     def update_neigh(self, influence_distance):
-        """Update neighbor list and model input.
+        r"""Update neighbor list and model input.
 
         Parameters
         ----------
@@ -188,7 +188,7 @@ class KIMComputeArguments(ComputeArguments):
         check_error(error, 'nl.build')
 
     def register_data(self, compute_energy=True, compute_forces=True):
-        """ Register model input and output data in KIM API."""
+        r"""Register model input and output data in KIM API."""
 
         # check whether model support energy and forces
         kim_can = kimpy.compute_argument_name
@@ -303,7 +303,7 @@ class KIM(Model):
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
     def _initialize(self):
-        """ Initialize the KIM object"""
+        r"""Initialize the KIM object"""
         units_accepted, model, error = kimpy.model.create(
             kimpy.numbering.zeroBased,
             kimpy.length_unit.A,
@@ -319,7 +319,7 @@ class KIM(Model):
         return model
 
     def inquire_params(self):
-        """Inquire the KIM model to get all parameters. """
+        r"""Inquire the KIM model to get all parameters. """
         params = OrderedDict()
 
         num_params = self.kim_model.get_number_of_parameters()
@@ -380,11 +380,11 @@ class KIM(Model):
             log_entry(logger, s, level='debug')
 
     def get_influence_distance(self):
-        """Return the influence distance of a model."""
+        r"""Return the influence distance of a model."""
         return self.kim_model.get_influence_distance()
 
     def get_supported_species(self):
-        """Get all the supported species.
+        r"""Get all the supported species.
 
         Return
         ------
@@ -407,7 +407,7 @@ class KIM(Model):
         return species
 
     def write_kim_model(self, path=None):
-        """Write out a KIM model that can be used directly with the kim-api.
+        r"""Write out a KIM model that can be used directly with the kim-api.
 
         This function typically write two files to `path`: (1) CMakeLists.txt, and (2)
         a parameter file like A.params. `path` will be created if it does not exist.

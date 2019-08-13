@@ -8,7 +8,10 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class ModelTorch(nn.Module):
-    """Base class for machine learning models."""
+    r"""Base class for machine learning models.
+
+    Typically, a user will not directly use this.
+    """
 
     def __init__(self, descriptor, seed=35):
         super(ModelTorch, self).__init__()
@@ -39,7 +42,7 @@ class ModelTorch(nn.Module):
         )
 
     def set_save_metadata(self, prefix, start, frequency):
-        """Set metadata that controls how the model are saved during training.
+        r"""Set metadata that controls how the model are saved during training.
 
         If this function is called before minimization starts, the model will be
         saved to the directory specified by ``prefix`` every ``frequency``
@@ -63,7 +66,7 @@ class ModelTorch(nn.Module):
         self.save_frequency = int(frequency)
 
     def save(self, path):
-        """Save a model to disk.
+        r"""Save a model to disk.
 
         Parameters
         ----------
@@ -81,7 +84,7 @@ class ModelTorch(nn.Module):
         self.descriptor.dump_mean_stdev(fname)
 
     def load(self, path, mode):
-        """Load a model on disk into memory.
+        r"""Load a model on disk into memory.
 
         Parameters
         ----------

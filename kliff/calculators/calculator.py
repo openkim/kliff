@@ -7,7 +7,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class Calculator:
-    """ Calculator class to exchange information between model and an optimizer.
+    r"""Calculator class to exchange information between model and an optimizer.
 
     It computes the `energy`, `forces`, etc. using a potential model, and provides these
     properties, together with the corresponding reference data, to
@@ -25,7 +25,7 @@ class Calculator:
         self.model = model
 
     def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
-        """Create compute arguments for a collection of configurations.
+        r"""Create compute arguments for a collection of configurations.
 
         By compute arguments, we mean the information needed by a model to carry on a
         calculation, such as the coordinates, species, cutoff distance, neighbor list,
@@ -102,14 +102,13 @@ class Calculator:
         return self.model.__class__.__name__ == 'KIM'
 
     def get_compute_arguments(self):
-        """Return a list of compute arguments, each associated with a configuration.
-        """
+        r"""Return a list of compute arguments, each associated with a configuration."""
         return self.compute_arguments
 
     # TODO, maybe change the compute_argument.compute api of kim models, such
     # that it accept params as the argument, insteand of kim_model
     def compute(self, compute_arguments):
-        """Compute the properties given the compute arguments associated with a
+        r"""Compute the properties given the compute arguments associated with a
         configuration.
 
         Parameters
@@ -130,7 +129,7 @@ class Calculator:
 
     # TODO, possibly, and an argument `reference` to get reference values
     def get_energy(self, compute_arguments):
-        """Get the energy of a configuration.
+        r"""Get the energy of a configuration.
 
         Parameters
         ----------
@@ -145,7 +144,7 @@ class Calculator:
         return compute_arguments.get_energy()
 
     def get_forces(self, compute_arguments):
-        """Get the forces of a configuration.
+        r"""Get the forces of a configuration.
 
         Parameters
         ----------
@@ -161,7 +160,7 @@ class Calculator:
         return compute_arguments.get_forces()
 
     def get_stress(self, compute_arguments):
-        """Get the stress of a configuration.
+        r"""Get the stress of a configuration.
 
         Parameters
         ----------
@@ -181,7 +180,7 @@ class Calculator:
 
     # TODO maybe move this and `get_reference` to loss.
     def get_prediction(self, compute_arguments):
-        """Get the prediction of all properties that are requested to compute.
+        r"""Get the prediction of all properties that are requested to compute.
 
         The `energy`, `forces`, and `stress` are each flattened to a 1D array, and then
         concatenated (in the order of `energy`, `forces`, and `stress`) to form the
@@ -213,7 +212,7 @@ class Calculator:
         return compute_arguments.get_prediction()
 
     def get_reference(self, compute_arguments):
-        """Get the reference data of all properties that are requested to compute.
+        r"""Get the reference data of all properties that are requested to compute.
 
         Same as :meth:`get_prediction`, the `energy`, `forces`, and `stress` are each
         flattened to a 1D array, and then concatenated (in the order of `energy`,
@@ -246,7 +245,7 @@ class Calculator:
         return compute_arguments.get_reference()
 
     def get_opt_params(self):
-        """Return a list of optimizing parameters.
+        r"""Return a list of optimizing parameters.
 
         The optimizing parameters is a list consisting of the values of the model
         parameters that is set to fit via :meth:`kliff.models.Model.set_fitting_params` or
@@ -256,13 +255,13 @@ class Calculator:
         return self.model.get_opt_params()
 
     def has_opt_params_bounds(self):
-        """Return a bool to indicate whether there are parameters whose bounds are
+        r"""Return a bool to indicate whether there are parameters whose bounds are
         provided.
         """
         return self.model.has_opt_params_bounds()
 
     def get_opt_params_bounds(self):
-        """Return the lower and upper bounds for the optimizing parameters.
+        r"""Return the lower and upper bounds for the optimizing parameters.
 
         The returned value is a list of (lower, upper) tuples. Each tuple contains the
         lower and upper bounds for the corresponding parameter obtained from
@@ -272,7 +271,7 @@ class Calculator:
         return self.model.get_opt_params_bounds()
 
     def update_opt_params(self, opt_params):
-        """Update the optimizing parameters from optimizer to model.
+        r"""Update the optimizing parameters from optimizer to model.
 
         This function is the reverse of :meth:`get_opt_params`.
 

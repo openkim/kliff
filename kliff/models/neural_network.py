@@ -9,7 +9,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class NeuralNetwork(ModelTorch):
-    """Neural Network model.
+    r"""Neural Network model.
 
     A feed-forward neural network model.
 
@@ -31,7 +31,7 @@ class NeuralNetwork(ModelTorch):
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
     def add_layers(self, *layers):
-        """Add layers to the sequential model.
+        r"""Add layers to the sequential model.
 
         Parameters
         ----------
@@ -260,7 +260,7 @@ class NeuralNetwork(ModelTorch):
         activ_layer=['Sigmoid', 'Tanh', 'ReLU', 'ELU'],
         dropout_layer=['Dropout'],
     ):
-        """Divide all the layers into groups.
+        r"""Divide all the layers into groups.
 
         The first group is either an empty list or a `Dropout` layer for the input layer.
         The last group typically contains only a `Linear` layer.  For other groups, each
@@ -307,7 +307,7 @@ class NeuralNetwork(ModelTorch):
         return groups, param_layer, activ_layer, dropout_layer
 
     def _get_weights_and_biases(self):
-        """Get weights and biases of all layers that have weights and biases."""
+        r"""Get weights and biases of all layers that have weights and biases."""
 
         groups, supported, _, _ = self._group_layers()
 
@@ -325,7 +325,7 @@ class NeuralNetwork(ModelTorch):
         return weights, biases
 
     def _get_activations(self):
-        """Get the activation of all layers."""
+        r"""Get the activation of all layers."""
 
         groups, _, supported, _ = self._group_layers()
 
@@ -339,7 +339,7 @@ class NeuralNetwork(ModelTorch):
         return activations
 
     def _get_drop_ratios(self):
-        """Get the dropout ratio of all layers."""
+        r"""Get the dropout ratio of all layers."""
 
         groups, _, _, supported = self._group_layers()
 

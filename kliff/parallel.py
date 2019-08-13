@@ -4,7 +4,7 @@ import numpy as np
 
 
 def parmap1(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
-    """Parallelism over data.
+    r"""Parallelism over data.
 
     This function mimics ``multiprocessing.Pool.map`` to allow extra arguments to be used
     for the function ``f``.
@@ -97,7 +97,7 @@ def _func1(f, q_in, q_out):
 
 
 def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
-    """Parallelism over data.
+    r"""Parallelism over data.
 
     This is to mimic ``multiprocessing.Pool.map``, which requires the function ``f`` to be
     picklable. This function does not have this restriction and allows extra arguments to

@@ -9,8 +9,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class LinearRegression(ModelTorch):
-    """Linear regression model.
-    """
+    r"""Linear regression model."""
 
     def __init__(self, descriptor, seed=35):
         super(LinearRegression, self).__init__(descriptor, seed)
@@ -22,7 +21,7 @@ class LinearRegression(ModelTorch):
         return self.layer(x)
 
     def fit(self, path):
-        """Fit the model using analytic solution."""
+        r"""Fit the model using analytic solution."""
         fp = FingerprintsDataset(path)
 
         loader = DataLoader(dataset=fp, batch_size=1, collate_fn=fingerprints_collate_fn)
@@ -38,7 +37,7 @@ class LinearRegression(ModelTorch):
         print(msg)
 
     def set_params(self, beta):
-        """Set linear weight and bias.
+        r"""Set linear weight and bias.
 
         Parameters
         ----------

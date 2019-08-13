@@ -52,7 +52,7 @@ class energy_forces_RMSE:
         self.compute_forces = forces
 
     def run(self, normalize=True, verbose=1, sort=None, path=None):
-        """Run the RMSE analyzer.
+        r"""Run the RMSE analyzer.
 
         Parameters
         ----------

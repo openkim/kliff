@@ -7,8 +7,7 @@ def length_equal(a, b):
             return True
         else:
             return False
-    # if one is Iterable and the other is not, we treat them as equal since it
-    # can be broadcasted
+    # If one is Iterable and the other not, we treat them as equal because of broadcast
     else:
         return True
 
@@ -23,7 +22,7 @@ def check_torch_available():
 
 
 def split_string(string, length=80, starter=None):
-    """Insert `\n` into long string such that each line has size no more than `length`.
+    r"""Insert `\n` into long string such that each line has size no more than `length`.
     """
 
     if starter is not None:
@@ -44,4 +43,4 @@ def split_string(string, length=80, starter=None):
         sub_string.append(sub)
         string = string[end:]
 
-    return '\n'.join(sub_string)
+    return r'\n'.join(sub_string)
