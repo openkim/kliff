@@ -202,7 +202,7 @@ class Descriptor:
         fit_stress,
     ):
 
-        msg = 'Pickle fingerprints to "{}"'.format(fname)
+        msg = 'Pickling fingerprints to "{}"'.format(fname)
         log_entry(logger, msg, level='info')
 
         dirname = os.path.dirname(os.path.abspath(fname))
@@ -235,7 +235,7 @@ class Descriptor:
                         dzetadr_s = dzetadr_s / stdev_3d
 
                 # pickling data
-                name = conf.get_identifier()
+                identifier = conf.get_identifier()
                 species = conf.get_species()
                 species = np.asarray([atomic_number[i] for i in species], np.intc)
                 weight = np.asarray(conf.get_weight(), self.dtype)
@@ -250,7 +250,8 @@ class Descriptor:
                     volume = np.asarray(conf.get_volume(), self.dtype)
 
                 example = {
-                    'name': name,
+                    'configuration': conf,
+                    'identifier': identifier,
                     'species': species,
                     'weight': weight,
                     'zeta': zeta,
@@ -266,7 +267,7 @@ class Descriptor:
 
                 pickle.dump(example, f)
 
-        msg = 'Pickling {} configurations finished.'.format(len(configs))
+        msg = 'Pickle {} configurations finished.'.format(len(configs))
         log_entry(logger, msg, level='info')
 
     def calc_zeta_dzetadr(self, configs, fit_forces, fit_stress, nprocs=mp.cpu_count()):

@@ -736,7 +736,7 @@ class LossNeuralNetworkModel(object):
                 pred = pred_stress.reshape(-1)
                 ref = ref_stress.reshape(-1)
 
-        identifier = sample['name']
+        identifier = sample['identifier']
         species = sample['species']
         natoms = len(species)
 

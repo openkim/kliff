@@ -1,6 +1,6 @@
 import os
-
 import sys
+from collections.abc import Iterable
 import numpy as np
 from ..dataset import write_config
 from ..utils import split_string
@@ -88,7 +88,7 @@ class energy_forces_RMSE:
         all_identifier = []
 
         # common path of dataset
-        ids = [ca.conf.get_identifier() for ca in cas]
+        ids = [_get_config(ca).get_identifier() for ca in cas]
         common = _get_common_path(ids)
 
         for ca in cas:
@@ -98,7 +98,7 @@ class energy_forces_RMSE:
             )
             all_enorm.append(enorm)
             all_fnorm.append(fnorm)
-            all_identifier.append(ca.conf.get_identifier())
+            all_identifier.append(_get_config(ca).get_identifier())
         all_enorm = np.asarray(all_enorm)
         all_fnorm = np.asarray(all_fnorm)
         all_identifier = np.asarray(all_identifier)
@@ -115,7 +115,6 @@ class energy_forces_RMSE:
                 all_enorm = all_enorm[order]
                 all_fnorm = all_fnorm[order]
                 all_identifier = all_identifier[order]
-        # else silently ignore
 
         if path is not None:
             fout = open(path, 'w')
@@ -186,12 +185,13 @@ class energy_forces_RMSE:
     def compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 
         self.calculator.compute(ca)
-        conf = ca.conf
+        conf = _get_config(ca)
         identifier = os.path.abspath(conf.get_identifier())
         natoms = conf.get_number_of_atoms()
 
         if self.compute_energy:
             pred_e = self.calculator.get_energy(ca)
+            pred_e = _to_numpy(pred_e, ca)
             ref_e = conf.get_energy()
             ediff = pred_e - ref_e
             enorm = abs(ediff)
@@ -203,7 +203,8 @@ class energy_forces_RMSE:
 
         if self.compute_forces:
             pred_f = self.calculator.get_forces(ca)
-            ref_f = conf.get_forces()
+            pred_f = _to_numpy(pred_f, ca).reshape(-1, 3)
+            ref_f = conf.get_forces().reshape(-1, 3)
             fdiff = pred_f - ref_f
             fnorm = np.linalg.norm(fdiff)
             if normalize:
@@ -241,6 +242,34 @@ class energy_forces_RMSE:
             )
 
         return enorm, fnorm
+
+
+def _get_config(compute_argument):
+    """Get the configuration attached to a compute argument.
+
+    For KIM model and Torch model, the way is different. It would be better to unify these
+    two. The method here is very vulnerable.
+    """
+    if isinstance(compute_argument, Iterable):
+        # compute argument from Torch dataset; [0] because it is a batch of 1 element
+        conf = compute_argument[0]['configuration']
+    else:
+        # For KIM and built-in models, it is a compute argument class
+        conf = compute_argument.conf
+
+    return conf
+
+
+def _to_numpy(x, compute_argument):
+    """Convert to a numpy array from a tensor.
+
+    `compute_argument` is needed to determine whether ``x`` is a list of tensor of a numpy
+    array.
+    """
+    if isinstance(compute_argument, Iterable):
+        return x[0].detach().numpy()
+    else:
+        return x
 
 
 def _get_common_path(paths):

@@ -108,7 +108,6 @@ dataset_name = 'Si_training_set/varying_alat'
 tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
-print('Number of configurations:', len(configs))
 
 # calculator
 calc = CalculatorTorch(model)

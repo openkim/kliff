@@ -171,6 +171,9 @@ class CalculatorTorch:
         if not self.use_stress:
             stress_config = None
 
+        self.results['energy'] = energy_config
+        self.results['forces'] = forces_config
+        self.results['stress'] = stress_config
         return {'energy': energy_config, 'forces': forces_config, 'stress': stress_config}
 
     @staticmethod
@@ -182,6 +185,15 @@ class CalculatorTorch:
     def compute_stress(denergy_dzeta, dzetadr, volume):
         forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
         return forces
+
+    def get_energy(self, batch):
+        return self.results['energy']
+
+    def get_forces(self, batch):
+        return self.results['forces']
+
+    def get_stress(self, batch):
+        return self.results['stress']
 
 
 class CalculatorTorchDDPCPU(CalculatorTorch):
