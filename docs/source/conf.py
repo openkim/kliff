@@ -14,6 +14,7 @@
 #
 import os
 import sys
+
 # sys.path.insert(0, os.path.abspath('.'))
 
 # this should be the path to the package, not the source
@@ -87,9 +88,9 @@ language = None
 exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
-#pygments_style = 'sphinx'
+# pygments_style = 'sphinx'
 pygments_style = 'default'
-#pygments_style = None
+# pygments_style = None
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -97,16 +98,14 @@ pygments_style = 'default'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-#html_theme = 'alabaster'
+# html_theme = 'alabaster'
 html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {
-    'logo_only': True,  # shows only the logo with no title text
-}
+html_theme_options = {'logo_only': True}  # shows only the logo with no title text
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -140,15 +139,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -158,8 +154,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'KLIFF.tex', 'KLIFF Documentation',
-     'Mingjian Wen', 'manual'),
+    (master_doc, 'KLIFF.tex', 'KLIFF Documentation', 'Mingjian Wen', 'manual')
 ]
 
 
@@ -167,10 +162,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'kliff', 'KLIFF Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, 'kliff', 'KLIFF Documentation', [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -179,9 +171,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'KLIFF', 'KLIFF Documentation',
-     author, 'KLIFF', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        'KLIFF',
+        'KLIFF Documentation',
+        author,
+        'KLIFF',
+        'One line description of project.',
+        'Miscellaneous',
+    )
 ]
 
 
@@ -208,8 +206,16 @@ epub_exclude_files = ['search.html']
 # https://docs.readthedocs.io/en/stable/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
 # This is useful when some external dependencies are not installed at build time,
 # which can break the building process.
-autodoc_mock_imports = ['numpy', 'scipy', 'scipy.optimize', 'kimpy', 'yaml', 'ase',
-                        'torch', 'tensorflow']
+autodoc_mock_imports = [
+    'numpy',
+    'scipy',
+    'scipy.optimize',
+    'kimpy',
+    'yaml',
+    'ase',
+    'torch',
+    'tensorflow',
+]
 
 # do not sort member functions of a class
 autodoc_member_order = 'bysource'
@@ -217,16 +223,13 @@ autodoc_member_order = 'bysource'
 # -- Math setup --------------------------------------------------------------
 # imgmath settings
 imgmath_image_format = 'svg'
-imgmath_latex_preamble = '\usepackage{bm}\n\usepackage{amsmath}\n'
+imgmath_latex_preamble = '\\usepackage{bm} \\usepackage{amsmath}'
 
 
 # -- sphinx-galley setup ------------------------------------------------------
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',  # path to your example scripts
     'gallery_dirs': 'auto_examples',  # path where to save gallery generated examples
-    'filename_pattern': '/example_',  # include files with names 'example_'; '/'
-                                      # matches the directory name separator
-    # exclude files without name '/example_'
-    'ignore_pattern': '^((?!/example_).)*$',
-    # 'plot_gallery': 'False',  # do not run examples while building
+    'filename_pattern': '/example_',  # include files with names 'example_'; '/' matches the directory name separator
+    'ignore_pattern': '^((?!/example_).)*$',  # exclude files without name '/example_'
 }
