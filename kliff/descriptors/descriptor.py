@@ -414,16 +414,13 @@ class Descriptor:
                 stdev = data['stdev']
         except Exception as e:
             msg = 'Cannot load mean and standard data from "{}". {}'.format(path, str(e))
-            log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
 
         if len(mean.shape) != 1 or mean.shape[0] != self.get_size():
             msg = 'Corrupted mean data from "{}".'.format(path)
-            log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
         if len(stdev.shape) != 1 or stdev.shape[0] != self.get_size():
             msg = 'Corrupted standard deviation data from "{}".'.format(path)
-            log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
 
         self.mean, self.stdev = mean, stdev
@@ -456,7 +453,6 @@ def load_fingerprints(path):
             pass
         except Exception as e:
             msg = 'Cannot fingerprints from "{}". {}'.format(path, str(e))
-            log_entry(logger, msg, level='error')
             raise DescriptorError(msg)
 
     return data
@@ -465,7 +461,7 @@ def load_fingerprints(path):
 def generate_full_cutoff(cutoff):
     r"""Generate a full binary cutoff dictionary.
 
-    For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it, which
+    For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it, with
     the same value as `S1-S2`.
 
     Parameters
@@ -489,9 +485,49 @@ def generate_full_cutoff(cutoff):
     for key, val in cutoff.items():
         s1, s2 = key.split('-')
         if s1 != s2:
-            rcut2[s2 + '-' + s1] = val
+            reverse_key = s2 + '-' + s1
+            if reverse_key in cutoff and cutoff[reverse_key] != val:
+                raise Exception(
+                    'Corrupted cutoff dictionary. cutoff["{0}-{1}"] != '
+                    'cutoff["{1}-{0}"].'.format(s1, s2)
+                )
+            else:
+                rcut2[reverse_key] = val
     # merge
     rcut2.update(cutoff)
+
+    return rcut2
+
+
+def generate_unique_cutoff_pairs(cutoff):
+    r"""Generate a full binary cutoff dictionary.
+
+    For species pair `S1-S2` in the ``cutoff`` dictionary, remove key `S2-S1` from it if
+    `S1` is different from `S2`.
+
+    Parameters
+    ----------
+    cutoff: dict
+        Cutoff dictionary with key of the form ``A-B`` where ``A`` and ``B`` are atomic
+        species, and value should be a float.
+
+    Return
+    ------
+    dict
+        A dictionary with unique species pair as keys.
+
+    Example
+    -------
+    >>> cutoff = {'C-C': 4.0, 'C-H':3.5, 'H-C':3.5}
+    >>> generate_unique_cutoff_pairs(cutoff)
+        {'C-C': 4.0, 'C-H':3.5}
+    """
+    rcut2 = dict()
+    for key, val in cutoff.items():
+        s1, s2 = key.split('-')
+        reverse_key = s2 + '-' + s1
+        if key not in rcut2 and reverse_key not in rcut2:
+            rcut2[key] = val
 
     return rcut2
 
@@ -507,9 +543,9 @@ def generate_species_code(cutoff):
 
     Return
     ------
-    species: dict
-        A dictionary of species and the integer code, with keys the species in ``cutoff``
-        keys, and values integer code for species.
+    species_code: dict
+        A dictionary of species and the integer code (starting from 0), with keys the
+        species in ``cutoff`` keys, and values integer code for species.
 
     Example
     -------
