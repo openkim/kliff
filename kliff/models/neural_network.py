@@ -96,6 +96,8 @@ class NeuralNetwork(ModelTorch):
             modelname = os.path.basename(path)
         if not os.path.exists(path):
             os.makedirs(path)
+        if driver_name is None:
+            driver_name = 'DUNN_WT__MD_000000111111_000'
 
         desc_name = 'descriptor.params'
         nn_name = 'NN.params'
