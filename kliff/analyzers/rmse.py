@@ -4,6 +4,7 @@ from collections.abc import Iterable
 import numpy as np
 from ..dataset import write_config
 from ..utils import split_string
+from ..log import log_entry
 
 import kliff
 
@@ -79,8 +80,11 @@ class energy_forces_RMSE:
             the file specified by `path`.
             Note, if ``verbose==3``, the difference of energy and forces will be written
             to a directory named `energy_forces_RMSE-difference`.
-
         """
+
+        msg = 'Start analyzing energy and forces RMSE.'
+        log_entry(logger, msg, level='info')
+
         cas = self.calculator.get_compute_arguments()
 
         all_enorm = []
@@ -91,7 +95,10 @@ class energy_forces_RMSE:
         ids = [_get_config(ca).get_identifier() for ca in cas]
         common = _get_common_path(ids)
 
-        for ca in cas:
+        for i, ca in enumerate(cas):
+            if i % 100 == 0:
+                msg = 'Processing configuration {}.'.format(i)
+                log_entry(logger, msg, level='info')
             prefix = 'energy_forces_RMSE-difference'
             enorm, fnorm = self._compute_single_config(
                 ca, normalize, verbose, common, prefix
@@ -181,6 +188,9 @@ class energy_forces_RMSE:
             )
             print(split_string(msg, length=80, starter='#'), file=fout)
             print('\n', file=fout)
+
+        msg = 'Finish analyzing energy and forces RMSE.'
+        log_entry(logger, msg, level='info')
 
     def _compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 
