@@ -16,7 +16,7 @@ before_install:
 
   # keep record of kliff directory
   - export KLIFF_DIR=$PWD
-  - export KIM_API_VERSION=2.0.2
+  - export KIM_API_VERSION=2.1.2
 
 
 
@@ -36,7 +36,7 @@ install:
   - kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_005
 
   # kimpy
-  - pip install kimpy
+  - pip install kimpy==0.3.0
 
 
 script:
