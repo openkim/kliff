@@ -5,9 +5,9 @@ from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 
 
-def residual_fn(identifier, natoms, prediction, reference, data):
+def residual_fn(identifier, natoms, weight, prediction, reference, data):
     assert len(prediction) == 3 * natoms + 1
-    return prediction - reference
+    return weight * (prediction - reference)
 
 
 def init():

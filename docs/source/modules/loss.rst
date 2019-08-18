@@ -63,7 +63,7 @@ The residual is computed using the ``residual_fn``, which should be of the form
 
 .. code-block:: python
 
-    def residual_fn(identifier, natoms, prediction, reference, data):
+    def residual_fn(identifier, natoms, weight, prediction, reference, data):
         """ A function to compute the residual for a configuration.
         """
 
@@ -78,6 +78,7 @@ In the above residual function,
   there, ``identifier`` is default to the path to the file that storing the
   configuration, e.g. ``Si_training_set/NVT_runs/T300_step100.xyz``.
 - ``natoms`` is an ``int`` denoting the number of atoms in the configuration.
+- ``weight`` is a ``float`` specifying the weight for the configuration.
 - ``prediction`` is a vector of the prediction :math:`\bm p` computed from the
   potential.
 - ``reference`` is a vector of the corresponding reference data :math:`\bm q`.
@@ -97,43 +98,33 @@ that constructs the residual using energy and forces is defined as (in a nutshel
 
 .. code-block:: python
 
-    def energy_forces_residual(identifier, natoms, prediction, reference, data):
+    def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
 
         # prepare weight based on user provided data
         energy_weight = data['energy_weight']
         forces_weight = data['forces_weight']
-        normalize_by_natoms  = data['normalize_by_natoms']
-        if energy_weight is None:
-            energy_weight = 1.
-        if forces_weight is None:
-            forces_weight = 1.
-        if normalize_by_natoms:
+        normalize = data['normalize_by_natoms']
+        if normalize:
             energy_weight /= natoms
             forces_weight /= natoms
 
         # obtain residual and properly normalize it
-        residual = prediction - reference
+        residual = weight * (prediction - reference)
         residual[0] *= energy_weight
         residual[1:] *= forces_weight
 
         return residual
 
-This residual function can weigh ``energy`` and ``forces`` differently, and
-enables the normalization of the residual based on the number of atoms.
-Normalization by the number of atoms makes each individual configuration in the
-training set contributes equally to the loss function; otherwise, configurations
-with more atoms will dominate the loss, which (most of the times) is not what we
-prefer.
 
-.. note::
-    We take the square root of ``energy_weight`` and ``forces_weight`` in
-    ``energy_forces_residual``. With this, the final loss is proportional to the
-    number of atoms instead of the square of the number of atoms as can be seen
-    in the definition of :math:`\mathcal{L(\bm\theta)}`.
+This residual function can weigh ``energy`` and ``forces`` differently, and enables the
+normalization of the residual based on the number of atoms.  Normalization by the number
+of atoms makes each individual configuration in the training set contributes equally to
+the loss function; otherwise, configurations with more atoms can dominate the loss, which
+(most of the times) is not what we prefer.
 
 
-One can provide a ``residual_data`` instead of using the default one to control
-tune the loss. In the below example, the `energy` is weighed 10 times as the
+One can provide a ``residual_data`` instead of using the default one to tune the loss. In
+the below example, the `energy` is weighed 10 times as the
 `forces`.
 
 .. code-block:: python
@@ -176,7 +167,7 @@ weigh more for the configurations with cracks.
     from kliff.loss import Loss
 
     # define my own residual function
-    def residual_fn(identifier, natoms, prediction, reference, data):
+    def residual_fn(identifier, natoms, weight, prediction, reference, data):
 
         energy_weight = 1./natoms
         forces_weight = 1./natoms

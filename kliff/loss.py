@@ -24,7 +24,7 @@ except ImportError:
 logger = kliff.logger.get_logger(__name__)
 
 
-def energy_forces_residual(identifier, natoms, prediction, reference, data):
+def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
     r"""A residual function using both energy and forces.
 
     Parameters
@@ -34,6 +34,9 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
 
     natoms: int
         number of atoms in the configuration
+
+    weight: float
+        weight for the configuration
 
     prediction: 1D array
         prediction computed by calculator
@@ -86,7 +89,7 @@ def energy_forces_residual(identifier, natoms, prediction, reference, data):
         forces_weight /= natoms
 
     # obtain residual and properly normalize it
-    residual = prediction - reference
+    residual = weight * (prediction - reference)
     residual[0] *= energy_weight
     residual[1:] *= forces_weight
 
@@ -537,8 +540,9 @@ class LossPhysicsMotivatedModel(object):
         conf = ca.conf
         identifier = conf.get_identifier()
         natoms = conf.get_number_of_atoms()
+        weight = conf.get_weight()
 
-        residual = residual_fn(identifier, natoms, pred, ref, residual_data)
+        residual = residual_fn(identifier, natoms, weight, pred, ref, residual_data)
 
         return residual
 
@@ -772,9 +776,12 @@ class LossNeuralNetworkModel(object):
 
         identifier = sample['identifier']
         species = sample['species']
+        weight = sample['weight']
         natoms = len(species)
 
-        residual = self.residual_fn(identifier, natoms, pred, ref, self.residual_data)
+        residual = self.residual_fn(
+            identifier, natoms, weight, pred, ref, self.residual_data
+        )
         loss = torch.sum(torch.pow(residual, 2))
 
         return loss
