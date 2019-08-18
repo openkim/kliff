@@ -6,7 +6,6 @@ import multiprocessing as mp
 import kliff
 from .. import parallel
 from ..log import log_entry
-from ..atomic_data import atomic_number
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -235,10 +234,6 @@ class Descriptor:
                         dzetadr_s = dzetadr_s / stdev_3d
 
                 # pickling data
-                identifier = conf.get_identifier()
-                species = conf.get_species()
-                species = np.asarray([atomic_number[i] for i in species], np.intc)
-                weight = np.asarray(conf.get_weight(), self.dtype)
                 zeta = np.asarray(zeta, self.dtype)
                 energy = np.asarray(conf.get_energy(), self.dtype)
                 if fit_forces:
@@ -249,14 +244,7 @@ class Descriptor:
                     stress = np.asarray(conf.get_stress(), self.dtype)
                     volume = np.asarray(conf.get_volume(), self.dtype)
 
-                example = {
-                    'configuration': conf,
-                    'identifier': identifier,
-                    'species': species,
-                    'weight': weight,
-                    'zeta': zeta,
-                    'energy': energy,
-                }
+                example = {'configuration': conf, 'zeta': zeta, 'energy': energy}
                 if fit_forces:
                     example['dzetadr_forces'] = dzetadr_f
                     example['forces'] = forces

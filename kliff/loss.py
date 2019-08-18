@@ -774,10 +774,10 @@ class LossNeuralNetworkModel(object):
                 pred = pred_stress.reshape(-1)
                 ref = ref_stress.reshape(-1)
 
-        identifier = sample['identifier']
-        species = sample['species']
-        weight = sample['weight']
-        natoms = len(species)
+        conf = sample['configuration']
+        identifier = conf.get_identifier()
+        natoms = conf.get_number_of_atoms()
+        weight = conf.get_weight()
 
         residual = self.residual_fn(
             identifier, natoms, weight, pred, ref, self.residual_data
