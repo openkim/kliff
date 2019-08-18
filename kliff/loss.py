@@ -588,9 +588,12 @@ class LossNeuralNetworkModel(object):
 
         self.calculator_type = calculator.__class__.__name__
 
+        self.optimizer = None
+        self.optimizer_stat_path = None
+
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
-    def minimize(self, method, batch_size=100, num_epochs=1000, **kwargs):
+    def minimize(self, method, batch_size=100, num_epochs=1000, start_epoch=0, **kwargs):
         r"""Minimize the loss.
 
         Parameters
@@ -607,6 +610,10 @@ class LossNeuralNetworkModel(object):
         num_epochs: int
             Number of epochs to carry out the minimization.
 
+        start_epoch: int
+            The starting epoch number. This is typically 0, but if continuing a training,
+            it is useful to set this to the last epoch number of the previous training.
+
         kwargs: dict
             Extra keyword arguments that can be used by the PyTorch optimizer.
         """
@@ -618,6 +625,7 @@ class LossNeuralNetworkModel(object):
         self.method = method
         self.batch_size = batch_size
         self.num_epochs = num_epochs
+        self.start_epoch = start_epoch
 
         # data loader
         loader = self.calculator.get_compute_arguments(batch_size)
@@ -643,9 +651,12 @@ class LossNeuralNetworkModel(object):
 
         # optimizing
         try:
-            optimizer = getattr(torch.optim, method)(
+            self.optimizer = getattr(torch.optim, method)(
                 self.calculator.model.parameters(), **kwargs
             )
+            if self.optimizer_stat_path is not None:
+                self._load_optimizer_stat(self.optimizer_stat_path)
+
         except TypeError as e:
             print(str(e))
             idx = str(e).index("argument '") + 10
@@ -654,29 +665,48 @@ class LossNeuralNetworkModel(object):
             log_entry(logger, msg, level='error')
             raise InputError(msg)
 
-        for epoch in range(self.num_epochs):
+        for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
 
-            epoch_loss = 0
-            for ib, batch in enumerate(loader):
+            # get the loss without any optimization if continue a training
+            if self.start_epoch != 0 and epoch == self.start_epoch:
+                epoch_loss = self._get_loss_epoch(loader)
+                print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch, epoch_loss))
 
-                def closure():
-                    optimizer.zero_grad()
-                    loss = self.get_loss_batch(batch)
-                    loss.backward()
-                    return loss
+            else:
+                epoch_loss = 0
+                for ib, batch in enumerate(loader):
 
-                loss = optimizer.step(closure)
-                # float() such that do not accumulate history, more memory friendly
-                epoch_loss += float(loss)
+                    def closure():
+                        self.optimizer.zero_grad()
+                        loss = self.get_loss_batch(batch)
+                        loss.backward()
+                        return loss
 
-            print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch + 1, epoch_loss))
-            if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
-                fname = 'model_epoch{}.pkl'.format(epoch)
-                path = os.path.join(save_prefix, fname)
-                self.calculator.model.save(path)
+                    loss = self.optimizer.step(closure)
+                    # float() such that do not accumulate history, more memory friendly
+                    epoch_loss += float(loss)
+
+                print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch, epoch_loss))
+                if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
+                    path = os.path.join(save_prefix, 'model_epoch{}.pkl'.format(epoch))
+                    self.calculator.model.save(path)
+
+        # print loss from final parameter and save last epoch
+        epoch += 1
+        epoch_loss = self._get_loss_epoch(loader)
+        print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch, epoch_loss))
+        path = os.path.join(save_prefix, 'model_epoch{}.pkl'.format(epoch))
+        self.calculator.model.save(path)
 
         msg = 'Finish minimization using optimization method: {}.'.format(self.method)
         log_entry(logger, msg, level='info')
+
+    def _get_loss_epoch(self, loader):
+        epoch_loss = 0
+        for ib, batch in enumerate(loader):
+            loss = self.get_loss_batch(batch)
+            epoch_loss += float(loss)
+        return epoch_loss
 
     def get_loss_batch(self, batch, normalize=True):
         r"""Compute the loss of a batch of samples.
@@ -748,6 +778,15 @@ class LossNeuralNetworkModel(object):
         loss = torch.sum(torch.pow(residual, 2))
 
         return loss
+
+    def save_optimizer_stat(self, path='optimizer_stat.pkl'):
+        torch.save(self.optimizer.state_dict(), path)
+
+    def load_optimizer_stat(self, path='optimizer_stat.pkl'):
+        self.optimizer_stat_path = path
+
+    def _load_optimizer_stat(self, path):
+        self.optimizer.load_state_dict(torch.load(path))
 
 
 class LossError(Exception):

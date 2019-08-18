@@ -70,7 +70,7 @@ model.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
+model.set_save_metadata(prefix='./kliff_saved_model', start=5, frequency=2)
 
 
 ##########################################################################################
@@ -137,5 +137,7 @@ result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.001)
 # also write the trained model to a KIM model such that it can be used in other simulation
 # codes such as LAMMPS via the KIM API.
 
-model.save('./saved_model.pkl')
+model.save('./final_model.pkl')
+loss.save_optimizer_stat('./optimizer_stat.pkl')
+
 model.write_kim_model()
