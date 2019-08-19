@@ -10,7 +10,7 @@ on OpenKIM_.
 
 
 ##########################################################################################
-# Before getting started to train the SW model, let's first install the SW # model::
+# Before getting started to train the SW model, let's first install the SW model::
 #
 #    $ kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_005
 #
@@ -137,7 +137,7 @@ calc.create(configs)
 
 
 ##########################################################################################
-# where ``calc.create(configs)`` does some initializations for each each
+# where ``calc.create(configs)`` does some initializations for each
 # configuration in the training set, such as creating the neighbor list.
 #
 #
@@ -152,7 +152,7 @@ calc.create(configs)
 # following code snippet, we create a loss of energy and forces, where the residual
 # function uses an ``energy_weight`` of ``1.0`` and a ``forces_weight`` of ``0.1``, and
 # ``2`` processors will be used to calculate the loss. The ``L-BFGS-B`` minimization
-# algorithm is applied to minimize the loss, and the minimization is allowed to run for a
+# algorithm is applied to minimize the loss, and the minimization is allowed to run for
 # a max number of 100 iterations.
 
 steps = 100
@@ -170,6 +170,7 @@ loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': steps})
 model.echo_fitting_params()
 model.save('kliff_model.pkl')
 model.write_kim_model()
+model.load('kliff_model.pkl')
 
 
 ##########################################################################################

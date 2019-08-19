@@ -15,7 +15,7 @@ Train a Stillinger-Weber potential
 In this tutorial, we train a Stillinger-Weber (SW) potential for silicon that is archived
 on OpenKIM_.
 
-Before getting started to train the SW model, let's first install the SW # model::
+Before getting started to train the SW model, let's first install the SW model::
 
    $ kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_005
 
@@ -245,6 +245,14 @@ test data). For the silicon training set, we can read and process the files by:
 
 
 
+.. rst-class:: sphx-glr-script-out
+
+ Out:
+
+ .. code-block:: none
+
+    1000 configurations read from "Si_training_set"
+
 
 
 The ``configs`` in the last line is a list of :class:`~kliff.dataset.Configuration`.
@@ -278,7 +286,7 @@ by:
 
 
 
-where ``calc.create(configs)`` does some initializations for each each
+where ``calc.create(configs)`` does some initializations for each
 configuration in the training set, such as creating the neighbor list.
 
 
@@ -293,7 +301,7 @@ SciPy_. For physics-motivated potentials, any algorithm listed on
 following code snippet, we create a loss of energy and forces, where the residual
 function uses an ``energy_weight`` of ``1.0`` and a ``forces_weight`` of ``0.1``, and
 ``2`` processors will be used to calculate the loss. The ``L-BFGS-B`` minimization
-algorithm is applied to minimize the loss, and the minimization is allowed to run for a
+algorithm is applied to minimize the loss, and the minimization is allowed to run for
 a max number of 100 iterations.
 
 
@@ -316,8 +324,12 @@ a max number of 100 iterations.
 
  .. code-block:: none
 
+    Start minimization using method: L-BFGS-B.
     Running in multiprocessing mode with 2 processes.
 
+    /Users/Wenz/Applications/kliff/kliff/log.py:45: Warning: "mpi4y" detected. If you try to run in MPI mode, you should execute your code via "mpiexec" (or "mpirun"). If not, ignore this message.
+      warnings.warn(message, category=warning_category)
+    Finish minimization using method: L-BFGS-B.
 
 
 
@@ -333,6 +345,7 @@ that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
     model.echo_fitting_params()
     model.save('kliff_model.pkl')
     model.write_kim_model()
+    model.load('kliff_model.pkl')
 
 
 
@@ -361,6 +374,7 @@ that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
     gamma 1
       2.2014621875873330e+00 
 
+    KLIFF trained model write to "/Users/Wenz/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_005_kliff_trained"
 
 
 
@@ -386,7 +400,7 @@ parameters quite reasonably. The second line saves the fitted model to a file na
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 2 minutes  43.602 seconds)
+   **Total running time of the script:** ( 2 minutes  19.769 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_kim_SW_Si.py:

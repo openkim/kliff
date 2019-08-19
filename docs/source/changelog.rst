@@ -4,6 +4,21 @@
 Change Log
 ==========
 
+v0.1.3 (2019/8/19)
+==================
+
+- add RMSE and Fisher information analyzers
+
+- allow configuration weight for ML models
+
+- add write optimizer state dictionary for ML models
+
+- combine functions ``generate_training_fingerprints()`` and
+  ``generate_test_fingerprints()`` of descriptor to ``generate_fingerprints()``
+  (supporting passing mean and stdev file)
+
+- rewrite symmetry descriptors to share with KIM driver
+
 
 v0.1.2 (2019/6/27)
 ==================

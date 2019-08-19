@@ -105,7 +105,7 @@ class NeuralNetwork(ModelTorch):
 
         paramfiles = [desc_name, nn_name, dropout_name]
         self.write_kim_cmakelists(
-            path, modelname, driver_name, paramfiles, version='2.0.2'
+            path, modelname, driver_name, paramfiles, version='2.0.0'
         )
         self.write_kim_params(path, nn_name)
         self.descriptor.write_kim_params(path, desc_name)
@@ -243,7 +243,7 @@ class NeuralNetwork(ModelTorch):
         modelname='NeuralNetwork_KLIFF__MO_000000111111',
         driver_name='DUNN_WT__MD_000000111111_000',
         paramfiles=["descriptor.params", "NN.params", "dropout_binary.params"],
-        version='2.0.2',
+        version='2.0.0',
     ):
         with open(os.path.join(path, 'CMakeLists.txt'), 'w') as fout:
             fout.write('#\n')
