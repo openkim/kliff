@@ -79,12 +79,14 @@ def test_fitting_parameter():
     assert fp.get_number_of_opt_params() == 3
 
     for i in range(3):
-        v, p, c = fp.get_opt_param_value_and_indices(i)
+        n, v, p, c = fp.get_opt_param_name_value_and_indices(i)
         assert v == x0[i]
         if i == 0:
+            assert n == 'p1'
             assert p == 0
             assert c == 0
         else:
+            assert n == 'p2'
             assert p == 1
             assert c == (i - 1) % 2
 
