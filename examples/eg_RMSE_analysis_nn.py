@@ -3,7 +3,7 @@ from kliff.models import NeuralNetwork
 from kliff import nn
 from kliff.dataset import Dataset
 from kliff.calculators import CalculatorTorch
-from kliff.analyzers import energy_forces_RMSE
+from kliff.analyzers import EnergyForcesRMSE
 
 # model
 descriptor = SymmetryFunction(
@@ -36,5 +36,5 @@ calc = CalculatorTorch(model)
 calc.create(configs, reuse=True)
 
 # analyzer
-analyzer = energy_forces_RMSE(calc)
+analyzer = EnergyForcesRMSE(calc)
 analyzer.run(verbose=2, sort='energy')

@@ -1,3 +1,4 @@
-from .rmse import energy_forces_RMSE
+from .rmse import EnergyForcesRMSE
+from .fisher import Fisher
 
-__all__ = ['energy_forces_RMSE']
+__all__ = ['EnergyForcesRMSE', 'Fisher']

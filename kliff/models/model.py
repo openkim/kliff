@@ -343,8 +343,8 @@ class Model:
     def get_opt_params(self):
         return self.fitting_params.get_opt_params()
 
-    def get_opt_param_value_and_indices(self, k):
-        return self.fitting_params.get_opt_param_value_and_indices(k)
+    def get_opt_param_name_value_and_indices(self, k):
+        return self.fitting_params.get_opt_param_name_value_and_indices(k)
 
     def has_opt_params_bounds(self):
         return self.fitting_params.has_opt_params_bounds()
@@ -353,7 +353,7 @@ class Model:
         return self.fitting_params.get_opt_params_bounds()
 
     def update_fitting_params(self, opt_params):
-        r"""Update from optimzier to fitting params."""
+        r"""Update from optimizer to fitting params."""
         self.fitting_params.update_params(opt_params)
 
     # TODO if parameters relation set, remove the parameters from fitting params

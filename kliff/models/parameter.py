@@ -6,6 +6,7 @@ from collections import OrderedDict
 from collections.abc import Iterable
 import numpy as np
 import kliff
+from ..error import InputError
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -360,15 +361,15 @@ class FittingParameter:
             raise ParameterError('No parameters specified to optimize.')
         return np.asarray(opt_x0)
 
-    def get_opt_param_value_and_indices(self, k):
-        r"""Get the `value`, `parameter_index`, and `component_index` of an optimizing
-        parameter given the slot `k`.
+    def get_opt_param_name_value_and_indices(self, k):
+        r"""Get the `name`, `value`, `parameter_index`, and `component_index` of an
+        optimizing parameter given the slot `k`.
         """
         name = self._index[k].name
         p_idx = self._index[k].p_idx
         c_idx = self._index[k].c_idx
         value = self.params[name]['value'][c_idx]
-        return value, p_idx, c_idx
+        return name, value, p_idx, c_idx
 
     def get_opt_params_bounds(self):
         r"""Get the lower and upper parameter bounds."""

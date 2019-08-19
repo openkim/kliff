@@ -355,8 +355,8 @@ class KIM(Model):
         # only update optimizing components
         num_params = self.get_number_of_opt_params()
         for i in range(num_params):
-            v, p, c = self.get_opt_param_value_and_indices(i)
-            self.kim_model.set_parameter(p, c, v)
+            _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
+            self.kim_model.set_parameter(p_idx, c_idx, value)
 
         # refresh model
         self.kim_model.clear_then_refresh()

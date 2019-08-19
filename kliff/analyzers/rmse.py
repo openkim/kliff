@@ -12,7 +12,7 @@ import kliff
 logger = kliff.logger.get_logger(__name__)
 
 
-class energy_forces_RMSE:
+class EnergyForcesRMSE:
     r"""Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
 
     The `energy difference norm` for a configuration is defined as:
@@ -52,7 +52,7 @@ class energy_forces_RMSE:
         self.compute_energy = energy
         self.compute_forces = forces
 
-    def run(self, normalize=True, verbose=1, sort=None, path=None):
+    def run(self, normalize=True, sort=None, path=None, verbose=1):
         r"""Run the RMSE analyzer.
 
         Parameters
@@ -60,15 +60,6 @@ class energy_forces_RMSE:
         normalize: bool
             Whether to normalize the energy (forces) by the number of atoms in a
             configuration.
-
-        verbose: int (optional)
-            Verbose level of the output info. Available values are: 0, 1, 2.
-            If ``verbose=0``, only output the energy and forces RMSEs for the dataset.
-            If ``verbose==1``, output the norms of the energy and forces for each
-            configuration additionally.
-            If ``verbose==2``, output the difference of the energy and forces for each
-            atom, and the information is written to extended XYZ files with the location
-            specified by ``path``.
 
         sort: str (optional)
             Sort per configuration information according to `energy` or `forces`.
@@ -80,6 +71,15 @@ class energy_forces_RMSE:
             the file specified by `path`.
             Note, if ``verbose==3``, the difference of energy and forces will be written
             to a directory named `energy_forces_RMSE-difference`.
+
+        verbose: int (optional)
+            Verbose level of the output info. Available values are: 0, 1, 2.
+            If ``verbose=0``, only output the energy and forces RMSEs for the dataset.
+            If ``verbose==1``, output the norms of the energy and forces for each
+            configuration additionally.
+            If ``verbose==2``, output the difference of the energy and forces for each
+            atom, and the information is written to extended XYZ files with the location
+            specified by ``path``.
         """
 
         msg = 'Start analyzing energy and forces RMSE.'
@@ -99,7 +99,7 @@ class energy_forces_RMSE:
             if i % 100 == 0:
                 msg = 'Processing configuration {}.'.format(i)
                 log_entry(logger, msg, level='info')
-            prefix = 'energy_forces_RMSE-difference'
+            prefix = 'analysis_energy_forces_RMSE-difference'
             enorm, fnorm = self._compute_single_config(
                 ca, normalize, verbose, common, prefix
             )

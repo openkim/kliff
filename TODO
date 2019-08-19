@@ -199,6 +199,7 @@
   optimizer, but just keep a record of the path. Then load it later.
   (2) Can be combined save model and save optimizer as one function call and
   where to put it.
-
                                                                                  Done
-
+27. 08/18/2019.
+  Update analyzer/fisher.py to be consistent with the latest calculator.
+                                                                                 Done

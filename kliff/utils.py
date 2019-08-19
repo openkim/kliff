@@ -52,4 +52,4 @@ def split_string(string, length=80, starter=None):
         sub_string.append(sub)
         string = string[end:]
 
-    return '\n'.join(sub_string)
+    return '\n'.join(sub_string) + '\n'
