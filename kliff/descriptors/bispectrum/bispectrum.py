@@ -70,28 +70,32 @@ class Bispectrum(Descriptor):
         switch_flag = self.hyperparams['switch_flag']
         bzero_flag = self.hyperparams['bzero_flag']
         use_shared_arrays = 0
-        self._cdesc = bs.Bispectrum(
-            rfac0,
-            2 * jmax,
-            diagonalstyle,
-            use_shared_arrays,
-            rmin0,
-            switch_flag,
-            bzero_flag,
-        )
+
+        self._cdesc = bs.Bispectrum(rfac0,
+                                    2 * jmax,
+                                    diagonalstyle,
+                                    use_shared_arrays,
+                                    rmin0,
+                                    switch_flag,
+                                    bzero_flag,
+                                    )
 
         self._set_cutoff()
+
         self._set_hyperparams()
 
     def transform(self, conf, grad=False):
 
         # neighbor list
         infl_dist = max(self.cutoff.values())
+
         nei = NeighborList(conf, infl_dist, padding_need_neigh=False)
 
         coords = nei.coords
         image = nei.image
-        species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
+        species = np.asarray([self.species_code[i]
+                              for i in nei.species], dtype=np.intc)
+
         numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
         Natoms = len(coords)
@@ -112,10 +116,14 @@ class Bispectrum(Descriptor):
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug(
-                '\n' + '=' * 25 + 'descriptor values (no normalization)' + '=' * 25
+                '\n' + '=' * 25 +
+                'descriptor values (no normalization)' + '=' * 25
             )
+
             logger.debug('\nconfiguration name: %s', conf.get_identifier())
+
             logger.debug('\natom id    descriptor values ...')
+
             for i, line in enumerate(zeta):
                 s = '\n{}    '.format(i)
                 for j in line:
@@ -146,12 +154,15 @@ class Bispectrum(Descriptor):
                     )
                 else:
                     default_hyperparams[key] = value
+
         self.hyperparams = default_hyperparams
 
     def _set_cutoff(self):
         supported = ['cos']
+
         if self.cut_name is None:
             self.cut_name = supported[0]
+
         if self.cut_name not in supported:
             spd = ['"{}", '.format(s) for s in supported]
             raise BispectrumError(
@@ -161,10 +172,13 @@ class Bispectrum(Descriptor):
             )
 
         self.cutoff = generate_full_cutoff(self.cut_dists)
+
         self.species_code = generate_species_code(self.cut_dists)
+
         num_species = len(self.species_code)
 
         rcutsym = np.zeros([num_species, num_species], dtype=np.double)
+
         for si, i in self.species_code.items():
             for sj, j in self.species_code.items():
                 rcutsym[i][j] = self.cutoff[si + '-' + sj]
@@ -173,10 +187,12 @@ class Bispectrum(Descriptor):
 
     def _set_hyperparams(self):
         weight_in = self.hyperparams['weight']
+
         if weight_in is None:
             weight = np.ones(len(self.species_code), dtype=np.double)
         else:
             weight = np.zeros(len(self.species_code), dtype=np.double)
+
             for spec, code in self.species_code.items():
                 try:
                     weight[code] = weight_in[spec]
@@ -184,6 +200,7 @@ class Bispectrum(Descriptor):
                     raise BispectrumError(
                         '"weight" for species "{}" not provided.'.format(spec)
                     )
+
         self._cdesc.set_weight(weight)
 
     def get_size(self):
@@ -210,10 +227,10 @@ class Bispectrum(Descriptor):
                             N += 1
         return N
 
-
 class BispectrumError(Exception):
     def __init__(self, msg):
         super(BispectrumError, self).__init__(msg)
+
         self.msg = msg
 
     def __expr__(self):
