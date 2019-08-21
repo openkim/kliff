@@ -1,1504 +1,1310 @@
-/* This implementation is based on the SNAP potential implemented in LAMMPS
-   by Aidan Thompson, Christian Trott.
-*/
+/*!
+ * \file bispectrum.cpp
+ * \author Mingjian Wen
+ * \author Yaser Afshar
+ * \brief The current implementation is based on the SNAP potential
+ *        implemented in <a href="http://lammps.sandia.gov/">LAMMPS</a>
+ *        by Aidan Thompson, Christian Trott.
+ * \version 0.1.3
+ * \date 08-21-2019
+ *
+ * @copyright CDDL-1.0
+ */
 
+#include "bispectrum.hpp"
 
-#include "bispectrum.h"
-#include "helper.hpp"
-#include <cmath>
-#include <cstdlib>
-#include <cstring>
+#include <numeric>
+#include <limits>
 #include <iostream>
+#include <cmath>
 
-#define MAX(A, B) ((A) > (B) ? (A) : (B))
-#define MIN(A, B) ((A) < (B) ? (A) : (B))
-
-/* ----------------------------------------------------------------------
-
-   this implementation is based on the method outlined
-   in Bartok[1], using formulae from VMK[2].
-
-   for the Clebsch-Gordan coefficients, we
-   convert the VMK half-integral labels
-   a, b, c, alpha, beta, gamma
-   to array offsets j1, j2, j, m1, m2, m
-   using the following relations:
-
-   j1 = 2*a
-   j2 = 2*b
-   j =  2*c
-
-   m1 = alpha+a      2*alpha = 2*m1 - j1
-   m2 = beta+b    or 2*beta = 2*m2 - j2
-   m =  gamma+c      2*gamma = 2*m - j
-
-   in this way:
-
-   -a <= alpha <= a
-   -b <= beta <= b
-   -c <= gamma <= c
-
-   becomes:
-
-   0 <= m1 <= j1
-   0 <= m2 <= j2
-   0 <= m <= j
-
-   and the requirement that
-   a+b+c be integral implies that
-   j1+j2+j must be even.
-   The requirement that:
-
-   gamma = alpha+beta
-
-   becomes:
-
-   2*m - j = 2*m1 - j1 + 2*m2 - j2
-
-   Similarly, for the Wigner U-functions U(J,m,m') we
-   convert the half-integral labels J,m,m' to
-   array offsets j,ma,mb:
-
-   j = 2*J
-   ma = J+m
-   mb = J+m'
-
-   so that:
-
-   0 <= j <= 2*Jmax
-   0 <= ma, mb <= j.
-
-   For the bispectrum components B(J1,J2,J) we convert to:
-
-   j1 = 2*J1
-   j2 = 2*J2
-   j = 2*J
-
-   and the requirement:
-
-   |J1-J2| <= J <= J1+J2, for j1+j2+j integral
-
-   becomes:
-
-   |j1-j2| <= j <= j1+j2, for j1+j2+j even integer
-
-   or
-
-   j = |j1-j2|, |j1-j2|+2,...,j1+j2-2,j1+j2
-
-   [1] Albert Bartok-Partay, "Gaussian Approximation..."
-   Doctoral Thesis, Cambrindge University, (2009)
-
-   [2] D. A. Varshalovich, A. N. Moskalev, and V. K. Khersonskii,
-   "Quantum Theory of Angular Momentum," World Scientific (1988)
-
-------------------------------------------------------------------------- */
-
-Bispectrum::Bispectrum(double rfac0_in,
-                       int twojmax_in,
-                       int diagonalstyle_in,
-                       int use_shared_arrays_in,
-                       double rmin0_in,
-                       int switch_flag_in,
-                       int bzero_flag_in)
+Bispectrum::Bispectrum(double const rfac0_in,
+                       int const twojmax_in,
+                       int const diagonalstyle_in,
+                       int const use_shared_arrays_in,
+                       double const rmin0_in,
+                       int const switch_flag_in,
+                       int const bzero_flag_in) : nmax(0),
+                                                  twojmax(twojmax_in),
+                                                  diagonalstyle(diagonalstyle_in),
+                                                  rmin0(rmin0_in),
+                                                  rfac0(rfac0_in),
+                                                  use_shared_arrays(use_shared_arrays_in),
+                                                  switch_flag(switch_flag_in),
+                                                  wself(1.0),
+                                                  bzero_flag(bzero_flag_in)
 {
-  wself = 1.0;
+    ncoeff = compute_ncoeff();
 
-  use_shared_arrays = use_shared_arrays_in;
-  rfac0 = rfac0_in;
-  rmin0 = rmin0_in;
-  switch_flag = switch_flag_in;
-  bzero_flag = bzero_flag_in;
+    create_twojmax_arrays();
 
-  twojmax = twojmax_in;
-  diagonalstyle = diagonalstyle_in;
+    if (bzero_flag)
+    {
+        double const www = wself * wself * wself;
+        for (int j = 1; j <= twojmax + 1; j++)
+        {
+            bzero[j] = www * j;
+        }
+    }
 
-  ncoeff = compute_ncoeff();
+    AllocateAndInitialize1DArray<double>(bvec, ncoeff);
+    AllocateAndInitialize2DArray<double>(dbvec, ncoeff, 3);
 
-  create_twojmax_arrays();
+    build_indexlist();
 
-  bvec = NULL;
-  dbvec = NULL;
-  AllocateAndInitialize1DArray<double>(bvec, ncoeff);
-  AllocateAndInitialize2DArray<double>(dbvec, ncoeff, 3);
-
-  rij = NULL;
-  inside = NULL;
-  wj = NULL;
-  rcutij = NULL;
-  nmax = 0;
-  idxj = NULL;
-  wjelem = NULL;
-  rcuts = NULL;
-
-  if (bzero_flag)
-  {
-    double www = wself * wself * wself;
-    for (int j = 0; j <= twojmax; j++) bzero[j] = www * (j + 1);
-  }
-
-  build_indexlist();
-
-  init();
+    init();
 }
 
-/* ---------------------------------------------------------------------- */
-
-Bispectrum::~Bispectrum()
-{
-  if (!use_shared_arrays)
-  {
-    destroy_twojmax_arrays();
-    Deallocate2DArray<double>(rij);
-    Deallocate1DArray<int>(inside);
-    Deallocate1DArray<double>(wj);
-    Deallocate1DArray<double>(rcutij);
-    Deallocate1DArray<double>(bvec);
-    Deallocate2DArray<double>(dbvec);
-  }
-  delete[] idxj;
-}
+Bispectrum::~Bispectrum() {}
 
 void Bispectrum::build_indexlist()
 {
-  if (diagonalstyle == 0)
-  {
-    int idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++)
-      for (int j2 = 0; j2 <= j1; j2++)
-        for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-          idxj_count++;
-
-    // indexList can be changed here
-
-    idxj = new BISPECTRUM_LOOPINDICES[idxj_count];
-    idxj_max = idxj_count;
-
-    idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++)
-      for (int j2 = 0; j2 <= j1; j2++)
-        for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-        {
-          idxj[idxj_count].j1 = j1;
-          idxj[idxj_count].j2 = j2;
-          idxj[idxj_count].j = j;
-          idxj_count++;
-        }
-  }
-
-  if (diagonalstyle == 1)
-  {
-    int idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++)
-      for (int j = 0; j <= MIN(twojmax, 2 * j1); j += 2) { idxj_count++; }
-
-    // indexList can be changed here
-
-    idxj = new BISPECTRUM_LOOPINDICES[idxj_count];
-    idxj_max = idxj_count;
-
-    idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++)
-      for (int j = 0; j <= MIN(twojmax, 2 * j1); j += 2)
-      {
-        idxj[idxj_count].j1 = j1;
-        idxj[idxj_count].j2 = j1;
-        idxj[idxj_count].j = j;
-        idxj_count++;
-      }
-  }
-
-  if (diagonalstyle == 2)
-  {
-    int idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++) { idxj_count++; }
-
-    // indexList can be changed here
-
-    idxj = new BISPECTRUM_LOOPINDICES[idxj_count];
-    idxj_max = idxj_count;
-
-    idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++)
+    switch (diagonalstyle)
     {
-      idxj[idxj_count].j1 = j1;
-      idxj[idxj_count].j2 = j1;
-      idxj[idxj_count].j = j1;
-      idxj_count++;
+    case 0:
+    {
+        int idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    idxj_count++;
+                }
+            }
+        }
+
+        // indexList can be changed here
+        idxj.resize(idxj_count);
+
+        idxj_max = idxj_count;
+
+        idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    idxj[idxj_count].j1 = j1;
+                    idxj[idxj_count].j2 = j2;
+                    idxj[idxj_count].j = j;
+                    idxj_count++;
+                }
+            }
+        }
+        return;
+        break;
     }
-  }
+    case 1:
+    {
+        int idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
+            {
+                idxj_count++;
+            }
+        }
 
-  if (diagonalstyle == 3)
-  {
-    int idxj_count = 0;
+        // indexList can be changed here
+        idxj.resize(idxj_count);
 
-    for (int j1 = 0; j1 <= twojmax; j1++)
-      for (int j2 = 0; j2 <= j1; j2++)
-        for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-          if (j >= j1) idxj_count++;
+        idxj_max = idxj_count;
 
-    // indexList can be changed here
-
-    idxj = new BISPECTRUM_LOOPINDICES[idxj_count];
-    idxj_max = idxj_count;
-
-    idxj_count = 0;
-
-    for (int j1 = 0; j1 <= twojmax; j1++)
-      for (int j2 = 0; j2 <= j1; j2++)
-        for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-          if (j >= j1)
-          {
-            idxj[idxj_count].j1 = j1;
-            idxj[idxj_count].j2 = j2;
-            idxj[idxj_count].j = j;
+        idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
+            {
+                idxj[idxj_count].j1 = j1;
+                idxj[idxj_count].j2 = j1;
+                idxj[idxj_count].j = j;
+                idxj_count++;
+            }
+        }
+        return;
+        break;
+    }
+    case 2:
+    {
+        int idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
             idxj_count++;
-          }
-  }
+        }
+
+        // indexList can be changed here
+        idxj.resize(idxj_count);
+
+        idxj_max = idxj_count;
+
+        idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            idxj[idxj_count].j1 = j1;
+            idxj[idxj_count].j2 = j1;
+            idxj[idxj_count].j = j1;
+            idxj_count++;
+        }
+        return;
+        break;
+    }
+    case 3:
+    {
+        int idxj_count = 0;
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    if (j >= j1)
+                    {
+                        idxj_count++;
+                    }
+                }
+            }
+        }
+
+        // indexList can be changed here
+        idxj.resize(idxj_count);
+
+        idxj_max = idxj_count;
+
+        idxj_count = 0;
+
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    if (j >= j1)
+                    {
+                        idxj[idxj_count].j1 = j1;
+                        idxj[idxj_count].j2 = j2;
+                        idxj[idxj_count].j = j;
+                        idxj_count++;
+                    }
+                }
+            }
+        }
+        return;
+        break;
+    }
+    default:
+        throw std::invalid_argument(std::string("The input index style = ") + std::to_string(diagonalstyle) + std::string(" is not a valid index!"));
+    }
 }
-/* ---------------------------------------------------------------------- */
 
 void Bispectrum::init()
 {
-  init_clebsch_gordan();
-  init_rootpqarray();
+    init_clebsch_gordan();
+
+    init_rootpqarray();
 }
-
-
-void Bispectrum::grow_rij(int newnmax)
-{
-  if (newnmax <= nmax) return;
-
-  nmax = newnmax;
-
-  if (!use_shared_arrays)
-  {
-    Deallocate2DArray<double>(rij);
-    Deallocate1DArray<int>(inside);
-    Deallocate1DArray<double>(wj);
-    Deallocate1DArray<double>(rcutij);
-
-    AllocateAndInitialize2DArray<double>(rij, nmax, 3);
-    AllocateAndInitialize1DArray<int>(inside, nmax);
-    AllocateAndInitialize1DArray<double>(wj, nmax);
-    AllocateAndInitialize1DArray<double>(rcutij, nmax);
-  }
-}
-
-/* ----------------------------------------------------------------------
-  compute bispectrum for a set of atoms
-  e.g. eq(5) of ``Gaussian Approximation Potentials: The Accuracy of Quantum
-  Mechanics, without the Electrons``, by Gabor Csany
-------------------------------------------------------------------------- */
-void Bispectrum::compute_B(double const * coordinates,
-                           int const * particleSpecies,
-                           int const * neighlist,
-                           int const * numneigh,
-                           int const * image,
-                           int const Natoms,
-                           int const Ncontrib,
-                           double * const zeta,
-                           double * const dzeta_dr)
-{
-  bool fit_forces = (dzeta_dr != nullptr);
-
-  // prepare data
-  VectorOfSizeDIM * coords = (VectorOfSizeDIM *) coordinates;
-
-  int start = 0;
-  for (int i = 0; i < Ncontrib; i++)
-  {
-    int const numNei = numneigh[i];
-    int const * const ilist = neighlist + start;
-    int const iSpecies = particleSpecies[i];
-
-    start += numNei;
-
-    // insure rij, inside, wj, and rcutij are of size jnum
-    grow_rij(numNei);
-
-    // rij[][3] = displacements between atom I and those neighbors
-    // inside = indices of neighbors of I within cutoff
-    // wj = weights for neighbors of I within cutoff
-    // rcutij = cutoffs for neighbors of I within cutoff
-    // note Rij sign convention => dU/dRij = dU/dRj = -dU/dRi
-
-    int ninside = 0;
-
-    // Setup loop over neighbors of current particle
-    for (int jj = 0; jj < numNei; ++jj)
-    {
-      // adjust index of particle neighbor
-      int const j = ilist[jj];
-      int const jSpecies = particleSpecies[j];
-
-      // rij vec and
-      double rvec[DIM];
-      for (int dim = 0; dim < DIM; ++dim)
-      { rvec[dim] = coords[j][dim] - coords[i][dim]; }
-      double const rsq
-          = rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2];
-      double const rmag = sqrt(rsq);
-
-      if (rmag < rcuts[iSpecies][jSpecies] && rmag > 1e-10)
-      {
-        rij[ninside][0] = rvec[0];
-        rij[ninside][1] = rvec[1];
-        rij[ninside][2] = rvec[2];
-        inside[ninside] = j;
-        wj[ninside] = wjelem[jSpecies];
-        rcutij[ninside] = rcuts[iSpecies][jSpecies];
-        ninside++;
-      }
-    }
-
-
-    // compute Ui, Zi, and Bi for atom I
-
-    compute_ui(ninside);
-    compute_zi();
-    compute_bi();
-    copy_bi2bvec();
-
-    for (int icoeff = 0; icoeff < ncoeff; icoeff++)
-    { zeta[i * ncoeff + icoeff] = bvec[icoeff]; }
-
-    // for neighbors of I within cutoff:
-    // compute dUi/drj and dBi/drj
-
-    if (fit_forces)
-    {
-      for (int jj = 0; jj < ninside; jj++)
-      {
-        compute_duidrj(rij[jj], wj[jj], rcutij[jj]);
-        compute_dbidrj();
-        copy_dbi2dbvec();
-
-        // copy to dzeta_dr
-        int const j = inside[jj];
-        for (int icoeff = 0; icoeff < ncoeff; icoeff++)
-        {
-          int page = (i * ncoeff + icoeff) * Ncontrib * DIM;
-          for (int dim = 0; dim < DIM; ++dim)
-          {
-            dzeta_dr[page + i * DIM + dim] += dbvec[icoeff][dim];
-            dzeta_dr[page + image[j] * DIM + dim] -= dbvec[icoeff][dim];
-          }
-        }
-      }
-    }  // fit forces
-
-  }  // loop over i
-}
-
-
-void Bispectrum::set_cutoff(const char * name,
-                            const int Nspecies,
-                            const double * rcuts_in)
-{
-  //  if (strcmp(name, "cos") == 0) {
-  //    cutoff_ = &cut_cos;
-  //    d_cutoff_ = &d_cut_cos;
-  //  }
-  //  else if (strcmp(name, "exp") == 0) {
-  //    cutoff_ = &cut_exp;
-  //    d_cutoff_ = &d_cut_exp;
-  //  }
-
-  // store number of species and cutoff values
-  Deallocate2DArray<double>(rcuts);
-  AllocateAndInitialize2DArray<double>(rcuts, Nspecies, Nspecies);
-  int idx = 0;
-  for (int i = 0; i < Nspecies; i++)
-  {
-    for (int j = 0; j < Nspecies; j++)
-    {
-      rcuts[i][j] = rcuts_in[idx];
-      idx++;
-    }
-  }
-}
-
-
-void Bispectrum::set_weight(const int Nspecies, const double * weight_in)
-{
-  Deallocate1DArray<double>(wjelem);
-  AllocateAndInitialize1DArray<double>(wjelem, Nspecies);
-  for (int i = 0; i < Nspecies; i++) { wjelem[i] = weight_in[i]; }
-}
-
-/* ----------------------------------------------------------------------
-   compute Ui by summing over neighbors j
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_ui(int jnum)
-{
-  double rsq, r, x, y, z, z0, theta0;
-
-  // utot(j,ma,mb) = 0 for all j,ma,ma
-  // utot(j,ma,ma) = 1 for all j,ma
-  // for j in neighbors of i:
-  //   compute r0 = (x,y,z,z0)
-  //   utot(j,ma,mb) += u(r0;j,ma,mb) for all j,ma,mb
-
-  zero_uarraytot();
-  addself_uarraytot(wself);
-
-  for (int j = 0; j < jnum; j++)
-  {
-    x = rij[j][0];
-    y = rij[j][1];
-    z = rij[j][2];
-    rsq = x * x + y * y + z * z;
-    r = sqrt(rsq);
-
-    // TODO this is not in agreement with the paper, maybe cahnge it
-    theta0 = (r - rmin0) * rfac0 * MY_PI / (rcutij[j] - rmin0);
-    //    theta0 = (r - rmin0) * rscale0;
-    z0 = r / tan(theta0);
-
-    compute_uarray(x, y, z, z0, r);
-    add_uarraytot(r, wj[j], rcutij[j]);
-  }
-}
-
-
-/* ----------------------------------------------------------------------
-   compute Zi by summing over products of Ui
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_zi()
-{
-  // for j1 = 0,...,twojmax
-  //   for j2 = 0,twojmax
-  //     for j = |j1-j2|,Min(twojmax,j1+j2),2
-  //        for ma = 0,...,j
-  //          for mb = 0,...,jmid
-  //            z(j1,j2,j,ma,mb) = 0
-  //            for ma1 = Max(0,ma+(j1-j2-j)/2),Min(j1,ma+(j1+j2-j)/2)
-  //              sumb1 = 0
-  //              ma2 = ma-ma1+(j1+j2-j)/2;
-  //              for mb1 = Max(0,mb+(j1-j2-j)/2),Min(j1,mb+(j1+j2-j)/2)
-  //                mb2 = mb-mb1+(j1+j2-j)/2;
-  //                sumb1 += cg(j1,mb1,j2,mb2,j) *
-  //                  u(j1,ma1,mb1) * u(j2,ma2,mb2)
-  //              z(j1,j2,j,ma,mb) += sumb1*cg(j1,ma1,j2,ma2,j)
-
-  // compute_dbidrj() requires full j1/j2/j chunk of z elements
-  // use zarray j1/j2 symmetry
-
-  for (int j1 = 0; j1 <= twojmax; j1++)
-    for (int j2 = 0; j2 <= j1; j2++)
-    {
-      for (int j = j1 - j2; j <= MIN(twojmax, j1 + j2); j += 2)
-      {
-        double sumb1_r, sumb1_i;
-        int ma2, mb2;
-        for (int mb = 0; 2 * mb <= j; mb++)
-          for (int ma = 0; ma <= j; ma++)
-          {
-            zarray_r[j1][j2][j][ma][mb] = 0.0;
-            zarray_i[j1][j2][j][ma][mb] = 0.0;
-
-            for (int ma1 = MAX(0, (2 * ma - j - j2 + j1) / 2);
-                 ma1 <= MIN(j1, (2 * ma - j + j2 + j1) / 2);
-                 ma1++)
-            {
-              sumb1_r = 0.0;
-              sumb1_i = 0.0;
-
-              ma2 = (2 * ma - j - (2 * ma1 - j1) + j2) / 2;
-
-              for (int mb1 = MAX(0, (2 * mb - j - j2 + j1) / 2);
-                   mb1 <= MIN(j1, (2 * mb - j + j2 + j1) / 2);
-                   mb1++)
-              {
-                mb2 = (2 * mb - j - (2 * mb1 - j1) + j2) / 2;
-                sumb1_r
-                    += cgarray[j1][j2][j][mb1][mb2]
-                       * (uarraytot_r[j1][ma1][mb1] * uarraytot_r[j2][ma2][mb2]
-                          - uarraytot_i[j1][ma1][mb1]
-                                * uarraytot_i[j2][ma2][mb2]);
-                sumb1_i
-                    += cgarray[j1][j2][j][mb1][mb2]
-                       * (uarraytot_r[j1][ma1][mb1] * uarraytot_i[j2][ma2][mb2]
-                          + uarraytot_i[j1][ma1][mb1]
-                                * uarraytot_r[j2][ma2][mb2]);
-              }  // end loop over mb1
-
-              zarray_r[j1][j2][j][ma][mb]
-                  += sumb1_r * cgarray[j1][j2][j][ma1][ma2];
-              zarray_i[j1][j2][j][ma][mb]
-                  += sumb1_i * cgarray[j1][j2][j][ma1][ma2];
-            }  // end loop over ma1
-          }  // end loop over ma, mb
-      }  // end loop over j
-    }  // end loop over j1, j2
-}
-
-
-/* ----------------------------------------------------------------------
-   compute Bi by summing conj(Ui)*Zi
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_bi()
-{
-  // for j1 = 0,...,twojmax
-  //   for j2 = 0,twojmax
-  //     for j = |j1-j2|,Min(twojmax,j1+j2),2
-  //        b(j1,j2,j) = 0
-  //        for mb = 0,...,jmid
-  //          for ma = 0,...,j
-  //            b(j1,j2,j) +=
-  //              2*Conj(u(j,ma,mb))*z(j1,j2,j,ma,mb)
-
-  for (int j1 = 0; j1 <= twojmax; j1++)
-    for (int j2 = 0; j2 <= j1; j2++)
-    {
-      for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-      {
-        barray[j1][j2][j] = 0.0;
-
-        for (int mb = 0; 2 * mb < j; mb++)
-          for (int ma = 0; ma <= j; ma++)
-            barray[j1][j2][j]
-                += uarraytot_r[j][ma][mb] * zarray_r[j1][j2][j][ma][mb]
-                   + uarraytot_i[j][ma][mb] * zarray_i[j1][j2][j][ma][mb];
-
-        // For j even, special treatment for middle column
-
-        if (j % 2 == 0)
-        {
-          int mb = j / 2;
-          for (int ma = 0; ma < mb; ma++)
-            barray[j1][j2][j]
-                += uarraytot_r[j][ma][mb] * zarray_r[j1][j2][j][ma][mb]
-                   + uarraytot_i[j][ma][mb] * zarray_i[j1][j2][j][ma][mb];
-          int ma = mb;
-          barray[j1][j2][j]
-              += (uarraytot_r[j][ma][mb] * zarray_r[j1][j2][j][ma][mb]
-                  + uarraytot_i[j][ma][mb] * zarray_i[j1][j2][j][ma][mb])
-                 * 0.5;
-        }
-
-        barray[j1][j2][j] *= 2.0;
-        if (bzero_flag) barray[j1][j2][j] -= bzero[j];
-      }
-    }
-}
-
-/* ----------------------------------------------------------------------
-   copy Bi array to a vector
-------------------------------------------------------------------------- */
-
-void Bispectrum::copy_bi2bvec()
-{
-  int ncount, j1, j2, j;
-
-  ncount = 0;
-
-  for (j1 = 0; j1 <= twojmax; j1++)
-    if (diagonalstyle == 0)
-    {
-      for (j2 = 0; j2 <= j1; j2++)
-        for (j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-        {
-          bvec[ncount] = barray[j1][j2][j];
-          ncount++;
-        }
-    }
-    else if (diagonalstyle == 1)
-    {
-      j2 = j1;
-      for (j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-      {
-        bvec[ncount] = barray[j1][j2][j];
-        ncount++;
-      }
-    }
-    else if (diagonalstyle == 2)
-    {
-      j = j2 = j1;
-      bvec[ncount] = barray[j1][j2][j];
-      ncount++;
-    }
-    else if (diagonalstyle == 3)
-    {
-      for (j2 = 0; j2 <= j1; j2++)
-        for (j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-          if (j >= j1)
-          {
-            bvec[ncount] = barray[j1][j2][j];
-            ncount++;
-          }
-    }
-}
-
-/* ----------------------------------------------------------------------
-   calculate derivative of Ui w.r.t. atom j
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_duidrj(double * rij, double wj, double rcut)
-{
-  double rsq, r, x, y, z, z0, theta0, cs, sn;
-  double dz0dr;
-
-  x = rij[0];
-  y = rij[1];
-  z = rij[2];
-  rsq = x * x + y * y + z * z;
-  r = sqrt(rsq);
-  // TODO this is not in agreemnt with paper
-  double rscale0 = rfac0 * MY_PI / (rcut - rmin0);
-  theta0 = (r - rmin0) * rscale0;
-  cs = cos(theta0);
-  sn = sin(theta0);
-  z0 = r * cs / sn;
-  dz0dr = z0 / r - (r * rscale0) * (rsq + z0 * z0) / rsq;
-
-  compute_duarray(x, y, z, z0, r, dz0dr, wj, rcut);
-}
-
-/* ----------------------------------------------------------------------
-   calculate derivative of Bi w.r.t. atom j
-   variant using indexlist for j1,j2,j
-   variant not using symmetry relation
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_dbidrj_nonsymm()
-{
-  // for j1 = 0,...,twojmax
-  //   for j2 = 0,twojmax
-  //     for j = |j1-j2|,Min(twojmax,j1+j2),2
-  //        dbdr(j1,j2,j) = 0
-  //        for ma = 0,...,j
-  //          for mb = 0,...,j
-  //            dzdr = 0
-  //            for ma1 = Max(0,ma+(j1-j2-j)/2),Min(j1,ma+(j1+j2-j)/2)
-  //              sumb1 = 0
-  //              ma2 = ma-ma1+(j1+j2-j)/2;
-  //              for mb1 = Max(0,mb+(j1-j2-j)/2),Min(j1,mb+(j1+j2-j)/2)
-  //                mb2 = mb-mb1+(j1+j2-j)/2;
-  //                sumb1 += cg(j1,mb1,j2,mb2,j) *
-  //                  (dudr(j1,ma1,mb1) * u(j2,ma2,mb2) +
-  //                  u(j1,ma1,mb1) * dudr(j2,ma2,mb2))
-  //              dzdr += sumb1*cg(j1,ma1,j2,ma2,j)
-  //            dbdr(j1,j2,j) +=
-  //              Conj(dudr(j,ma,mb))*z(j1,j2,j,ma,mb) +
-  //              Conj(u(j,ma,mb))*dzdr
-
-  double * dbdr;
-  double *dudr_r, *dudr_i;
-  double sumb1_r[3], sumb1_i[3], dzdr_r[3], dzdr_i[3];
-  int ma2;
-
-  for (int JJ = 0; JJ < idxj_max; JJ++)
-  {
-    const int j1 = idxj[JJ].j1;
-    const int j2 = idxj[JJ].j2;
-    const int j = idxj[JJ].j;
-
-    dbdr = dbarray[j1][j2][j];
-    dbdr[0] = 0.0;
-    dbdr[1] = 0.0;
-    dbdr[2] = 0.0;
-
-    double *** j1duarray_r = duarray_r[j1];
-    double *** j2duarray_r = duarray_r[j2];
-    double *** j1duarray_i = duarray_i[j1];
-    double *** j2duarray_i = duarray_i[j2];
-    double ** j1uarraytot_r = uarraytot_r[j1];
-    double ** j2uarraytot_r = uarraytot_r[j2];
-    double ** j1uarraytot_i = uarraytot_i[j1];
-    double ** j2uarraytot_i = uarraytot_i[j2];
-    double ** j1j2jcgarray = cgarray[j1][j2][j];
-
-    for (int ma = 0; ma <= j; ma++)
-      for (int mb = 0; mb <= j; mb++)
-      {
-        dzdr_r[0] = 0.0;
-        dzdr_r[1] = 0.0;
-        dzdr_r[2] = 0.0;
-        dzdr_i[0] = 0.0;
-        dzdr_i[1] = 0.0;
-        dzdr_i[2] = 0.0;
-
-        const int max_mb1 = MIN(j1, (2 * mb - j + j2 + j1) / 2) + 1;
-        const int max_ma1 = MIN(j1, (2 * ma - j + j2 + j1) / 2) + 1;
-
-        for (int ma1 = MAX(0, (2 * ma - j - j2 + j1) / 2); ma1 < max_ma1; ma1++)
-        {
-          ma2 = (2 * ma - j - (2 * ma1 - j1) + j2) / 2;
-          sumb1_r[0] = 0.0;
-          sumb1_r[1] = 0.0;
-          sumb1_r[2] = 0.0;
-          sumb1_i[0] = 0.0;
-          sumb1_i[1] = 0.0;
-          sumb1_i[2] = 0.0;
-
-          // inside loop 54 operations (mul and add)
-          for (int mb1 = MAX(0, (2 * mb - j - j2 + j1) / 2),
-                   mb2 = mb + (j1 + j2 - j) / 2 - mb1;
-               mb1 < max_mb1;
-               mb1++, mb2--)
-          {
-            double *dudr1_r, *dudr1_i, *dudr2_r, *dudr2_i;
-
-            dudr1_r = j1duarray_r[ma1][mb1];
-            dudr2_r = j2duarray_r[ma2][mb2];
-            dudr1_i = j1duarray_i[ma1][mb1];
-            dudr2_i = j2duarray_i[ma2][mb2];
-
-            const double cga_mb1mb2 = j1j2jcgarray[mb1][mb2];
-            const double uat_r_ma2mb2 = cga_mb1mb2 * j2uarraytot_r[ma2][mb2];
-            const double uat_r_ma1mb1 = cga_mb1mb2 * j1uarraytot_r[ma1][mb1];
-            const double uat_i_ma2mb2 = cga_mb1mb2 * j2uarraytot_i[ma2][mb2];
-            const double uat_i_ma1mb1 = cga_mb1mb2 * j1uarraytot_i[ma1][mb1];
-
-            for (int k = 0; k < 3; k++)
-            {
-              sumb1_r[k] += dudr1_r[k] * uat_r_ma2mb2;
-              sumb1_r[k] -= dudr1_i[k] * uat_i_ma2mb2;
-              sumb1_i[k] += dudr1_r[k] * uat_i_ma2mb2;
-              sumb1_i[k] += dudr1_i[k] * uat_r_ma2mb2;
-
-              sumb1_r[k] += dudr2_r[k] * uat_r_ma1mb1;
-              sumb1_r[k] -= dudr2_i[k] * uat_i_ma1mb1;
-              sumb1_i[k] += dudr2_r[k] * uat_i_ma1mb1;
-              sumb1_i[k] += dudr2_i[k] * uat_r_ma1mb1;
-            }
-          }  // end loop over mb1,mb2
-
-          // dzdr += sumb1*cg(j1,ma1,j2,ma2,j)
-
-          dzdr_r[0] += sumb1_r[0] * j1j2jcgarray[ma1][ma2];
-          dzdr_r[1] += sumb1_r[1] * j1j2jcgarray[ma1][ma2];
-          dzdr_r[2] += sumb1_r[2] * j1j2jcgarray[ma1][ma2];
-          dzdr_i[0] += sumb1_i[0] * j1j2jcgarray[ma1][ma2];
-          dzdr_i[1] += sumb1_i[1] * j1j2jcgarray[ma1][ma2];
-          dzdr_i[2] += sumb1_i[2] * j1j2jcgarray[ma1][ma2];
-        }  // end loop over ma1,ma2
-
-        // dbdr(j1,j2,j) +=
-        //   Conj(dudr(j,ma,mb))*z(j1,j2,j,ma,mb) +
-        //   Conj(u(j,ma,mb))*dzdr
-
-        dudr_r = duarray_r[j][ma][mb];
-        dudr_i = duarray_i[j][ma][mb];
-
-        for (int k = 0; k < 3; k++)
-          dbdr[k] += (dudr_r[k] * zarray_r[j1][j2][j][ma][mb]
-                      + dudr_i[k] * zarray_i[j1][j2][j][ma][mb])
-                     + (uarraytot_r[j][ma][mb] * dzdr_r[k]
-                        + uarraytot_i[j][ma][mb] * dzdr_i[k]);
-      }  // end loop over ma mb
-
-  }  // end loop over j1 j2 j
-}
-
-/* ----------------------------------------------------------------------
-   calculate derivative of Bi w.r.t. atom j
-   variant using indexlist for j1,j2,j
-   variant using symmetry relation
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_dbidrj()
-{
-  // for j1 = 0,...,twojmax
-  //   for j2 = 0,twojmax
-  //     for j = |j1-j2|,Min(twojmax,j1+j2),2
-  //        zdb = 0
-  //        for mb = 0,...,jmid
-  //          for ma = 0,...,j
-  //            zdb +=
-  //              Conj(dudr(j,ma,mb))*z(j1,j2,j,ma,mb)
-  //        dbdr(j1,j2,j) += 2*zdb
-  //        zdb = 0
-  //        for mb1 = 0,...,j1mid
-  //          for ma1 = 0,...,j1
-  //            zdb +=
-  //              Conj(dudr(j1,ma1,mb1))*z(j,j2,j1,ma1,mb1)
-  //        dbdr(j1,j2,j) += 2*zdb*(j+1)/(j1+1)
-  //        zdb = 0
-  //        for mb2 = 0,...,j2mid
-  //          for ma2 = 0,...,j2
-  //            zdb +=
-  //              Conj(dudr(j2,ma2,mb2))*z(j1,j,j2,ma2,mb2)
-  //        dbdr(j1,j2,j) += 2*zdb*(j+1)/(j2+1)
-
-  double * dbdr;
-  double *dudr_r, *dudr_i;
-  double sumzdu_r[3];
-  double ** jjjzarray_r;
-  double ** jjjzarray_i;
-  double jjjmambzarray_r;
-  double jjjmambzarray_i;
-
-  for (int JJ = 0; JJ < idxj_max; JJ++)
-  {
-    const int j1 = idxj[JJ].j1;
-    const int j2 = idxj[JJ].j2;
-    const int j = idxj[JJ].j;
-
-    dbdr = dbarray[j1][j2][j];
-    dbdr[0] = 0.0;
-    dbdr[1] = 0.0;
-    dbdr[2] = 0.0;
-
-    // Sum terms Conj(dudr(j,ma,mb))*z(j1,j2,j,ma,mb)
-
-    for (int k = 0; k < 3; k++) sumzdu_r[k] = 0.0;
-
-    // use zarray j1/j2 symmetry (optional)
-
-    if (j1 >= j2)
-    {
-      jjjzarray_r = zarray_r[j1][j2][j];
-      jjjzarray_i = zarray_i[j1][j2][j];
-    }
-    else
-    {
-      jjjzarray_r = zarray_r[j2][j1][j];
-      jjjzarray_i = zarray_i[j2][j1][j];
-    }
-
-    for (int mb = 0; 2 * mb < j; mb++)
-      for (int ma = 0; ma <= j; ma++)
-      {
-        dudr_r = duarray_r[j][ma][mb];
-        dudr_i = duarray_i[j][ma][mb];
-        jjjmambzarray_r = jjjzarray_r[ma][mb];
-        jjjmambzarray_i = jjjzarray_i[ma][mb];
-        for (int k = 0; k < 3; k++)
-          sumzdu_r[k]
-              += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
-
-      }  // end loop over ma mb
-
-    // For j even, handle middle column
-
-    if (j % 2 == 0)
-    {
-      int mb = j / 2;
-      for (int ma = 0; ma < mb; ma++)
-      {
-        dudr_r = duarray_r[j][ma][mb];
-        dudr_i = duarray_i[j][ma][mb];
-        jjjmambzarray_r = jjjzarray_r[ma][mb];
-        jjjmambzarray_i = jjjzarray_i[ma][mb];
-        for (int k = 0; k < 3; k++)
-          sumzdu_r[k]
-              += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
-      }
-      int ma = mb;
-      dudr_r = duarray_r[j][ma][mb];
-      dudr_i = duarray_i[j][ma][mb];
-      jjjmambzarray_r = jjjzarray_r[ma][mb];
-      jjjmambzarray_i = jjjzarray_i[ma][mb];
-      for (int k = 0; k < 3; k++)
-        sumzdu_r[k]
-            += (dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i)
-               * 0.5;
-    }  // end if jeven
-
-    for (int k = 0; k < 3; k++) dbdr[k] += 2.0 * sumzdu_r[k];
-
-    // Sum over Conj(dudr(j1,ma1,mb1))*z(j,j2,j1,ma1,mb1)
-
-    double j1fac = (j + 1) / (j1 + 1.0);
-
-    for (int k = 0; k < 3; k++) sumzdu_r[k] = 0.0;
-
-    // use zarray j1/j2 symmetry (optional)
-
-    if (j >= j2)
-    {
-      jjjzarray_r = zarray_r[j][j2][j1];
-      jjjzarray_i = zarray_i[j][j2][j1];
-    }
-    else
-    {
-      jjjzarray_r = zarray_r[j2][j][j1];
-      jjjzarray_i = zarray_i[j2][j][j1];
-    }
-
-    for (int mb1 = 0; 2 * mb1 < j1; mb1++)
-      for (int ma1 = 0; ma1 <= j1; ma1++)
-      {
-        dudr_r = duarray_r[j1][ma1][mb1];
-        dudr_i = duarray_i[j1][ma1][mb1];
-        jjjmambzarray_r = jjjzarray_r[ma1][mb1];
-        jjjmambzarray_i = jjjzarray_i[ma1][mb1];
-        for (int k = 0; k < 3; k++)
-          sumzdu_r[k]
-              += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
-
-      }  // end loop over ma1 mb1
-
-    // For j1 even, handle middle column
-
-    if (j1 % 2 == 0)
-    {
-      int mb1 = j1 / 2;
-      for (int ma1 = 0; ma1 < mb1; ma1++)
-      {
-        dudr_r = duarray_r[j1][ma1][mb1];
-        dudr_i = duarray_i[j1][ma1][mb1];
-        jjjmambzarray_r = jjjzarray_r[ma1][mb1];
-        jjjmambzarray_i = jjjzarray_i[ma1][mb1];
-        for (int k = 0; k < 3; k++)
-          sumzdu_r[k]
-              += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
-      }
-      int ma1 = mb1;
-      dudr_r = duarray_r[j1][ma1][mb1];
-      dudr_i = duarray_i[j1][ma1][mb1];
-      jjjmambzarray_r = jjjzarray_r[ma1][mb1];
-      jjjmambzarray_i = jjjzarray_i[ma1][mb1];
-      for (int k = 0; k < 3; k++)
-        sumzdu_r[k]
-            += (dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i)
-               * 0.5;
-    }  // end if j1even
-
-    for (int k = 0; k < 3; k++) dbdr[k] += 2.0 * sumzdu_r[k] * j1fac;
-
-    // Sum over Conj(dudr(j2,ma2,mb2))*z(j1,j,j2,ma2,mb2)
-
-    double j2fac = (j + 1) / (j2 + 1.0);
-
-    for (int k = 0; k < 3; k++) sumzdu_r[k] = 0.0;
-
-    // use zarray j1/j2 symmetry (optional)
-
-    if (j1 >= j)
-    {
-      jjjzarray_r = zarray_r[j1][j][j2];
-      jjjzarray_i = zarray_i[j1][j][j2];
-    }
-    else
-    {
-      jjjzarray_r = zarray_r[j][j1][j2];
-      jjjzarray_i = zarray_i[j][j1][j2];
-    }
-
-    for (int mb2 = 0; 2 * mb2 < j2; mb2++)
-      for (int ma2 = 0; ma2 <= j2; ma2++)
-      {
-        dudr_r = duarray_r[j2][ma2][mb2];
-        dudr_i = duarray_i[j2][ma2][mb2];
-        jjjmambzarray_r = jjjzarray_r[ma2][mb2];
-        jjjmambzarray_i = jjjzarray_i[ma2][mb2];
-        for (int k = 0; k < 3; k++)
-          sumzdu_r[k]
-              += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
-
-      }  // end loop over ma2 mb2
-
-    // For j2 even, handle middle column
-
-    if (j2 % 2 == 0)
-    {
-      int mb2 = j2 / 2;
-      for (int ma2 = 0; ma2 < mb2; ma2++)
-      {
-        dudr_r = duarray_r[j2][ma2][mb2];
-        dudr_i = duarray_i[j2][ma2][mb2];
-        jjjmambzarray_r = jjjzarray_r[ma2][mb2];
-        jjjmambzarray_i = jjjzarray_i[ma2][mb2];
-        for (int k = 0; k < 3; k++)
-          sumzdu_r[k]
-              += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
-      }
-      int ma2 = mb2;
-      dudr_r = duarray_r[j2][ma2][mb2];
-      dudr_i = duarray_i[j2][ma2][mb2];
-      jjjmambzarray_r = jjjzarray_r[ma2][mb2];
-      jjjmambzarray_i = jjjzarray_i[ma2][mb2];
-      for (int k = 0; k < 3; k++)
-        sumzdu_r[k]
-            += (dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i)
-               * 0.5;
-    }  // end if j2even
-
-    for (int k = 0; k < 3; k++) dbdr[k] += 2.0 * sumzdu_r[k] * j2fac;
-
-  }  // end loop over j1 j2 j
-}
-
-/* ----------------------------------------------------------------------
-   copy Bi derivatives into a vector
-------------------------------------------------------------------------- */
-
-void Bispectrum::copy_dbi2dbvec()
-{
-  int ncount, j1, j2, j;
-
-  ncount = 0;
-
-  for (j1 = 0; j1 <= twojmax; j1++)
-  {
-    if (diagonalstyle == 0)
-    {
-      for (j2 = 0; j2 <= j1; j2++)
-        for (j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-        {
-          dbvec[ncount][0] = dbarray[j1][j2][j][0];
-          dbvec[ncount][1] = dbarray[j1][j2][j][1];
-          dbvec[ncount][2] = dbarray[j1][j2][j][2];
-          ncount++;
-        }
-    }
-    else if (diagonalstyle == 1)
-    {
-      j2 = j1;
-      for (j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-      {
-        dbvec[ncount][0] = dbarray[j1][j2][j][0];
-        dbvec[ncount][1] = dbarray[j1][j2][j][1];
-        dbvec[ncount][2] = dbarray[j1][j2][j][2];
-        ncount++;
-      }
-    }
-    else if (diagonalstyle == 2)
-    {
-      j = j2 = j1;
-      dbvec[ncount][0] = dbarray[j1][j2][j][0];
-      dbvec[ncount][1] = dbarray[j1][j2][j][1];
-      dbvec[ncount][2] = dbarray[j1][j2][j][2];
-      ncount++;
-    }
-    else if (diagonalstyle == 3)
-    {
-      for (j2 = 0; j2 <= j1; j2++)
-        for (j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-          if (j >= j1)
-          {
-            dbvec[ncount][0] = dbarray[j1][j2][j][0];
-            dbvec[ncount][1] = dbarray[j1][j2][j][1];
-            dbvec[ncount][2] = dbarray[j1][j2][j][2];
-            ncount++;
-          }
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Bispectrum::zero_uarraytot()
-{
-  for (int j = 0; j <= twojmax; j++)
-    for (int ma = 0; ma <= j; ma++)
-      for (int mb = 0; mb <= j; mb++)
-      {
-        uarraytot_r[j][ma][mb] = 0.0;
-        uarraytot_i[j][ma][mb] = 0.0;
-      }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Bispectrum::addself_uarraytot(double wself_in)
-{
-  for (int j = 0; j <= twojmax; j++)
-    for (int ma = 0; ma <= j; ma++)
-    {
-      uarraytot_r[j][ma][ma] = wself_in;
-      uarraytot_i[j][ma][ma] = 0.0;
-    }
-}
-
-/* ----------------------------------------------------------------------
-   add Wigner U-functions for one neighbor to the total
-------------------------------------------------------------------------- */
-
-void Bispectrum::add_uarraytot(double r, double wj, double rcut)
-{
-  double sfac;
-
-  sfac = compute_sfac(r, rcut);
-
-  sfac *= wj;
-
-  for (int j = 0; j <= twojmax; j++)
-    for (int ma = 0; ma <= j; ma++)
-      for (int mb = 0; mb <= j; mb++)
-      {
-        uarraytot_r[j][ma][mb] += sfac * uarray_r[j][ma][mb];
-        uarraytot_i[j][ma][mb] += sfac * uarray_i[j][ma][mb];
-      }
-}
-
-
-/* ----------------------------------------------------------------------
-   compute Wigner U-functions for one neighbor
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_uarray(
-    double x, double y, double z, double z0, double r)
-{
-  double r0inv;
-  double a_r, b_r, a_i, b_i;
-  double rootpq;
-
-  // compute Cayley-Klein parameters for unit quaternion
-
-  r0inv = 1.0 / sqrt(r * r + z0 * z0);
-  a_r = r0inv * z0;
-  a_i = -r0inv * z;
-  b_r = r0inv * y;
-  b_i = -r0inv * x;
-
-  // VMK Section 4.8.2
-
-  uarray_r[0][0][0] = 1.0;
-  uarray_i[0][0][0] = 0.0;
-
-  for (int j = 1; j <= twojmax; j++)
-  {
-    // fill in left side of matrix layer from previous layer
-
-    for (int mb = 0; 2 * mb <= j; mb++)
-    {
-      uarray_r[j][0][mb] = 0.0;
-      uarray_i[j][0][mb] = 0.0;
-
-      for (int ma = 0; ma < j; ma++)
-      {
-        rootpq = rootpqarray[j - ma][j - mb];
-        uarray_r[j][ma][mb] += rootpq
-                               * (a_r * uarray_r[j - 1][ma][mb]
-                                  + a_i * uarray_i[j - 1][ma][mb]);
-        uarray_i[j][ma][mb] += rootpq
-                               * (a_r * uarray_i[j - 1][ma][mb]
-                                  - a_i * uarray_r[j - 1][ma][mb]);
-
-        rootpq = rootpqarray[ma + 1][j - mb];
-        uarray_r[j][ma + 1][mb]
-            = -rootpq
-              * (b_r * uarray_r[j - 1][ma][mb] + b_i * uarray_i[j - 1][ma][mb]);
-        uarray_i[j][ma + 1][mb]
-            = -rootpq
-              * (b_r * uarray_i[j - 1][ma][mb] - b_i * uarray_r[j - 1][ma][mb]);
-      }
-    }
-
-    // copy left side to right side with inversion symmetry VMK 4.4(2)
-    // u[ma-j][mb-j] = (-1)^(ma-mb)*Conj([u[ma][mb])
-
-    int mbpar = -1;
-    for (int mb = 0; 2 * mb <= j; mb++)
-    {
-      mbpar = -mbpar;
-      int mapar = -mbpar;
-      for (int ma = 0; ma <= j; ma++)
-      {
-        mapar = -mapar;
-        if (mapar == 1)
-        {
-          uarray_r[j][j - ma][j - mb] = uarray_r[j][ma][mb];
-          uarray_i[j][j - ma][j - mb] = -uarray_i[j][ma][mb];
-        }
-        else
-        {
-          uarray_r[j][j - ma][j - mb] = -uarray_r[j][ma][mb];
-          uarray_i[j][j - ma][j - mb] = uarray_i[j][ma][mb];
-        }
-      }
-    }
-  }
-}
-
-
-/* ----------------------------------------------------------------------
-   compute derivatives of Wigner U-functions for one neighbor
-   see comments in compute_uarray()
-------------------------------------------------------------------------- */
-
-void Bispectrum::compute_duarray(double x,
-                                 double y,
-                                 double z,
-                                 double z0,
-                                 double r,
-                                 double dz0dr,
-                                 double wj,
-                                 double rcut)
-{
-  double r0inv;
-  double a_r, a_i, b_r, b_i;
-  double da_r[3], da_i[3], db_r[3], db_i[3];
-  double dz0[3], dr0inv[3], dr0invdr;
-  double rootpq;
-
-  double rinv = 1.0 / r;
-  double ux = x * rinv;
-  double uy = y * rinv;
-  double uz = z * rinv;
-
-  r0inv = 1.0 / sqrt(r * r + z0 * z0);
-  a_r = z0 * r0inv;
-  a_i = -z * r0inv;
-  b_r = y * r0inv;
-  b_i = -x * r0inv;
-
-  dr0invdr = -pow(r0inv, 3.0) * (r + z0 * dz0dr);
-
-  dr0inv[0] = dr0invdr * ux;
-  dr0inv[1] = dr0invdr * uy;
-  dr0inv[2] = dr0invdr * uz;
-
-  dz0[0] = dz0dr * ux;
-  dz0[1] = dz0dr * uy;
-  dz0[2] = dz0dr * uz;
-
-  for (int k = 0; k < 3; k++)
-  {
-    da_r[k] = dz0[k] * r0inv + z0 * dr0inv[k];
-    da_i[k] = -z * dr0inv[k];
-  }
-
-  da_i[2] += -r0inv;
-
-  for (int k = 0; k < 3; k++)
-  {
-    db_r[k] = y * dr0inv[k];
-    db_i[k] = -x * dr0inv[k];
-  }
-
-  db_i[0] += -r0inv;
-  db_r[1] += r0inv;
-
-  uarray_r[0][0][0] = 1.0;
-  duarray_r[0][0][0][0] = 0.0;
-  duarray_r[0][0][0][1] = 0.0;
-  duarray_r[0][0][0][2] = 0.0;
-  uarray_i[0][0][0] = 0.0;
-  duarray_i[0][0][0][0] = 0.0;
-  duarray_i[0][0][0][1] = 0.0;
-  duarray_i[0][0][0][2] = 0.0;
-
-  for (int j = 1; j <= twojmax; j++)
-  {
-    for (int mb = 0; 2 * mb <= j; mb++)
-    {
-      uarray_r[j][0][mb] = 0.0;
-      duarray_r[j][0][mb][0] = 0.0;
-      duarray_r[j][0][mb][1] = 0.0;
-      duarray_r[j][0][mb][2] = 0.0;
-      uarray_i[j][0][mb] = 0.0;
-      duarray_i[j][0][mb][0] = 0.0;
-      duarray_i[j][0][mb][1] = 0.0;
-      duarray_i[j][0][mb][2] = 0.0;
-
-      for (int ma = 0; ma < j; ma++)
-      {
-        rootpq = rootpqarray[j - ma][j - mb];
-        uarray_r[j][ma][mb] += rootpq
-                               * (a_r * uarray_r[j - 1][ma][mb]
-                                  + a_i * uarray_i[j - 1][ma][mb]);
-        uarray_i[j][ma][mb] += rootpq
-                               * (a_r * uarray_i[j - 1][ma][mb]
-                                  - a_i * uarray_r[j - 1][ma][mb]);
-
-        for (int k = 0; k < 3; k++)
-        {
-          duarray_r[j][ma][mb][k] += rootpq
-                                     * (da_r[k] * uarray_r[j - 1][ma][mb]
-                                        + da_i[k] * uarray_i[j - 1][ma][mb]
-                                        + a_r * duarray_r[j - 1][ma][mb][k]
-                                        + a_i * duarray_i[j - 1][ma][mb][k]);
-          duarray_i[j][ma][mb][k] += rootpq
-                                     * (da_r[k] * uarray_i[j - 1][ma][mb]
-                                        - da_i[k] * uarray_r[j - 1][ma][mb]
-                                        + a_r * duarray_i[j - 1][ma][mb][k]
-                                        - a_i * duarray_r[j - 1][ma][mb][k]);
-        }
-
-        rootpq = rootpqarray[ma + 1][j - mb];
-        uarray_r[j][ma + 1][mb]
-            = -rootpq
-              * (b_r * uarray_r[j - 1][ma][mb] + b_i * uarray_i[j - 1][ma][mb]);
-        uarray_i[j][ma + 1][mb]
-            = -rootpq
-              * (b_r * uarray_i[j - 1][ma][mb] - b_i * uarray_r[j - 1][ma][mb]);
-
-        for (int k = 0; k < 3; k++)
-        {
-          duarray_r[j][ma + 1][mb][k] = -rootpq
-                                        * (db_r[k] * uarray_r[j - 1][ma][mb]
-                                           + db_i[k] * uarray_i[j - 1][ma][mb]
-                                           + b_r * duarray_r[j - 1][ma][mb][k]
-                                           + b_i * duarray_i[j - 1][ma][mb][k]);
-          duarray_i[j][ma + 1][mb][k] = -rootpq
-                                        * (db_r[k] * uarray_i[j - 1][ma][mb]
-                                           - db_i[k] * uarray_r[j - 1][ma][mb]
-                                           + b_r * duarray_i[j - 1][ma][mb][k]
-                                           - b_i * duarray_r[j - 1][ma][mb][k]);
-        }
-      }
-    }
-
-    int mbpar = -1;
-    for (int mb = 0; 2 * mb <= j; mb++)
-    {
-      mbpar = -mbpar;
-      int mapar = -mbpar;
-      for (int ma = 0; ma <= j; ma++)
-      {
-        mapar = -mapar;
-        if (mapar == 1)
-        {
-          uarray_r[j][j - ma][j - mb] = uarray_r[j][ma][mb];
-          uarray_i[j][j - ma][j - mb] = -uarray_i[j][ma][mb];
-          for (int k = 0; k < 3; k++)
-          {
-            duarray_r[j][j - ma][j - mb][k] = duarray_r[j][ma][mb][k];
-            duarray_i[j][j - ma][j - mb][k] = -duarray_i[j][ma][mb][k];
-          }
-        }
-        else
-        {
-          uarray_r[j][j - ma][j - mb] = -uarray_r[j][ma][mb];
-          uarray_i[j][j - ma][j - mb] = uarray_i[j][ma][mb];
-          for (int k = 0; k < 3; k++)
-          {
-            duarray_r[j][j - ma][j - mb][k] = -duarray_r[j][ma][mb][k];
-            duarray_i[j][j - ma][j - mb][k] = duarray_i[j][ma][mb][k];
-          }
-        }
-      }
-    }
-  }
-
-  double sfac = compute_sfac(r, rcut);
-  double dsfac = compute_dsfac(r, rcut);
-
-  sfac *= wj;
-  dsfac *= wj;
-
-  for (int j = 0; j <= twojmax; j++)
-    for (int ma = 0; ma <= j; ma++)
-      for (int mb = 0; mb <= j; mb++)
-      {
-        duarray_r[j][ma][mb][0]
-            = dsfac * uarray_r[j][ma][mb] * ux + sfac * duarray_r[j][ma][mb][0];
-        duarray_i[j][ma][mb][0]
-            = dsfac * uarray_i[j][ma][mb] * ux + sfac * duarray_i[j][ma][mb][0];
-        duarray_r[j][ma][mb][1]
-            = dsfac * uarray_r[j][ma][mb] * uy + sfac * duarray_r[j][ma][mb][1];
-        duarray_i[j][ma][mb][1]
-            = dsfac * uarray_i[j][ma][mb] * uy + sfac * duarray_i[j][ma][mb][1];
-        duarray_r[j][ma][mb][2]
-            = dsfac * uarray_r[j][ma][mb] * uz + sfac * duarray_r[j][ma][mb][2];
-        duarray_i[j][ma][mb][2]
-            = dsfac * uarray_i[j][ma][mb] * uz + sfac * duarray_i[j][ma][mb][2];
-      }
-}
-
-/* ----------------------------------------------------------------------
-   memory usage of arrays
-------------------------------------------------------------------------- */
 
 double Bispectrum::memory_usage()
 {
-  int jdim = twojmax + 1;
-  double bytes;
-  bytes = jdim * jdim * jdim * jdim * jdim * sizeof(double);
-  bytes += 2 * jdim * jdim * jdim * sizeof(std::complex<double>);
-  bytes += 2 * jdim * jdim * jdim * sizeof(double);
-  bytes += jdim * jdim * jdim * 3 * sizeof(std::complex<double>);
-  bytes += jdim * jdim * jdim * 3 * sizeof(double);
-  bytes += ncoeff * sizeof(double);
-  bytes += jdim * jdim * jdim * jdim * jdim * sizeof(std::complex<double>);
-  return bytes;
+    double bytes;
+    int const jdim = twojmax + 1;
+    bytes = jdim * jdim * jdim * jdim * jdim * sizeof(double);
+    bytes += 2 * jdim * jdim * jdim * sizeof(std::complex<double>);
+    bytes += 2 * jdim * jdim * jdim * sizeof(double);
+    bytes += jdim * jdim * jdim * 3 * sizeof(std::complex<double>);
+    bytes += jdim * jdim * jdim * 3 * sizeof(double);
+    bytes += ncoeff * sizeof(double);
+    bytes += jdim * jdim * jdim * jdim * jdim * sizeof(std::complex<double>);
+    return bytes;
 }
 
-/* ---------------------------------------------------------------------- */
+void Bispectrum::grow_rij(int const newnmax)
+{
+    if (newnmax <= nmax)
+    {
+        return;
+    }
+
+    nmax = newnmax;
+
+    if (!use_shared_arrays)
+    {
+        AllocateAndInitialize2DArray<double>(rij, nmax, 3);
+        AllocateAndInitialize1DArray<int>(inside, nmax);
+        AllocateAndInitialize1DArray<double>(wj, nmax);
+        AllocateAndInitialize1DArray<double>(rcutij, nmax);
+    }
+}
+
+void Bispectrum::compute_B(double const *coordinates,
+                           int const *particleSpecies,
+                           int const *neighlist,
+                           int const *numneigh,
+                           int const *image,
+                           int const Natoms,
+                           int const Ncontrib,
+                           double *const zeta,
+                           double *const dzeta_dr)
+{
+    // prepare data
+    VectorOfSizeDIM *coords = (VectorOfSizeDIM *)coordinates;
+
+    int start = 0;
+    for (int i = 0; i < Ncontrib; i++)
+    {
+        int const numNei = numneigh[i];
+        int const *const ilist = neighlist + start;
+        int const iSpecies = particleSpecies[i];
+
+        start += numNei;
+
+        // insure rij, inside, wj, and rcutij are of size jnum
+        grow_rij(numNei);
+
+        // rij[][3] = displacements between atom I and those neighbors
+        // inside = indices of neighbors of I within cutoff
+        // wj = weights for neighbors of I within cutoff
+        // rcutij = cutoffs for neighbors of I within cutoff
+        // note Rij sign convention => dU/dRij = dU/dRj = -dU/dRi
+
+        int ninside = 0;
+
+        // Setup loop over neighbors of current particle
+        for (int jj = 0; jj < numNei; ++jj)
+        {
+            // adjust index of particle neighbor
+            int const j = ilist[jj];
+            int const jSpecies = particleSpecies[j];
+
+            // rij vec and
+            double rvec[DIM];
+            for (int dim = 0; dim < DIM; ++dim)
+            {
+                rvec[dim] = coords[j][dim] - coords[i][dim];
+            }
+
+            double const rsq = rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2];
+            double const rmag = std::sqrt(rsq);
+
+            if (rmag < rcuts[iSpecies][jSpecies] && rmag > 1e-10)
+            {
+                rij[ninside][0] = rvec[0];
+                rij[ninside][1] = rvec[1];
+                rij[ninside][2] = rvec[2];
+
+                inside[ninside] = j;
+                wj[ninside] = wjelem[jSpecies];
+                rcutij[ninside] = rcuts[iSpecies][jSpecies];
+
+                ninside++;
+            }
+        }
+
+        // compute Ui, Zi, and Bi for atom I
+
+        compute_ui(ninside);
+
+        compute_zi();
+
+        compute_bi();
+
+        copy_bi2bvec();
+
+        for (int icoeff = 0; icoeff < ncoeff; icoeff++)
+        {
+            zeta[i * ncoeff + icoeff] = bvec[icoeff];
+        }
+
+        // for neighbors of I within cutoff:
+        // compute dUi/drj and dBi/drj
+
+        if (dzeta_dr != nullptr)
+        {
+            for (int jj = 0; jj < ninside; jj++)
+            {
+                compute_duidrj(rij[jj], wj[jj], rcutij[jj]);
+
+                compute_dbidrj();
+
+                copy_dbi2dbvec();
+
+                // copy to dzeta_dr
+                int const j = inside[jj];
+                for (int icoeff = 0; icoeff < ncoeff; icoeff++)
+                {
+                    int const page = (i * ncoeff + icoeff) * Ncontrib * DIM;
+                    for (int dim = 0; dim < DIM; ++dim)
+                    {
+                        dzeta_dr[page + i * DIM + dim] += dbvec[icoeff][dim];
+                        dzeta_dr[page + image[j] * DIM + dim] -= dbvec[icoeff][dim];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Bispectrum::set_cutoff(char *name, int const Nspecies, double const *rcuts_in)
+{
+    // store number of species and cutoff values
+    AllocateAndInitialize2DArray<double>(rcuts, Nspecies, Nspecies, rcuts_in);
+}
+
+void Bispectrum::set_weight(int const Nspecies, double const *weight_in)
+{
+    AllocateAndInitialize1DArray<double>(wjelem, Nspecies, weight_in);
+}
+
+void Bispectrum::compute_ui(int const jnum)
+{
+    zero_uarraytot();
+
+    addself_uarraytot(wself);
+
+    double x, y, z;
+    double r, rsq;
+    double z0;
+    double theta0;
+
+    for (int j = 0; j < jnum; j++)
+    {
+        x = rij[j][0];
+        y = rij[j][1];
+        z = rij[j][2];
+
+        rsq = x * x + y * y + z * z;
+        r = std::sqrt(rsq);
+
+        // TODO this is not in agreement with the paper, maybe cahnge it
+        theta0 = (r - rmin0) * rfac0 * MY_PI / (rcutij[j] - rmin0);
+        // theta0 = (r - rmin0) * rscale0;
+
+        z0 = r / std::tan(theta0);
+
+        compute_uarray(x, y, z, z0, r);
+
+        add_uarraytot(r, wj[j], rcutij[j]);
+    }
+}
+
+void Bispectrum::compute_zi()
+{
+    for (int j1 = 0; j1 <= twojmax; j1++)
+    {
+        for (int j2 = 0; j2 <= j1; j2++)
+        {
+            for (int j = j1 - j2; j <= std::min(twojmax, j1 + j2); j += 2)
+            {
+                for (int mb = 0; 2 * mb <= j; mb++)
+                {
+                    for (int ma = 0; ma <= j; ma++)
+                    {
+                        zarray_r[j1][j2][j][ma][mb] = 0.0;
+                        zarray_i[j1][j2][j][ma][mb] = 0.0;
+
+                        for (int ma1 = std::max(0, (2 * ma - j - j2 + j1) / 2); ma1 <= std::min(j1, (2 * ma - j + j2 + j1) / 2); ma1++)
+                        {
+                            double sumb1_r = 0.0;
+                            double sumb1_i = 0.0;
+
+                            int const ma2 = (2 * ma - j - (2 * ma1 - j1) + j2) / 2;
+
+                            for (int mb1 = std::max(0, (2 * mb - j - j2 + j1) / 2); mb1 <= std::min(j1, (2 * mb - j + j2 + j1) / 2); mb1++)
+                            {
+                                int const mb2 = (2 * mb - j - (2 * mb1 - j1) + j2) / 2;
+
+                                sumb1_r += cgarray[j1][j2][j][mb1][mb2] * (uarraytot_r[j1][ma1][mb1] * uarraytot_r[j2][ma2][mb2] - uarraytot_i[j1][ma1][mb1] * uarraytot_i[j2][ma2][mb2]);
+                                sumb1_i += cgarray[j1][j2][j][mb1][mb2] * (uarraytot_r[j1][ma1][mb1] * uarraytot_i[j2][ma2][mb2] + uarraytot_i[j1][ma1][mb1] * uarraytot_r[j2][ma2][mb2]);
+                            }
+
+                            zarray_r[j1][j2][j][ma][mb] += sumb1_r * cgarray[j1][j2][j][ma1][ma2];
+                            zarray_i[j1][j2][j][ma][mb] += sumb1_i * cgarray[j1][j2][j][ma1][ma2];
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Bispectrum::compute_bi()
+{
+    for (int j1 = 0; j1 <= twojmax; j1++)
+    {
+        for (int j2 = 0; j2 <= j1; j2++)
+        {
+            for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+            {
+                barray[j1][j2][j] = 0.0;
+
+                for (int mb = 0; 2 * mb < j; mb++)
+                {
+                    for (int ma = 0; ma <= j; ma++)
+                    {
+                        barray[j1][j2][j] += uarraytot_r[j][ma][mb] * zarray_r[j1][j2][j][ma][mb] + uarraytot_i[j][ma][mb] * zarray_i[j1][j2][j][ma][mb];
+                    }
+                }
+
+                // For j even, special treatment for middle column
+                if (j % 2 == 0)
+                {
+                    int const mb = j / 2;
+                    for (int ma = 0; ma < mb; ma++)
+                    {
+                        barray[j1][j2][j] += uarraytot_r[j][ma][mb] * zarray_r[j1][j2][j][ma][mb] + uarraytot_i[j][ma][mb] * zarray_i[j1][j2][j][ma][mb];
+                    }
+
+                    // ma = mb
+                    barray[j1][j2][j] += (uarraytot_r[j][mb][mb] * zarray_r[j1][j2][j][mb][mb] + uarraytot_i[j][mb][mb] * zarray_i[j1][j2][j][mb][mb]) * 0.5;
+                }
+
+                barray[j1][j2][j] *= 2.0;
+
+                if (bzero_flag)
+                {
+                    barray[j1][j2][j] -= bzero[j];
+                }
+            }
+        }
+    }
+}
+
+void Bispectrum::copy_bi2bvec()
+{
+    switch (diagonalstyle)
+    {
+    case (0):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    bvec[ncount++] = barray[j1][j2][j];
+                }
+            }
+        }
+        return;
+        break;
+    }
+    case (1):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
+            {
+                bvec[ncount++] = barray[j1][j1][j];
+            }
+        }
+        return;
+        break;
+    }
+    case (2):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            bvec[ncount++] = barray[j1][j1][j1];
+        }
+        return;
+        break;
+    }
+    case (3):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    if (j >= j1)
+                    {
+                        bvec[ncount++] = barray[j1][j2][j];
+                    }
+                }
+            }
+        }
+        return;
+    }
+    }
+}
+
+void Bispectrum::compute_duidrj(double const *rij_in, double const wj_in, double const rcut_in)
+{
+    double const x = rij_in[0];
+    double const y = rij_in[1];
+    double const z = rij_in[2];
+
+    double const rsq = x * x + y * y + z * z;
+    double const r = std::sqrt(rsq);
+
+    // TODO this is not in agreemnt with paper
+    double const rscale0 = rfac0 * MY_PI / (rcut_in - rmin0);
+
+    double const theta0 = (r - rmin0) * rscale0;
+
+    double const cs = std::cos(theta0);
+    double const sn = std::sin(theta0);
+
+    double const z0 = r * cs / sn;
+    double const dz0dr = z0 / r - (r * rscale0) * (rsq + z0 * z0) / rsq;
+
+    compute_duarray(x, y, z, z0, r, dz0dr, wj_in, rcut_in);
+}
+
+void Bispectrum::compute_duidrj(Array1D<double> const &rij_in, double const wj_in, double const rcut_in)
+{
+    compute_duidrj(rij_in.data(), wj_in, rcut_in);
+}
+
+void Bispectrum::compute_dbidrj_nonsymm()
+{
+    double sumb1_r[3], sumb1_i[3];
+    double dzdr_r[3], dzdr_i[3];
+
+    for (int JJ = 0; JJ < idxj_max; JJ++)
+    {
+        int const j1 = idxj[JJ].j1;
+        int const j2 = idxj[JJ].j2;
+        int const j = idxj[JJ].j;
+
+        auto dbdr = dbarray[j1][j2][j].data();
+
+        dbdr[0] = 0.0;
+        dbdr[1] = 0.0;
+        dbdr[2] = 0.0;
+
+        auto j1duarray_r = duarray_r[j1].data();
+        auto j2duarray_r = duarray_r[j2].data();
+        auto j1duarray_i = duarray_i[j1].data();
+        auto j2duarray_i = duarray_i[j2].data();
+
+        auto j1uarraytot_r = uarraytot_r[j1].data();
+        auto j2uarraytot_r = uarraytot_r[j2].data();
+        auto j1uarraytot_i = uarraytot_i[j1].data();
+        auto j2uarraytot_i = uarraytot_i[j2].data();
+
+        auto j1j2jcgarray = cgarray[j1][j2][j].data();
+
+        for (int ma = 0; ma <= j; ma++)
+        {
+            for (int mb = 0; mb <= j; mb++)
+            {
+                dzdr_r[0] = 0.0;
+                dzdr_r[1] = 0.0;
+                dzdr_r[2] = 0.0;
+
+                dzdr_i[0] = 0.0;
+                dzdr_i[1] = 0.0;
+                dzdr_i[2] = 0.0;
+
+                int const max_mb1 = std::min(j1, (2 * mb - j + j2 + j1) / 2) + 1;
+                int const max_ma1 = std::min(j1, (2 * ma - j + j2 + j1) / 2) + 1;
+
+                for (int ma1 = std::max(0, (2 * ma - j - j2 + j1) / 2); ma1 < max_ma1; ma1++)
+                {
+                    int const ma2 = (2 * ma - j - (2 * ma1 - j1) + j2) / 2;
+
+                    sumb1_r[0] = 0.0;
+                    sumb1_r[1] = 0.0;
+                    sumb1_r[2] = 0.0;
+
+                    sumb1_i[0] = 0.0;
+                    sumb1_i[1] = 0.0;
+                    sumb1_i[2] = 0.0;
+
+                    // inside loop 54 operations (mul and add)
+                    for (int mb1 = std::max(0, (2 * mb - j - j2 + j1) / 2), mb2 = mb + (j1 + j2 - j) / 2 - mb1; mb1 < max_mb1; mb1++, mb2--)
+                    {
+                        auto dudr1_r = j1duarray_r[ma1][mb1].data();
+                        auto dudr2_r = j2duarray_r[ma2][mb2].data();
+                        auto dudr1_i = j1duarray_i[ma1][mb1].data();
+                        auto dudr2_i = j2duarray_i[ma2][mb2].data();
+
+                        double const cga_mb1mb2 = j1j2jcgarray[mb1][mb2];
+
+                        double const uat_r_ma2mb2 = cga_mb1mb2 * j2uarraytot_r[ma2][mb2];
+                        double const uat_r_ma1mb1 = cga_mb1mb2 * j1uarraytot_r[ma1][mb1];
+                        double const uat_i_ma2mb2 = cga_mb1mb2 * j2uarraytot_i[ma2][mb2];
+                        double const uat_i_ma1mb1 = cga_mb1mb2 * j1uarraytot_i[ma1][mb1];
+
+                        for (int k = 0; k < 3; k++)
+                        {
+                            sumb1_r[k] += dudr1_r[k] * uat_r_ma2mb2;
+                            sumb1_r[k] -= dudr1_i[k] * uat_i_ma2mb2;
+                            sumb1_i[k] += dudr1_r[k] * uat_i_ma2mb2;
+                            sumb1_i[k] += dudr1_i[k] * uat_r_ma2mb2;
+
+                            sumb1_r[k] += dudr2_r[k] * uat_r_ma1mb1;
+                            sumb1_r[k] -= dudr2_i[k] * uat_i_ma1mb1;
+                            sumb1_i[k] += dudr2_r[k] * uat_i_ma1mb1;
+                            sumb1_i[k] += dudr2_i[k] * uat_r_ma1mb1;
+                        }
+                    }
+
+                    // dzdr += sumb1*cg(j1,ma1,j2,ma2,j)
+
+                    dzdr_r[0] += sumb1_r[0] * j1j2jcgarray[ma1][ma2];
+                    dzdr_r[1] += sumb1_r[1] * j1j2jcgarray[ma1][ma2];
+                    dzdr_r[2] += sumb1_r[2] * j1j2jcgarray[ma1][ma2];
+
+                    dzdr_i[0] += sumb1_i[0] * j1j2jcgarray[ma1][ma2];
+                    dzdr_i[1] += sumb1_i[1] * j1j2jcgarray[ma1][ma2];
+                    dzdr_i[2] += sumb1_i[2] * j1j2jcgarray[ma1][ma2];
+                }
+
+                // dbdr(j1,j2,j) +=
+                //   Conj(dudr(j,ma,mb))*z(j1,j2,j,ma,mb) +
+                //   Conj(u(j,ma,mb))*dzdr
+
+                auto dudr_r = duarray_r[j][ma][mb].data();
+                auto dudr_i = duarray_i[j][ma][mb].data();
+
+                for (int k = 0; k < 3; k++)
+                {
+                    dbdr[k] += (dudr_r[k] * zarray_r[j1][j2][j][ma][mb] + dudr_i[k] * zarray_i[j1][j2][j][ma][mb]) + (uarraytot_r[j][ma][mb] * dzdr_r[k] + uarraytot_i[j][ma][mb] * dzdr_i[k]);
+                }
+            }
+        }
+    }
+}
+
+void Bispectrum::compute_dbidrj()
+{
+    double *dbdr;
+    double *dudr_r;
+    double *dudr_i;
+
+    double jjjmambzarray_r;
+    double jjjmambzarray_i;
+
+    double sumzdu_r[3];
+
+    for (int JJ = 0; JJ < idxj_max; JJ++)
+    {
+        int const j1 = idxj[JJ].j1;
+        int const j2 = idxj[JJ].j2;
+        int const j = idxj[JJ].j;
+
+        dbdr = dbarray[j1][j2][j].data();
+
+        dbdr[0] = 0.0;
+        dbdr[1] = 0.0;
+        dbdr[2] = 0.0;
+
+        // Sum terms Conj(dudr(j,ma,mb))*z(j1,j2,j,ma,mb)
+        {
+            sumzdu_r[0] = 0.0;
+            sumzdu_r[1] = 0.0;
+            sumzdu_r[2] = 0.0;
+
+            // use zarray j1/j2 symmetry (optional)
+            auto jjjzarray_r = (j1 >= j2) ? zarray_r[j1][j2][j].data() : zarray_r[j2][j1][j].data();
+            auto jjjzarray_i = (j1 >= j2) ? zarray_i[j1][j2][j].data() : zarray_i[j2][j1][j].data();
+
+            for (int mb = 0; 2 * mb < j; mb++)
+            {
+                for (int ma = 0; ma <= j; ma++)
+                {
+                    dudr_r = duarray_r[j][ma][mb].data();
+                    dudr_i = duarray_i[j][ma][mb].data();
+
+                    jjjmambzarray_r = jjjzarray_r[ma][mb];
+                    jjjmambzarray_i = jjjzarray_i[ma][mb];
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        sumzdu_r[k] += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
+                    }
+                }
+            }
+
+            // For j even, handle middle column
+            if (!(j % 2))
+            {
+                int const mb = j / 2;
+                for (int ma = 0; ma < mb; ma++)
+                {
+                    dudr_r = duarray_r[j][ma][mb].data();
+                    dudr_i = duarray_i[j][ma][mb].data();
+
+                    jjjmambzarray_r = jjjzarray_r[ma][mb];
+                    jjjmambzarray_i = jjjzarray_i[ma][mb];
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        sumzdu_r[k] += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
+                    }
+                }
+
+                dudr_r = duarray_r[j][mb][mb].data();
+                dudr_i = duarray_i[j][mb][mb].data();
+
+                jjjmambzarray_r = jjjzarray_r[mb][mb];
+                jjjmambzarray_i = jjjzarray_i[mb][mb];
+
+                for (int k = 0; k < 3; k++)
+                {
+                    sumzdu_r[k] += (dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i) * 0.5;
+                }
+            }
+
+            for (int k = 0; k < 3; k++)
+            {
+                dbdr[k] += 2.0 * sumzdu_r[k];
+            }
+        }
+
+        // Sum over Conj(dudr(j1,ma1,mb1))*z(j,j2,j1,ma1,mb1)
+        {
+            sumzdu_r[0] = 0.0;
+            sumzdu_r[1] = 0.0;
+            sumzdu_r[2] = 0.0;
+
+            // use zarray j1/j2 symmetry (optional)
+            auto jjjzarray_r = (j1 >= j2) ? zarray_r[j][j2][j1].data() : zarray_r[j2][j][j1].data();
+            auto jjjzarray_i = (j1 >= j2) ? zarray_i[j][j2][j1].data() : zarray_i[j2][j][j1].data();
+
+            for (int mb1 = 0; 2 * mb1 < j1; mb1++)
+            {
+                for (int ma1 = 0; ma1 <= j1; ma1++)
+                {
+                    dudr_r = duarray_r[j1][ma1][mb1].data();
+                    dudr_i = duarray_i[j1][ma1][mb1].data();
+
+                    jjjmambzarray_r = jjjzarray_r[ma1][mb1];
+                    jjjmambzarray_i = jjjzarray_i[ma1][mb1];
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        sumzdu_r[k] += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
+                    }
+                }
+            }
+
+            // For j1 even, handle middle column
+
+            if (j1 % 2 == 0)
+            {
+                int const mb1 = j1 / 2;
+                for (int ma1 = 0; ma1 < mb1; ma1++)
+                {
+                    dudr_r = duarray_r[j1][ma1][mb1].data();
+                    dudr_i = duarray_i[j1][ma1][mb1].data();
+
+                    jjjmambzarray_r = jjjzarray_r[ma1][mb1];
+                    jjjmambzarray_i = jjjzarray_i[ma1][mb1];
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        sumzdu_r[k] += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
+                    }
+                }
+
+                dudr_r = duarray_r[j1][mb1][mb1].data();
+                dudr_i = duarray_i[j1][mb1][mb1].data();
+
+                jjjmambzarray_r = jjjzarray_r[mb1][mb1];
+                jjjmambzarray_i = jjjzarray_i[mb1][mb1];
+
+                for (int k = 0; k < 3; k++)
+                {
+                    sumzdu_r[k] += (dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i) * 0.5;
+                }
+            }
+
+            double const j1fac = (j + 1) / (j1 + 1.0);
+
+            for (int k = 0; k < 3; k++)
+            {
+                dbdr[k] += 2.0 * sumzdu_r[k] * j1fac;
+            }
+        }
+
+        // Sum over Conj(dudr(j2,ma2,mb2))*z(j1,j,j2,ma2,mb2)
+
+        {
+            sumzdu_r[0] = 0.0;
+            sumzdu_r[1] = 0.0;
+            sumzdu_r[2] = 0.0;
+
+            // use zarray j1/j2 symmetry (optional)
+            auto jjjzarray_r = (j1 >= j2) ? zarray_r[j1][j][j2].data() : zarray_r[j][j1][j2].data();
+            auto jjjzarray_i = (j1 >= j2) ? zarray_i[j1][j][j2].data() : zarray_i[j][j1][j2].data();
+
+            for (int mb2 = 0; 2 * mb2 < j2; mb2++)
+            {
+                for (int ma2 = 0; ma2 <= j2; ma2++)
+                {
+                    dudr_r = duarray_r[j2][ma2][mb2].data();
+                    dudr_i = duarray_i[j2][ma2][mb2].data();
+
+                    jjjmambzarray_r = jjjzarray_r[ma2][mb2];
+                    jjjmambzarray_i = jjjzarray_i[ma2][mb2];
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        sumzdu_r[k] += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
+                    }
+                }
+            }
+
+            // For j2 even, handle middle column
+            if (j2 % 2 == 0)
+            {
+                int const mb2 = j2 / 2;
+                for (int ma2 = 0; ma2 < mb2; ma2++)
+                {
+                    dudr_r = duarray_r[j2][ma2][mb2].data();
+                    dudr_i = duarray_i[j2][ma2][mb2].data();
+
+                    jjjmambzarray_r = jjjzarray_r[ma2][mb2];
+                    jjjmambzarray_i = jjjzarray_i[ma2][mb2];
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        sumzdu_r[k] += dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i;
+                    }
+                }
+
+                dudr_r = duarray_r[j2][mb2][mb2].data();
+                dudr_i = duarray_i[j2][mb2][mb2].data();
+
+                jjjmambzarray_r = jjjzarray_r[mb2][mb2];
+                jjjmambzarray_i = jjjzarray_i[mb2][mb2];
+
+                for (int k = 0; k < 3; k++)
+                {
+                    sumzdu_r[k] += (dudr_r[k] * jjjmambzarray_r + dudr_i[k] * jjjmambzarray_i) * 0.5;
+                }
+            }
+
+            double const j2fac = (j + 1) / (j2 + 1.0);
+
+            for (int k = 0; k < 3; k++)
+            {
+                dbdr[k] += 2.0 * sumzdu_r[k] * j2fac;
+            }
+        }
+    }
+}
+
+void Bispectrum::copy_dbi2dbvec()
+{
+    switch (diagonalstyle)
+    {
+    case (0):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    dbvec[ncount][0] = dbarray[j1][j2][j][0];
+                    dbvec[ncount][1] = dbarray[j1][j2][j][1];
+                    dbvec[ncount][2] = dbarray[j1][j2][j][2];
+                    ncount++;
+                }
+            }
+        }
+        return;
+    }
+    break;
+    case (1):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
+            {
+                dbvec[ncount][0] = dbarray[j1][j1][j][0];
+                dbvec[ncount][1] = dbarray[j1][j1][j][1];
+                dbvec[ncount][2] = dbarray[j1][j1][j][2];
+                ncount++;
+            }
+        }
+        return;
+    }
+    break;
+    case (2):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            dbvec[ncount][0] = dbarray[j1][j1][j1][0];
+            dbvec[ncount][1] = dbarray[j1][j1][j1][1];
+            dbvec[ncount][2] = dbarray[j1][j1][j1][2];
+            ncount++;
+        }
+        return;
+    }
+    break;
+    case (3):
+    {
+        for (int j1 = 0, ncount = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                    if (j >= j1)
+                    {
+                        dbvec[ncount][0] = dbarray[j1][j2][j][0];
+                        dbvec[ncount][1] = dbarray[j1][j2][j][1];
+                        dbvec[ncount][2] = dbarray[j1][j2][j][2];
+                        ncount++;
+                    }
+            }
+        }
+        return;
+    }
+    }
+}
+
+void Bispectrum::zero_uarraytot()
+{
+    for (int j = 0; j <= twojmax; j++)
+    {
+        for (int ma = 0; ma <= j; ma++)
+        {
+            for (int mb = 0; mb <= j; mb++)
+            {
+                uarraytot_r[j][ma][mb] = 0.0;
+                uarraytot_i[j][ma][mb] = 0.0;
+            }
+        }
+    }
+}
+
+void Bispectrum::addself_uarraytot(double const wself_in)
+{
+    for (int j = 0; j <= twojmax; j++)
+    {
+        for (int ma = 0; ma <= j; ma++)
+        {
+            uarraytot_r[j][ma][ma] = wself_in;
+            uarraytot_i[j][ma][ma] = 0.0;
+        }
+    }
+}
+
+void Bispectrum::compute_uarray(double const x, double const y, double const z, double const z0, double const r)
+{
+    // compute Cayley-Klein parameters for unit quaternion
+    double const r0inv = 1.0 / std::sqrt(r * r + z0 * z0);
+
+    double const a_r = r0inv * z0;
+    double const a_i = -r0inv * z;
+    double const b_r = r0inv * y;
+    double const b_i = -r0inv * x;
+
+    double rootpq;
+
+    // VMK Section 4.8.2
+    uarray_r[0][0][0] = 1.0;
+    uarray_i[0][0][0] = 0.0;
+
+    for (int j = 1; j <= twojmax; j++)
+    {
+        // fill in left side of matrix layer from previous layer
+        for (int mb = 0; 2 * mb <= j; mb++)
+        {
+            uarray_r[j][0][mb] = 0.0;
+            uarray_i[j][0][mb] = 0.0;
+
+            for (int ma = 0; ma < j; ma++)
+            {
+                rootpq = rootpqarray[j - ma][j - mb];
+
+                uarray_r[j][ma][mb] += rootpq * (a_r * uarray_r[j - 1][ma][mb] + a_i * uarray_i[j - 1][ma][mb]);
+                uarray_i[j][ma][mb] += rootpq * (a_r * uarray_i[j - 1][ma][mb] - a_i * uarray_r[j - 1][ma][mb]);
+
+                rootpq = rootpqarray[ma + 1][j - mb];
+
+                uarray_r[j][ma + 1][mb] = -rootpq * (b_r * uarray_r[j - 1][ma][mb] + b_i * uarray_i[j - 1][ma][mb]);
+                uarray_i[j][ma + 1][mb] = -rootpq * (b_r * uarray_i[j - 1][ma][mb] - b_i * uarray_r[j - 1][ma][mb]);
+            }
+        }
+
+        // copy left side to right side with inversion symmetry VMK 4.4(2)
+        // u[ma-j][mb-j] = (-1)^(ma-mb)*Conj([u[ma][mb])
+
+        int mbpar = -1;
+        for (int mb = 0; 2 * mb <= j; mb++)
+        {
+            mbpar = -mbpar;
+
+            int mapar = -mbpar;
+            for (int ma = 0; ma <= j; ma++)
+            {
+                mapar = -mapar;
+                if (mapar == 1)
+                {
+                    uarray_r[j][j - ma][j - mb] = uarray_r[j][ma][mb];
+                    uarray_i[j][j - ma][j - mb] = -uarray_i[j][ma][mb];
+                }
+                else
+                {
+                    uarray_r[j][j - ma][j - mb] = -uarray_r[j][ma][mb];
+                    uarray_i[j][j - ma][j - mb] = uarray_i[j][ma][mb];
+                }
+            }
+        }
+    }
+}
+
+void Bispectrum::add_uarraytot(double const r, double const wj_in, double const rcut_in)
+{
+    double sfac = compute_sfac(r, rcut_in);
+    sfac *= wj_in;
+
+    for (int j = 0; j <= twojmax; j++)
+    {
+        for (int ma = 0; ma <= j; ma++)
+        {
+            for (int mb = 0; mb <= j; mb++)
+            {
+                uarraytot_r[j][ma][mb] += sfac * uarray_r[j][ma][mb];
+                uarraytot_i[j][ma][mb] += sfac * uarray_i[j][ma][mb];
+            }
+        }
+    }
+}
+
+double Bispectrum::compute_sfac(double const r, double const rcut_in)
+{
+    switch (switch_flag)
+    {
+    case (0):
+        return 1.0;
+        break;
+    case (1):
+        return (r <= rmin0) ? 1.0 : (r > rcut_in) ? 0.0 : 0.5 * (std::cos((r - rmin0) * MY_PI / (rcut_in - rmin0)) + 1.0);
+        break;
+    default:
+        return 0.0;
+    }
+}
+
+double Bispectrum::compute_dsfac(double const r, double const rcut_in)
+{
+    switch (switch_flag)
+    {
+    case (1):
+        if (r <= rmin0 || r > rcut_in)
+        {
+            return 0.0;
+        }
+        else
+        {
+            double const rcutfac = MY_PI / (rcut_in - rmin0);
+            return -0.5 * std::sin((r - rmin0) * rcutfac) * rcutfac;
+        }
+        break;
+    default:
+        return 0.0;
+    }
+}
+
+void Bispectrum::compute_duarray(double const x,
+                                 double const y,
+                                 double const z,
+                                 double const z0,
+                                 double const r,
+                                 double const dz0dr,
+                                 double const wj_in,
+                                 double const rcut_in)
+{
+    if (r <= std::numeric_limits<double>::epsilon() * 100.)
+    {
+        throw std::invalid_argument(std::string("The input radius = ") + std::to_string(r) + std::string(" is less than the machine epsilon!"));
+    }
+
+    double const rinv = 1.0 / r;
+    double const ux = x * rinv;
+    double const uy = y * rinv;
+    double const uz = z * rinv;
+
+    double const r0inv = 1.0 / std::sqrt(r * r + z0 * z0);
+    double const a_r = z0 * r0inv;
+    double const a_i = -z * r0inv;
+    double const b_r = y * r0inv;
+    double const b_i = -x * r0inv;
+
+    double da_r[3], da_i[3], db_r[3], db_i[3];
+    double dz0[3], dr0inv[3];
+    double rootpq;
+
+    {
+        double const dr0invdr = -std::pow(r0inv, 3) * (r + z0 * dz0dr);
+
+        dr0inv[0] = dr0invdr * ux;
+        dr0inv[1] = dr0invdr * uy;
+        dr0inv[2] = dr0invdr * uz;
+    }
+
+    dz0[0] = dz0dr * ux;
+    dz0[1] = dz0dr * uy;
+    dz0[2] = dz0dr * uz;
+
+    for (int k = 0; k < 3; k++)
+    {
+        da_r[k] = dz0[k] * r0inv + z0 * dr0inv[k];
+        da_i[k] = -z * dr0inv[k];
+    }
+
+    da_i[2] += -r0inv;
+
+    for (int k = 0; k < 3; k++)
+    {
+        db_r[k] = y * dr0inv[k];
+        db_i[k] = -x * dr0inv[k];
+    }
+
+    db_i[0] += -r0inv;
+    db_r[1] += r0inv;
+
+    uarray_r[0][0][0] = 1.0;
+    duarray_r[0][0][0][0] = 0.0;
+    duarray_r[0][0][0][1] = 0.0;
+    duarray_r[0][0][0][2] = 0.0;
+
+    uarray_i[0][0][0] = 0.0;
+    duarray_i[0][0][0][0] = 0.0;
+    duarray_i[0][0][0][1] = 0.0;
+    duarray_i[0][0][0][2] = 0.0;
+
+    for (int j = 1; j <= twojmax; j++)
+    {
+        for (int mb = 0; 2 * mb <= j; mb++)
+        {
+            uarray_r[j][0][mb] = 0.0;
+            duarray_r[j][0][mb][0] = 0.0;
+            duarray_r[j][0][mb][1] = 0.0;
+            duarray_r[j][0][mb][2] = 0.0;
+
+            uarray_i[j][0][mb] = 0.0;
+            duarray_i[j][0][mb][0] = 0.0;
+            duarray_i[j][0][mb][1] = 0.0;
+            duarray_i[j][0][mb][2] = 0.0;
+
+            for (int ma = 0; ma < j; ma++)
+            {
+                rootpq = rootpqarray[j - ma][j - mb];
+                uarray_r[j][ma][mb] += rootpq * (a_r * uarray_r[j - 1][ma][mb] + a_i * uarray_i[j - 1][ma][mb]);
+                uarray_i[j][ma][mb] += rootpq * (a_r * uarray_i[j - 1][ma][mb] - a_i * uarray_r[j - 1][ma][mb]);
+
+                for (int k = 0; k < 3; k++)
+                {
+                    duarray_r[j][ma][mb][k] += rootpq * (da_r[k] * uarray_r[j - 1][ma][mb] + da_i[k] * uarray_i[j - 1][ma][mb] + a_r * duarray_r[j - 1][ma][mb][k] + a_i * duarray_i[j - 1][ma][mb][k]);
+                    duarray_i[j][ma][mb][k] += rootpq * (da_r[k] * uarray_i[j - 1][ma][mb] - da_i[k] * uarray_r[j - 1][ma][mb] + a_r * duarray_i[j - 1][ma][mb][k] - a_i * duarray_r[j - 1][ma][mb][k]);
+                }
+
+                rootpq = rootpqarray[ma + 1][j - mb];
+                uarray_r[j][ma + 1][mb] = -rootpq * (b_r * uarray_r[j - 1][ma][mb] + b_i * uarray_i[j - 1][ma][mb]);
+                uarray_i[j][ma + 1][mb] = -rootpq * (b_r * uarray_i[j - 1][ma][mb] - b_i * uarray_r[j - 1][ma][mb]);
+
+                for (int k = 0; k < 3; k++)
+                {
+                    duarray_r[j][ma + 1][mb][k] = -rootpq * (db_r[k] * uarray_r[j - 1][ma][mb] + db_i[k] * uarray_i[j - 1][ma][mb] + b_r * duarray_r[j - 1][ma][mb][k] + b_i * duarray_i[j - 1][ma][mb][k]);
+                    duarray_i[j][ma + 1][mb][k] = -rootpq * (db_r[k] * uarray_i[j - 1][ma][mb] - db_i[k] * uarray_r[j - 1][ma][mb] + b_r * duarray_i[j - 1][ma][mb][k] - b_i * duarray_r[j - 1][ma][mb][k]);
+                }
+            }
+        }
+
+        int mbpar = -1;
+        for (int mb = 0; 2 * mb <= j; mb++)
+        {
+            mbpar = -mbpar;
+
+            int mapar = -mbpar;
+            for (int ma = 0; ma <= j; ma++)
+            {
+                mapar = -mapar;
+                if (mapar == 1)
+                {
+                    uarray_r[j][j - ma][j - mb] = uarray_r[j][ma][mb];
+                    uarray_i[j][j - ma][j - mb] = -uarray_i[j][ma][mb];
+                    for (int k = 0; k < 3; k++)
+                    {
+                        duarray_r[j][j - ma][j - mb][k] = duarray_r[j][ma][mb][k];
+                        duarray_i[j][j - ma][j - mb][k] = -duarray_i[j][ma][mb][k];
+                    }
+                }
+                else
+                {
+                    uarray_r[j][j - ma][j - mb] = -uarray_r[j][ma][mb];
+                    uarray_i[j][j - ma][j - mb] = uarray_i[j][ma][mb];
+                    for (int k = 0; k < 3; k++)
+                    {
+                        duarray_r[j][j - ma][j - mb][k] = -duarray_r[j][ma][mb][k];
+                        duarray_i[j][j - ma][j - mb][k] = duarray_i[j][ma][mb][k];
+                    }
+                }
+            }
+        }
+    }
+
+    double sfac = compute_sfac(r, rcut_in);
+    sfac *= wj_in;
+
+    double dsfac = compute_dsfac(r, rcut_in);
+    dsfac *= wj_in;
+
+    for (int j = 0; j <= twojmax; j++)
+    {
+        for (int ma = 0; ma <= j; ma++)
+        {
+            for (int mb = 0; mb <= j; mb++)
+            {
+                duarray_r[j][ma][mb][0] = dsfac * uarray_r[j][ma][mb] * ux + sfac * duarray_r[j][ma][mb][0];
+                duarray_i[j][ma][mb][0] = dsfac * uarray_i[j][ma][mb] * ux + sfac * duarray_i[j][ma][mb][0];
+                duarray_r[j][ma][mb][1] = dsfac * uarray_r[j][ma][mb] * uy + sfac * duarray_r[j][ma][mb][1];
+                duarray_i[j][ma][mb][1] = dsfac * uarray_i[j][ma][mb] * uy + sfac * duarray_i[j][ma][mb][1];
+                duarray_r[j][ma][mb][2] = dsfac * uarray_r[j][ma][mb] * uz + sfac * duarray_r[j][ma][mb][2];
+                duarray_i[j][ma][mb][2] = dsfac * uarray_i[j][ma][mb] * uz + sfac * duarray_i[j][ma][mb][2];
+            }
+        }
+    }
+}
 
 void Bispectrum::create_twojmax_arrays()
 {
-  int jdim = twojmax + 1;
+    int const jdim = twojmax + 1;
 
-  AllocateAndInitialize5DArray<double>(cgarray, jdim, jdim, jdim, jdim, jdim);
-  AllocateAndInitialize2DArray<double>(rootpqarray, jdim + 1, jdim + 1);
-  AllocateAndInitialize3DArray<double>(barray, jdim, jdim, jdim);
-  AllocateAndInitialize4DArray<double>(dbarray, jdim, jdim, jdim, 3);
+    AllocateAndInitialize5DArray<double>(cgarray, jdim, jdim, jdim, jdim, jdim);
+    AllocateAndInitialize2DArray<double>(rootpqarray, jdim + 1, jdim + 1);
+    AllocateAndInitialize3DArray<double>(barray, jdim, jdim, jdim);
+    AllocateAndInitialize4DArray<double>(dbarray, jdim, jdim, jdim, 3);
+    AllocateAndInitialize4DArray<double>(duarray_r, jdim, jdim, jdim, 3);
+    AllocateAndInitialize4DArray<double>(duarray_i, jdim, jdim, jdim, 3);
+    AllocateAndInitialize3DArray<double>(uarray_r, jdim, jdim, jdim);
+    AllocateAndInitialize3DArray<double>(uarray_i, jdim, jdim, jdim);
 
-  AllocateAndInitialize4DArray<double>(duarray_r, jdim, jdim, jdim, 3);
-  AllocateAndInitialize4DArray<double>(duarray_i, jdim, jdim, jdim, 3);
+    if (bzero_flag)
+    {
+        AllocateAndInitialize1DArray<double>(bzero, jdim);
+    }
 
-  AllocateAndInitialize3DArray<double>(uarray_r, jdim, jdim, jdim);
-  AllocateAndInitialize3DArray<double>(uarray_i, jdim, jdim, jdim);
-
-  if (bzero_flag)
-    AllocateAndInitialize1DArray<double>(bzero, jdim);
-  else
-    bzero = NULL;
-
-
-  if (!use_shared_arrays)
-  {
-    AllocateAndInitialize3DArray<double>(uarraytot_r, jdim, jdim, jdim);
-    AllocateAndInitialize5DArray<double>(
-        zarray_r, jdim, jdim, jdim, jdim, jdim);
-    AllocateAndInitialize3DArray<double>(uarraytot_i, jdim, jdim, jdim);
-    AllocateAndInitialize5DArray<double>(
-        zarray_i, jdim, jdim, jdim, jdim, jdim);
-  }
+    if (!use_shared_arrays)
+    {
+        AllocateAndInitialize3DArray<double>(uarraytot_r, jdim, jdim, jdim);
+        AllocateAndInitialize5DArray<double>(zarray_r, jdim, jdim, jdim, jdim, jdim);
+        AllocateAndInitialize3DArray<double>(uarraytot_i, jdim, jdim, jdim);
+        AllocateAndInitialize5DArray<double>(zarray_i, jdim, jdim, jdim, jdim, jdim);
+    }
 }
 
-/* ---------------------------------------------------------------------- */
-
-void Bispectrum::destroy_twojmax_arrays()
+inline double Bispectrum::factorial(int const n)
 {
-  Deallocate5DArray<double>(cgarray);
-  Deallocate2DArray<double>(rootpqarray);
-  Deallocate3DArray<double>(barray);
-  Deallocate4DArray<double>(dbarray);
-  Deallocate4DArray<double>(duarray_r);
-  Deallocate4DArray<double>(duarray_i);
-  Deallocate3DArray<double>(uarray_r);
-  Deallocate3DArray<double>(uarray_i);
-
-  if (bzero_flag) Deallocate1DArray<double>(bzero);
-
-  if (!use_shared_arrays)
-  {
-    Deallocate3DArray<double>(uarraytot_r);
-    Deallocate5DArray<double>(zarray_r);
-    Deallocate3DArray<double>(uarraytot_i);
-    Deallocate5DArray<double>(zarray_i);
-  }
+    if (n < 0 || n > nmaxfactorial)
+    {
+        throw std::invalid_argument(std::string("The input intger = ") + std::to_string(n) + std::string(" is not a valid number for this factorial function!"));
+    }
+    return nfac_table[n];
 }
 
-/* ----------------------------------------------------------------------
-   factorial n, wrapper for precomputed table
-------------------------------------------------------------------------- */
-
-double Bispectrum::factorial(int n)
-{
-  if (n < 0 || n > nmaxfactorial)
-  {
-    char str[128];
-    sprintf(str, "Invalid argument to factorial %d", n);
-    // error->all(FLERR, str);
-    std::cerr << str;
-  }
-
-  return nfac_table[n];
-}
-
-/* ----------------------------------------------------------------------
-   factorial n table, size Bispectrum::nmaxfactorial+1
-------------------------------------------------------------------------- */
-
-const double Bispectrum::nfac_table[] = {
+double const Bispectrum::nfac_table[] = {
     1,
     1,
     2,
@@ -1666,236 +1472,207 @@ const double Bispectrum::nfac_table[] = {
     3.28721858553429e+293,
     5.42391066613159e+295,
     9.00369170577843e+297,
-    1.503616514865e+300,  // nmaxfactorial = 167
+    1.503616514865e+300, // nmaxfactorial = 167
 };
 
-/* ----------------------------------------------------------------------
-   the function delta given by VMK Eq. 8.2(1)
-------------------------------------------------------------------------- */
-
-double Bispectrum::deltacg(int j1, int j2, int j)
+inline double Bispectrum::deltacg(int const j1, int const j2, int const j)
 {
-  double sfaccg = factorial((j1 + j2 + j) / 2 + 1);
-  return sqrt(factorial((j1 + j2 - j) / 2) * factorial((j1 - j2 + j) / 2)
-              * factorial((-j1 + j2 + j) / 2) / sfaccg);
+    double const sfaccg = factorial((j1 + j2 + j) / 2 + 1);
+    return std::sqrt(factorial((j1 + j2 - j) / 2) * factorial((j1 - j2 + j) / 2) * factorial((-j1 + j2 + j) / 2) / sfaccg);
 }
 
-/* ----------------------------------------------------------------------
-   assign Clebsch-Gordan coefficients using
-   the quasi-binomial formula VMK 8.2.1(3)
-------------------------------------------------------------------------- */
 
 void Bispectrum::init_clebsch_gordan()
 {
-  double sum, dcg, sfaccg;
-  int m, aa2, bb2, cc2;
-  int ifac;
-
-  for (int j1 = 0; j1 <= twojmax; j1++)
-    for (int j2 = 0; j2 <= twojmax; j2++)
-      for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-        for (int m1 = 0; m1 <= j1; m1 += 1)
+    for (int j1 = 0; j1 <= twojmax; j1++)
+    {
+        for (int j2 = 0; j2 <= twojmax; j2++)
         {
-          aa2 = 2 * m1 - j1;
-
-          for (int m2 = 0; m2 <= j2; m2 += 1)
-          {
-            // -c <= cc <= c
-
-            bb2 = 2 * m2 - j2;
-            m = (aa2 + bb2 + j) / 2;
-
-            if (m < 0 || m > j) continue;
-
-            sum = 0.0;
-
-            for (int z = MAX(0, MAX(-(j - j2 + aa2) / 2, -(j - j1 - bb2) / 2));
-                 z
-                 <= MIN((j1 + j2 - j) / 2, MIN((j1 - aa2) / 2, (j2 + bb2) / 2));
-                 z++)
+            for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
             {
-              ifac = z % 2 ? -1 : 1;
-              sum += ifac
-                     / (factorial(z) * factorial((j1 + j2 - j) / 2 - z)
-                        * factorial((j1 - aa2) / 2 - z)
-                        * factorial((j2 + bb2) / 2 - z)
-                        * factorial((j - j2 + aa2) / 2 + z)
-                        * factorial((j - j1 - bb2) / 2 + z));
+                for (int m1 = 0; m1 <= j1; m1 += 1)
+                {
+                    int const aa2 = 2 * m1 - j1;
+
+                    for (int m2 = 0; m2 <= j2; m2 += 1)
+                    {
+                        // -c <= cc <= c
+                        int const bb2 = 2 * m2 - j2;
+                        int const m = (aa2 + bb2 + j) / 2;
+                        if (m < 0 || m > j)
+                        {
+                            continue;
+                        }
+
+                        double sum(0.0);
+                        for (int z = std::max(0, std::max(-(j - j2 + aa2) / 2, -(j - j1 - bb2) / 2)); z <= std::min((j1 + j2 - j) / 2, std::min((j1 - aa2) / 2, (j2 + bb2) / 2)); z++)
+                        {
+                            int const ifac = z % 2 ? -1 : 1;
+                            sum += ifac / (factorial(z) * factorial((j1 + j2 - j) / 2 - z) * factorial((j1 - aa2) / 2 - z) * factorial((j2 + bb2) / 2 - z) * factorial((j - j2 + aa2) / 2 + z) * factorial((j - j1 - bb2) / 2 + z));
+                        }
+
+                        int const cc2 = 2 * m - j;
+
+                        double dcg = deltacg(j1, j2, j);
+
+                        double sfaccg = std::sqrt(factorial((j1 + aa2) / 2) * factorial((j1 - aa2) / 2) * factorial((j2 + bb2) / 2) * factorial((j2 - bb2) / 2) * factorial((j + cc2) / 2) * factorial((j - cc2) / 2) * (j + 1));
+
+                        cgarray[j1][j2][j][m1][m2] = sum * dcg * sfaccg;
+                    }
+                }
             }
-
-            cc2 = 2 * m - j;
-            dcg = deltacg(j1, j2, j);
-            sfaccg = sqrt(factorial((j1 + aa2) / 2) * factorial((j1 - aa2) / 2)
-                          * factorial((j2 + bb2) / 2)
-                          * factorial((j2 - bb2) / 2) * factorial((j + cc2) / 2)
-                          * factorial((j - cc2) / 2) * (j + 1));
-
-            cgarray[j1][j2][j][m1][m2] = sum * dcg * sfaccg;
-          }
         }
+    }
 }
-
-/* ----------------------------------------------------------------------
-   pre-compute table of sqrt[p/m2], p, q = 1,twojmax
-   the p = 0, q = 0 entries are allocated and skipped for convenience.
-------------------------------------------------------------------------- */
 
 void Bispectrum::init_rootpqarray()
 {
-  for (int p = 1; p <= twojmax; p++)
-    for (int q = 1; q <= twojmax; q++)
-      rootpqarray[p][q] = sqrt(static_cast<double>(p) / q);
-}
-
-/* ----------------------------------------------------------------------
-   a = j/2
-------------------------------------------------------------------------- */
-
-void Bispectrum::jtostr(char * str, int j)
-{
-  if (j % 2 == 0)
-    sprintf(str, "%d", j / 2);
-  else
-    sprintf(str, "%d/2", j);
-}
-
-/* ----------------------------------------------------------------------
-   aa = m - j/2
-------------------------------------------------------------------------- */
-
-void Bispectrum::mtostr(char * str, int j, int m)
-{
-  if (j % 2 == 0)
-    sprintf(str, "%d", m - j / 2);
-  else
-    sprintf(str, "%d/2", 2 * m - j);
-}
-
-/* ----------------------------------------------------------------------
-   list values of Clebsch-Gordan coefficients
-   using notation of VMK Table 8.11
-------------------------------------------------------------------------- */
-
-void Bispectrum::print_clebsch_gordan(FILE * file)
-{
-  char stra[20], strb[20], strc[20], straa[20], strbb[20], strcc[20];
-  int m, aa2, bb2;
-
-  fprintf(file, "a, aa, b, bb, c, cc, c(a,aa,b,bb,c,cc) \n");
-
-  for (int j1 = 0; j1 <= twojmax; j1++)
-  {
-    jtostr(stra, j1);
-
-    for (int j2 = 0; j2 <= twojmax; j2++)
+    for (int p = 1; p <= twojmax; p++)
     {
-      jtostr(strb, j2);
-
-      for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-      {
-        jtostr(strc, j);
-
-        for (int m1 = 0; m1 <= j1; m1 += 1)
+        for (int q = 1; q <= twojmax; q++)
         {
-          mtostr(straa, j1, m1);
-          aa2 = 2 * m1 - j1;
-
-          for (int m2 = 0; m2 <= j2; m2 += 1)
-          {
-            bb2 = 2 * m2 - j2;
-            m = (aa2 + bb2 + j) / 2;
-
-            if (m < 0 || m > j) continue;
-
-            mtostr(strbb, j2, m2);
-            mtostr(strcc, j, m);
-
-            fprintf(file,
-                    "%s\t%s\t%s\t%s\t%s\t%s\t%g\n",
-                    stra,
-                    straa,
-                    strb,
-                    strbb,
-                    strc,
-                    strcc,
-                    cgarray[j1][j2][j][m1][m2]);
-          }
+            rootpqarray[p][q] = std::sqrt(static_cast<double>(p) / q);
         }
-      }
     }
-  }
 }
 
-/* ---------------------------------------------------------------------- */
+inline void Bispectrum::jtostr(char *str_out, int const j)
+{
+    if (j % 2 == 0)
+    {
+        sprintf(str_out, "%d", j / 2);
+    }
+    else
+    {
+        sprintf(str_out, "%d/2", j);
+    }
+}
+
+inline void Bispectrum::mtostr(char *str_out, int const j, int const m)
+{
+    if (j % 2 == 0)
+    {
+        sprintf(str_out, "%d", m - j / 2);
+    }
+    else
+    {
+        sprintf(str_out, "%d/2", 2 * m - j);
+    }
+}
+
+void Bispectrum::print_clebsch_gordan(FILE *file)
+{
+    char stra[20], strb[20], strc[20], straa[20], strbb[20], strcc[20];
+
+    int m, aa2, bb2;
+
+    fprintf(file, "a, aa, b, bb, c, cc, c(a,aa,b,bb,c,cc) \n");
+
+    for (int j1 = 0; j1 <= twojmax; j1++)
+    {
+        jtostr(stra, j1);
+
+        for (int j2 = 0; j2 <= twojmax; j2++)
+        {
+            jtostr(strb, j2);
+
+            for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+            {
+                jtostr(strc, j);
+
+                for (int m1 = 0; m1 <= j1; m1 += 1)
+                {
+                    mtostr(straa, j1, m1);
+
+                    aa2 = 2 * m1 - j1;
+
+                    for (int m2 = 0; m2 <= j2; m2 += 1)
+                    {
+                        bb2 = 2 * m2 - j2;
+                        m = (aa2 + bb2 + j) / 2;
+
+                        if (m < 0 || m > j)
+                        {
+                            continue;
+                        }
+
+                        mtostr(strbb, j2, m2);
+
+                        mtostr(strcc, j, m);
+
+                        fprintf(file, "%s\t%s\t%s\t%s\t%s\t%s\t%g\n",
+                                stra, straa, strb, strbb, strc, strcc,
+                                cgarray[j1][j2][j][m1][m2]);
+                    }
+                }
+            }
+        }
+    }
+}
 
 int Bispectrum::compute_ncoeff()
 {
-  int ncount;
-
-  ncount = 0;
-
-  for (int j1 = 0; j1 <= twojmax; j1++)
-    if (diagonalstyle == 0)
+    switch (diagonalstyle)
     {
-      for (int j2 = 0; j2 <= j1; j2++)
-        for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2) ncount++;
-    }
-    else if (diagonalstyle == 1)
+    case (0):
     {
-      int j2 = j1;
-
-      for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2) ncount++;
+        int ncount(0);
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    ncount++;
+                }
+            }
+        }
+        return ncount;
     }
-    else if (diagonalstyle == 2)
+    break;
+    case (1):
     {
-      ncount++;
+        int ncount(0);
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
+            {
+                ncount++;
+            }
+        }
+        return ncount;
     }
-    else if (diagonalstyle == 3)
+    break;
+    case (2):
     {
-      for (int j2 = 0; j2 <= j1; j2++)
-        for (int j = abs(j1 - j2); j <= MIN(twojmax, j1 + j2); j += 2)
-          if (j >= j1) ncount++;
+        int ncount(0);
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            ncount++;
+        }
+        return ncount;
     }
-
-  return ncount;
-}
-
-/* ---------------------------------------------------------------------- */
-
-double Bispectrum::compute_sfac(double r, double rcut)
-{
-  if (switch_flag == 0) return 1.0;
-  if (switch_flag == 1)
-  {
-    if (r <= rmin0)
-      return 1.0;
-    else if (r > rcut)
-      return 0.0;
-    else
+    break;
+    case (3):
     {
-      double rcutfac = MY_PI / (rcut - rmin0);
-      return 0.5 * (cos((r - rmin0) * rcutfac) + 1.0);
+        int ncount(0);
+        for (int j1 = 0; j1 <= twojmax; j1++)
+        {
+            for (int j2 = 0; j2 <= j1; j2++)
+            {
+                for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2); j += 2)
+                {
+                    if (j >= j1)
+                    {
+                        ncount++;
+                    }
+                }
+            }
+        }
+        return ncount;
     }
-  }
-  return 0.0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-double Bispectrum::compute_dsfac(double r, double rcut)
-{
-  if (switch_flag == 0) return 0.0;
-  if (switch_flag == 1)
-  {
-    if (r <= rmin0)
-      return 0.0;
-    else if (r > rcut)
-      return 0.0;
-    else
-    {
-      double rcutfac = MY_PI / (rcut - rmin0);
-      return -0.5 * sin((r - rmin0) * rcutfac) * rcutfac;
+    break;
+    default:
+        throw std::invalid_argument(std::string("The input index style = ") + std::to_string(diagonalstyle) + std::string(" is not a valid index!"));
     }
-  }
-  return 0.0;
 }
