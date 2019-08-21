@@ -47,8 +47,8 @@ Bispectrum::Bispectrum(double const rfac0_in,
         }
     }
 
-    AllocateAndInitialize1DArray<double>(bvec, ncoeff);
-    AllocateAndInitialize2DArray<double>(dbvec, ncoeff, 3);
+    AllocateAndInitialize1DArray(bvec, ncoeff);
+    AllocateAndInitialize2DArray(dbvec, ncoeff, 3);
 
     build_indexlist();
 
@@ -231,10 +231,10 @@ void Bispectrum::grow_rij(int const newnmax)
 
     if (!use_shared_arrays)
     {
-        AllocateAndInitialize2DArray<double>(rij, nmax, 3);
+        AllocateAndInitialize2DArray(rij, nmax, 3);
         AllocateAndInitialize1DArray<int>(inside, nmax);
-        AllocateAndInitialize1DArray<double>(wj, nmax);
-        AllocateAndInitialize1DArray<double>(rcutij, nmax);
+        AllocateAndInitialize1DArray(wj, nmax);
+        AllocateAndInitialize1DArray(rcutij, nmax);
     }
 }
 
@@ -349,12 +349,12 @@ void Bispectrum::compute_B(double const *coordinates,
 void Bispectrum::set_cutoff(char *name, int const Nspecies, double const *rcuts_in)
 {
     // store number of species and cutoff values
-    AllocateAndInitialize2DArray<double>(rcuts, Nspecies, Nspecies, rcuts_in);
+    AllocateAndInitialize2DArray(rcuts, Nspecies, Nspecies, rcuts_in);
 }
 
 void Bispectrum::set_weight(int const Nspecies, double const *weight_in)
 {
-    AllocateAndInitialize1DArray<double>(wjelem, Nspecies, weight_in);
+    AllocateAndInitialize1DArray(wjelem, Nspecies, weight_in);
 }
 
 void Bispectrum::compute_ui(int const jnum)
@@ -1272,26 +1272,26 @@ void Bispectrum::create_twojmax_arrays()
 {
     int const jdim = twojmax + 1;
 
-    AllocateAndInitialize5DArray<double>(cgarray, jdim, jdim, jdim, jdim, jdim);
-    AllocateAndInitialize2DArray<double>(rootpqarray, jdim + 1, jdim + 1);
-    AllocateAndInitialize3DArray<double>(barray, jdim, jdim, jdim);
-    AllocateAndInitialize4DArray<double>(dbarray, jdim, jdim, jdim, 3);
-    AllocateAndInitialize4DArray<double>(duarray_r, jdim, jdim, jdim, 3);
-    AllocateAndInitialize4DArray<double>(duarray_i, jdim, jdim, jdim, 3);
-    AllocateAndInitialize3DArray<double>(uarray_r, jdim, jdim, jdim);
-    AllocateAndInitialize3DArray<double>(uarray_i, jdim, jdim, jdim);
+    AllocateAndInitialize5DArray(cgarray, jdim, jdim, jdim, jdim, jdim);
+    AllocateAndInitialize2DArray(rootpqarray, jdim + 1, jdim + 1);
+    AllocateAndInitialize3DArray(barray, jdim, jdim, jdim);
+    AllocateAndInitialize4DArray(dbarray, jdim, jdim, jdim, 3);
+    AllocateAndInitialize4DArray(duarray_r, jdim, jdim, jdim, 3);
+    AllocateAndInitialize4DArray(duarray_i, jdim, jdim, jdim, 3);
+    AllocateAndInitialize3DArray(uarray_r, jdim, jdim, jdim);
+    AllocateAndInitialize3DArray(uarray_i, jdim, jdim, jdim);
 
     if (bzero_flag)
     {
-        AllocateAndInitialize1DArray<double>(bzero, jdim);
+        AllocateAndInitialize1DArray(bzero, jdim);
     }
 
     if (!use_shared_arrays)
     {
-        AllocateAndInitialize3DArray<double>(uarraytot_r, jdim, jdim, jdim);
-        AllocateAndInitialize5DArray<double>(zarray_r, jdim, jdim, jdim, jdim, jdim);
-        AllocateAndInitialize3DArray<double>(uarraytot_i, jdim, jdim, jdim);
-        AllocateAndInitialize5DArray<double>(zarray_i, jdim, jdim, jdim, jdim, jdim);
+        AllocateAndInitialize3DArray(uarraytot_r, jdim, jdim, jdim);
+        AllocateAndInitialize5DArray(zarray_r, jdim, jdim, jdim, jdim, jdim);
+        AllocateAndInitialize3DArray(uarraytot_i, jdim, jdim, jdim);
+        AllocateAndInitialize5DArray(zarray_i, jdim, jdim, jdim, jdim, jdim);
     }
 }
 
