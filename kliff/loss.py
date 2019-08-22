@@ -198,7 +198,7 @@ class LossPhysicsMotivatedModel(object):
         'trust-krylov',
     ]
     scipy_minimize_methods_not_supported_args = ['bounds']
-    scipy_least_squares_methods = ['trf', 'dogbox', 'lm']
+    scipy_least_squares_methods = ['trf', 'dogbox', 'lm', 'geodesiclm']
     scipy_least_squares_methods_not_supported_args = ['bounds']
 
     def __init__(
@@ -328,7 +328,13 @@ class LossPhysicsMotivatedModel(object):
 
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
-                minimize_fn = scipy.optimize.least_squares
+                # geodesic LM
+                if method == 'geodesiclm':
+                    from geodesicLM import geodesiclm
+
+                    minimize_fn = geodesiclm
+                else:
+                    minimize_fn = scipy.optimize.least_squares
                 func = self.get_residual_MPI
             elif method in self.scipy_minimize_methods:
                 minimize_fn = scipy.optimize.minimize
@@ -371,7 +377,12 @@ class LossPhysicsMotivatedModel(object):
 
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
-                minimize_fn = scipy.optimize.least_squares
+                if method == 'geodesiclm':
+                    from geodesicLM import geodesiclm
+
+                    minimize_fn = geodesiclm
+                else:
+                    minimize_fn = scipy.optimize.least_squares
                 func = self.get_residual
             elif method in self.scipy_minimize_methods:
                 minimize_fn = scipy.optimize.minimize
