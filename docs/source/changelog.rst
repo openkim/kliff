@@ -4,6 +4,14 @@
 Change Log
 ==========
 
+v0.1.4 (2019/8/34)
+==================
+
+- add support for the geodesic Levenberg-Marquardt minimization algorithm
+
+- add command line tool ``model`` to inquire available parameters of KIM model
+
+
 v0.1.3 (2019/8/19)
 ==================
 
