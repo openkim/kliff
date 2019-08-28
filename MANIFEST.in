@@ -1,5 +1,5 @@
 include README.md
-recursive-include kliff *.hpp *.h
+recursive-include kliff *.hpp
 recursive-include tests *.py *.xyz
 recursive-include utils *.py
 recursive-include examples *.py README.txt Si_training_set.tar.gz
