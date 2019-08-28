@@ -2,19 +2,6 @@
 #define KLIFF_BISPECTRUM_HPP_
 
 #include "helper.hpp"
-#include <complex>
-
-#ifdef MY_PI
-#undef MY_PI
-#endif
-
-#define MY_PI 3.1415926535897932
-
-/*! The new type of a DIM times double size vector */
-typedef double VectorOfSizeDIM[DIM];
-
-/*! The new type of a Six times double size vector */
-typedef double VectorOfSizeSix[DIM * 2];
 
 /*! \class BISPECTRUM_LOOPINDICES
  * \brief The structure for the Bispectrum loop indices
@@ -187,7 +174,7 @@ public:
      * \param Nspecies
      * \param rcuts_in
      */
-    void set_cutoff(char *name, int const Nspecies, double const *rcuts_in);
+    void set_cutoff(char *name, std::size_t const Nspecies, double const *rcuts_in);
 
     /*!
      * \brief Set the element weight
@@ -242,7 +229,6 @@ public:
      * \param rcut_in
      */
     void compute_duidrj(double const *rij_in, double const wj_in, double const rcut_in);
-    void compute_duidrj(Array1D<double> const &rij_in, double const wj_in, double const rcut_in);
 
     /*!
      * \brief Calculate derivative of Bi w.r.t. atom j
@@ -428,17 +414,23 @@ public:
     // per bispectrum class instance for OMP use
 
     /*! */
-    Array1D<double> bvec;
+    std::vector<double> bvec;
+
     /*! */
     Array2D<double> dbvec;
+
     /*! */
     Array2D<double> rij;
+
     /*! */
-    Array1D<int> inside;
+    std::vector<int> inside;
+
     /*! */
-    Array1D<double> wj;
+    std::vector<double> wj;
+
     /*! */
-    Array1D<double> rcutij;
+    std::vector<double> rcutij;
+
     /*! */
     int nmax;
 
@@ -451,15 +443,19 @@ public:
     /*! */
     Array3D<double> uarraytot_r;
     Array3D<double> uarraytot_i;
+
     /*! */
     Array5D<double> zarray_r;
     Array5D<double> zarray_i;
+
     /*! */
     Array3D<double> uarraytot_r_b;
     Array3D<double> uarraytot_i_b;
+
     /*! */
     Array5D<double> zarray_r_b;
     Array5D<double> zarray_i_b;
+
     /*! */
     Array3D<double> uarray_r;
     Array3D<double> uarray_i;
@@ -467,9 +463,9 @@ public:
 private:
     /*! Cutoff radius */
     Array2D<double> rcuts;
-    //
+
     /*! Element weight */
-    Array1D<double> wjelem;
+    std::vector<double> wjelem;
 
     /*!  */
     double rmin0;
@@ -487,8 +483,10 @@ private:
 
     /*!  */
     Array5D<double> cgarray;
+
     /*!  */
     Array2D<double> rootpqarray;
+
     /*!  */
     Array3D<double> barray;
 
@@ -497,6 +495,7 @@ private:
     /*!  */
     Array4D<double> duarray_r;
     Array4D<double> duarray_i;
+
     /*!  */
     Array4D<double> dbarray;
 
@@ -529,7 +528,7 @@ private:
     int bzero_flag;
 
     /*! array of B values for isolated atoms */
-    Array1D<double> bzero;
+    std::vector<double> bzero;
 };
 
 #endif // KLIFF_BISPECTRUM_HPP_
