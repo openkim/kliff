@@ -1,81 +1,123 @@
 #include "helper.hpp"
+
 #include <cstring>
-#include <iostream>
 
-//******************************************************************************
-// process parameter file
-//******************************************************************************
+#ifdef MAXLINE
+#undef MAXLINE
+#endif
 
-void getNextDataLine(FILE * const filePtr,
-                     char * nextLinePtr,
-                     int const maxSize,
-                     int * endOfFileFlag)
+#define MAXLINE 20480
+
+std::string FormatMessageFileLineFunctionMessage(std::string const &message1,
+                                                 std::string const &fileName,
+                                                 long lineNumber,
+                                                 std::string const &functionName,
+                                                 std::string const &message2)
 {
-  do
-  {
-    if (fgets(nextLinePtr, maxSize, filePtr) == NULL)
+    std::ostringstream ss;
+    ss << "\n";
+    ss << message1 << ":" << fileName << ":" << lineNumber << ":@(" << functionName << ")\n";
+    ss << message2 << "\n\n";
+    return ss.str();
+}
+
+template <>
+_Array_Basic<std::string>::_Array_Basic(std::size_t const count) : m(count, "\0") {}
+
+template <>
+inline void Array2D<std::string>::resize(int const extentZero, int const extentOne)
+{
+    _extentZero = extentZero;
+    _extentOne = extentOne;
+    std::size_t const _n = _extentZero * _extentOne;
+    this->m.resize(_n, "\0");
+}
+
+void getNextDataLine(FILE *const cstream, char *nextLinePtr, int const maxSize, int *endOfFileFlag)
+{
+    do
     {
-      *endOfFileFlag = 1;
-      break;
+        if (std::fgets(nextLinePtr, maxSize, cstream) == NULL)
+        {
+            *endOfFileFlag = 1;
+            break;
+        }
+
+        while (nextLinePtr[0] == ' ' || nextLinePtr[0] == '\t' || nextLinePtr[0] == '\n' || nextLinePtr[0] == '\r')
+        {
+            nextLinePtr++;
+        }
+
+    } while ((std::strncmp("#", nextLinePtr, 1) == 0) || (strlen(nextLinePtr) == 0));
+
+    // remove comments starting with `#' in a line
+    char *pch = std::strchr(nextLinePtr, '#');
+    if (pch != NULL)
+    {
+        *pch = '\0';
+    }
+}
+
+int getXdouble(char *linePtr, int const N, double *list)
+{
+    char line[MAXLINE];
+    std::strcpy(line, linePtr);
+
+    char *pch;
+    pch = std::strtok(line, " \t\n\r");
+
+    int i = 0;
+    while (pch != NULL)
+    {
+        if (std::sscanf(pch, "%lf", &list[i]) != 1)
+        {
+            return true;
+        }
+
+        pch = std::strtok(NULL, " \t\n\r");
+
+        i++;
     }
 
-    while ((nextLinePtr[0] == ' ' || nextLinePtr[0] == '\t')
-           || (nextLinePtr[0] == '\n' || nextLinePtr[0] == '\r'))
-    { nextLinePtr = (nextLinePtr + 1); }
-  } while ((strncmp("#", nextLinePtr, 1) == 0) || (strlen(nextLinePtr) == 0));
-
-  // remove comments starting with `#' in a line
-  char * pch = strchr(nextLinePtr, '#');
-  if (pch != NULL) { *pch = '\0'; }
+    return (i != N);
 }
 
-//******************************************************************************
-int getXdouble(char * linePtr, const int N, double * list)
+int getXint(char *linePtr, int const N, int *list)
 {
-  int ier;
-  char * pch;
-  char line[MAXLINE];
-  int i = 0;
+    char line[MAXLINE];
+    std::strcpy(line, linePtr);
 
-  strcpy(line, linePtr);
-  pch = strtok(line, " \t\n\r");
-  while (pch != NULL)
-  {
-    ier = sscanf(pch, "%lf", &list[i]);
-    if (ier != 1) { return true; }
-    pch = strtok(NULL, " \t\n\r");
-    i += 1;
-  }
+    char *pch;
+    pch = std::strtok(line, " \t\n\r");
 
-  if (i != N) { return true; }
+    int i = 0;
+    while (pch != NULL)
+    {
+        if (std::sscanf(pch, "%d", &list[i]) != 1)
+        {
+            return true;
+        }
 
-  return false;
+        pch = std::strtok(NULL, " \t\n\r");
+
+        i++;
+    }
+
+    return (i != N);
 }
 
-//******************************************************************************
-int getXint(char * linePtr, const int N, int * list)
+void lowerCase(char *linePtr)
 {
-  int ier;
-  char * pch;
-  char line[MAXLINE];
-  int i = 0;
-
-  strcpy(line, linePtr);
-  pch = strtok(line, " \t\n\r");
-  while (pch != NULL)
-  {
-    ier = sscanf(pch, "%d", &list[i]);
-    if (ier != 1) { return true; }
-    pch = strtok(NULL, " \t\n\r");
-    i += 1;
-  }
-  if (i != N) { return true; }
-
-  return false;
+    for (int i = 0; linePtr[i]; i++)
+    {
+        linePtr[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(linePtr[i])));
+    }
 }
 
-//******************************************************************************
-void lowerCase(char * linePtr)
+void lowerCase(std::string &InputLineArg)
 {
-  for (int i = 0; linePtr[i]; i++) { linePtr[i] = tolower(linePtr[i]); }
+    std::transform(InputLineArg.begin(), InputLineArg.end(), InputLineArg.begin(), [](unsigned char c) {
+        unsigned char const l = std::tolower(c);
+        return (l != c) ? l : c;
+    });
 }
