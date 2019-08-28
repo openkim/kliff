@@ -34,8 +34,7 @@ PYBIND11_MODULE(bs, m)
             auto zeta_2D = py::array(py::buffer_info(
                 zeta.data(),                             // data pointer
                 sizeof(double),                          // size of one element
-                py::format_descriptor<double>::format(), // Python struct-style
-                                                         // format descriptor
+                py::format_descriptor<double>::format(), // Python struct-style format descriptor
                 2,                                       // dimension
                 {Ncontrib, Ndescriptor},                 // size of each dimension
                 {sizeof(double) * Ndescriptor, sizeof(double)}
@@ -49,8 +48,7 @@ PYBIND11_MODULE(bs, m)
         .def("compute_zeta_and_dzeta_dr", [](Bispectrum &d, py::array_t<double> coords, py::array_t<int> species, py::array_t<int> neighlist, py::array_t<int> numneigh, py::array_t<int> image, int Natoms, int Ncontrib, int Ndescriptor) {
             // create empty vectors to hold return data
             std::vector<double> zeta(Ncontrib * Ndescriptor, 0.0);
-            std::vector<double> dzeta_dr(Ncontrib * Ndescriptor * Ncontrib * 3,
-                                         0.0);
+            std::vector<double> dzeta_dr(Ncontrib * Ndescriptor * Ncontrib * 3, 0.0);
 
             d.compute_B(coords.data(0),
                         species.data(0),
