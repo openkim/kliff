@@ -1,10 +1,9 @@
-#include "sym_fn.h"
+#include "sym_fn.hpp"
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <vector>
 
 namespace py = pybind11;
-
 
 PYBIND11_MODULE(sf, m)
 {
