@@ -81,9 +81,12 @@ class SymmetryFunction(Descriptor):
        physica status solidi (b) 250, no. 6 (2013): 1191-1203.
     """
 
-    def __init__(self, cut_dists, cut_name, hyperparams, normalize=True, dtype=np.float32):
+    def __init__(
+        self, cut_dists, cut_name, hyperparams, normalize=True, dtype=np.float32
+    ):
         super(SymmetryFunction, self).__init__(
-            cut_dists, cut_name, hyperparams, normalize, dtype)
+            cut_dists, cut_name, hyperparams, normalize, dtype
+        )
 
         self._desc = OrderedDict()
 
@@ -141,8 +144,7 @@ class SymmetryFunction(Descriptor):
 
         coords = nei.coords
         image = nei.image
-        species = np.asarray([self.species_code[i]
-                              for i in nei.species], dtype=np.intc)
+        species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
 
         Ncontrib = conf.get_number_of_atoms()
         Ndesc = len(self)
@@ -243,8 +245,7 @@ class SymmetryFunction(Descriptor):
             elif name == 'set30':
                 self.hyperparams = get_set30()
             else:
-                raise SymmetryFunctionError(
-                    'hyperparams "{}" unrecognized.'.format(name))
+                raise SymmetryFunctionError('hyperparams "{}" unrecognized.'.format(name))
         if not isinstance(self.hyperparams, OrderedDict):
             self.hyperparams = OrderedDict(self.hyperparams)
 
@@ -321,8 +322,7 @@ class SymmetryFunction(Descriptor):
 
             desc = self.get_hyperparams()
             num_desc = len(desc)
-            fout.write(
-                '{}  # number of symmetry functions types\n\n'.format(num_desc))
+            fout.write('{}  # number of symmetry functions types\n\n'.format(num_desc))
 
             # descriptor values
             fout.write('# sym_function    rows    cols\n')

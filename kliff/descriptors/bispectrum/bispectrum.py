@@ -71,14 +71,15 @@ class Bispectrum(Descriptor):
         bzero_flag = self.hyperparams['bzero_flag']
         use_shared_arrays = 0
 
-        self._cdesc = bs.Bispectrum(rfac0,
-                                    2 * jmax,
-                                    diagonalstyle,
-                                    use_shared_arrays,
-                                    rmin0,
-                                    switch_flag,
-                                    bzero_flag,
-                                    )
+        self._cdesc = bs.Bispectrum(
+            rfac0,
+            2 * jmax,
+            diagonalstyle,
+            use_shared_arrays,
+            rmin0,
+            switch_flag,
+            bzero_flag,
+        )
 
         self._set_cutoff()
 
@@ -93,8 +94,7 @@ class Bispectrum(Descriptor):
 
         coords = nei.coords
         image = nei.image
-        species = np.asarray([self.species_code[i]
-                              for i in nei.species], dtype=np.intc)
+        species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
 
         numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
@@ -116,8 +116,7 @@ class Bispectrum(Descriptor):
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug(
-                '\n' + '=' * 25 +
-                'descriptor values (no normalization)' + '=' * 25
+                '\n' + '=' * 25 + 'descriptor values (no normalization)' + '=' * 25
             )
 
             logger.debug('\nconfiguration name: %s', conf.get_identifier())
@@ -226,6 +225,7 @@ class Bispectrum(Descriptor):
                         if j >= j1:
                             N += 1
         return N
+
 
 class BispectrumError(Exception):
     def __init__(self, msg):
