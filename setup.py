@@ -1,6 +1,8 @@
 from setuptools import setup, Extension, find_packages
 from distutils.sysconfig import get_config_vars
+import sys
 import os
+import subprocess
 
 
 # remove `-Wstrict-prototypes' that is for C not C++
@@ -25,7 +27,9 @@ class get_pybind11_includes:
         try:
             import pybind11
         except ImportError:
-            if subprocess.call([sys.executable, '-m', 'pip', 'install', 'pybind11']):
+            if subprocess.call(
+                [sys.executable, '-m', 'pip', 'install', 'pybind11==2.2.4']
+            ):
                 raise RuntimeError('pybind11 install failed.')
         self.user = user
 
@@ -89,16 +93,10 @@ kliff_scripts = ['bin/kliff']
 setup(
     name='kliff',
     version=get_version(),
-    # NOTE, subpackages need to be specified as well
-    # packages=['kliff'],
-    # NOTE, subpackages need to be included as well
-    # packages=['kliff','tensorflow_op', 'geolm'],
-    # package_dir={'geolm':'libs/geodesicLMv1.1/pythonInterface'},
-    # package_data={'geolm':['_geodesiclm.so']},
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum],
     scripts=kliff_scripts,
-    install_requires=['scipy', 'pybind11', 'pytest'],
+    install_requires=['scipy', 'pybind11==2.2.4', 'pytest'],
     author='Mingjian Wen',
     author_email='wenxx151@gmail.com',
     url='https://github.com/mjwen/kliff',
