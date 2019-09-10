@@ -2,7 +2,6 @@ import torch
 from torch.nn import *
 
 # redefine Dropout layer
-@torch._jit_internal.weak_module
 class Dropout(torch.nn.modules.dropout._DropoutNd):
     r"""A Dropout layer that zeros the same element of descriptor values for all
     atoms.
@@ -25,7 +24,6 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
         iteration.
     """
 
-    @torch._jit_internal.weak_script_method
     def forward(self, input):
         dim = input.dim()
         shape = input.shape
