@@ -131,7 +131,7 @@ class CalculatorTorch:
             for zeta in zeta_config:
                 zeta.requires_grad_(True)
 
-        # evaluate model (forward pass)
+        # evaluate model
         zeta_stacked = torch.cat(zeta_config, dim=0)
         energy_atom = self.model(zeta_stacked)
 
@@ -139,9 +139,15 @@ class CalculatorTorch:
         natoms_config = [len(zeta) for zeta in zeta_config]
         energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
 
-        # forces and stress (backward propagation)
-        forces_config = []
-        stress_config = []
+        # forces and stress
+        if not self.use_forces:
+            forces_config = None
+        else:
+            forces_config = []
+        if not self.use_stress:
+            stress_config = None
+        else:
+            stress_config = []
         if grad:
             for i, sample in enumerate(batch):
 
@@ -161,11 +167,6 @@ class CalculatorTorch:
                     volume = sample['dzetadr_volume']
                     s = self.compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
-
-        if not self.use_forces:
-            forces_config = None
-        if not self.use_stress:
-            stress_config = None
 
         self.results['energy'] = energy_config
         self.results['forces'] = forces_config
@@ -231,7 +232,6 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
             )
             for zeta in zeta_config:
                 zeta.requires_grad_(False)
-            # zeta_stacked.requires_grad_(False)
         else:
             forces_config = None
 
@@ -239,3 +239,12 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
 
     def __del__(self):
         self.clean_up()
+
+
+class CalculatorTorchError(Exception):
+    def __init__(self, msg):
+        super(CalculatorTorchError, self).__init__(msg)
+        self.msg = msg
+
+    def __expr__(self):
+        return self.msg
