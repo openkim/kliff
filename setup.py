@@ -71,6 +71,14 @@ bispectrum = Extension(
     language='c++',
 )
 
+neighlist = Extension(
+    'kliff.neighbor.nl',
+    sources=['kliff/neighbor/neighbor_list.cpp', 'kliff/neighbor/neighbor_list_bind.cpp'],
+    include_dirs=get_includes(),
+    extra_compile_args=get_extra_compile_args(),
+    language='c++',
+)
+
 
 def get_version(fname=os.path.join('kliff', '__init__.py')):
     with open(fname) as fin:
@@ -94,7 +102,7 @@ setup(
     name='kliff',
     version=get_version(),
     packages=find_packages(),
-    ext_modules=[sym_fn, bispectrum],
+    ext_modules=[sym_fn, bispectrum, neighlist],
     scripts=kliff_scripts,
     install_requires=['scipy', 'pybind11==2.2.4', 'pytest'],
     author='Mingjian Wen',

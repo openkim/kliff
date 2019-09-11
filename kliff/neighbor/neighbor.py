@@ -1,6 +1,6 @@
 import numpy as np
-from kimpy import neighlist as nl
-from .atomic_data import atomic_number, atomic_species
+from . import nl
+from ..atomic_data import atomic_number, atomic_species
 
 
 class NeighborList:
