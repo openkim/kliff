@@ -19,7 +19,6 @@ class CalculatorTorch:
     ----------
     model: obj
         Instance of :class:`~kliff.neuralnetwork.NeuralNetwork`.
-
     """
 
     implemented_property = ['energy', 'forces', 'stress']
@@ -191,6 +190,108 @@ class CalculatorTorch:
 
     def get_stress(self, batch):
         return self.results['stress']
+
+
+class CalculatorTorchSeparateSpecies(CalculatorTorch):
+    def __init__(self, models):
+        self.models = models
+
+        self.dtype = None
+        for s, m in self.models.items():
+            if self.dtype is None:
+                self.dtype = m.descriptor.dtype
+            else:
+                if self.dtype != m.descriptor.dtype:
+                    raise CalculatorTorchError('inconsistent "dtype" from descriptors.')
+        # TODO change this (we now temporarily set model to the last one)
+        self.model = m
+
+        self.fingerprints_path = None
+
+        self.use_energy = None
+        self.use_forces = None
+        self.use_stress = None
+
+        self.results = dict([(i, None) for i in self.implemented_property])
+
+    def compute(self, batch):
+
+        grad = self.use_forces or self.use_stress
+
+        # collate batch by species
+        zeta_config = [sample['zeta'] for sample in batch]
+        if grad:
+            for zeta in zeta_config:
+                zeta.requires_grad_(True)
+
+        supported_species = self.models.keys()
+        zeta_by_species = {s: [] for s in supported_species}
+        config_id_by_species = {s: [] for s in supported_species}
+        zeta_config = []
+
+        for i, sample in enumerate(batch):
+            zeta = sample['zeta']
+            species = sample['configuration'].get_species()
+            zeta.requires_grad_(True)
+            zeta_config.append(zeta)
+
+            for s, z in zip(species, zeta):
+                # TODO move check to somewhere else to speed up computation
+                if s not in supported_species:
+                    raise CalculatorTorchError('no model for species ""'.format(s))
+                else:
+                    zeta_by_species[s].append(z)
+                    config_id_by_species[s].append(i)
+
+        # evaluate model to compute energy
+        energy_config = [None for _ in range(len(batch))]
+        for s, zeta in zeta_by_species.items():
+
+            # have no species "s" in this batch of data
+            if zeta is []:
+                continue
+
+            z_tensor = torch.stack(zeta)  # convert a list of tensor to tensor
+            energy = self.model(z_tensor)
+            for e_atom, i in zip(energy, config_id_by_species[s]):
+                if energy_config[i] is None:
+                    energy_config[i] = e_atom
+                else:
+                    energy_config[i] += e_atom
+
+        # forces and stress
+        if not self.use_forces:
+            forces_config = None
+        else:
+            forces_config = []
+        if not self.use_stress:
+            stress_config = None
+        else:
+            stress_config = []
+        if grad:
+            for i, sample in enumerate(batch):
+
+                # derivative of energy w.r.t. zeta
+                energy = energy_config[i]
+                zeta = zeta_config[i]
+                dedz = torch.autograd.grad(energy, zeta, create_graph=True)[0]
+                zeta.requires_grad_(False)  # no need of grad any more
+
+                if self.use_forces:
+                    dzetadr_forces = sample['dzetadr_forces']
+                    f = self.compute_forces(dedz, dzetadr_forces)
+                    forces_config.append(f)
+
+                if self.use_stress:
+                    dzetadr_stress = sample['dzetadr_stress']
+                    volume = sample['dzetadr_volume']
+                    s = self.compute_stress(dedz, dzetadr_stress, volume)
+                    stress_config.append(s)
+
+        self.results['energy'] = energy_config
+        self.results['forces'] = forces_config
+        self.results['stress'] = stress_config
+        return {'energy': energy_config, 'forces': forces_config, 'stress': stress_config}
 
 
 class CalculatorTorchDDPCPU(CalculatorTorch):
