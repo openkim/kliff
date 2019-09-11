@@ -33,8 +33,14 @@ class InitializationError(Exception):
         return repr(self.value) + ' initialization failed'
 
 
-def report_import_error(name):
-    raise ImportError(
-        'Optional module "{}" needed by "KLIFF" not found. Please install it '
-        'manually.'.format(name)
-    )
+def report_import_error(package, classname=None):
+    if classname is not None:
+        msg = 'To use "{}", the package "{}" is need. Please install it first.'.format(
+            classname, package
+        )
+    else:
+        msg = 'Package "{}" needed by "KLIFF" not found. Please install it first.'.format(
+            package
+        )
+
+    raise ImportError(msg)

@@ -2,14 +2,20 @@ import os
 import numpy as np
 import logging
 from collections import OrderedDict
-import kimpy
-from kimpy import neighlist as nl
 import kliff
 from .model import ComputeArguments, Model
 from .parameter import Parameter
 from ..neighbor import assemble_forces, assemble_stress
 from ..log import log_entry
-from ..error import SupportError
+from ..error import SupportError, report_import_error
+
+try:
+    import kimpy
+    from kimpy import neighlist as nl
+
+    kimpy_avail = True
+except ImportError:
+    kimpy_avail = False
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -28,6 +34,9 @@ class KIMComputeArguments(ComputeArguments):
     implemented_property = []
 
     def __init__(self, kim_ca, *args, **kwargs):
+        if not kimpy_avail:
+            report_import_error('kimpy', self.__class__.__name__)
+
         self.kim_ca = kim_ca
         super(KIMComputeArguments, self).__init__(*args, **kwargs)
 
@@ -286,6 +295,9 @@ class KIMComputeArguments(ComputeArguments):
 
 class KIM(Model):
     def __init__(self, model_name=None, params_relation_callback=None):
+        if not kimpy_avail:
+            report_import_error('kimpy', self.__class__.__name__)
+
         super(KIM, self).__init__(model_name, params_relation_callback)
 
         if self.model_name is None:

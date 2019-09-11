@@ -9,16 +9,16 @@ from .error import InputError, report_import_error
 try:
     import torch
 
-    torch_available = True
+    torch_avail = True
 except ImportError:
-    torch_available = False
+    torch_avail = False
 
 try:
     from mpi4py import MPI
 
-    mpi4py_available = True
+    mpi4py_avail = True
 except ImportError:
-    mpi4py_available = False
+    mpi4py_avail = False
 
 
 logger = kliff.logger.get_logger(__name__)
@@ -367,7 +367,7 @@ class LossPhysicsMotivatedModel(object):
                 log_entry(logger, msg, level='info', print_end='\n\n')
 
                 # Maybe one thinks he is using MPI because nprocs is used
-                if mpi4py_available:
+                if mpi4py_avail:
                     msg = (
                         '"mpi4y" detected. If you try to run in MPI mode, you should '
                         'execute your code via "mpiexec" (or "mpirun"). If not, ignore '
@@ -592,7 +592,7 @@ class LossNeuralNetworkModel(object):
         self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
     ):
 
-        if not torch_available:
+        if not torch_avail:
             report_import_error('pytorch')
 
         self.calculator = calculator
