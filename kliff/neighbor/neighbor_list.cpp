@@ -1,4 +1,4 @@
-// Author: Mingjian Wen (wenxx151@umn.edu)
+// Author: Mingjian Wen (wenxx151@gmail.com)
 
 #include "neighbor_list.h"
 #include "helper.hpp"
@@ -6,6 +6,7 @@
 #include <cstring>
 #include <sstream>
 #include <vector>
+#include <limits>
 
 #define DIM 3
 #define TOL 1.0e-10
@@ -87,7 +88,8 @@ int nbl_build(NeighList * const nl,
   for (int k = 0; k < DIM; k++)
   {
     min[k] = coordinates[k];
-    max[k] = coordinates[k] + 1.0;  // +1 to prevent max==min for 1D and 2D case
+    // epsilon to prevent max==min for 1D and 2D case
+    max[k] = coordinates[k] + std::numeric_limits<double>::epsilon();
   }
   for (int i = 0; i < numberOfParticles; i++)
   {
@@ -111,7 +113,7 @@ int nbl_build(NeighList * const nl,
   }
   if (size_total > 1000000000)
   {
-    MY_WARNING("Cell size too large. Check if you have partilces fly away.");
+    MY_WARNING("Cell size too large. Check if you have particles fly away.");
     return 1;
   }
 
@@ -136,7 +138,7 @@ int nbl_build(NeighList * const nl,
   { cutsqs[i] = cutoffs[i] * cutoffs[i]; }
 
   // temporary neigh container
-  std::vector<int> * tmp_neigh = new std::vector<int>[numberOfCutoffs];
+  std::vector<std::vector<int> > tmp_neigh(numberOfCutoffs);
   int * total = new int[numberOfCutoffs];
   int * num_neigh = new int[numberOfCutoffs];
   for (int k = 0; k < numberOfCutoffs; k++) { total[k] = 0; }
@@ -150,7 +152,7 @@ int nbl_build(NeighList * const nl,
       int index[DIM];
       coords_to_index(&coordinates[DIM * i], size, max, min, index);
 
-      // loop over neighborling cells and the cell atom i resides
+      // loop over neighboring cells and the cell atom i resides
       for (int ii = std::max(0, index[0] - 1);
            ii <= std::min(index[0] + 1, size[0] - 1);
            ii++)
@@ -222,7 +224,6 @@ int nbl_build(NeighList * const nl,
   }
 
   delete[] cutsqs;
-  delete[] tmp_neigh;
   delete[] num_neigh;
   delete[] total;
 
@@ -284,7 +285,7 @@ int nbl_create_paddings(int const numberOfParticles,
   int error = inverse(tcell, fcell);
   if (error) { return error; }
 
-  double frac_coords[DIM * numberOfParticles];
+  double* frac_coords = new double[DIM * numberOfParticles];
   double min[DIM] = {1e10, 1e10, 1e10};
   double max[DIM] = {-1e10, -1e10, -1e10};
   for (int i = 0; i < numberOfParticles; i++)
@@ -316,7 +317,7 @@ int nbl_create_paddings(int const numberOfParticles,
   cross(cell + 3, cell + 6, xprod);
   double volume = std::abs(dot(cell, xprod));
 
-  // distance between parallelpiped cell faces
+  // distance between parallelepiped cell faces
   double dist[DIM];
   cross(cell + 3, cell + 6, xprod);
   dist[0] = volume / norm(xprod);
@@ -355,8 +356,8 @@ int nbl_create_paddings(int const numberOfParticles,
           double y = frac_coords[DIM * at + 1];
           double z = frac_coords[DIM * at + 2];
 
-          // select the necessary atoms to repeate for the most outside bins
-          // the follwing few lines can be easily understood when assuming
+          // select the necessary atoms to repeat for the most outside bins
+          // the following few lines can be easily understood when assuming
           // size=1
           if (i == -size[0]
               && x - min[0] < static_cast<double>(size[0]) - ratio[0])
@@ -394,6 +395,8 @@ int nbl_create_paddings(int const numberOfParticles,
   }
 
   numberOfPaddings = masterOfPaddings.size();
+
+  delete[] frac_coords;
 
   return 0;
 }

@@ -1,4 +1,4 @@
-// Author: Mingjian Wen (wenxx151@umn.edu)
+// Author: Mingjian Wen (wenxx151@gmail.com)
 
 #ifndef NEIGHBOR_LIST_H_
 #define NEIGHBOR_LIST_H_

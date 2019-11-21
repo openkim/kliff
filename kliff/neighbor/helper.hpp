@@ -1,4 +1,4 @@
-// Author: Mingjian Wen (wenxx151@umn.edu)
+// Author: Mingjian Wen (wenxx151@gmail.com)
 
 #ifndef HELPER_HPP_
 #define HELPER_HPP_
