@@ -54,9 +54,13 @@ symmetry functions.
 
  .. code-block:: none
 
+    "SymmetryFunction" descriptor initialized.
+    400 configurations read from "Si_training_set/varying_alat"
     Number of configurations: 400
-    Start generating fingerprints
-    Finish generating fingerprints
+    Found existing fingerprints "fingerprints.pkl".
+    Reuse existing fingerprints.
+    Restore mean and stdev from "fingerprints_mean_and_stdev.pkl".
+
 
 
 
@@ -91,9 +95,10 @@ function of its calculator.
 
 
 
+
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.473 seconds)
+   **Total running time of the script:** ( 0 minutes  1.087 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_linear_regression.py:

@@ -21,9 +21,9 @@ neural network potential.
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_linear_regression_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_linear_regression_thumb.png
 
-        :ref:`sphx_glr_auto_examples_example_linear_regression.py`
+     :ref:`sphx_glr_auto_examples_example_linear_regression.py`
 
 .. raw:: html
 
@@ -41,9 +41,9 @@ neural network potential.
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_kim_SW_Si_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_kim_SW_Si_thumb.png
 
-        :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py`
+     :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py`
 
 .. raw:: html
 
@@ -61,9 +61,9 @@ neural network potential.
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
 
-        :ref:`sphx_glr_auto_examples_example_nn_Si.py`
+     :ref:`sphx_glr_auto_examples_example_nn_Si.py`
 
 .. raw:: html
 
@@ -76,7 +76,7 @@ neural network potential.
    /auto_examples/example_nn_Si
 .. raw:: html
 
-    <div style='clear:both'></div>
+    <div class="sphx-glr-clear"></div>
 
 
 
@@ -88,13 +88,13 @@ neural network potential.
 
   .. container:: sphx-glr-download
 
-    :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/Wenz/Applications/kliff/docs/source/auto_examples/auto_examples_python.zip>`
+    :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/mjwen/Applications/kliff/docs/source/auto_examples/auto_examples_python.zip>`
 
 
 
   .. container:: sphx-glr-download
 
-    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/Wenz/Applications/kliff/docs/source/auto_examples/auto_examples_jupyter.zip>`
+    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/mjwen/Applications/kliff/docs/source/auto_examples/auto_examples_jupyter.zip>`
 
 
 .. only:: html
