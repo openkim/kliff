@@ -4,7 +4,17 @@
 Change Log
 ==========
 
-v0.1.4 (2019/8/34)
+v0.1.5 (2020/2/13)
+==================
+
+- add neighborlist utility, making NN model independent on kimpy
+
+- add calculator to deal with multiple species for NN model
+
+- update dropout layer to be compatible with the pytorch 1.3
+
+
+v0.1.4 (2019/8/24)
 ==================
 
 - add support for the geodesic Levenberg-Marquardt minimization algorithm
