@@ -31,12 +31,12 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
             shape_4D = (1, *shape, 1)
         elif dim == 3:
             if shape[0] != 1:
-                raise Exception('Shape[0] needs to be 1 for a 3D tensor.')
+                raise Exception("Shape[0] needs to be 1 for a 3D tensor.")
             shape_4D = (*shape, 1)
 
         else:
             raise Exception(
-                'Input need to be 2D or 3D tensor, but got a ' '{}D tensor.'.format(dim)
+                "Input need to be 2D or 3D tensor, but got a " "{}D tensor.".format(dim)
             )
         x = torch.reshape(input, shape_4D)
         x = torch.transpose(x, 1, 2)

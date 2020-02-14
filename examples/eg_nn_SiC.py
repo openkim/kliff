@@ -1,10 +1,10 @@
 """
-.. _tut_nn:
+.. _tut_nn_multi_spec:
 
 Train a neural network potential
 ================================
 
-In this tutorial, we train a neural network (NN) potential for silicon
+In this tutorial, we train a neural network (NN) potential for SiC
 """
 
 

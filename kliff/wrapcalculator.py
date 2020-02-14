@@ -41,7 +41,7 @@ class WrapCalculator:
         """Write parameters to file KIM_MODEL_PARAMS + modelname, and also give its path to the
         enviroment variable that has the same name: KIM_MODEL_PARAMS + modelname.
         """
-        name = 'KIM_MODEL_PARAMS_' + self.params._modelname
+        name = "KIM_MODEL_PARAMS_" + self.params._modelname
         self.params.echo_params(name, print_size=True)
         path = os.getcwd() + os.path.sep + name
         os.environ[name] = path
@@ -59,13 +59,13 @@ class WrapCalculator:
           Keyword in the edn format(think it as a dictionary), whose value will be returned.
         """
 
-        with open(fname, 'r') as fin:
+        with open(fname, "r") as fin:
             lines = fin.read()
         parsed = edn_format.loads(lines)
         values = []
         for k in keys:
             try:
-                v = parsed[k]['source-value']
+                v = parsed[k]["source-value"]
             except KeyError:
                 raise KeyError('Keyword "{}" not found in {}.'.format(k, self.outname))
             # make it a 1D array

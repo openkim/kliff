@@ -248,7 +248,7 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         for s, zeta in zeta_by_species.items():
 
             # have no species "s" in this batch of data
-            if zeta is []:
+            if not zeta:  # zeta == []
                 continue
 
             z_tensor = torch.stack(zeta)  # convert a list of tensor to tensor

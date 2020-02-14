@@ -242,6 +242,8 @@ codes such as LAMMPS via the KIM API.
 
 
 
+
+
 .. rst-class:: sphx-glr-script-out
 
  Out:
@@ -253,10 +255,17 @@ codes such as LAMMPS via the KIM API.
 
 
 
+.. note::
+   Now we have trained an NN for a single specie Si. If you have multiple species in
+   your system and want to use different parameters for different species,
+   take a look at the SiC_ example.
+
+.. _SiC: https://github.com/mjwen/kliff/blob/master/examples/eg_nn_SiC.py
+
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  16.523 seconds)
+   **Total running time of the script:** ( 0 minutes  16.575 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_Si.py:

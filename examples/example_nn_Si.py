@@ -141,3 +141,12 @@ model.save("./final_model.pkl")
 loss.save_optimizer_stat("./optimizer_stat.pkl")
 
 model.write_kim_model()
+
+
+##########################################################################################
+# .. note::
+#    Now we have trained an NN for a single specie Si. If you have multiple species in
+#    your system and want to use different parameters for different species,
+#    take a look at the SiC_ example.
+#
+# .. _SiC: https://github.com/mjwen/kliff/blob/master/examples/eg_nn_SiC.py
