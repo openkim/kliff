@@ -42,7 +42,7 @@ from kliff.loss import Loss
 # symmetry functions proposed by Behler and coworkers.
 
 descriptor = SymmetryFunction(
-    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
 )
 
 
@@ -70,7 +70,7 @@ model.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model.set_save_metadata(prefix='./kliff_saved_model', start=5, frequency=2)
+model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 
 
 ##########################################################################################
@@ -104,7 +104,7 @@ model.set_save_metadata(prefix='./kliff_saved_model', start=5, frequency=2)
 # fingerprints generated from the descriptor if it is present.
 
 # training set
-dataset_name = 'Si_training_set/varying_alat'
+dataset_name = "Si_training_set/varying_alat"
 tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
@@ -128,8 +128,8 @@ calc.create(configs, reuse=True)
 # ``0.001``, and typically, one may need to play with this to find an acceptable one that
 # drives the loss down in a reasonable time.
 
-loss = Loss(calc, residual_data={'forces_weight': 0.3})
-result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.001)
+loss = Loss(calc, residual_data={"forces_weight": 0.3})
+result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 
 ##########################################################################################
@@ -137,7 +137,7 @@ result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.001)
 # also write the trained model to a KIM model such that it can be used in other simulation
 # codes such as LAMMPS via the KIM API.
 
-model.save('./final_model.pkl')
-loss.save_optimizer_stat('./optimizer_stat.pkl')
+model.save("./final_model.pkl")
+loss.save_optimizer_stat("./optimizer_stat.pkl")
 
 model.write_kim_model()

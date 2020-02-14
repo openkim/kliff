@@ -26,18 +26,18 @@ symmetry functions.
 
 
     descriptor = SymmetryFunction(
-        cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+        cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
     )
 
 
     model = LinearRegression(descriptor)
 
     # training set
-    dataset_name = 'Si_training_set/varying_alat'
+    dataset_name = "Si_training_set/varying_alat"
     tset = Dataset()
     tset.read(dataset_name)
     configs = tset.get_configs()
-    print('Number of configurations:', len(configs))
+    print("Number of configurations:", len(configs))
 
     # calculator
     calc = CalculatorTorch(model)
@@ -79,7 +79,7 @@ function of its calculator.
 
 
     # save model
-    model.save('linear_model.pkl')
+    model.save("linear_model.pkl")
 
 
 
@@ -98,7 +98,7 @@ function of its calculator.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.087 seconds)
+   **Total running time of the script:** ( 0 minutes  0.798 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_linear_regression.py:

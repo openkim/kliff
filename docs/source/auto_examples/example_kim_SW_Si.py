@@ -47,7 +47,7 @@ from kliff.dataset import Dataset
 # We first create a KIM model for the SW potential, and print out all the available
 # parameters that can be optimized (we call this ``model parameters``).
 
-model = KIM(model_name='SW_StillingerWeber_1985_Si__MO_405512056662_005')
+model = KIM(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
 model.echo_model_params()
 
 
@@ -68,7 +68,7 @@ model.echo_model_params()
 # subset of them to reproduce the training set.
 
 model.set_fitting_params(
-    A=[[5.0, 1.0, 20]], B=[['default']], sigma=[[2.0951, 'fix']], gamma=[[1.5]]
+    A=[[5.0, 1.0, 20]], B=[["default"]], sigma=[[2.0951, "fix"]], gamma=[[1.5]]
 )
 model.echo_fitting_params()
 
@@ -108,7 +108,7 @@ model.echo_fitting_params()
 # KLIFF has a :class:`~kliff.dataset.Dataset` to deal with the training data (and possibly
 # test data). For the silicon training set, we can read and process the files by:
 
-dataset_name = 'Si_training_set'
+dataset_name = "Si_training_set"
 tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
@@ -156,9 +156,9 @@ calc.create(configs)
 # a max number of 100 iterations.
 
 steps = 100
-residual_data = {'energy_weight': 1.0, 'forces_weight': 0.1}
+residual_data = {"energy_weight": 1.0, "forces_weight": 0.1}
 loss = Loss(calc, residual_data=residual_data, nprocs=2)
-loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': steps})
+loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 
 
 ##########################################################################################
@@ -168,9 +168,9 @@ loss.minimize(method='L-BFGS-B', options={'disp': True, 'maxiter': steps})
 # that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
 
 model.echo_fitting_params()
-model.save('kliff_model.pkl')
+model.save("kliff_model.pkl")
 model.write_kim_model()
-model.load('kliff_model.pkl')
+model.load("kliff_model.pkl")
 
 
 ##########################################################################################

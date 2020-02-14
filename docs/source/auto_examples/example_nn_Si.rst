@@ -60,7 +60,7 @@ symmetry functions proposed by Behler and coworkers.
 
 
     descriptor = SymmetryFunction(
-        cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+        cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
     )
 
 
@@ -106,7 +106,7 @@ We can then build the NN model on top of the descriptor.
         # output layer
         nn.Linear(N2, 1),
     )
-    model.set_save_metadata(prefix='./kliff_saved_model', start=5, frequency=2)
+    model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 
 
 
@@ -150,7 +150,7 @@ fingerprints generated from the descriptor if it is present.
 
 
     # training set
-    dataset_name = 'Si_training_set/varying_alat'
+    dataset_name = "Si_training_set/varying_alat"
     tset = Dataset()
     tset.read(dataset_name)
     configs = tset.get_configs()
@@ -195,8 +195,8 @@ drives the loss down in a reasonable time.
 .. code-block:: default
 
 
-    loss = Loss(calc, residual_data={'forces_weight': 0.3})
-    result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.001)
+    loss = Loss(calc, residual_data={"forces_weight": 0.3})
+    result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 
 
@@ -210,17 +210,17 @@ drives the loss down in a reasonable time.
  .. code-block:: none
 
     Start minimization using optimization method: Adam.
-    Epoch = 0       loss = 2.0618024826e+01
-    Epoch = 1       loss = 2.0552209854e+01
-    Epoch = 2       loss = 2.0486871719e+01
-    Epoch = 3       loss = 2.0422067642e+01
-    Epoch = 4       loss = 2.0357845306e+01
-    Epoch = 5       loss = 2.0294256210e+01
-    Epoch = 6       loss = 2.0231365204e+01
-    Epoch = 7       loss = 2.0169200897e+01
-    Epoch = 8       loss = 2.0107803345e+01
-    Epoch = 9       loss = 2.0047174454e+01
-    Epoch = 10      loss = 1.9987298965e+01
+    Epoch = 0       loss = 7.9039424896e+01
+    Epoch = 1       loss = 7.7877323151e+01
+    Epoch = 2       loss = 7.7002645493e+01
+    Epoch = 3       loss = 7.6163650513e+01
+    Epoch = 4       loss = 7.5341215134e+01
+    Epoch = 5       loss = 7.4532175064e+01
+    Epoch = 6       loss = 7.3735103607e+01
+    Epoch = 7       loss = 7.2947338104e+01
+    Epoch = 8       loss = 7.2166387558e+01
+    Epoch = 9       loss = 7.1390523911e+01
+    Epoch = 10      loss = 7.0958875656e+01
     Finish minimization using optimization method: Adam.
 
 
@@ -234,8 +234,8 @@ codes such as LAMMPS via the KIM API.
 .. code-block:: default
 
 
-    model.save('./final_model.pkl')
-    loss.save_optimizer_stat('./optimizer_stat.pkl')
+    model.save("./final_model.pkl")
+    loss.save_optimizer_stat("./optimizer_stat.pkl")
 
     model.write_kim_model()
 
@@ -256,7 +256,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  0.492 seconds)
+   **Total running time of the script:** ( 0 minutes  16.523 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_Si.py:
