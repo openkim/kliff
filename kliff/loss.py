@@ -81,9 +81,9 @@ def energy_forces_residual(identifier, natoms, weight, prediction, reference, da
     """
 
     # prepare weight based on user provided data
-    energy_weight = data['energy_weight']
-    forces_weight = data['forces_weight']
-    normalize = data['normalize_by_natoms']
+    energy_weight = data["energy_weight"]
+    forces_weight = data["forces_weight"]
+    normalize = data["normalize_by_natoms"]
     if normalize:
         energy_weight /= natoms
         forces_weight /= natoms
@@ -97,17 +97,17 @@ def energy_forces_residual(identifier, natoms, weight, prediction, reference, da
 
 
 def forces_residual(conf_id, natoms, prediction, reference, data):
-    data['energy_weight'] = 0
+    data["energy_weight"] = 0
     return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
 def energy_residual(conf_id, natoms, prediction, reference, data):
-    data['forces_weight'] = 0
+    data["forces_weight"] = 0
     return energy_forces_residual(conf_id, natoms, prediction, reference, data)
 
 
 class Loss(object):
-    r"""Objective function class to conduct the optimization."""
+    """Objective function class to conduct the optimization."""
 
     def __new__(
         self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
@@ -133,7 +133,7 @@ class Loss(object):
 
         calc_type = calculator.__class__.__name__
 
-        if 'Torch' in calc_type:
+        if "Torch" in calc_type:
             return LossNeuralNetworkModel(calculator, nprocs, residual_fn, data)
         else:
             return LossPhysicsMotivatedModel(calculator, nprocs, residual_fn, data)
@@ -141,16 +141,16 @@ class Loss(object):
     @staticmethod
     def check_residual_data(data):
         default = {
-            'energy_weight': 1.0,
-            'forces_weight': 1.0,
-            'stress_weight': 1.0,
-            'normalize_by_natoms': True,
+            "energy_weight": 1.0,
+            "forces_weight": 1.0,
+            "stress_weight": 1.0,
+            "normalize_by_natoms": True,
         }
         if data is not None:
             for key, value in data.items():
                 if key not in default:
                     msg = '"{}" not supported by "residual_data".'.format(key)
-                    log_entry(logger, msg, level='error')
+                    log_entry(logger, msg, level="error")
                     raise InputError(msg)
                 else:
                     default[key] = value
@@ -158,48 +158,48 @@ class Loss(object):
 
     @staticmethod
     def check_computation_flag(calculator, data):
-        ew = data['energy_weight']
-        fw = data['forces_weight']
-        sw = data['stress_weight']
+        ew = data["energy_weight"]
+        fw = data["forces_weight"]
+        sw = data["stress_weight"]
         msg = (
             '"{0}_weight" set to "{1}". Seems you do not want to use {0} in the fitting. '
             'You can set "use_{0}" of "calculator.create()" to "False" to speed up the '
-            'fitting.'
+            "fitting."
         )
 
         if calculator.use_energy and ew < 1e-12:
-            msg = msg.format('energy', ew)
-            log_entry(logger, msg, level='warning')
+            msg = msg.format("energy", ew)
+            log_entry(logger, msg, level="warning")
         if calculator.use_forces and fw < 1e-12:
-            msg = msg.format('forces', fw)
-            log_entry(logger, msg, level='warning')
+            msg = msg.format("forces", fw)
+            log_entry(logger, msg, level="warning")
         if calculator.use_stress and sw < 1e-12:
-            msg = msg.format('stress', sw)
-            log_entry(logger, msg, level='warning')
+            msg = msg.format("stress", sw)
+            log_entry(logger, msg, level="warning")
 
 
 class LossPhysicsMotivatedModel(object):
     r"""Objective function class to conduct the optimization for PM models."""
 
     scipy_minimize_methods = [
-        'Nelder-Mead',
-        'Powell',
-        'CG',
-        'BFGS',
-        'Newton-CG',
-        'L-BFGS-B',
-        'TNC',
-        'COBYLA',
-        'SLSQP',
-        'trust-constr',
-        'dogleg',
-        'trust-ncg',
-        'trust-exact',
-        'trust-krylov',
+        "Nelder-Mead",
+        "Powell",
+        "CG",
+        "BFGS",
+        "Newton-CG",
+        "L-BFGS-B",
+        "TNC",
+        "COBYLA",
+        "SLSQP",
+        "trust-constr",
+        "dogleg",
+        "trust-ncg",
+        "trust-exact",
+        "trust-krylov",
     ]
-    scipy_minimize_methods_not_supported_args = ['bounds']
-    scipy_least_squares_methods = ['trf', 'dogbox', 'lm', 'geodesiclm']
-    scipy_least_squares_methods_not_supported_args = ['bounds']
+    scipy_minimize_methods_not_supported_args = ["bounds"]
+    scipy_least_squares_methods = ["trf", "dogbox", "lm", "geodesiclm"]
+    scipy_least_squares_methods_not_supported_args = ["bounds"]
 
     def __init__(
         self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
@@ -212,7 +212,7 @@ class LossPhysicsMotivatedModel(object):
         self.residual_data = residual_data if residual_data is not None else dict()
         self.calculator_type = calculator.__class__.__name__
 
-        if self.calculator_type == 'WrapperCalculator':
+        if self.calculator_type == "WrapperCalculator":
             calculators = self.calculator.calculators
         else:
             calculators = [self.calculator]
@@ -239,13 +239,13 @@ class LossPhysicsMotivatedModel(object):
         """
         kwargs = self.adjust_kwargs(method, **kwargs)
 
-        msg = 'Start minimization using method: {}.'.format(method)
-        log_entry(logger, msg, level='info')
+        msg = "Start minimization using method: {}.".format(method)
+        log_entry(logger, msg, level="info")
 
         result = self.scipy_optimize(method, **kwargs)
 
-        msg = 'Finish minimization using method: {}.'.format(method)
-        log_entry(logger, msg, level='info')
+        msg = "Finish minimization using method: {}.".format(method)
+        log_entry(logger, msg, level="info")
 
         # update final optimized parameters
         self.calculator.update_opt_params(result.x)
@@ -261,22 +261,22 @@ class LossPhysicsMotivatedModel(object):
                 if i in kwargs:
                     msg = (
                         'Argument "{}" should not be set via the "minimize" method. '
-                        'It it set internally.'.format(i)
+                        "It it set internally.".format(i)
                     )
-                    log_entry(logger, msg, level='error')
+                    log_entry(logger, msg, level="error")
                     raise LossError(msg)
 
             # adjust bounds
             if self.calculator.has_opt_params_bounds():
-                if method in ['trf', 'dogbox']:
+                if method in ["trf", "dogbox"]:
                     bounds = self.calculator.get_opt_params_bounds()
                     lb = [b[0] if b[0] is not None else -np.inf for b in bounds]
                     ub = [b[1] if b[1] is not None else np.inf for b in bounds]
                     bounds = (lb, ub)
-                    kwargs['bounds'] = bounds
+                    kwargs["bounds"] = bounds
                 else:
                     msg = 'Method "{}" cannot handle bounds.'.format(method)
-                    log_entry(logger, msg, level='error')
+                    log_entry(logger, msg, level="error")
                     raise LossError(msg)
 
         elif method in self.scipy_minimize_methods:
@@ -286,23 +286,23 @@ class LossPhysicsMotivatedModel(object):
                 if i in kwargs:
                     msg = (
                         'Argument "{}" should not be set via the "minimize" method. '
-                        'It it set internally.'.format(i)
+                        "It it set internally.".format(i)
                     )
-                    log_entry(logger, msg, level='error')
+                    log_entry(logger, msg, level="error")
                     raise LossError(msg)
 
             # adjust bounds
             if self.calculator.has_opt_params_bounds():
-                if method in ['L-BFGS-B', 'TNC', 'SLSQP']:
+                if method in ["L-BFGS-B", "TNC", "SLSQP"]:
                     bounds = self.calculator.get_opt_params_bounds()
-                    kwargs['bounds'] = bounds
+                    kwargs["bounds"] = bounds
                 else:
                     msg = 'Method "{}" cannot handle bounds.'.format(method)
-                    log_entry(logger, msg, level='error')
+                    log_entry(logger, msg, level="error")
                     raise LossError(msg)
         else:
             msg = 'minimization method "{}" not supported.'.format(method)
-            log_entry(logger, msg, level='error')
+            log_entry(logger, msg, level="error")
             raise LossError(msg)
 
         return kwargs
@@ -315,21 +315,21 @@ class LossPhysicsMotivatedModel(object):
             comm = MPI.COMM_WORLD
             rank = comm.Get_rank()
 
-            msg = 'Running in MPI mode with {} processes.'.format(size)
-            log_entry(logger, msg, level='info', print_end='\n\n')
+            msg = "Running in MPI mode with {} processes.".format(size)
+            log_entry(logger, msg, level="info", print_end="\n\n")
 
             if self.nprocs > 1:
                 msg = (
                     'Argument "nprocs = {}" provided at initialization is ignored. When '
-                    'running in MPI mode, the number of processes provided along with '
+                    "running in MPI mode, the number of processes provided along with "
                     'the "mpiexec" (or "mpirun") command is used.'.format(self.nprocs)
                 )
-                log_entry(logger, msg, level='warning')
+                log_entry(logger, msg, level="warning")
 
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
                 # geodesic LM
-                if method == 'geodesiclm':
+                if method == "geodesiclm":
                     from geodesicLM import geodesiclm
 
                     minimize_fn = geodesiclm
@@ -358,26 +358,26 @@ class LossPhysicsMotivatedModel(object):
             # both cases are regarded as running without MPI
 
             if self.nprocs == 1:
-                msg = 'Running in serial mode.'
-                log_entry(logger, msg, level='info', print_end='\n\n')
+                msg = "Running in serial mode."
+                log_entry(logger, msg, level="info", print_end="\n\n")
             else:
-                msg = 'Running in multiprocessing mode with {} processes.'.format(
+                msg = "Running in multiprocessing mode with {} processes.".format(
                     self.nprocs
                 )
-                log_entry(logger, msg, level='info', print_end='\n\n')
+                log_entry(logger, msg, level="info", print_end="\n\n")
 
                 # Maybe one thinks he is using MPI because nprocs is used
                 if mpi4py_avail:
                     msg = (
                         '"mpi4y" detected. If you try to run in MPI mode, you should '
                         'execute your code via "mpiexec" (or "mpirun"). If not, ignore '
-                        'this message.'
+                        "this message."
                     )
-                    log_entry(logger, msg, level='warning')
+                    log_entry(logger, msg, level="warning")
 
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
-                if method == 'geodesiclm':
+                if method == "geodesiclm":
                     from geodesicLM import geodesiclm
 
                     minimize_fn = geodesiclm
@@ -409,7 +409,7 @@ class LossPhysicsMotivatedModel(object):
 
         cas = self.calculator.get_compute_arguments()
 
-        if self.calculator_type == 'WrapperCalculator':
+        if self.calculator_type == "WrapperCalculator":
             calc_list = self.calculator.get_calculator_list()
             X = zip(cas, calc_list)
             if self.nprocs > 1:
@@ -576,16 +576,16 @@ class LossNeuralNetworkModel(object):
     """
 
     torch_minimize_methods = [
-        'Adadelta',
-        'Adagrad',
-        'Adam',
-        'SparseAdam',
-        'Adamax',
-        'ASGD',
-        'LBFGS',
-        'RMSprop',
-        'Rprop',
-        'SGD',
+        "Adadelta",
+        "Adagrad",
+        "Adam",
+        "SparseAdam",
+        "Adamax",
+        "ASGD",
+        "LBFGS",
+        "RMSprop",
+        "Rprop",
+        "SGD",
     ]
 
     def __init__(
@@ -593,7 +593,7 @@ class LossNeuralNetworkModel(object):
     ):
 
         if not torch_avail:
-            report_import_error('pytorch')
+            report_import_error("pytorch")
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -634,7 +634,7 @@ class LossNeuralNetworkModel(object):
         """
         if method not in self.torch_minimize_methods:
             msg = 'Minimization method "{}" not supported.'.format(method)
-            log_entry(logger, msg, level='error')
+            log_entry(logger, msg, level="error")
             raise LossError(msg)
 
         self.method = method
@@ -651,18 +651,18 @@ class LossNeuralNetworkModel(object):
         save_frequency = self.calculator.model.save_frequency
         if save_prefix is None or save_start is None or save_frequency is None:
             logger.info(
-                'Model saving meta data not set by user. Now set it to '
+                "Model saving meta data not set by user. Now set it to "
                 '"prefix=./kliff_saved_model", "start=1", and "frequency=10".'
             )
-            save_prefix = os.path.join(os.getcwd(), 'kliff_saved_model')
+            save_prefix = os.path.join(os.getcwd(), "kliff_saved_model")
             save_start = 1
             save_frequency = 10
             self.calculator.model.set_save_metadata(
                 save_prefix, save_start, save_frequency
             )
 
-        msg = 'Start minimization using optimization method: {}.'.format(self.method)
-        log_entry(logger, msg, level='info')
+        msg = "Start minimization using optimization method: {}.".format(self.method)
+        log_entry(logger, msg, level="info")
 
         # optimizing
         try:
@@ -677,15 +677,16 @@ class LossNeuralNetworkModel(object):
             idx = str(e).index("argument '") + 10
             err_arg = str(e)[idx:].strip("'")
             msg = 'Argument "{}" not supported by optimizer "{}".'.format(err_arg, method)
-            log_entry(logger, msg, level='error')
+            log_entry(logger, msg, level="error")
             raise InputError(msg)
 
+        epoch = 0
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
 
             # get the loss without any optimization if continue a training
             if self.start_epoch != 0 and epoch == self.start_epoch:
                 epoch_loss = self._get_loss_epoch(loader)
-                print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch, epoch_loss))
+                print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
 
             else:
                 epoch_loss = 0
@@ -701,20 +702,20 @@ class LossNeuralNetworkModel(object):
                     # float() such that do not accumulate history, more memory friendly
                     epoch_loss += float(loss)
 
-                print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch, epoch_loss))
+                print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
                 if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
-                    path = os.path.join(save_prefix, 'model_epoch{}.pkl'.format(epoch))
+                    path = os.path.join(save_prefix, "model_epoch{}.pkl".format(epoch))
                     self.calculator.model.save(path)
 
         # print loss from final parameter and save last epoch
         epoch += 1
         epoch_loss = self._get_loss_epoch(loader)
-        print('Epoch = {:<6d}  loss = {:.10e}'.format(epoch, epoch_loss))
-        path = os.path.join(save_prefix, 'model_epoch{}.pkl'.format(epoch))
+        print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
+        path = os.path.join(save_prefix, "model_epoch{}.pkl".format(epoch))
         self.calculator.model.save(path)
 
-        msg = 'Finish minimization using optimization method: {}.'.format(self.method)
-        log_entry(logger, msg, level='info')
+        msg = "Finish minimization using optimization method: {}.".format(self.method)
+        log_entry(logger, msg, level="info")
 
     def _get_loss_epoch(self, loader):
         epoch_loss = 0
@@ -737,9 +738,9 @@ class LossNeuralNetworkModel(object):
             `normalize` flag of the `residual_data` argument of :mod:`kliff.Loss`.
         """
         results = self.calculator.compute(batch)
-        energy_batch = results['energy']
-        forces_batch = results['forces']
-        stress_batch = results['stress']
+        energy_batch = results["energy"]
+        forces_batch = results["forces"]
+        stress_batch = results["stress"]
 
         if forces_batch is None:
             forces_batch = [None] * len(batch)
@@ -765,10 +766,10 @@ class LossNeuralNetworkModel(object):
 
         if self.calculator.use_energy:
             pred = pred_energy.reshape(-1)  # reshape scalar as 1D tensor
-            ref = sample['energy'].reshape(-1)
+            ref = sample["energy"].reshape(-1)
 
         if self.calculator.use_forces:
-            ref_forces = sample['forces']
+            ref_forces = sample["forces"]
             if self.calculator.use_energy:
                 pred = torch.cat((pred, pred_forces.reshape(-1)))
                 ref = torch.cat((ref, ref_forces.reshape(-1)))
@@ -777,7 +778,7 @@ class LossNeuralNetworkModel(object):
                 ref = ref_forces.reshape(-1)
 
         if self.calculator.use_stress:
-            ref_stress = sample['stress']
+            ref_stress = sample["stress"]
             if self.calculator.use_energy or self.calculator.use_stress:
                 pred = torch.cat((pred, pred_stress.reshape(-1)))
                 ref = torch.cat((ref, ref_stress.reshape(-1)))
@@ -785,7 +786,7 @@ class LossNeuralNetworkModel(object):
                 pred = pred_stress.reshape(-1)
                 ref = ref_stress.reshape(-1)
 
-        conf = sample['configuration']
+        conf = sample["configuration"]
         identifier = conf.get_identifier()
         natoms = conf.get_number_of_atoms()
         weight = conf.get_weight()
@@ -797,10 +798,10 @@ class LossNeuralNetworkModel(object):
 
         return loss
 
-    def save_optimizer_stat(self, path='optimizer_stat.pkl'):
+    def save_optimizer_stat(self, path="optimizer_stat.pkl"):
         torch.save(self.optimizer.state_dict(), path)
 
-    def load_optimizer_stat(self, path='optimizer_stat.pkl'):
+    def load_optimizer_stat(self, path="optimizer_stat.pkl"):
         self.optimizer_stat_path = path
 
     def _load_optimizer_stat(self, path):

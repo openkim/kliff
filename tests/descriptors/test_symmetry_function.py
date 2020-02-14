@@ -7,6 +7,7 @@ from kliff.descriptors import SymmetryFunction
 from kliff.dataset import Configuration
 from collections import OrderedDict
 
+
 zeta_ref = [
     [
         8.26552746e-01,
@@ -271,20 +272,20 @@ dzetadr_stress_ref = [
 
 
 def get_descriptor():
-    cutfunc = 'cos'
-    cutvalue = {'Si-Si': 4.5}
+    cutfunc = "cos"
+    cutvalue = {"Si-Si": 4.5}
     desc_params = OrderedDict()
 
-    desc_params['g1'] = None
-    desc_params['g2'] = [{'eta': 0.0009, 'Rs': 0.0}, {'eta': 0.01, 'Rs': 0.0}]
-    desc_params['g3'] = [{'kappa': 0.03214}, {'kappa': 0.13123}]
-    desc_params['g4'] = [
-        {'zeta': 1, 'lambda': -1, 'eta': 0.0001},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.003},
+    desc_params["g1"] = None
+    desc_params["g2"] = [{"eta": 0.0009, "Rs": 0.0}, {"eta": 0.01, "Rs": 0.0}]
+    desc_params["g3"] = [{"kappa": 0.03214}, {"kappa": 0.13123}]
+    desc_params["g4"] = [
+        {"zeta": 1, "lambda": -1, "eta": 0.0001},
+        {"zeta": 2, "lambda": 1, "eta": 0.003},
     ]
-    desc_params['g5'] = [
-        {'zeta': 1, 'lambda': -1, 'eta': 0.0001},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.003},
+    desc_params["g5"] = [
+        {"zeta": 1, "lambda": -1, "eta": 0.0001},
+        {"zeta": 2, "lambda": 1, "eta": 0.003},
     ]
 
     desc = SymmetryFunction(cutvalue, cutfunc, desc_params)
@@ -294,8 +295,8 @@ def get_descriptor():
 
 def test_desc():
 
-    config = Configuration(format='extxyz')
-    config.read('./configs_extxyz/Si.xyz')
+    config = Configuration(format="extxyz")
+    config.read("./configs_extxyz/Si.xyz")
 
     desc = get_descriptor()
 
@@ -310,5 +311,5 @@ def test_desc():
             assert np.allclose(dzetadr_stress[0], dzetadr_stress_ref)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_desc()

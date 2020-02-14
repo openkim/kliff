@@ -3,6 +3,7 @@ from kliff.neighbor import NeighborList
 from kliff.dataset import Configuration
 from kliff.dataset import write_config
 
+
 target_coords = np.asarray(
     [
         [0.000000e00, 0.000000e00, 0.000000e00],
@@ -24,11 +25,11 @@ target_coords = np.asarray(
     ]
 )
 
-target_species = ['C'] * 16
-target_species[0] = 'O'
-target_species[10] = 'O'
-target_species[12] = 'O'
-target_species[14] = 'O'
+target_species = ["C"] * 16
+target_species[0] = "O"
+target_species[10] = "O"
+target_species[12] = "O"
+target_species[14] = "O"
 
 all_indices = [[6, 1, 8], [0, 10, 12], [7, 3, 9], [2, 11, 13]]
 all_numneigh = [len(i) for i in all_indices]
@@ -36,17 +37,17 @@ all_numneigh = [len(i) for i in all_indices]
 
 def test_neigh():
     conf = Configuration()
-    fname = 'configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz'
+    fname = "configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz"
     conf.read(fname)
-    conf.species[0] = 'O'
+    conf.species[0] = "O"
 
     neigh = NeighborList(conf, infl_dist=2, padding_need_neigh=False)
-    fname = 'tmp_test_neighbor.xyz'
+    fname = "tmp_test_neighbor.xyz"
     cell = conf.get_cell()
     PBC = conf.get_PBC()
     coords = neigh.get_coords()
     species = neigh.get_species()
-    write_config(fname, cell, PBC, species, coords, fmt='extxyz')
+    write_config(fname, cell, PBC, species, coords, fmt="extxyz")
 
     assert np.allclose(coords, target_coords)
     assert np.array_equal(species, target_species)
@@ -68,5 +69,5 @@ def test_neigh():
     np.array_equal(neighlist, np.concatenate(all_indices))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_neigh()

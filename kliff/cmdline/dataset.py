@@ -9,45 +9,45 @@ class Tree:
         self.dirCount = 0
         self.stack_num_all = []
         self.stack_num_current = []
-        self.string = ''
+        self.string = ""
         self.started = False
 
     def count(self, absolute):
-        if os.path.isfile(absolute) and absolute.endswith('.xyz'):
+        if os.path.isfile(absolute) and absolute.endswith(".xyz"):
             return 1
         else:
             return 0
 
     def summary(self):
-        s = '\n' + '=' * 80 + '\n'
-        s += '                           KLIFF Dataset Count\n\n'
+        s = "\n" + "=" * 80 + "\n"
+        s += "                           KLIFF Dataset Count\n\n"
         s += 'Notation: "──dir_name (a/b)"\n'
         s += 'a: number of .xyz files in directory "dir_name"\n'
         s += 'b: number of .xyz files in directory "dir_name" and its subdirectories\n'
-        s += '\n'
+        s += "\n"
         s += self.string
-        s += '\n' + '=' * 80 + '\n'
+        s += "\n" + "=" * 80 + "\n"
 
         return s
 
-    def walk(self, directory, prefix=''):
+    def walk(self, directory, prefix=""):
 
         num_current = 0
         num_all = 0
 
         if not self.started:
-            self.string += '{}{} (rpls_num_current_{}/rpls_num_all_{})\n'.format(
+            self.string += "{}{} (rpls_num_current_{}/rpls_num_all_{})\n".format(
                 prefix, directory, self.dirCount, self.dirCount
             )
-            self.stack_num_all.append('rpls_num_all_{}'.format(self.dirCount))
-            self.stack_num_current.append('rpls_num_current_{}'.format(self.dirCount))
+            self.stack_num_all.append("rpls_num_all_{}".format(self.dirCount))
+            self.stack_num_current.append("rpls_num_current_{}".format(self.dirCount))
             self.dirCount += 1
             self.started = True
 
         filepaths = os.listdir(directory)
         for index, path in enumerate(filepaths):
 
-            if path[0] == '.':
+            if path[0] == ".":
                 continue
 
             absolute = os.path.join(directory, path)
@@ -56,18 +56,18 @@ class Tree:
             num_all += x
 
             if index == len(filepaths) - 1:
-                connector = '└──'
-                prefix_new = prefix + '    '
+                connector = "└──"
+                prefix_new = prefix + "    "
             else:
-                connector = '├──'
-                prefix_new = prefix + '│   '
+                connector = "├──"
+                prefix_new = prefix + "│   "
 
             if os.path.isdir(absolute):
-                self.string += '{}{}{} (rpls_num_current_{}/rpls_num_all_{})\n'.format(
+                self.string += "{}{}{} (rpls_num_current_{}/rpls_num_all_{})\n".format(
                     prefix, connector, path, self.dirCount, self.dirCount
                 )
-                self.stack_num_all.append('rpls_num_all_{}'.format(self.dirCount))
-                self.stack_num_current.append('rpls_num_current_{}'.format(self.dirCount))
+                self.stack_num_all.append("rpls_num_all_{}".format(self.dirCount))
+                self.stack_num_current.append("rpls_num_current_{}".format(self.dirCount))
                 self.dirCount += 1
                 sub_current, sub_all = self.walk(absolute, prefix_new)
                 num_all += sub_all
@@ -89,7 +89,7 @@ def split_dataset(source, target, nfold):
         return 'input "{}" does not exists'.format(source)
 
     for i in range(nfold):
-        path = os.path.join(target, 'subset{}'.format(i))
+        path = os.path.join(target, "subset{}".format(i))
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -104,18 +104,18 @@ class Command:
     def add_arguments(parser):
         func = parser.add_argument
         func(
-            '-c',
-            '--count',
+            "-c",
+            "--count",
             type=str,
-            metavar='directory',
+            metavar="directory",
             help='count the number of ".xyz" files in a given directory',
         )
         func(
-            '-s',
-            '--split',
+            "-s",
+            "--split",
             nargs=3,
-            metavar=('<input>', '<output>', '<n folds>'),
-            help='split dataset into multiple folds',
+            metavar=("<input>", "<output>", "<n folds>"),
+            help="split dataset into multiple folds",
         )
 
     @staticmethod
@@ -132,7 +132,7 @@ class Command:
             parser.print_help()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     directory = "."
     if len(sys.argv) > 1:

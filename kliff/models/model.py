@@ -44,7 +44,7 @@ class ComputeArguments:
             infl_dist = influence_distance
         else:
             try:
-                infl_dist = params['influence_distance'].get_value()[0]
+                infl_dist = params["influence_distance"].get_value()[0]
             except KeyError:
                 report_error('"influence_distance" not provided by "params".')
 
@@ -62,11 +62,11 @@ class ComputeArguments:
 
         compute_property = []
         if self.compute_energy:
-            add_to_compute_property(compute_property, 'energy')
+            add_to_compute_property(compute_property, "energy")
         if self.compute_forces:
-            add_to_compute_property(compute_property, 'forces')
+            add_to_compute_property(compute_property, "forces")
         if self.compute_stress:
-            add_to_compute_property(compute_property, 'stress')
+            add_to_compute_property(compute_property, "stress")
         return compute_property
 
     def compute(self, params):
@@ -106,27 +106,27 @@ class ComputeArguments:
         return result
 
     def get_energy(self):
-        return self.get_property('energy')
+        return self.get_property("energy")
 
     def get_forces(self):
-        return self.get_property('forces')
+        return self.get_property("forces")
 
     def get_stress(self):
-        return self.get_property('stress')
+        return self.get_property("stress")
 
     def get_prediction(self):
         if self.compute_energy:
-            energy = self.results['energy']
+            energy = self.results["energy"]
             pred = np.asarray([energy])
         else:
             pred = np.asarray([])
 
         if self.compute_forces:
-            forces = self.results['forces']
+            forces = self.results["forces"]
             pred = np.concatenate((pred, forces.ravel()))
 
         if self.compute_stress:
-            stress = self.results['stress']
+            stress = self.results["stress"]
             pred = np.concatenate((pred, stress))
 
         return pred
@@ -193,7 +193,7 @@ class Model:
 
         self.model_name = model_name
         if self.model_name is not None:
-            self.model_name = self.model_name.rstrip('/')
+            self.model_name = self.model_name.rstrip("/")
         self.params_relation_callback = params_relation_callback
 
         # NOTE to be filled
@@ -220,7 +220,7 @@ class Model:
 
     def write_kim_model(self, path=None):
         # NOTE fill this
-        report_error('This model does not support writing to a KIM model.')
+        report_error("This model does not support writing to a KIM model.")
 
     def set_params_relation_callback(self, params_relation_callback):
         r"""Register a function to set the relation between parameters."""
@@ -290,27 +290,27 @@ class Model:
         """
 
         if path is not None:
-            fout = open(path, 'w')
+            fout = open(path, "w")
         else:
             fout = sys.stdout
 
         print(file=fout)
-        print('#' + '=' * 80, file=fout)
-        print('# Available parameters to optimize.')
+        print("#" + "=" * 80, file=fout)
+        print("# Available parameters to optimize.")
         print(file=fout)
         if self.model_name is None:
             name = self.__class__.__name__
         else:
             name = self.model_name
-        print('# Model:', name, file=fout)
-        print('#' + '=' * 80, file=fout)
+        print("# Model:", name, file=fout)
+        print("#" + "=" * 80, file=fout)
         print(file=fout)
         for name, p in self.params.items():
-            print('name:', name, file=fout)
-            print('value:', p.value, file=fout)
-            print('size:', p.size, file=fout)
-            print('dtype:', p.dtype, file=fout)
-            print('description:', p.description, file=fout)
+            print("name:", name, file=fout)
+            print("value:", p.value, file=fout)
+            print("size:", p.size, file=fout)
+            print("dtype:", p.dtype, file=fout)
+            print("description:", p.description, file=fout)
             print(file=fout)
 
         if path is not None:
@@ -366,7 +366,7 @@ class Model:
     def update_model_params(self):
         r"""Update from fitting params to model params."""
         for name, attr in self.fitting_params.params.items():
-            self.set_model_params(name, attr['value'], check_shape=False)
+            self.set_model_params(name, attr["value"], check_shape=False)
 
     def save(self, path):
         r"""Save a model to disk.
@@ -400,5 +400,5 @@ class ModelError(Exception):
 
 
 def report_error(msg):
-    log_entry(logger, msg, level='error')
+    log_entry(logger, msg, level="error")
     raise ModelError(msg)

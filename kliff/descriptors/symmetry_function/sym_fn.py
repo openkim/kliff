@@ -96,7 +96,7 @@ class SymmetryFunction(Descriptor):
         self.size = self.get_size()
 
         msg = '"{}" descriptor initialized.'.format(self.__class__.__name__)
-        log_entry(logger, msg, level='info')
+        log_entry(logger, msg, level="info")
 
     def transform(self, conf, fit_forces=False, fit_stress=False):
         r"""Transform atomic coords to atomic environment descriptor values.
@@ -199,24 +199,24 @@ class SymmetryFunction(Descriptor):
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             msg = (
-                '=' * 25
-                + 'descriptor values (no normalization)'
-                + '=' * 25
-                + '\nconfiguration name: {}'.format(conf.get_identifier())
-                + '\natom id    descriptor values ...'
+                "=" * 25
+                + "descriptor values (no normalization)"
+                + "=" * 25
+                + "\nconfiguration name: {}".format(conf.get_identifier())
+                + "\natom id    descriptor values ..."
             )
-            log_entry(logger, msg, level='debug')
+            log_entry(logger, msg, level="debug")
 
             for i, line in enumerate(zeta_config):
-                s = '\n{}    '.format(i)
+                s = "\n{}    ".format(i)
                 for j in line:
-                    s += '{:.15g} '.format(j)
-                log_entry(logger, s, level='debug')
+                    s += "{:.15g} ".format(j)
+                log_entry(logger, s, level="debug")
 
         return zeta_config, dzetadr_forces_config, dzetadr_stress_config
 
     def _set_cutoff(self):
-        supported = ['cos']
+        supported = ["cos"]
         if self.cut_name is None:
             self.cut_name = supported[0]
         if self.cut_name not in supported:
@@ -234,15 +234,15 @@ class SymmetryFunction(Descriptor):
         rcutsym = np.zeros([num_species, num_species], dtype=np.double)
         for si, i in self.species_code.items():
             for sj, j in self.species_code.items():
-                rcutsym[i][j] = self.cutoff[si + '-' + sj]
+                rcutsym[i][j] = self.cutoff[si + "-" + sj]
         self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
         if isinstance(self.hyperparams, str):
             name = self.hyperparams.lower()
-            if name == 'set51':
+            if name == "set51":
                 self.hyperparams = get_set51()
-            elif name == 'set30':
+            elif name == "set30":
                 self.hyperparams = get_set30()
             else:
                 raise SymmetryFunctionError('hyperparams "{}" unrecognized.'.format(name))
@@ -251,14 +251,14 @@ class SymmetryFunction(Descriptor):
 
         # hyperparams of descriptors
         for key, values in self.hyperparams.items():
-            if key.lower() not in ['g1', 'g2', 'g3', 'g4', 'g5']:
+            if key.lower() not in ["g1", "g2", "g3", "g4", "g5"]:
                 raise SymmetryFunctionError(
                     'Symmetry function "{}" unrecognized.'.format(key)
                 )
 
             # g1 needs no hyperparams, put a placeholder
             name = key.lower()
-            if name == 'g1':
+            if name == "g1":
                 # it has no hyperparams, zeros([1,1]) for placeholder
                 params = np.zeros([1, 1], dtype=np.double)
             else:
@@ -266,126 +266,126 @@ class SymmetryFunction(Descriptor):
                 cols = len(values[0])
                 params = np.zeros([rows, cols], dtype=np.double)
                 for i, line in enumerate(values):
-                    if name == 'g2':
-                        params[i][0] = line['eta']
-                        params[i][1] = line['Rs']
-                    elif name == 'g3':
-                        params[i][0] = line['kappa']
-                    elif key == 'g4':
-                        params[i][0] = line['zeta']
-                        params[i][1] = line['lambda']
-                        params[i][2] = line['eta']
-                    elif key == 'g5':
-                        params[i][0] = line['zeta']
-                        params[i][1] = line['lambda']
-                        params[i][2] = line['eta']
+                    if name == "g2":
+                        params[i][0] = line["eta"]
+                        params[i][1] = line["Rs"]
+                    elif name == "g3":
+                        params[i][0] = line["kappa"]
+                    elif key == "g4":
+                        params[i][0] = line["zeta"]
+                        params[i][1] = line["lambda"]
+                        params[i][2] = line["eta"]
+                    elif key == "g5":
+                        params[i][0] = line["zeta"]
+                        params[i][1] = line["lambda"]
+                        params[i][2] = line["eta"]
 
             # store cutoff values in both this python and cpp class
             self._desc[name] = params
             self._cdesc.add_descriptor(name, params)
 
-    def write_kim_params(self, path, fname='descriptor.params'):
+    def write_kim_params(self, path, fname="descriptor.params"):
 
-        with open(os.path.join(path, fname), 'w') as fout:
+        with open(os.path.join(path, fname), "w") as fout:
 
             if self.dtype == np.float64:
-                fmt = '{:.15e} '
+                fmt = "{:.15e} "
             else:
-                fmt = '{:.7e} '
+                fmt = "{:.7e} "
 
             # header
-            fout.write('#' + '=' * 80 + '\n')
-            fout.write('# Descriptor parameters file generated by KLIFF.\n')
-            fout.write('#' + '=' * 80 + '\n\n')
+            fout.write("#" + "=" * 80 + "\n")
+            fout.write("# Descriptor parameters file generated by KLIFF.\n")
+            fout.write("#" + "=" * 80 + "\n\n")
 
             # cutoff and species
             cutname, rcut = self.get_cutoff()
             unique_pairs = generate_unique_cutoff_pairs(rcut)
             species = generate_species_code(rcut)
 
-            fout.write('{}  # cutoff type\n\n'.format(cutname))
-            fout.write('{}  # number of species\n\n'.format(len(species)))
-            fout.write('# species 1    species 2    cutoff\n')
+            fout.write("{}  # cutoff type\n\n".format(cutname))
+            fout.write("{}  # number of species\n\n".format(len(species)))
+            fout.write("# species 1    species 2    cutoff\n")
             for key, value in unique_pairs.items():
-                s1, s2 = key.split('-')
-                fout.write(('{}  {}  ' + fmt + '\n').format(s1, s2, value))
-            fout.write('\n')
+                s1, s2 = key.split("-")
+                fout.write(("{}  {}  " + fmt + "\n").format(s1, s2, value))
+            fout.write("\n")
 
             #
             # symmetry functions
             #
 
             # header
-            fout.write('#' + '=' * 80 + '\n')
-            fout.write('# symmetry functions\n')
-            fout.write('#' + '=' * 80 + '\n\n')
+            fout.write("#" + "=" * 80 + "\n")
+            fout.write("# symmetry functions\n")
+            fout.write("#" + "=" * 80 + "\n\n")
 
             desc = self.get_hyperparams()
             num_desc = len(desc)
-            fout.write('{}  # number of symmetry functions types\n\n'.format(num_desc))
+            fout.write("{}  # number of symmetry functions types\n\n".format(num_desc))
 
             # descriptor values
-            fout.write('# sym_function    rows    cols\n')
+            fout.write("# sym_function    rows    cols\n")
             for name, values in desc.items():
-                if name == 'g1':
-                    fout.write('g1\n\n')
+                if name == "g1":
+                    fout.write("g1\n\n")
                 else:
                     rows = len(values)
                     cols = len(values[0])
-                    fout.write('{}    {}    {}\n'.format(name, rows, cols))
-                    if name == 'g2':
+                    fout.write("{}    {}    {}\n".format(name, rows, cols))
+                    if name == "g2":
                         for val in values:
                             fout.write((fmt * 2).format(val[0], val[1]))
-                            fout.write('    # eta  Rs\n')
-                        fout.write('\n')
-                    elif name == 'g3':
+                            fout.write("    # eta  Rs\n")
+                        fout.write("\n")
+                    elif name == "g3":
                         for val in values:
                             fout.write((fmt).format(val[0]))
-                            fout.write('    # kappa\n')
-                        fout.write('\n')
-                    elif name == 'g4':
+                            fout.write("    # kappa\n")
+                        fout.write("\n")
+                    elif name == "g4":
                         for val in values:
                             zeta = val[0]
                             lam = val[1]
                             eta = val[2]
                             fout.write((fmt * 3).format(zeta, lam, eta))
-                            fout.write('    # zeta  lambda  eta\n')
-                        fout.write('\n')
-                    elif name == 'g5':
+                            fout.write("    # zeta  lambda  eta\n")
+                        fout.write("\n")
+                    elif name == "g5":
                         for val in values:
                             zeta = val[0]
                             lam = val[1]
                             eta = val[2]
                             fout.write((fmt * 3).format(zeta, lam, eta))
-                            fout.write('    # zeta  lambda  eta\n')
-                        fout.write('\n')
+                            fout.write("    # zeta  lambda  eta\n")
+                        fout.write("\n")
 
             #
             # data centering and normalization
             #
 
             # header
-            fout.write('#' + '=' * 80 + '\n')
-            fout.write('# Preprocessing data to center and normalize\n')
-            fout.write('#' + '=' * 80 + '\n')
+            fout.write("#" + "=" * 80 + "\n")
+            fout.write("# Preprocessing data to center and normalize\n")
+            fout.write("#" + "=" * 80 + "\n")
 
             # mean and stdev
             mean = self.get_mean()
             stdev = self.get_stdev()
             if mean is None and stdev is None:
-                fout.write('center_and_normalize  False\n')
+                fout.write("center_and_normalize  False\n")
             else:
-                fout.write('center_and_normalize  True\n\n')
+                fout.write("center_and_normalize  True\n\n")
 
-                fout.write('{}   # descriptor size\n'.format(self.get_size()))
+                fout.write("{}   # descriptor size\n".format(self.get_size()))
 
-                fout.write('# mean\n')
+                fout.write("# mean\n")
                 for i in mean:
-                    fout.write((fmt + '\n').format(i))
-                fout.write('\n# standard deviation\n')
+                    fout.write((fmt + "\n").format(i))
+                fout.write("\n# standard deviation\n")
                 for i in stdev:
-                    fout.write((fmt + '\n').format(i))
-                fout.write('\n')
+                    fout.write((fmt + "\n").format(i))
+                fout.write("\n")
 
     def get_size(self):
         return len(self)
@@ -409,72 +409,72 @@ def get_set51():
 
     params = OrderedDict()
 
-    params['g2'] = [
-        {'eta': 0.001, 'Rs': 0.0},
-        {'eta': 0.01, 'Rs': 0.0},
-        {'eta': 0.02, 'Rs': 0.0},
-        {'eta': 0.035, 'Rs': 0.0},
-        {'eta': 0.06, 'Rs': 0.0},
-        {'eta': 0.1, 'Rs': 0.0},
-        {'eta': 0.2, 'Rs': 0.0},
-        {'eta': 0.4, 'Rs': 0.0},
+    params["g2"] = [
+        {"eta": 0.001, "Rs": 0.0},
+        {"eta": 0.01, "Rs": 0.0},
+        {"eta": 0.02, "Rs": 0.0},
+        {"eta": 0.035, "Rs": 0.0},
+        {"eta": 0.06, "Rs": 0.0},
+        {"eta": 0.1, "Rs": 0.0},
+        {"eta": 0.2, "Rs": 0.0},
+        {"eta": 0.4, "Rs": 0.0},
     ]
 
-    params['g4'] = [
-        {'zeta': 1, 'lambda': -1, 'eta': 0.0001},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.0001},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.0001},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.0001},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.003},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.003},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.003},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.003},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.008},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.008},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.008},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.008},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.015},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.015},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 4, 'lambda': -1, 'eta': 0.015},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 16, 'lambda': -1, 'eta': 0.015},
-        {'zeta': 16, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.025},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.025},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 4, 'lambda': -1, 'eta': 0.025},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 16, 'lambda': -1, 'eta': 0.025},
-        {'zeta': 16, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.045},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.045},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 4, 'lambda': -1, 'eta': 0.045},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 16, 'lambda': -1, 'eta': 0.045},
-        {'zeta': 16, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.08},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.08},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.08},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.08},
-        {'zeta': 4, 'lambda': -1, 'eta': 0.08},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.08},
+    params["g4"] = [
+        {"zeta": 1, "lambda": -1, "eta": 0.0001},
+        {"zeta": 1, "lambda": 1, "eta": 0.0001},
+        {"zeta": 2, "lambda": -1, "eta": 0.0001},
+        {"zeta": 2, "lambda": 1, "eta": 0.0001},
+        {"zeta": 1, "lambda": -1, "eta": 0.003},
+        {"zeta": 1, "lambda": 1, "eta": 0.003},
+        {"zeta": 2, "lambda": -1, "eta": 0.003},
+        {"zeta": 2, "lambda": 1, "eta": 0.003},
+        {"zeta": 1, "lambda": -1, "eta": 0.008},
+        {"zeta": 1, "lambda": 1, "eta": 0.008},
+        {"zeta": 2, "lambda": -1, "eta": 0.008},
+        {"zeta": 2, "lambda": 1, "eta": 0.008},
+        {"zeta": 1, "lambda": -1, "eta": 0.015},
+        {"zeta": 1, "lambda": 1, "eta": 0.015},
+        {"zeta": 2, "lambda": -1, "eta": 0.015},
+        {"zeta": 2, "lambda": 1, "eta": 0.015},
+        {"zeta": 4, "lambda": -1, "eta": 0.015},
+        {"zeta": 4, "lambda": 1, "eta": 0.015},
+        {"zeta": 16, "lambda": -1, "eta": 0.015},
+        {"zeta": 16, "lambda": 1, "eta": 0.015},
+        {"zeta": 1, "lambda": -1, "eta": 0.025},
+        {"zeta": 1, "lambda": 1, "eta": 0.025},
+        {"zeta": 2, "lambda": -1, "eta": 0.025},
+        {"zeta": 2, "lambda": 1, "eta": 0.025},
+        {"zeta": 4, "lambda": -1, "eta": 0.025},
+        {"zeta": 4, "lambda": 1, "eta": 0.025},
+        {"zeta": 16, "lambda": -1, "eta": 0.025},
+        {"zeta": 16, "lambda": 1, "eta": 0.025},
+        {"zeta": 1, "lambda": -1, "eta": 0.045},
+        {"zeta": 1, "lambda": 1, "eta": 0.045},
+        {"zeta": 2, "lambda": -1, "eta": 0.045},
+        {"zeta": 2, "lambda": 1, "eta": 0.045},
+        {"zeta": 4, "lambda": -1, "eta": 0.045},
+        {"zeta": 4, "lambda": 1, "eta": 0.045},
+        {"zeta": 16, "lambda": -1, "eta": 0.045},
+        {"zeta": 16, "lambda": 1, "eta": 0.045},
+        {"zeta": 1, "lambda": -1, "eta": 0.08},
+        {"zeta": 1, "lambda": 1, "eta": 0.08},
+        {"zeta": 2, "lambda": -1, "eta": 0.08},
+        {"zeta": 2, "lambda": 1, "eta": 0.08},
+        {"zeta": 4, "lambda": -1, "eta": 0.08},
+        {"zeta": 4, "lambda": 1, "eta": 0.08},
         # {'zeta':16,  'lambda':-1,  'eta':0.08 },
-        {'zeta': 16, 'lambda': 1, 'eta': 0.08},
+        {"zeta": 16, "lambda": 1, "eta": 0.08},
     ]
 
     # transfer units from bohr to angstrom
     bhor2ang = 0.529177
     for key, values in params.items():
         for val in values:
-            if key == 'g2':
-                val['eta'] /= bhor2ang ** 2
-            elif key == 'g4':
-                val['eta'] /= bhor2ang ** 2
+            if key == "g2":
+                val["eta"] /= bhor2ang ** 2
+            elif key == "g4":
+                val["eta"] /= bhor2ang ** 2
 
     return params
 
@@ -488,50 +488,50 @@ def get_set30():
 
     params = OrderedDict()
 
-    params['g2'] = [
-        {'eta': 0.0009, 'Rs': 0.0},
-        {'eta': 0.01, 'Rs': 0.0},
-        {'eta': 0.02, 'Rs': 0.0},
-        {'eta': 0.035, 'Rs': 0.0},
-        {'eta': 0.06, 'Rs': 0.0},
-        {'eta': 0.1, 'Rs': 0.0},
-        {'eta': 0.2, 'Rs': 0.0},
-        {'eta': 0.4, 'Rs': 0.0},
+    params["g2"] = [
+        {"eta": 0.0009, "Rs": 0.0},
+        {"eta": 0.01, "Rs": 0.0},
+        {"eta": 0.02, "Rs": 0.0},
+        {"eta": 0.035, "Rs": 0.0},
+        {"eta": 0.06, "Rs": 0.0},
+        {"eta": 0.1, "Rs": 0.0},
+        {"eta": 0.2, "Rs": 0.0},
+        {"eta": 0.4, "Rs": 0.0},
     ]
 
-    params['g4'] = [
-        {'zeta': 1, 'lambda': -1, 'eta': 0.0001},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.0001},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.0001},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.0001},
-        {'zeta': 1, 'lambda': -1, 'eta': 0.003},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.003},
-        {'zeta': 2, 'lambda': -1, 'eta': 0.003},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.003},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.008},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.008},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 16, 'lambda': 1, 'eta': 0.015},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 16, 'lambda': 1, 'eta': 0.025},
-        {'zeta': 1, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 2, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 4, 'lambda': 1, 'eta': 0.045},
-        {'zeta': 16, 'lambda': 1, 'eta': 0.045},
+    params["g4"] = [
+        {"zeta": 1, "lambda": -1, "eta": 0.0001},
+        {"zeta": 1, "lambda": 1, "eta": 0.0001},
+        {"zeta": 2, "lambda": -1, "eta": 0.0001},
+        {"zeta": 2, "lambda": 1, "eta": 0.0001},
+        {"zeta": 1, "lambda": -1, "eta": 0.003},
+        {"zeta": 1, "lambda": 1, "eta": 0.003},
+        {"zeta": 2, "lambda": -1, "eta": 0.003},
+        {"zeta": 2, "lambda": 1, "eta": 0.003},
+        {"zeta": 1, "lambda": 1, "eta": 0.008},
+        {"zeta": 2, "lambda": 1, "eta": 0.008},
+        {"zeta": 1, "lambda": 1, "eta": 0.015},
+        {"zeta": 2, "lambda": 1, "eta": 0.015},
+        {"zeta": 4, "lambda": 1, "eta": 0.015},
+        {"zeta": 16, "lambda": 1, "eta": 0.015},
+        {"zeta": 1, "lambda": 1, "eta": 0.025},
+        {"zeta": 2, "lambda": 1, "eta": 0.025},
+        {"zeta": 4, "lambda": 1, "eta": 0.025},
+        {"zeta": 16, "lambda": 1, "eta": 0.025},
+        {"zeta": 1, "lambda": 1, "eta": 0.045},
+        {"zeta": 2, "lambda": 1, "eta": 0.045},
+        {"zeta": 4, "lambda": 1, "eta": 0.045},
+        {"zeta": 16, "lambda": 1, "eta": 0.045},
     ]
 
     # transfer units from bohr to angstrom
     bhor2ang = 0.529177
     for key, values in params.items():
         for val in values:
-            if key == 'g2':
-                val['eta'] /= bhor2ang ** 2
-            elif key == 'g4':
-                val['eta'] /= bhor2ang ** 2
+            if key == "g2":
+                val["eta"] /= bhor2ang ** 2
+            elif key == "g4":
+                val["eta"] /= bhor2ang ** 2
 
     return params
 

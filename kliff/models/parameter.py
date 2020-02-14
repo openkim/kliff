@@ -14,7 +14,7 @@ logger = kliff.logger.get_logger(__name__)
 class Parameter:
     r"""Parameter class."""
 
-    def __init__(self, value, dtype='double', description=None):
+    def __init__(self, value, dtype="double", description=None):
         self.set_value(value)
         self.dtype = dtype
         self.description = description
@@ -35,10 +35,10 @@ class Parameter:
         if check_shape:
             if isinstance(value, Iterable):
                 if any(isinstance(i, Iterable) for i in value):
-                    raise ParameterError('Parameter should be a 1D array.')
+                    raise ParameterError("Parameter should be a 1D array.")
                 self._set_val(value)
             else:
-                raise ParameterError('Parameter should be a 1D array.')
+                raise ParameterError("Parameter should be a 1D array.")
         else:
             self._set_val(value)
 
@@ -47,10 +47,10 @@ class Parameter:
         self.size = len(value)
 
     def to_string(self):
-        s = 'value: {}\n'.format(np.array_str(self.value))
-        s += 'size: {}\n'.format(self.size)
-        s += 'dtype: {}\n'.format(self.dtype)
-        s += 'description: {}\n'.format(self.description)
+        s = "value: {}\n".format(np.array_str(self.value))
+        s += "size: {}\n".format(self.size)
+        s += "dtype: {}\n".format(self.dtype)
+        s += "description: {}\n".format(self.description)
         return s
 
 
@@ -125,7 +125,7 @@ class FittingParameter:
         2.0      FIX
         """
 
-        with open(fname, 'r') as fin:
+        with open(fname, "r") as fin:
             lines = fin.readlines()
             lines = remove_comments(lines)
         num_line = 0
@@ -203,12 +203,12 @@ class FittingParameter:
             )
 
         tmp_dict = {
-            'size': size,
-            'value': [None for _ in range(size)],
-            'use_default': [False for _ in range(size)],
-            'fix': [False for _ in range(size)],
-            'lower_bound': [None for _ in range(size)],
-            'upper_bound': [None for _ in range(size)],
+            "size": size,
+            "value": [None for _ in range(size)],
+            "use_default": [False for _ in range(size)],
+            "fix": [False for _ in range(size)],
+            "lower_bound": [None for _ in range(size)],
+            "upper_bound": [None for _ in range(size)],
         }
         self.params[name] = tmp_dict
 
@@ -222,7 +222,7 @@ class FittingParameter:
                 self._read_3_item(name, j, line)
             else:
                 raise InputError(
-                    'More than 3 elements listed at data line '
+                    "More than 3 elements listed at data line "
                     '{} for parameter "{}".'.format(j + 1, name)
                 )
             self._check_bounds(name)
@@ -244,41 +244,41 @@ class FittingParameter:
         """
 
         if fname is not None:
-            fout = open(fname, 'w')
+            fout = open(fname, "w")
         else:
             fout = sys.stdout
 
-        print('#' + '=' * 80, file=fout)
-        print('# Model parameters that are optimized.', file=fout)
-        print('#' + '=' * 80, file=fout)
+        print("#" + "=" * 80, file=fout)
+        print("# Model parameters that are optimized.", file=fout)
+        print("#" + "=" * 80, file=fout)
         print(file=fout)
 
         for name, attr in self.params.items():
             if print_size:
-                print(name, attr['size'], file=fout)
+                print(name, attr["size"], file=fout)
             else:
                 print(name, file=fout)
 
-            for i in range(attr['size']):
-                print('{:24.16e}'.format(attr['value'][i]), end=' ', file=fout)
+            for i in range(attr["size"]):
+                print("{:24.16e}".format(attr["value"][i]), end=" ", file=fout)
 
-                if attr['fix'][i]:
-                    print('fix', end=' ', file=fout)
+                if attr["fix"][i]:
+                    print("fix", end=" ", file=fout)
 
-                lb = attr['lower_bound'][i]
-                ub = attr['upper_bound'][i]
+                lb = attr["lower_bound"][i]
+                ub = attr["upper_bound"][i]
                 has_lb = lb is not None
                 has_ub = ub is not None
                 has_bounds = has_lb or has_ub
                 if has_bounds:
                     if has_lb:
-                        print('{:24.16e}'.format(lb), end=' ', file=fout)
+                        print("{:24.16e}".format(lb), end=" ", file=fout)
                     else:
-                        print('None', end=' ', file=fout)
+                        print("None", end=" ", file=fout)
                     if has_ub:
-                        print('{:24.16e}'.format(ub), end=' ', file=fout)
+                        print("{:24.16e}".format(ub), end=" ", file=fout)
                     else:
-                        print('None', end=' ', file=fout)
+                        print("None", end=" ", file=fout)
                 print(file=fout)
 
             print(file=fout)
@@ -291,12 +291,12 @@ class FittingParameter:
         dirname = os.path.dirname(path)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(self.params, f)
 
     def load(self, path):
         # restore parameters
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             self.params = pickle.load(f)
         # restore index
         self._index = []
@@ -307,22 +307,22 @@ class FittingParameter:
         return self.params.keys()
 
     def get_size(self, name):
-        return self.params[name]['size']
+        return self.params[name]["size"]
 
     def get_value(self, name):
-        return self.params[name]['value'].copy()
+        return self.params[name]["value"].copy()
 
     def set_value(self, name, value):
-        self.params[name]['value'] = value
+        self.params[name]["value"] = value
 
     def get_lower_bound(self, name):
-        return self.params[name]['lower_bound'].copy()
+        return self.params[name]["lower_bound"].copy()
 
     def get_upper_bound(self, name):
-        return self.params[name]['upper_bound'].copy()
+        return self.params[name]["upper_bound"].copy()
 
     def get_fix(self, name):
-        return self.params[name]['fix'].copy()
+        return self.params[name]["fix"].copy()
 
     def get_number_of_opt_params(self):
         return len(self._index)
@@ -340,7 +340,7 @@ class FittingParameter:
         for k, val in enumerate(opt_x):
             name = self._index[k].name
             c_idx = self._index[k].c_idx
-            self.params[name]['value'][c_idx] = val
+            self.params[name]["value"][c_idx] = val
 
     def get_opt_params(self):
         r"""Nest all parameter values (except the fix ones) to a list.
@@ -356,9 +356,9 @@ class FittingParameter:
         for idx in self._index:
             name = idx.name
             c_idx = idx.c_idx
-            opt_x0.append(self.params[name]['value'][c_idx])
+            opt_x0.append(self.params[name]["value"][c_idx])
         if len(opt_x0) == 0:
-            raise ParameterError('No parameters specified to optimize.')
+            raise ParameterError("No parameters specified to optimize.")
         return np.asarray(opt_x0)
 
     def get_opt_param_name_value_and_indices(self, k):
@@ -368,7 +368,7 @@ class FittingParameter:
         name = self._index[k].name
         p_idx = self._index[k].p_idx
         c_idx = self._index[k].c_idx
-        value = self.params[name]['value'][c_idx]
+        value = self.params[name]["value"][c_idx]
         return name, value, p_idx, c_idx
 
     def get_opt_params_bounds(self):
@@ -377,8 +377,8 @@ class FittingParameter:
         for idx in self._index:
             name = idx.name
             c_idx = idx.c_idx
-            lower = self.params[name]['lower_bound'][c_idx]
-            upper = self.params[name]['upper_bound'][c_idx]
+            lower = self.params[name]["lower_bound"][c_idx]
+            upper = self.params[name]["upper_bound"][c_idx]
             bounds.append([lower, upper])
         return bounds
 
@@ -395,42 +395,42 @@ class FittingParameter:
 
     def _read_2_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
-        if line[1].lower() == 'fix':
-            self.params[name]['fix'][j] = True
+        if line[1].lower() == "fix":
+            self.params[name]["fix"][j] = True
         else:
-            raise InputError('Data at line {} of {} corrupted.'.format(j + 1, name))
+            raise InputError("Data at line {} of {} corrupted.".format(j + 1, name))
 
     def _read_3_item(self, name, j, line):
         self._read_1st_item(name, j, line[0])
 
         if (line[1] is not None) and (
-            not (isinstance(line[1], str) and line[1].lower() == 'none')
+            not (isinstance(line[1], str) and line[1].lower() == "none")
         ):
             try:
-                self.params[name]['lower_bound'][j] = float(line[1])
+                self.params[name]["lower_bound"][j] = float(line[1])
             except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(e, j + 1, name)
+                    "{}.\nData at line {} of {} corrupted.".format(e, j + 1, name)
                 )
 
         if (line[2] is not None) and (
-            not (isinstance(line[2], str) and line[2].lower() == 'none')
+            not (isinstance(line[2], str) and line[2].lower() == "none")
         ):
             try:
-                self.params[name]['upper_bound'][j] = float(line[2])
+                self.params[name]["upper_bound"][j] = float(line[2])
             except ValueError as e:
                 raise InputError(
-                    '{}.\nData at line {} of {} corrupted.'.format(e, j + 1, name)
+                    "{}.\nData at line {} of {} corrupted.".format(e, j + 1, name)
                 )
 
     def _read_1st_item(self, name, j, first):
-        if isinstance(first, str) and first.lower() == 'default':
-            self.params[name]['use_default'][j] = True
+        if isinstance(first, str) and first.lower() == "default":
+            self.params[name]["use_default"][j] = True
             model_value = self.model_params[name].get_value()
-            self.params[name]['value'][j] = model_value[j]
+            self.params[name]["value"][j] = model_value[j]
         else:
             try:
-                self.params[name]['value'][j] = float(first)
+                self.params[name]["value"][j] = float(first)
             except ValueError as e:
                 raise InputError(
                     '{}.\nData at line {} of parameter "{}" corrupted.'.format(
@@ -443,21 +443,21 @@ class FittingParameter:
         upper bounds.
         """
         attr = self.params[name]
-        for i in range(attr['size']):
-            lower_bound = attr['lower_bound'][i]
-            upper_bound = attr['upper_bound'][i]
-            value = attr['value'][i]
+        for i in range(attr["size"]):
+            lower_bound = attr["lower_bound"][i]
+            upper_bound = attr["upper_bound"][i]
+            value = attr["value"][i]
             if lower_bound is not None:
                 if value < lower_bound:
                     raise InputError(
                         'Initial guess at line {} of parameter "{}" '
-                        'out of bounds.'.format(i + 1, name)
+                        "out of bounds.".format(i + 1, name)
                     )
             if upper_bound is not None:
                 if value > upper_bound:
                     raise InputError(
                         'Initial guess at line {} of parameter "{}" '
-                        'out of bounds.'.format(i + 1, name)
+                        "out of bounds.".format(i + 1, name)
                     )
 
     def _set_index(self, name):
@@ -477,8 +477,8 @@ class FittingParameter:
 
         # TODO check if there is alternative so as not to use OrderedDict
         p_idx = list(self.model_params.keys()).index(name)
-        size = self.params[name]['size']
-        fix = self.params[name]['fix']
+        size = self.params[name]["size"]
+        fix = self.params[name]["fix"]
         for c_idx in range(size):
             if not fix[c_idx]:
                 idx = Index(name, p_idx, c_idx)
@@ -527,10 +527,10 @@ def remove_comments(lines):
     processed_lines = []
     for line in lines:
         line = line.strip()
-        if not line or line[0] == '#':
+        if not line or line[0] == "#":
             continue
-        if '#' in line:
-            line = line[0 : line.index('#')]
+        if "#" in line:
+            line = line[0 : line.index("#")]
         processed_lines.append(line)
     return processed_lines
 

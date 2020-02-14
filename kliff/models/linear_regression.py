@@ -53,23 +53,23 @@ class LinearRegression(ModelTorch):
         for batch in loader:
             sample = batch[0]
             if use_energy:
-                zeta = sample['zeta']
+                zeta = sample["zeta"]
                 intercept = torch.ones(zeta.size()[0], 1)
                 zeta = torch.cat((intercept, zeta), dim=1)
 
                 # sum to get energy of the configuration; we can do this because the model
                 # is linear
                 zeta = torch.sum(zeta, 0, keepdim=True)  # 2D tensor
-                e = torch.tensor([sample['energy']])  # 1D tensor
+                e = torch.tensor([sample["energy"]])  # 1D tensor
 
             if use_forces:
-                dzeta = sample['dzeta_dr']  # 3D tensor (atom, desc, coords)
+                dzeta = sample["dzeta_dr"]  # 3D tensor (atom, desc, coords)
                 # torch.zeros because derivative of intercept is 0
                 intercept = torch.zeros(dzeta.size()[0], dzeta.size()[2])
                 dzeta = torch.cat((intercept, dzeta), dim=1)
 
                 dzeta = torch.sum(dzeta, 0)  # 2D tensor
-                f = sample['forces'][0]  # 1D tensor
+                f = sample["forces"][0]  # 1D tensor
 
             if use_energy and use_forces:
                 x_ = torch.cat((zeta, torch.transpose(dzeta)))

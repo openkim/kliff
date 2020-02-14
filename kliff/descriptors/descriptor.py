@@ -109,12 +109,12 @@ class Descriptor:
         """
 
         if fingerprints_path is None:
-            fname = 'fingerprints.pkl'
+            fname = "fingerprints.pkl"
         else:
             fname = fingerprints_path
 
         if fingerprints_mean_and_stdev_path is None:
-            mean_stdev_name = 'fingerprints_mean_and_stdev.pkl'
+            mean_stdev_name = "fingerprints_mean_and_stdev.pkl"
             mean_stdev_provided = False
         else:
             mean_stdev_name = fingerprints_mean_and_stdev_path
@@ -123,27 +123,27 @@ class Descriptor:
         def restore_mean_and_stdev():
             self.load_mean_stdev(mean_stdev_name)
             msg = 'Restore mean and stdev from "{}".'.format(mean_stdev_name)
-            log_entry(logger, msg, level='info')
+            log_entry(logger, msg, level="info")
 
         # TODO need to check the integrity of the loaded data
         # restore data
         if os.path.exists(fname):
             msg = 'Found existing fingerprints "{}".'.format(fname)
-            log_entry(logger, msg, level='info')
+            log_entry(logger, msg, level="info")
             if not reuse:
                 os.remove(fname)
                 msg = 'Delete existing fingerprints "{}"'.format(fname)
-                log_entry(logger, msg, level='info')
+                log_entry(logger, msg, level="info")
             else:
-                msg = 'Reuse existing fingerprints.'
-                log_entry(logger, msg, level='info')
+                msg = "Reuse existing fingerprints."
+                log_entry(logger, msg, level="info")
                 if self.normalize:
                     restore_mean_and_stdev()
                 return fname
 
         # generate data
-        msg = 'Start generating fingerprints.'
-        log_entry(logger, msg, level='info')
+        msg = "Start generating fingerprints."
+        log_entry(logger, msg, level="info")
 
         if serial:
             all_zeta, all_dzetadr_forces, all_dzetadr_stress = None, None, None
@@ -154,8 +154,8 @@ class Descriptor:
                 else:
                     self.mean, self.stdev = self.welford_mean_and_stdev(configs)
                     self.dump_mean_stdev(mean_stdev_name)
-                    msg = 'Calculating mean and stdev.'
-                    log_entry(logger, msg, level='info')
+                    msg = "Calculating mean and stdev."
+                    log_entry(logger, msg, level="info")
         else:
             all_zeta, all_dzetadr_forces, all_dzetadr_stress = self.calc_zeta_dzetadr(
                 configs, fit_forces, fit_stress, nprocs
@@ -172,8 +172,8 @@ class Descriptor:
                     else:
                         self.mean, self.stdev = self.welford_mean_and_stdev(configs)
                     self.dump_mean_stdev(mean_stdev_name)
-                    msg = 'Calculating mean and stdev.'
-                    log_entry(logger, msg, level='info')
+                    msg = "Calculating mean and stdev."
+                    log_entry(logger, msg, level="info")
 
         self.dump_fingerprints(
             configs,
@@ -185,8 +185,8 @@ class Descriptor:
             fit_stress,
         )
 
-        msg = 'Finish generating fingerprints.'
-        log_entry(logger, msg, level='info')
+        msg = "Finish generating fingerprints."
+        log_entry(logger, msg, level="info")
 
         return fname
 
@@ -202,17 +202,17 @@ class Descriptor:
     ):
 
         msg = 'Pickling fingerprints to "{}"'.format(fname)
-        log_entry(logger, msg, level='info')
+        log_entry(logger, msg, level="info")
 
         dirname = os.path.dirname(os.path.abspath(fname))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        with open(fname, 'ab') as f:
+        with open(fname, "ab") as f:
             for i, conf in enumerate(configs):
                 if i % 100 == 0:
-                    msg = 'Processing configuration: {}.'.format(i)
-                    log_entry(logger, msg, level='info')
+                    msg = "Processing configuration: {}.".format(i)
+                    log_entry(logger, msg, level="info")
 
                 if all_zeta is None:
                     zeta, dzetadr_f, dzetadr_s = self.transform(
@@ -244,19 +244,19 @@ class Descriptor:
                     stress = np.asarray(conf.get_stress(), self.dtype)
                     volume = np.asarray(conf.get_volume(), self.dtype)
 
-                example = {'configuration': conf, 'zeta': zeta, 'energy': energy}
+                example = {"configuration": conf, "zeta": zeta, "energy": energy}
                 if fit_forces:
-                    example['dzetadr_forces'] = dzetadr_f
-                    example['forces'] = forces
+                    example["dzetadr_forces"] = dzetadr_f
+                    example["forces"] = forces
                 if fit_stress:
-                    example['dzetadr_stress'] = dzetadr_s
-                    example['stress'] = stress
-                    example['volume'] = volume
+                    example["dzetadr_stress"] = dzetadr_s
+                    example["stress"] = stress
+                    example["volume"] = volume
 
                 pickle.dump(example, f)
 
-        msg = 'Pickle {} configurations finished.'.format(len(configs))
-        log_entry(logger, msg, level='info')
+        msg = "Pickle {} configurations finished.".format(len(configs))
+        log_entry(logger, msg, level="info")
 
     def calc_zeta_dzetadr(self, configs, fit_forces, fit_stress, nprocs=mp.cpu_count()):
         try:
@@ -268,11 +268,11 @@ class Descriptor:
             dzetadr_stress = [pair[2] for pair in rslt]
         except MemoryError as e:
             msg = (
-                '{}. MemoryError occurs in calculating fingerprints using parallel. '
-                'Fallback to use a serial version.',
+                "{}. MemoryError occurs in calculating fingerprints using parallel. "
+                "Fallback to use a serial version.",
                 str(e),
             )
-            log_entry(logger, msg, level='info')
+            log_entry(logger, msg, level="info")
 
             zeta = None
             dzetadr_forces = None
@@ -295,8 +295,8 @@ class Descriptor:
         --------
             https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         """
-        msg = 'Welford method to calculate mean and standard deviation.'
-        log_entry(logger, msg, level='info')
+        msg = "Welford method to calculate mean and standard deviation."
+        log_entry(logger, msg, level="info")
 
         # number of features
         conf = configs[0]
@@ -317,14 +317,14 @@ class Descriptor:
                 M2 += delta * delta2
 
             if i % 100 == 0:
-                msg = 'Processing configuration: {}.'.format(i)
-                log_entry(logger, msg, level='info')
+                msg = "Processing configuration: {}.".format(i)
+                log_entry(logger, msg, level="info")
                 sys.stdout.flush()
 
         stdev = np.sqrt(M2 / n)  # not the unbiased
 
-        msg = 'Finish mean and standard deviation calculation using Welford method.'
-        log_entry(logger, msg, level='info')
+        msg = "Finish mean and standard deviation calculation using Welford method."
+        log_entry(logger, msg, level="info")
 
         return mean, stdev
 
@@ -356,10 +356,10 @@ class Descriptor:
 
         raise NotImplementedError(
             'Method "transform" not implemented; it has to be needs to be '
-            'added by any subclass.'
+            "added by any subclass."
         )
 
-    def write_kim_params(self, path, fname='descriptor.params'):
+    def write_kim_params(self, path, fname="descriptor.params"):
         raise NotImplementedError('"write_kim_params" not implemented.')
 
     def get_size(self):
@@ -390,16 +390,16 @@ class Descriptor:
         dirname = os.path.dirname(os.path.abspath(path))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        data = {'mean': self.mean, 'stdev': self.stdev}
-        with open(path, 'wb') as f:
+        data = {"mean": self.mean, "stdev": self.stdev}
+        with open(path, "wb") as f:
             pickle.dump(data, f)
 
     def load_mean_stdev(self, path):
         try:
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 data = pickle.load(f)
-                mean = data['mean']
-                stdev = data['stdev']
+                mean = data["mean"]
+                stdev = data["stdev"]
         except Exception as e:
             msg = 'Cannot load mean and standard data from "{}". {}'.format(path, str(e))
             raise DescriptorError(msg)
@@ -432,7 +432,7 @@ def load_fingerprints(path):
     Instance of tf.data.
     """
     data = []
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         try:
             while True:
                 x = pickle.load(f)
@@ -471,9 +471,9 @@ def generate_full_cutoff(cutoff):
     """
     rcut2 = dict()
     for key, val in cutoff.items():
-        s1, s2 = key.split('-')
+        s1, s2 = key.split("-")
         if s1 != s2:
-            reverse_key = s2 + '-' + s1
+            reverse_key = s2 + "-" + s1
             if reverse_key in cutoff and cutoff[reverse_key] != val:
                 raise Exception(
                     'Corrupted cutoff dictionary. cutoff["{0}-{1}"] != '
@@ -512,8 +512,8 @@ def generate_unique_cutoff_pairs(cutoff):
     """
     rcut2 = dict()
     for key, val in cutoff.items():
-        s1, s2 = key.split('-')
-        reverse_key = s2 + '-' + s1
+        s1, s2 = key.split("-")
+        reverse_key = s2 + "-" + s1
         if key not in rcut2 and reverse_key not in rcut2:
             rcut2[key] = val
 
@@ -543,7 +543,7 @@ def generate_species_code(cutoff):
     """
     species = set()
     for key in cutoff:
-        s1, s2 = key.split('-')
+        s1, s2 = key.split("-")
         species.update([s1, s2])
     species = list(species)
     species_code = {s: i for i, s in enumerate(species)}

@@ -1,8 +1,6 @@
 from setuptools import setup, Extension, find_packages
 from distutils.sysconfig import get_config_vars
-import sys
 import os
-import subprocess
 
 
 # remove `-Wstrict-prototypes' that is for C not C++
@@ -12,7 +10,7 @@ for key, value in cfg_vars.items():
         cfg_vars[key] = value.replace("-Wstrict-prototypes", "")
 
 
-class get_pybind11_includes(object):
+class get_pybind11_includes:
     """Helper class to determine the pybind11 include path
 
      The purpose of this class is to postpone importing pybind11 until it is actually

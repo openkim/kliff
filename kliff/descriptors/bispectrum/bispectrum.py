@@ -1,10 +1,10 @@
-import sys
 import logging
 import numpy as np
 import kliff
 from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
 from ...neighbor import NeighborList
 from . import bs
+
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -63,12 +63,12 @@ class Bispectrum(Descriptor):
         self.update_hyperparams(self.hyperparams)
 
         # init cdesc
-        rfac0 = self.hyperparams['rfac0']
-        jmax = self.hyperparams['jmax']
-        diagonalstyle = self.hyperparams['diagonalstyle']
-        rmin0 = self.hyperparams['rmin0']
-        switch_flag = self.hyperparams['switch_flag']
-        bzero_flag = self.hyperparams['bzero_flag']
+        rfac0 = self.hyperparams["rfac0"]
+        jmax = self.hyperparams["jmax"]
+        diagonalstyle = self.hyperparams["diagonalstyle"]
+        rmin0 = self.hyperparams["rmin0"]
+        switch_flag = self.hyperparams["switch_flag"]
+        bzero_flag = self.hyperparams["bzero_flag"]
         use_shared_arrays = 0
 
         self._cdesc = bs.Bispectrum(
@@ -116,17 +116,17 @@ class Bispectrum(Descriptor):
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             logger.debug(
-                '\n' + '=' * 25 + 'descriptor values (no normalization)' + '=' * 25
+                "\n" + "=" * 25 + "descriptor values (no normalization)" + "=" * 25
             )
 
-            logger.debug('\nconfiguration name: %s', conf.get_identifier())
+            logger.debug("\nconfiguration name: %s", conf.get_identifier())
 
-            logger.debug('\natom id    descriptor values ...')
+            logger.debug("\natom id    descriptor values ...")
 
             for i, line in enumerate(zeta):
-                s = '\n{}    '.format(i)
+                s = "\n{}    ".format(i)
                 for j in line:
-                    s += '{:.15g} '.format(j)
+                    s += "{:.15g} ".format(j)
                 logger.debug(s)
 
         return zeta, dzeta_dr
@@ -134,13 +134,13 @@ class Bispectrum(Descriptor):
     def update_hyperparams(self, params):
         """Update the hyperparameters based on the input at initialization."""
         default_hyperparams = {
-            'jmax': 4,
-            'rfac0': 0.99363,
-            'diagonalstyle': 3,
-            'rmin0': 0,
-            'switch_flag': 1,
-            'bzero_flag': 0,
-            'weight': None,
+            "jmax": 4,
+            "rfac0": 0.99363,
+            "diagonalstyle": 3,
+            "rmin0": 0,
+            "switch_flag": 1,
+            "bzero_flag": 0,
+            "weight": None,
         }
 
         if params is not None:
@@ -157,7 +157,7 @@ class Bispectrum(Descriptor):
         self.hyperparams = default_hyperparams
 
     def _set_cutoff(self):
-        supported = ['cos']
+        supported = ["cos"]
 
         if self.cut_name is None:
             self.cut_name = supported[0]
@@ -180,12 +180,12 @@ class Bispectrum(Descriptor):
 
         for si, i in self.species_code.items():
             for sj, j in self.species_code.items():
-                rcutsym[i][j] = self.cutoff[si + '-' + sj]
+                rcutsym[i][j] = self.cutoff[si + "-" + sj]
 
         self._cdesc.set_cutoff(self.cut_name, rcutsym)
 
     def _set_hyperparams(self):
-        weight_in = self.hyperparams['weight']
+        weight_in = self.hyperparams["weight"]
 
         if weight_in is None:
             weight = np.ones(len(self.species_code), dtype=np.double)
@@ -205,8 +205,8 @@ class Bispectrum(Descriptor):
     def get_size(self):
         """Return the size of descriptor.
         """
-        diagonal = self.hyperparams['diagonalstyle']
-        twojmax = int(2 * self.hyperparams['jmax'])
+        diagonal = self.hyperparams["diagonalstyle"]
+        twojmax = int(2 * self.hyperparams["jmax"])
 
         N = 0
         for j1 in range(0, twojmax + 1):

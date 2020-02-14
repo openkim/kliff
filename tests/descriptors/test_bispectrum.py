@@ -2,6 +2,7 @@ import numpy as np
 from kliff.dataset import Configuration
 from kliff.descriptors import Bispectrum
 
+
 zeta_ref = [
     [
         9.67233961e00,
@@ -182,20 +183,20 @@ dzeta_dr_minus_121 = [
 
 def test_desc():
 
-    fname = './configs_extxyz/Si.xyz'
-    conf = Configuration(format='extxyz')
+    fname = "./configs_extxyz/Si.xyz"
+    conf = Configuration(format="extxyz")
     conf.read(fname)
 
-    cut_name = 'cos'
-    cut_dists = {'Si-Si': 5.0}
+    cut_name = "cos"
+    cut_dists = {"Si-Si": 5.0}
     hyperparams = {
-        'jmax': 2,
-        'rfac0': 1,
-        'diagonalstyle': 3,
-        'rmin0': 0,
-        'switch_flag': 1,
-        'bzero_flag': 0,
-        'weight': {'Si': 1.0},
+        "jmax": 2,
+        "rfac0": 1,
+        "diagonalstyle": 3,
+        "rmin0": 0,
+        "switch_flag": 1,
+        "bzero_flag": 0,
+        "weight": {"Si": 1.0},
     }
 
     desc = Bispectrum(cut_dists, cut_name, hyperparams)
@@ -210,5 +211,5 @@ def test_desc():
     assert dzeta_dr is None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_desc()

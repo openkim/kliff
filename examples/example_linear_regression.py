@@ -15,18 +15,18 @@ from kliff.calculators import CalculatorTorch
 
 
 descriptor = SymmetryFunction(
-    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
 )
 
 
 model = LinearRegression(descriptor)
 
 # training set
-dataset_name = 'Si_training_set/varying_alat'
+dataset_name = "Si_training_set/varying_alat"
 tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
-print('Number of configurations:', len(configs))
+print("Number of configurations:", len(configs))
 
 # calculator
 calc = CalculatorTorch(model)
@@ -45,4 +45,4 @@ calc.fit()
 
 
 # save model
-model.save('linear_model.pkl')
+model.save("linear_model.pkl")

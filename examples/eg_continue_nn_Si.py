@@ -14,7 +14,7 @@ from kliff.loss import Loss
 
 
 descriptor = SymmetryFunction(
-    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
 )
 
 N1 = 10
@@ -30,7 +30,7 @@ model.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model.set_save_metadata(prefix='./kliff_saved_model', start=5, frequency=2)
+model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 
 ##########################################################################################
 # Load the parameters from the saved model.
@@ -38,11 +38,11 @@ model.set_save_metadata(prefix='./kliff_saved_model', start=5, frequency=2)
 # set to ``train``; if we load the model for evaluation, it should be ``eval``. For
 # fully-connected layer, this actually does not matter. But for dropout and batchNorm
 # layers, the two modes are different.
-model.load(path='final_model.pkl', mode='train')
+model.load(path="final_model.pkl", mode="train")
 
 
 # training set
-dataset_name = 'Si_training_set/varying_alat'
+dataset_name = "Si_training_set/varying_alat"
 tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
@@ -53,14 +53,14 @@ calc.create(configs, reuse=True)
 
 
 # loss
-loss = Loss(calc, residual_data={'forces_weight': 0.3})
+loss = Loss(calc, residual_data={"forces_weight": 0.3})
 
 ##########################################################################################
 # load the state dictionary of the optimizer.
 # We also set ``start_epoch`` to ``10`` such that the epoch number continues from the last
 # training.
 
-loss.load_optimizer_stat('optimizer_stat.pkl')
+loss.load_optimizer_stat("optimizer_stat.pkl")
 result = loss.minimize(
-    method='Adam', num_epochs=10, start_epoch=10, batch_size=100, lr=0.001
+    method="Adam", num_epochs=10, start_epoch=10, batch_size=100, lr=0.001
 )

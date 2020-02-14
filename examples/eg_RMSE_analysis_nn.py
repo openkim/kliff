@@ -5,9 +5,10 @@ from kliff.dataset import Dataset
 from kliff.calculators import CalculatorTorch
 from kliff.analyzers import EnergyForcesRMSE
 
+
 # model
 descriptor = SymmetryFunction(
-    cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
 )
 
 N1 = 10
@@ -23,11 +24,11 @@ model.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model.load('./saved_model.pkl', mode='train')
+model.load("./saved_model.pkl", mode="train")
 
 # dataset
 tset = Dataset()
-dataset_name = 'Si_training_set'
+dataset_name = "Si_training_set"
 tset.read(dataset_name)
 configs = tset.get_configs()
 
@@ -37,4 +38,4 @@ calc.create(configs, reuse=True)
 
 # analyzer
 analyzer = EnergyForcesRMSE(calc)
-analyzer.run(verbose=2, sort='energy')
+analyzer.run(verbose=2, sort="energy")

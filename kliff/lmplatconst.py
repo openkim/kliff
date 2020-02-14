@@ -1,5 +1,4 @@
 import subprocess
-import os
 
 
 def lmp_lat_const(modelname):
@@ -48,21 +47,21 @@ def lmp_lat_const(modelname):
   """
 
     # create lammps input file
-    lmp_input_str = lmp_input_str.replace('rpls_modelname', modelname)
-    with open('lammps.in', 'w') as fout:
+    lmp_input_str = lmp_input_str.replace("rpls_modelname", modelname)
+    with open("lammps.in", "w") as fout:
         fout.write(lmp_input_str)
 
     # run lammps
-    subprocess.call('lmp_serial <lammps.in > lammps.out', shell=True)
+    subprocess.call("lmp_serial <lammps.in > lammps.out", shell=True)
 
     # write results to edn format
-    with open('lammps.out', 'r') as fin:
+    with open("lammps.out", "r") as fin:
         for line in fin:
-            if 'lat_const' in line:
-                lat_const = float(line.split('=')[1])
+            if "lat_const" in line:
+                lat_const = float(line.split("=")[1])
 
-    with open('lattice_const.edn', 'w') as fout:
-        edn_str = '''{
+    with open("lattice_const.edn", "w") as fout:
+        edn_str = """{
       "species" {
         "source-value"  ["Mo" "Mo" "S"]
       }
@@ -71,12 +70,12 @@ def lmp_lat_const(modelname):
         "source-unit" "Angstrom"
         "source-value"  %22.15e
       }
-    }''' % (
+    }""" % (
             lat_const
         )
 
         fout.write(edn_str)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     lmp_lat_const()

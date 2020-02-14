@@ -6,6 +6,7 @@ from kliff.descriptors.descriptor import Descriptor
 from kliff.descriptors.descriptor import load_fingerprints
 from kliff.descriptors.descriptor import DescriptorError
 
+
 # make up some data
 num_atoms = 4
 num_desc = 5
@@ -81,8 +82,8 @@ class ExampleDescriptor(Descriptor):
 
 
 def test_descriptor():
-    fname = './configs_extxyz/Si.xyz'
-    conf = Configuration(format='extxyz', identifier=fname)
+    fname = "./configs_extxyz/Si.xyz"
+    conf = Configuration(format="extxyz", identifier=fname)
     conf.read(fname)
     configs = [conf, conf]
 
@@ -95,33 +96,33 @@ def test_descriptor():
         desc.generate_fingerprints(
             configs, fit_forces, fit_stress, reuse=reuse, serial=serial
         )
-        data = load_fingerprints('fingerprints.pkl')[0]
+        data = load_fingerprints("fingerprints.pkl")[0]
 
         if normalize:
             assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
-            assert np.allclose(data['zeta'], _normalized_zeta)
+            assert np.allclose(data["zeta"], _normalized_zeta)
             if fit_forces:
-                assert np.allclose(data['dzetadr_forces'], _normalized_dzetadr_forces)
+                assert np.allclose(data["dzetadr_forces"], _normalized_dzetadr_forces)
             if fit_stress:
-                assert np.allclose(data['dzetadr_stress'], _normalized_dzetadr_stress)
+                assert np.allclose(data["dzetadr_stress"], _normalized_dzetadr_stress)
         else:
             assert_mean_stdev(desc.mean, desc.stdev, None, None)
-            assert np.allclose(data['zeta'], _zeta)
+            assert np.allclose(data["zeta"], _zeta)
             if fit_forces:
-                assert np.allclose(data['dzetadr_forces'], _dzetadr_forces)
+                assert np.allclose(data["dzetadr_forces"], _dzetadr_forces)
             if fit_stress:
-                assert np.allclose(data['dzetadr_stress'], _dzetadr_stress)
+                assert np.allclose(data["dzetadr_stress"], _dzetadr_stress)
 
     # check when normalize is True, if mean and stdev is provided by user, it has to be
     # correct.
     for normalize, fp_path, mean_std_path in itertools.product(
-        [False, True], [None, 'fp.pkl'], [None, 'ms.pkl']
+        [False, True], [None, "fp.pkl"], [None, "ms.pkl"]
     ):
 
-        delete_file('fingerprints.pkl')
-        delete_file('fingerprints_mean_and_stdev.pkl')
-        delete_file('fp.pkl')
-        delete_file('ms.pkl')
+        delete_file("fingerprints.pkl")
+        delete_file("fingerprints_mean_and_stdev.pkl")
+        delete_file("fp.pkl")
+        delete_file("ms.pkl")
 
         desc = ExampleDescriptor(normalize)
 
@@ -144,16 +145,16 @@ def test_descriptor():
             )
 
             if fp_path is None:
-                fp_path = 'fingerprints.pkl'
+                fp_path = "fingerprints.pkl"
             data = load_fingerprints(fp_path)[0]
 
             if normalize:
                 assert_mean_stdev(desc.mean, desc.stdev, _mean, _stdev)
-                assert np.allclose(data['zeta'], _normalized_zeta)
+                assert np.allclose(data["zeta"], _normalized_zeta)
             else:
                 assert_mean_stdev(desc.mean, desc.stdev, None, None)
-                assert np.allclose(data['zeta'], _zeta)
+                assert np.allclose(data["zeta"], _zeta)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_descriptor()

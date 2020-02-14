@@ -10,16 +10,16 @@ def assert_1d_array(a, b):
 
 
 def test_configuration(e=True, f=False, s=False, order=False):
-    fname = './configs_extxyz/MoS2/MoS2'
+    fname = "./configs_extxyz/MoS2/MoS2"
     if e:
-        fname += '_energy'
+        fname += "_energy"
     if f:
-        fname += '_forces'
+        fname += "_forces"
     if s:
-        fname += '_stress'
-    fname += '.xyz'
+        fname += "_stress"
+    fname += ".xyz"
 
-    config = Configuration(format='extxyz', order_by_species=order)
+    config = Configuration(format="extxyz", order_by_species=order)
     config.read(fname)
 
     natoms = config.get_number_of_atoms()
@@ -52,7 +52,7 @@ def test_configuration(e=True, f=False, s=False, order=False):
         assert np.allclose(stress, [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
 
     if order:
-        ref_species = ['Mo', 'Mo', 'Mo', 'Mo', 'Mo', 'Mo']
+        ref_species = ["Mo", "Mo", "Mo", "Mo", "Mo", "Mo"]
         ref_coords = [
             [0.051823, -0.017150, 16.736001],
             [2.819495, 1.607633, 16.734550],
@@ -64,7 +64,7 @@ def test_configuration(e=True, f=False, s=False, order=False):
             [-0.164382, -0.103679, -0.050262],
         ]
     else:
-        ref_species = ['Mo', 'Mo', 'S', 'S', 'S', 'S']
+        ref_species = ["Mo", "Mo", "S", "S", "S", "S"]
         ref_coords = [
             [0.051823, -0.017150, 16.736001],
             [2.819495, 1.607633, 16.734550],
@@ -82,8 +82,8 @@ def test_configuration(e=True, f=False, s=False, order=False):
         assert np.allclose(forces[:3], ref_forces)
 
     natoms_by_species = config.count_atoms_by_species()
-    assert natoms_by_species['Mo'] == 96
-    assert natoms_by_species['S'] == 192
+    assert natoms_by_species["Mo"] == 96
+    assert natoms_by_species["S"] == 192
 
     if not e:
         energy = None
@@ -91,19 +91,19 @@ def test_configuration(e=True, f=False, s=False, order=False):
         forces = None
     if not s:
         stress = None
-    outname = fname.replace('./configs_extxyz/MoS2/MoS2', 'tmp_Mos2')
+    outname = fname.replace("./configs_extxyz/MoS2/MoS2", "tmp_Mos2")
     write_extxyz(outname, cell, PBC, species, coords, energy, forces, stress)
 
 
 def test_dataset():
-    directory = './configs_extxyz/MoS2'
+    directory = "./configs_extxyz/MoS2"
     tset = Dataset()
     tset.read(directory)
     configs = tset.get_configs()
     assert len(configs) == 3
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_configuration(True, False, False)
     test_configuration(True, True, False)
     test_configuration(True, True, True)

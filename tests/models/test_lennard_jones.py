@@ -8,18 +8,18 @@ from kliff.dataset import Dataset
 
 
 def params_relation(params):
-    sigma = params.get_value('sigma')
-    epsilon = params.get_value('epsilon')
+    sigma = params.get_value("sigma")
+    epsilon = params.get_value("epsilon")
     epsilon[0] = 2 * sigma[0]
-    params.set_value('epsilon', epsilon)
+    params.set_value("epsilon", epsilon)
 
 
 def write_tmp_params(fname):
-    with open(fname, 'w') as fout:
-        fout.write('sigma\n')
-        fout.write('1.1  fix\n')
-        fout.write('epsilon\n')
-        fout.write('2.1  None  3.\n')
+    with open(fname, "w") as fout:
+        fout.write("sigma\n")
+        fout.write("1.1  fix\n")
+        fout.write("epsilon\n")
+        fout.write("2.1  None  3.\n")
 
 
 def delete_tmp_params(fname):
@@ -64,9 +64,9 @@ def energy_forces_stress(
     ca = cas[0]
     calc.compute(ca)
 
-    assert ca.get_compute_flag('energy') == use_energy
-    assert ca.get_compute_flag('forces') == use_forces
-    assert ca.get_compute_flag('stress') == use_stress
+    assert ca.get_compute_flag("energy") == use_energy
+    assert ca.get_compute_flag("forces") == use_forces
+    assert ca.get_compute_flag("stress") == use_stress
 
     try:
         energy = calc.get_energy(ca)
@@ -118,7 +118,7 @@ def test_lj():
     model = LennardJones()
 
     # set params directly
-    model.set_fitting_params(sigma=[[1.1, 'fix']], epsilon=[[2.1, None, 3.0]])
+    model.set_fitting_params(sigma=[[1.1, "fix"]], epsilon=[[2.1, None, 3.0]])
 
     model.update_model_params()
     # model.echo_model_params()
@@ -133,7 +133,7 @@ def test_lj():
     calc = Calculator(model)
 
     dset = Dataset(order_by_species=False)
-    fname = './configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz'
+    fname = "./configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz"
     dset.read(fname)
     configs = dset.get_configs()
 
@@ -145,10 +145,10 @@ def test_lj():
     model.set_params_relation_callback(params_relation)
     x0 = calc.get_opt_params()
     calc.update_opt_params(x0)
-    sigma = model.get_model_params('sigma')
-    epsilon = model.get_model_params('epsilon')
+    sigma = model.get_model_params("sigma")
+    epsilon = model.get_model_params("epsilon")
     assert np.allclose(sigma * 2, epsilon)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_lj()

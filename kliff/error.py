@@ -30,7 +30,7 @@ class InitializationError(Exception):
         self.value = value
 
     def __expr__(self):
-        return repr(self.value) + ' initialization failed'
+        return repr(self.value) + " initialization failed"
 
 
 def report_import_error(package, classname=None):

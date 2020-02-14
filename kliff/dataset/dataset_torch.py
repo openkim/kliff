@@ -49,7 +49,7 @@ def fingerprints_collate_fn(batch):
     for i, sample in enumerate(batch):
         tensor_sample = {}
         for key, value in sample.items():
-            if type(value).__module__ == 'numpy':
+            if type(value).__module__ == "numpy":
                 value = torch.from_numpy(value)
             tensor_sample[key] = value
         tensor_batch.append(tensor_sample)

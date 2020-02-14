@@ -84,7 +84,7 @@ class NeighborList:
         )
         out = nl.create_paddings(self.infl_dist, cell, PBC, coords_cb, species_code_cb)
         coords_pd, species_code_pd, image_pd, error = out
-        check_error(error, 'nl.create_padding')
+        check_error(error, "nl.create_padding")
         species_pd = [atomic_species[i] for i in species_code_pd]
 
         self.padding_coords = np.asarray(coords_pd, dtype=np.double)
@@ -107,7 +107,7 @@ class NeighborList:
         # create neighbor list
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
         error = nl.build(self.neigh, self.coords, self.infl_dist, cutoffs, need_neigh)
-        check_error(error, 'nl.build')
+        check_error(error, "nl.build")
 
     def get_neigh(self, index):
         r"""Get the indices, coordinates, and species string of a given atom.
@@ -134,7 +134,7 @@ class NeighborList:
         num_neigh, neigh_indices, error = nl.get_neigh(
             self.neigh, cutoffs, neigh_list_index, index
         )
-        check_error(error, 'nl.get_neigh')
+        check_error(error, "nl.get_neigh")
 
         neigh_coords = self.coords[neigh_indices]
         neigh_species = self.species[neigh_indices]
@@ -164,7 +164,7 @@ class NeighborList:
         if request_padding:
             if not self.padding_need_neigh:
                 raise NeighborListError(
-                    'Request to get neighbors of padding atoms, but '
+                    "Request to get neighbors of padding atoms, but "
                     '"padding_need_neigh" is set to "False" at initialization.'
                 )
             N = len(self.coords)
@@ -180,7 +180,7 @@ class NeighborList:
             num_neigh, neigh_indices, error = nl.get_neigh(
                 self.neigh, cutoffs, neigh_list_index, i
             )
-            check_error(error, 'nl.get_neigh')
+            check_error(error, "nl.get_neigh")
             numneigh.append(num_neigh)
             neighlist.append(neigh_indices)
         neighlist = np.asarray(np.concatenate(neighlist), dtype=np.intc)

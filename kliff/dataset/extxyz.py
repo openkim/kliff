@@ -33,7 +33,7 @@ def read_extxyz(fname):
     stress: list of 6 float (or None if not provided in file)
         stress on the cell in Voigt notation
     """
-    with open(fname, 'r') as fin:
+    with open(fname, "r") as fin:
         lines = fin.readlines()
 
         try:
@@ -45,18 +45,18 @@ def read_extxyz(fname):
 
         # lattice vector, PBC, energy, and stress
         line = lines[1].replace("'", '"')
-        cell = parse_key_value(line, 'Lattice', 'float', 9, fname)
+        cell = parse_key_value(line, "Lattice", "float", 9, fname)
         cell = np.reshape(cell, (3, 3))
-        PBC = parse_key_value(line, 'PBC', 'int', 3, fname)
+        PBC = parse_key_value(line, "PBC", "int", 3, fname)
         # energy is optional
         try:
-            in_quotes = check_in_quotes(line, 'Energy', fname)
-            energy = parse_key_value(line, 'Energy', 'float', 1, fname, in_quotes)[0]
+            in_quotes = check_in_quotes(line, "Energy", fname)
+            energy = parse_key_value(line, "Energy", "float", 1, fname, in_quotes)[0]
         except KeyNotFoundError:
             energy = None
         # stress is optional
         try:
-            stress = parse_key_value(line, 'Stress', 'float', 6, fname)
+            stress = parse_key_value(line, "Stress", "float", 6, fname)
         except KeyNotFoundError:
             stress = None
 
@@ -147,11 +147,11 @@ def write_extxyz(
         stress on the cell in Voigt notation
     """
 
-    with open(fname, 'w') as fout:
+    with open(fname, "w") as fout:
 
         # first line (number of atoms)
         natoms = len(species)
-        fout.write('{}\n'.format(natoms))
+        fout.write("{}\n".format(natoms))
 
         # second line
         fout.write('Lattice="')
@@ -160,7 +160,7 @@ def write_extxyz(
                 if i == 2 and j == 2:
                     fout.write('{:.15g}" '.format(item))
                 else:
-                    fout.write('{:.15g} '.format(item))
+                    fout.write("{:.15g} ".format(item))
 
         PBC = [int(i) for i in PBC]
         fout.write('PBC="{} {} {}" '.format(PBC[0], PBC[1], PBC[2]))
@@ -174,30 +174,30 @@ def write_extxyz(
                 if i == 5:
                     fout.write('{:.15g}" '.format(s))
                 else:
-                    fout.write('{:.15g} '.format(s))
+                    fout.write("{:.15g} ".format(s))
 
-        properties = 'Properties=species:S:1:pos:R:3'
+        properties = "Properties=species:S:1:pos:R:3"
         if forces is not None:
-            properties += ':for:R:3\n'
+            properties += ":for:R:3\n"
         else:
-            properties += '\n'
+            properties += "\n"
         fout.write(properties)
 
         # body
         for i in range(natoms):
-            fout.write('{:2s} '.format(species[i]))
+            fout.write("{:2s} ".format(species[i]))
             fout.write(
-                '{:23.15e} {:23.15e} {:23.15e} '.format(
+                "{:23.15e} {:23.15e} {:23.15e} ".format(
                     coords[i][0], coords[i][1], coords[i][2]
                 )
             )
             if forces is not None:
                 fout.write(
-                    '{:23.15e} {:23.15e} {:23.15e}'.format(
+                    "{:23.15e} {:23.15e} {:23.15e}".format(
                         forces[i][0], forces[i][1], forces[i][2]
                     )
                 )
-            fout.write('\n')
+            fout.write("\n")
 
 
 def check_key(line, key, fname):
@@ -217,8 +217,8 @@ def check_in_quotes(line, key, fname):
     r"""Check whether ``key=value`` or ``key="value"`` in line."""
     key = check_key(line, key, fname)
     value = line[line.index(key) :]
-    value = value[value.index('=') + 1 :]
-    value = value.lstrip(' ')
+    value = value[value.index("=") + 1 :]
+    value = value.lstrip(" ")
     if value[0] == '"':
         return True
     else:
@@ -261,10 +261,10 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
             value = value[value.index('"') + 1 :]
             value = value[: value.index('"')]
         else:
-            value = value[value.index('=') + 1 :]
-            value = value.lstrip(' ')
-            value += ' '  # add an whitespace at end in case this is the last key
-            value = value[: value.index(' ')]
+            value = value[value.index("=") + 1 :]
+            value = value.lstrip(" ")
+            value += " "  # add an whitespace at end in case this is the last key
+            value = value[: value.index(" ")]
         value = value.split()
     except Exception as e:
         raise InputError(
@@ -274,14 +274,14 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
     if len(value) != size:
         raise InputError(
             'Incorrect size of "{}" at line 2 of file "{}";\n'
-            'required: {}, provided: {}. Possibly, the quotes do not match.'.format(
+            "required: {}, provided: {}. Possibly, the quotes do not match.".format(
                 key, fname, size, len(value)
             )
         )
     try:
-        if dtype == 'float':
+        if dtype == "float":
             value = [float(i) for i in value]
-        elif dtype == 'int':
+        elif dtype == "int":
             value = [int(i) for i in value]
     except Exception as e:
         raise InputError(

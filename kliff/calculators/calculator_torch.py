@@ -21,7 +21,7 @@ class CalculatorTorch:
         Instance of :class:`~kliff.neuralnetwork.NeuralNetwork`.
     """
 
-    implemented_property = ['energy', 'forces', 'stress']
+    implemented_property = ["energy", "forces", "stress"]
 
     def __init__(self, model):
 
@@ -125,7 +125,7 @@ class CalculatorTorch:
         grad = self.use_forces or self.use_stress
 
         # collate batch input to NN
-        zeta_config = [sample['zeta'] for sample in batch]
+        zeta_config = [sample["zeta"] for sample in batch]
         if grad:
             for zeta in zeta_config:
                 zeta.requires_grad_(True)
@@ -157,20 +157,20 @@ class CalculatorTorch:
                 zeta.requires_grad_(False)  # no need of grad any more
 
                 if self.use_forces:
-                    dzetadr_forces = sample['dzetadr_forces']
+                    dzetadr_forces = sample["dzetadr_forces"]
                     f = self.compute_forces(dedz, dzetadr_forces)
                     forces_config.append(f)
 
                 if self.use_stress:
-                    dzetadr_stress = sample['dzetadr_stress']
-                    volume = sample['dzetadr_volume']
+                    dzetadr_stress = sample["dzetadr_stress"]
+                    volume = sample["dzetadr_volume"]
                     s = self.compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
 
-        self.results['energy'] = energy_config
-        self.results['forces'] = forces_config
-        self.results['stress'] = stress_config
-        return {'energy': energy_config, 'forces': forces_config, 'stress': stress_config}
+        self.results["energy"] = energy_config
+        self.results["forces"] = forces_config
+        self.results["stress"] = stress_config
+        return {"energy": energy_config, "forces": forces_config, "stress": stress_config}
 
     @staticmethod
     def compute_forces(denergy_dzeta, dzetadr):
@@ -183,13 +183,13 @@ class CalculatorTorch:
         return forces
 
     def get_energy(self, batch):
-        return self.results['energy']
+        return self.results["energy"]
 
     def get_forces(self, batch):
-        return self.results['forces']
+        return self.results["forces"]
 
     def get_stress(self, batch):
-        return self.results['stress']
+        return self.results["stress"]
 
 
 class CalculatorTorchSeparateSpecies(CalculatorTorch):
@@ -219,7 +219,7 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         grad = self.use_forces or self.use_stress
 
         # collate batch by species
-        zeta_config = [sample['zeta'] for sample in batch]
+        zeta_config = [sample["zeta"] for sample in batch]
         if grad:
             for zeta in zeta_config:
                 zeta.requires_grad_(True)
@@ -230,8 +230,8 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         zeta_config = []
 
         for i, sample in enumerate(batch):
-            zeta = sample['zeta']
-            species = sample['configuration'].get_species()
+            zeta = sample["zeta"]
+            species = sample["configuration"].get_species()
             zeta.requires_grad_(True)
             zeta_config.append(zeta)
 
@@ -278,20 +278,20 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
                 zeta.requires_grad_(False)  # no need of grad any more
 
                 if self.use_forces:
-                    dzetadr_forces = sample['dzetadr_forces']
+                    dzetadr_forces = sample["dzetadr_forces"]
                     f = self.compute_forces(dedz, dzetadr_forces)
                     forces_config.append(f)
 
                 if self.use_stress:
-                    dzetadr_stress = sample['dzetadr_stress']
-                    volume = sample['dzetadr_volume']
+                    dzetadr_stress = sample["dzetadr_stress"]
+                    volume = sample["dzetadr_volume"]
                     s = self.compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
 
-        self.results['energy'] = energy_config
-        self.results['forces'] = forces_config
-        self.results['stress'] = stress_config
-        return {'energy': energy_config, 'forces': forces_config, 'stress': stress_config}
+        self.results["energy"] = energy_config
+        self.results["forces"] = forces_config
+        self.results["stress"] = stress_config
+        return {"energy": energy_config, "forces": forces_config, "stress": stress_config}
 
 
 class CalculatorTorchDDPCPU(CalculatorTorch):
@@ -300,9 +300,9 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
         self.set_up(rank, world_size)
 
     def set_up(self, rank, world_size):
-        os.environ['MASTER_ADDR'] = 'localhost'
-        os.environ['MASTER_PORT'] = '12355'
-        dist.init_process_group('gloo', rank=rank, world_size=world_size)
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "12355"
+        dist.init_process_group("gloo", rank=rank, world_size=world_size)
 
     def clean_up(self):
         dist.destroy_process_group()
@@ -311,7 +311,7 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
         grad = self.use_forces
 
         # collate batch input to NN
-        zeta_config = self._collate(batch, 'zeta')
+        zeta_config = self._collate(batch, "zeta")
         if grad:
             for zeta in zeta_config:
                 zeta.requires_grad_(True)
@@ -327,7 +327,7 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
 
         # forces
         if grad:
-            dzetadr_config = self._collate(batch, 'dzetadr')
+            dzetadr_config = self._collate(batch, "dzetadr")
             forces_config = self.compute_forces_config(
                 energy_config, zeta_config, dzetadr_config
             )
@@ -336,7 +336,7 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
         else:
             forces_config = None
 
-        return {'energy': energy_config, 'forces': forces_config}
+        return {"energy": energy_config, "forces": forces_config}
 
     def __del__(self):
         self.clean_up()

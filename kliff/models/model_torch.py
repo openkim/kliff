@@ -38,7 +38,7 @@ class ModelTorch(nn.Module):
     def fit(self, path):
         raise ModelTorchError(
             '"fit" not supported by this model. Minimize a loss function to train the '
-            'model instead.'
+            "model instead."
         )
 
     def set_save_metadata(self, prefix, start, frequency):
@@ -80,10 +80,10 @@ class ModelTorch(nn.Module):
         torch.save(self.state_dict(), path)
 
         # save descriptor mean and stdev
-        fname = os.path.join(dirname, 'mean_and_stdev.pkl')
+        fname = os.path.join(dirname, "mean_and_stdev.pkl")
         self.descriptor.dump_mean_stdev(fname)
 
-    def load(self, path, mode='train'):
+    def load(self, path, mode="train"):
         r"""Load a model on disk into memory.
 
         Parameters
@@ -96,16 +96,16 @@ class ModelTorch(nn.Module):
         """
 
         self.load_state_dict(torch.load(path))
-        if mode == 'train':
+        if mode == "train":
             self.train()
-        elif mode == 'eval':
+        elif mode == "eval":
             self.eval()
         else:
             raise ModelTorchError('Unrecognized mode "{}" in model.load().'.format(mode))
 
         # load descriptor mean and stdev
         dirname = os.path.dirname(path)
-        fname = os.path.join(dirname, 'mean_and_stdev.pkl')
+        fname = os.path.join(dirname, "mean_and_stdev.pkl")
         self.descriptor.load_mean_stdev(fname)
 
     def write_kim_model(self, path=None):

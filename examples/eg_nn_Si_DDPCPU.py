@@ -5,7 +5,6 @@ Train a neural network potential
 ================================
 
 In this tutorial, we train a neural network (NN) potential for silicon
-
 """
 
 
@@ -48,7 +47,7 @@ from kliff.loss import Loss
 def train_fn(rank, world_size):
 
     descriptor = SymmetryFunction(
-        cut_name='cos', cut_dists={'Si-Si': 5.0}, hyperparams='set30', normalize=True
+        cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
     )
 
     ##########################################################################################
@@ -75,7 +74,7 @@ def train_fn(rank, world_size):
         # output layer
         nn.Linear(N2, 1),
     )
-    model.set_save_metadata(prefix='./my_kliff_model', start=5, frequency=2)
+    model.set_save_metadata(prefix="./my_kliff_model", start=5, frequency=2)
 
     ##########################################################################################
     # In the above code, we build a NN model with an input layer, two hidden layer, and an
@@ -108,11 +107,11 @@ def train_fn(rank, world_size):
     # fingerprints generated from the descriptor if it is present.
 
     # training set
-    dataset_name = 'Si_training_set/varying_alat'
+    dataset_name = "Si_training_set/varying_alat"
     tset = Dataset()
     tset.read(dataset_name)
     configs = tset.get_configs()
-    print('Number of configurations:', len(configs))
+    print("Number of configurations:", len(configs))
 
     # calculator
     calc = CalculatorTorchDDPCPU(model, rank, world_size)
@@ -132,8 +131,8 @@ def train_fn(rank, world_size):
     # ``0.01``, and typically, one may need to play with this to find an acceptable one that
     # drives the loss down in a reasonable time.
 
-    loss = Loss(calc, residual_data={'forces_weight': 0.3})
-    result = loss.minimize(method='Adam', num_epochs=10, batch_size=100, lr=0.01)
+    loss = Loss(calc, residual_data={"forces_weight": 0.3})
+    result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.01)
 
     ##########################################################################################
     # We can save the trained model to disk, and later can load it back if we want. We can
@@ -148,5 +147,5 @@ def run_demo(train_fn, world_size):
     mp.spawn(train_fn, args=(world_size,), nprocs=world_size, join=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_demo(train_fn, 2)

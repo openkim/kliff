@@ -2,6 +2,7 @@ from collections.abc import Iterable
 import kliff
 from ..dataset import Configuration
 from ..utils import length_equal
+from ..error import InputError
 
 logger = kliff.logger.get_logger(__name__)
 
@@ -95,11 +96,11 @@ class Calculator:
                 )
             self.compute_arguments.append(ca)
 
-        logger.info('calculator for %d configurations created.', len(configs))
+        logger.info("calculator for %d configurations created.", len(configs))
         return self.compute_arguments
 
     def _is_kim_model(self):
-        return self.model.__class__.__name__ == 'KIM'
+        return self.model.__class__.__name__ == "KIM"
 
     def get_compute_arguments(self):
         r"""Return a list of compute arguments, each associated with a configuration."""

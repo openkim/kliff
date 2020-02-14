@@ -15,11 +15,11 @@ class Command:
     def add_arguments(parser):
         func = parser.add_argument
         func(
-            '-a',
-            '--avail-params',
+            "-a",
+            "--avail-params",
             type=str,
-            metavar='model_name',
-            help='Get the available parameters of a KIM model that can be used for fitting.',
+            metavar="model_name",
+            help="Get the available parameters of a KIM model to be used for fitting.",
         )
 
     @staticmethod
@@ -31,7 +31,7 @@ class Command:
             parser.print_help()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     model_name = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
     if len(sys.argv) > 1:

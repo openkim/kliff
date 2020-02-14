@@ -23,7 +23,7 @@ def test_parameter():
     p = Parameter([2.2, 3.3])
     assert np.allclose(p.get_value(), [2.2, 3.3])
     assert p.get_size() == 2
-    assert p.get_dtype() == 'double'
+    assert p.get_dtype() == "double"
     assert p.get_description() == None
 
     p.set_value([4.4])
@@ -32,9 +32,9 @@ def test_parameter():
 
 def create_all_possible_input(v):
     inp = []
-    for ud in ['default', v + 0.01]:
+    for ud in ["default", v + 0.01]:
         inp.append([ud])
-        inp.append([ud, 'fix'])
+        inp.append([ud, "fix"])
         for lb in [None, v - 0.1]:
             for ub in [None, v + 0.1]:
                 inp.append([ud, lb, ub])
@@ -47,14 +47,14 @@ def test_fitting_parameter():
     mp = OrderedDict()
     p1 = [1.1]
     p2 = [2.2, 3.3]
-    names = ['p1', 'p2']
+    names = ["p1", "p2"]
     mp[names[0]] = Parameter(p1)
     mp[names[1]] = Parameter(p2)
     fp = FittingParameter(mp)
 
     # fitting params
     with warnings.catch_warnings():  # context manager to ignore warning
-        warnings.simplefilter('ignore')
+        warnings.simplefilter("ignore")
 
         v0 = p1[0]
         inp0 = create_all_possible_input(v0)
@@ -82,11 +82,11 @@ def test_fitting_parameter():
         n, v, p, c = fp.get_opt_param_name_value_and_indices(i)
         assert v == x0[i]
         if i == 0:
-            assert n == 'p1'
+            assert n == "p1"
             assert p == 0
             assert c == 0
         else:
-            assert n == 'p2'
+            assert n == "p2"
             assert p == 1
             assert c == (i - 1) % 2
 
@@ -108,6 +108,6 @@ def test_fitting_parameter():
             assert not x
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_parameter()
     test_fitting_parameter()

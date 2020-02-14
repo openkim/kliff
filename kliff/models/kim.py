@@ -35,7 +35,7 @@ class KIMComputeArguments(ComputeArguments):
 
     def __init__(self, kim_ca, *args, **kwargs):
         if not kimpy_avail:
-            report_import_error('kimpy', self.__class__.__name__)
+            report_import_error("kimpy", self.__class__.__name__)
 
         self.kim_ca = kim_ca
         super(KIMComputeArguments, self).__init__(*args, **kwargs)
@@ -71,11 +71,11 @@ class KIMComputeArguments(ComputeArguments):
         self._get_implemented_property()
         compute_property = []
         if self.compute_energy:
-            add_to_compute_property(compute_property, 'energy')
+            add_to_compute_property(compute_property, "energy")
         if self.compute_forces:
-            add_to_compute_property(compute_property, 'forces')
+            add_to_compute_property(compute_property, "forces")
         if self.compute_stress:
-            add_to_compute_property(compute_property, 'stress')
+            add_to_compute_property(compute_property, "stress")
         return compute_property
 
     def _get_implemented_property(self):
@@ -86,13 +86,13 @@ class KIMComputeArguments(ComputeArguments):
 
         for i in range(N):
             name, error = kim_can.get_compute_argument_name(i)
-            check_error(error, 'kim_can.get_compute_argument_name')
+            check_error(error, "kim_can.get_compute_argument_name")
 
             dtype, error = kim_can.get_compute_argument_data_type(name)
-            check_error(error, 'kim_can.get_compute_argument_data_type')
+            check_error(error, "kim_can.get_compute_argument_data_type")
 
             support_status, error = self.kim_ca.get_argument_support_status(name)
-            check_error(error, 'kim_ca.get_argument_support_status')
+            check_error(error, "kim_ca.get_argument_support_status")
 
             # calculator can only handle energy and forces
             if support_status == kimpy.support_status.required:
@@ -101,10 +101,10 @@ class KIMComputeArguments(ComputeArguments):
 
             # supported property
             if name == kim_can.partialEnergy:
-                self.implemented_property.append('energy')
+                self.implemented_property.append("energy")
             elif name == kim_can.partialForces:
-                self.implemented_property.append('forces')
-                self.implemented_property.append('stress')
+                self.implemented_property.append("forces")
+                self.implemented_property.append("stress")
 
         # check compute callbacks
         kim_ccn = kimpy.compute_callback_name
@@ -112,10 +112,10 @@ class KIMComputeArguments(ComputeArguments):
 
         for i in range(num_callbacks):
             name, error = kim_ccn.get_compute_callback_name(i)
-            check_error(error, 'kim_ccn.get_compute_callback_name')
+            check_error(error, "kim_ccn.get_compute_callback_name")
 
             support_status, error = self.kim_ca.get_callback_support_status(name)
-            check_error(error, 'compute_arguments.get_callback_support_status')
+            check_error(error, "compute_arguments.get_callback_support_status")
 
             # calculator only provides get_neigh
             if support_status == kimpy.support_status.required:
@@ -165,7 +165,7 @@ class KIMComputeArguments(ComputeArguments):
                 contributing_species_code,
             )
             padding_coords, padding_species_code, self.padding_image_of, error = out
-            check_error(error, 'nl.create_paddings')
+            check_error(error, "nl.create_paddings")
 
             num_padding = padding_species_code.size
             self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
@@ -194,7 +194,7 @@ class KIMComputeArguments(ComputeArguments):
             np.asarray([influence_distance], dtype=np.double),
             need_neigh,
         )
-        check_error(error, 'nl.build')
+        check_error(error, "nl.build")
 
     def register_data(self, compute_energy=True, compute_forces=True):
         r"""Register model input and output data in KIM API."""
@@ -204,75 +204,75 @@ class KIMComputeArguments(ComputeArguments):
         if compute_energy:
             name = kim_can.partialEnergy
             support_status, error = self.kim_ca.get_argument_support_status(name)
-            check_error(error, 'kim_ca.get_argument_support_status')
+            check_error(error, "kim_ca.get_argument_support_status")
             if not (
                 support_status == kimpy.support_status.required
                 or support_status == kimpy.support_status.optional
             ):
-                report_error('Energy not supported by model')
+                report_error("Energy not supported by model")
 
         if compute_forces:
             name = kim_can.partialForces
             support_status, error = self.kim_ca.get_argument_support_status(name)
-            check_error(error, 'kim_ca.get_argument_support_status')
+            check_error(error, "kim_ca.get_argument_support_status")
             if not (
                 support_status == kimpy.support_status.required
                 or support_status == kimpy.support_status.optional
             ):
-                report_error('Forces not supported by model')
+                report_error("Forces not supported by model")
 
         # register argument
         error = self.kim_ca.set_argument_pointer(
             kim_can.numberOfParticles, self.num_particles
         )
-        check_error(error, 'kim_can.set_argument_pointer')
+        check_error(error, "kim_can.set_argument_pointer")
 
         error = self.kim_ca.set_argument_pointer(
             kim_can.particleSpeciesCodes, self.species_code
         )
-        check_error(error, 'kim_can.set_argument_pointer')
+        check_error(error, "kim_can.set_argument_pointer")
 
         error = self.kim_ca.set_argument_pointer(
             kim_can.particleContributing, self.particle_contributing
         )
-        check_error(error, 'kim_can.set_argument_pointer')
+        check_error(error, "kim_can.set_argument_pointer")
 
         error = self.kim_ca.set_argument_pointer(kim_can.coordinates, self.coords)
-        check_error(error, 'kim_can.set_argument_pointer')
+        check_error(error, "kim_can.set_argument_pointer")
 
         if compute_energy:
             self.energy = np.array([0.0], dtype=np.double)
             error = self.kim_ca.set_argument_pointer(kim_can.partialEnergy, self.energy)
-            check_error(error, 'kim_can.set_argument_pointer')
+            check_error(error, "kim_can.set_argument_pointer")
         else:
             self.energy = None
             error = self.kim_ca.set_argument_null_pointer(kim_can.partialEnergy)
-            check_error(error, 'kim_can.set_argument_null_pointer')
+            check_error(error, "kim_can.set_argument_null_pointer")
 
         if compute_forces:
             self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
             error = self.kim_ca.set_argument_pointer(kim_can.partialForces, self.forces)
-            check_error(error, 'kim_can.set_argument_pointer')
+            check_error(error, "kim_can.set_argument_pointer")
         else:
             self.forces = None
             error = self.kim_ca.set_argument_null_pointer(kim_can.partialForces)
-            check_error(error, 'kim_can.set_argument_null_pointer')
+            check_error(error, "kim_can.set_argument_null_pointer")
 
     def compute(self, kim_model):
         error = kim_model.compute(self.kim_ca)
-        check_error(error, 'kim_model.compute')
+        check_error(error, "kim_model.compute")
 
         if self.compute_energy:
-            self.results['energy'] = self.energy[0]
+            self.results["energy"] = self.energy[0]
         if self.compute_forces:
             forces = assemble_forces(
                 self.forces, self.num_contributing_particles, self.padding_image_of
             )
-            self.results['forces'] = forces
+            self.results["forces"] = forces
         if self.compute_stress:
             volume = self.conf.get_volume()
             stress = assemble_stress(self.coords, self.forces, volume)
-            self.results['stress'] = stress
+            self.results["stress"] = stress
 
     def _init_neigh(self):
 
@@ -284,7 +284,7 @@ class KIMComputeArguments(ComputeArguments):
         error = self.kim_ca.set_callback_pointer(
             kimpy.compute_callback_name.GetNeighborList, nl.get_neigh_kim(), neigh
         )
-        check_error(error, 'compute_arguments.set_callback_pointer')
+        check_error(error, "compute_arguments.set_callback_pointer")
 
     def __del__(self):
         """Garbage collection to destroy the neighbor list automatically"""
@@ -296,7 +296,7 @@ class KIMComputeArguments(ComputeArguments):
 class KIM(Model):
     def __init__(self, model_name=None, params_relation_callback=None):
         if not kimpy_avail:
-            report_import_error('kimpy', self.__class__.__name__)
+            report_import_error("kimpy", self.__class__.__name__)
 
         super(KIM, self).__init__(model_name, params_relation_callback)
 
@@ -325,9 +325,9 @@ class KIM(Model):
             kimpy.time_unit.ps,
             self.model_name,
         )
-        check_error(error, 'kimpy.model.create')
+        check_error(error, "kimpy.model.create")
         if not units_accepted:
-            report_error('requested units not accepted in kimpy.model.create')
+            report_error("requested units not accepted in kimpy.model.create")
         return model
 
     def inquire_params(self):
@@ -338,16 +338,16 @@ class KIM(Model):
         for i in range(num_params):
             out = self.kim_model.get_parameter_metadata(i)
             dtype, extent, name, description, error = out
-            check_error(error, 'model.get_parameter_data_type_extent_and_description')
+            check_error(error, "model.get_parameter_data_type_extent_and_description")
 
             values = []
             for j in range(extent):
-                if str(dtype) == 'Double':
+                if str(dtype) == "Double":
                     value, error = self.kim_model.get_parameter_double(i, j)
-                    check_error(error, 'model.get_parameter_double')
-                elif str(dtype) == 'Int':
+                    check_error(error, "model.get_parameter_double")
+                elif str(dtype) == "Int":
                     value, error = self.kim_model.get_parameter_int(i, j)
-                    check_error(error, 'model.get_parameter_int')
+                    check_error(error, "model.get_parameter_int")
                 else:  # should never reach here
                     report_error('get unexpeced parameter data type "{}"'.format(dtype))
                 values.append(value)
@@ -358,7 +358,7 @@ class KIM(Model):
 
     def create_a_kim_compute_argument(self):
         kim_ca, error = self.kim_model.compute_arguments_create()
-        check_error(error, 'kim_model.compute_arguments_create')
+        check_error(error, "kim_model.compute_arguments_create")
         return kim_ca
 
     def update_model_params(self):
@@ -381,15 +381,15 @@ class KIM(Model):
         # FittingParams. This should not be a problem.
         # update model params of the model class
         for name, attr in self.fitting_params.params.items():
-            self.set_model_params(name, attr['value'], check_shape=False)
+            self.set_model_params(name, attr["value"], check_shape=False)
 
         if logger.getEffectiveLevel() == logging.DEBUG:
             params = self.inquire_params()
-            s = ''
+            s = ""
             for name, p in params.items():
-                s += '\nname: {}\n'.format(name)
+                s += "\nname: {}\n".format(name)
                 s += p.to_string()
-            log_entry(logger, s, level='debug')
+            log_entry(logger, s, level="debug")
 
     def get_influence_distance(self):
         r"""Return the influence distance of a model."""
@@ -408,11 +408,11 @@ class KIM(Model):
 
         for i in range(num_kim_species):
             species_name, error = kimpy.species_name.get_species_name(i)
-            check_error(error, 'kimpy.species_name.get_species_name')
+            check_error(error, "kimpy.species_name.get_species_name")
             supported, code, error = self.kim_model.get_species_support_and_code(
                 species_name
             )
-            check_error(error, 'kim_model.get_species_support_and_code')
+            check_error(error, "kim_model.get_species_support_and_code")
             if supported:
                 species[str(species_name)] = code
 
@@ -439,12 +439,12 @@ class KIM(Model):
         present, required, error = self.kim_model.is_routine_present(
             kimpy.model_routine_name.WriteParameterizedModel
         )
-        check_error(error, 'kim_model.is_routine_is_routine_present')
+        check_error(error, "kim_model.is_routine_is_routine_present")
         if not present:
-            raise SupportError('This KIM model does not support writing parameters.')
+            raise SupportError("This KIM model does not support writing parameters.")
 
         if path is None:
-            model_name = self.model_name + '_kliff_trained'
+            model_name = self.model_name + "_kliff_trained"
             path = os.path.join(os.getcwd(), model_name)
         else:
             path = os.path.abspath(path)
@@ -453,10 +453,10 @@ class KIM(Model):
             os.makedirs(path)
 
         error = self.kim_model.write_parameterized_model(path, model_name)
-        check_error(error, 'kim_model.write_parameterized_model')
+        check_error(error, "kim_model.write_parameterized_model")
 
         msg = 'KLIFF trained model write to "{}"'.format(path)
-        log_entry(logger, msg, level='info')
+        log_entry(logger, msg, level="info")
 
 
 class KIMModelError(Exception):
@@ -471,10 +471,10 @@ class KIMModelError(Exception):
 def check_error(error, msg):
     if error != 0 and error is not None:
         msg = 'Calling "{}" failed.\nSee "kim.log" for more information.'.format(msg)
-        log_entry(logger, msg, level='error')
+        log_entry(logger, msg, level="error")
         raise KIMModelError(msg)
 
 
 def report_error(msg):
-    log_entry(logger, msg, level='error')
+    log_entry(logger, msg, level="error")
     raise KIMModelError(msg)

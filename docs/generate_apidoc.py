@@ -11,7 +11,7 @@ import os
 import subprocess
 
 
-def get_all_modules(source='../kliff'):
+def get_all_modules(source="../kliff"):
     """Get all modules.
     Note, this only get the first-level modules like `kliff.module_a`, not modules
     (in subpackages) like `kliff.subpackage_a.module_b`. subpackage is considered
@@ -22,14 +22,14 @@ def get_all_modules(source='../kliff'):
     Return a list of modules names.
     """
     results = subprocess.check_output(
-        ['sphinx-apidoc', '-f', '-e', '-o', '/tmp/kliff_apidoc', source],
+        ["sphinx-apidoc", "-f", "-e", "-o", "/tmp/kliff_apidoc", source],
         universal_newlines=True,
     )
-    results = results.split('\n')
+    results = results.split("\n")
     modules = []
     for line in results:
-        if 'Creating' in line:
-            name = line.rstrip('.').split('/')[-1].split('.')
+        if "Creating" in line:
+            name = line.rstrip(".").split("/")[-1].split(".")
             if len(name) >= 3:
                 mod = name[1]
                 if mod not in modules:
@@ -40,41 +40,41 @@ def get_all_modules(source='../kliff'):
 def autodoc_package(path, modules):
     if path and not os.path.exists(path):
         os.makedirs(path)
-    fname = os.path.join(path, 'kliff.rst')
-    with open(fname, 'w') as fout:
-        fout.write('.. _reference:\n\n')
-        fout.write('Package Reference\n')
-        fout.write('=================\n\n')
-        fout.write('.. toctree::\n')
+    fname = os.path.join(path, "kliff.rst")
+    with open(fname, "w") as fout:
+        fout.write(".. _reference:\n\n")
+        fout.write("Package Reference\n")
+        fout.write("=================\n\n")
+        fout.write(".. toctree::\n")
         for mod in modules:
-            fout.write('    kliff.' + mod + '\n')
+            fout.write("    kliff." + mod + "\n")
 
 
 def autodoc_module(path, module):
     if path and not os.path.exists(path):
         os.makedirs(path)
-    module_name = 'kliff.' + module
-    fname = os.path.join(path, module_name + '.rst')
-    with open(fname, 'w') as fout:
-        fout.write('{}\n'.format(module_name))
-        fout.write('-' * len(module_name) + '\n\n')
-        fout.write('.. automodule:: {}\n'.format(module_name))
-        fout.write('    :members:\n')
-        fout.write('    :undoc-members:\n')
-        fout.write('    :show-inheritance:\n')
-        fout.write('    :inherited-members:\n')
+    module_name = "kliff." + module
+    fname = os.path.join(path, module_name + ".rst")
+    with open(fname, "w") as fout:
+        fout.write("{}\n".format(module_name))
+        fout.write("-" * len(module_name) + "\n\n")
+        fout.write(".. automodule:: {}\n".format(module_name))
+        fout.write("    :members:\n")
+        fout.write("    :undoc-members:\n")
+        fout.write("    :show-inheritance:\n")
+        fout.write("    :inherited-members:\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # this will not be included, e.g. excludes = ['models']
-    excludes = ['cmdline', 'lmplatconst', 'wrapcalculator']
+    excludes = ["cmdline", "lmplatconst", "wrapcalculator"]
 
     modules = get_all_modules()
     for exc in excludes:
         modules.remove(exc)
     modules = sorted(modules)
-    path = './tmp_apidoc'
+    path = "./tmp_apidoc"
     autodoc_package(path, modules)
     for mod in modules:
         autodoc_module(path, mod)

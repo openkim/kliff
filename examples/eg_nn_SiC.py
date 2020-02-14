@@ -5,7 +5,6 @@ Train a neural network potential
 ================================
 
 In this tutorial, we train a neural network (NN) potential for silicon
-
 """
 
 
@@ -18,9 +17,9 @@ from kliff.loss import Loss
 
 
 descriptor = SymmetryFunction(
-    cut_name='cos',
-    cut_dists={'Si-Si': 5.0, 'C-C': 5.0, 'Si-C': 5.0},
-    hyperparams='set30',
+    cut_name="cos",
+    cut_dists={"Si-Si": 5.0, "C-C": 5.0, "Si-C": 5.0},
+    hyperparams="set30",
     normalize=True,
 )
 
@@ -37,7 +36,7 @@ model_si.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model_si.set_save_metadata(prefix='./kliff_saved_model_si', start=5, frequency=2)
+model_si.set_save_metadata(prefix="./kliff_saved_model_si", start=5, frequency=2)
 
 
 N1 = 10
@@ -53,22 +52,22 @@ model_c.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model_c.set_save_metadata(prefix='./kliff_saved_model_c', start=5, frequency=2)
+model_c.set_save_metadata(prefix="./kliff_saved_model_c", start=5, frequency=2)
 
 
 # training set
-dataset_name = 'SiC_training_set'
+dataset_name = "SiC_training_set"
 tset = Dataset()
 tset.read(dataset_name)
 configs = tset.get_configs()
 
 # calculator
-calc = CalculatorTorchSeparateSpecies({'Si': model_si, 'C': model_c})
+calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
 calc.create(configs, reuse=True)
 
 # loss
-loss = Loss(calc, residual_data={'forces_weight': 0.3})
-result = loss.minimize(method='Adam', num_epochs=10, batch_size=4, lr=0.001)
+loss = Loss(calc, residual_data={"forces_weight": 0.3})
+result = loss.minimize(method="Adam", num_epochs=10, batch_size=4, lr=0.001)
 
 
 ##########################################################################################
@@ -76,7 +75,6 @@ result = loss.minimize(method='Adam', num_epochs=10, batch_size=4, lr=0.001)
 # also write the trained model to a KIM model such that it can be used in other simulation
 # codes such as LAMMPS via the KIM API.
 
-model_si.save('./final_model_si.pkl')
-model_c.save('./final_model_c.pkl')
-loss.save_optimizer_stat('./optimizer_stat.pkl')
-
+model_si.save("./final_model_si.pkl")
+model_c.save("./final_model_c.pkl")
+loss.save_optimizer_stat("./optimizer_stat.pkl")

@@ -8,16 +8,17 @@ logger = kliff.logger.get_logger(__name__)
 
 
 class LJComputeArguments(ComputeArguments):
-    r"""Lennard-Jones 6-12 potential model built within KLIFF."""
+    """Lennard-Jones 6-12 potential model built within KLIFF."""
 
-    implemented_property = ['energy', 'forces', 'stress']
+    implemented_property = ["energy", "forces", "stress"]
 
     def __init__(self, *args, **kwargs):
         super(LJComputeArguments, self).__init__(*args, **kwargs)
         self.refresh(self.influence_distance)
 
     def refresh(self, influence_distance=None, params=None):
-        """ Refresh settings.
+        """
+        Refresh settings.
 
         Recreating the neighbor list due to the change of influence distance.
         """
@@ -25,7 +26,7 @@ class LJComputeArguments(ComputeArguments):
             infl_dist = influence_distance
         else:
             try:
-                infl_dist = params['influence_distance'].get_value()[0]
+                infl_dist = params["influence_distance"].get_value()[0]
             except KeyError:
                 raise ParameterError('"influence_distance" not provided by calculator."')
         self.influence_distance = infl_dist
@@ -34,9 +35,9 @@ class LJComputeArguments(ComputeArguments):
         self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=False)
 
     def compute(self, params):
-        epsilon = params['epsilon'].get_value()[0]
-        sigma = params['sigma'].get_value()[0]
-        rcut = params['cutoff'].get_value()[0]
+        epsilon = params["epsilon"].get_value()[0]
+        sigma = params["sigma"].get_value()[0]
+        rcut = params["cutoff"].get_value()[0]
         coords = self.conf.coords
 
         coords_including_padding = self.neigh.coords
@@ -61,18 +62,18 @@ class LJComputeArguments(ComputeArguments):
                     energy += 0.5 * phi
 
         if self.compute_energy:
-            self.results['energy'] = energy
+            self.results["energy"] = energy
         if self.compute_forces:
             forces = assemble_forces(
                 forces_including_padding, len(coords), self.neigh.padding_image
             )
-            self.results['forces'] = forces
+            self.results["forces"] = forces
         if self.compute_stress:
             volume = self.conf.get_volume()
             stress = assemble_stress(
                 coords_including_padding, forces_including_padding, volume
             )
-            self.results['stress'] = stress
+            self.results["stress"] = stress
 
     @staticmethod
     def calc_phi(epsilon, sigma, r, rcut):
@@ -105,11 +106,11 @@ class LennardJones(Model):
     def __init__(self, model_name=None, params_relation_callback=None):
         super(LennardJones, self).__init__(model_name, params_relation_callback)
 
-        self.params['epsilon'] = Parameter(value=[1.0])
-        self.params['sigma'] = Parameter(value=[2.0])
-        self.params['cutoff'] = Parameter(value=[5.0])
+        self.params["epsilon"] = Parameter(value=[1.0])
+        self.params["sigma"] = Parameter(value=[2.0])
+        self.params["cutoff"] = Parameter(value=[5.0])
         self.compute_arguments_class = LJComputeArguments
         self.fitting_params = self.init_fitting_params(self.params)
 
     def get_influence_distance(self):
-        return self.params['cutoff'].get_value()[0]
+        return self.params["cutoff"].get_value()[0]

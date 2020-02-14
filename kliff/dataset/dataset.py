@@ -9,7 +9,7 @@ logger = kliff.logger.get_logger(__name__)
 
 
 implemented_format = dict()
-implemented_format['extxyz'] = '.xyz'
+implemented_format["extxyz"] = ".xyz"
 
 
 class Configuration:
@@ -29,7 +29,7 @@ class Configuration:
         species such that atoms with the same species will have contiguous indices.
     """
 
-    def __init__(self, format='extxyz', identifier=None, order_by_species=True):
+    def __init__(self, format="extxyz", identifier=None, order_by_species=True):
         self.format = format
         self.id = identifier
         self.do_order = order_by_species
@@ -155,13 +155,13 @@ class Configuration:
     def get_energy(self):
         r"""Return the potential energy of the configuration."""
         if self.energy is None:
-            raise DatasetError('Configuration does not contain forces.')
+            raise DatasetError("Configuration does not contain forces.")
         return self.energy
 
     def get_forces(self):
         r"""Return a `Nx3` matrix of the forces on each atoms."""
         if self.forces is None:
-            raise DatasetError('Configuration does not contain forces.')
+            raise DatasetError("Configuration does not contain forces.")
         return self.forces.copy()
 
     def get_stress(self):
@@ -176,7 +176,7 @@ class Configuration:
             https://en.wikipedia.org/wiki/Voigt_notation
         """
         if self.stress is None:
-            raise DatasetError('Configuration does not contain stress.')
+            raise DatasetError("Configuration does not contain stress.")
         return self.stress.copy()
 
     def set_weight(self, weight):
@@ -211,7 +211,7 @@ class Dataset:
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
-    def read(self, path, fmt='extxyz'):
+    def read(self, path, fmt="extxyz"):
         r"""Read an atomic configuration.
 
         Parameters
@@ -267,7 +267,7 @@ class Dataset:
                 conf.natoms_by_species = conf.count_atoms_by_species(all_species)
 
         msg = '{} configurations read from "{}"'.format(len(configs), path)
-        log_entry(logger, msg, level='info')
+        log_entry(logger, msg, level="info")
 
     def get_configs(self):
         r"""Get the configurations.
@@ -283,7 +283,7 @@ class Dataset:
         return len(self.configs)
 
 
-def read_config(path, fmt='extxyz'):
+def read_config(path, fmt="extxyz"):
     r"""Read configuration stored in a file.
 
     Parameters
@@ -327,14 +327,14 @@ def read_config(path, fmt='extxyz'):
     if fmt not in implemented_format:
         report_error('Data file format "{}" not recognized.')
 
-    if fmt == 'extxyz':
+    if fmt == "extxyz":
         cell, PBC, species, coords, energy, forces, stress = read_extxyz(path)
 
     return cell, PBC, species, coords, energy, forces, stress
 
 
 def write_config(
-    path, cell, PBC, species, coords, energy=None, forces=None, stress=None, fmt='extxyz'
+    path, cell, PBC, species, coords, energy=None, forces=None, stress=None, fmt="extxyz"
 ):
     r"""
     Write a configuration to a file in the specified format.
@@ -381,7 +381,7 @@ def write_config(
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
-    if fmt == 'extxyz':
+    if fmt == "extxyz":
         write_extxyz(path, cell, PBC, species, coords, energy, forces, stress)
 
 
@@ -395,5 +395,5 @@ class DatasetError(Exception):
 
 
 def report_error(msg):
-    log_entry(logger, msg, level='error')
+    log_entry(logger, msg, level="error")
     raise DatasetError(msg)

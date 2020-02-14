@@ -5,7 +5,6 @@ import numpy as np
 from ..dataset import write_config
 from ..utils import split_string
 from ..log import log_entry
-
 import kliff
 
 
@@ -82,8 +81,8 @@ class EnergyForcesRMSE:
             specified by ``path``.
         """
 
-        msg = 'Start analyzing energy and forces RMSE.'
-        log_entry(logger, msg, level='info')
+        msg = "Start analyzing energy and forces RMSE."
+        log_entry(logger, msg, level="info")
 
         cas = self.calculator.get_compute_arguments()
 
@@ -97,9 +96,9 @@ class EnergyForcesRMSE:
 
         for i, ca in enumerate(cas):
             if i % 100 == 0:
-                msg = 'Processing configuration {}.'.format(i)
-                log_entry(logger, msg, level='info')
-            prefix = 'analysis_energy_forces_RMSE-difference'
+                msg = "Processing configuration {}.".format(i)
+                log_entry(logger, msg, level="info")
+            prefix = "analysis_energy_forces_RMSE-difference"
             enorm, fnorm = self._compute_single_config(
                 ca, normalize, verbose, common, prefix
             )
@@ -110,13 +109,13 @@ class EnergyForcesRMSE:
         all_fnorm = np.asarray(all_fnorm)
         all_identifier = np.asarray(all_identifier)
 
-        if sort == 'energy':
+        if sort == "energy":
             if self.compute_energy:
                 order = all_enorm.argsort()
                 all_enorm = all_enorm[order]
                 all_fnorm = all_fnorm[order]
                 all_identifier = all_identifier[order]
-        elif sort == 'forces':
+        elif sort == "forces":
             if self.compute_forces:
                 order = all_fnorm.argsort()
                 all_enorm = all_enorm[order]
@@ -124,73 +123,73 @@ class EnergyForcesRMSE:
                 all_identifier = all_identifier[order]
 
         if path is not None:
-            fout = open(path, 'w')
+            fout = open(path, "w")
         else:
             fout = sys.stdout
 
         # header
-        print('#' * 80, file=fout)
-        print('#', file=fout)
-        print('# Root-mean-square errors for energy and forces', file=fout)
-        print('#', file=fout)
+        print("#" * 80, file=fout)
+        print("#", file=fout)
+        print("# Root-mean-square errors for energy and forces", file=fout)
+        print("#", file=fout)
         msg = (
             'Values reported is per atom quantify if "normalize=True". For example, '
             '"eV/atom" for energy and "(eV/Angstrom)/atom" if "eV" is the units for '
             'energy and "Angstrom" is the units for forces.'
         )
-        print(split_string(msg, length=80, starter='#'), file=fout)
-        print('#', file=fout)
+        print(split_string(msg, length=80, starter="#"), file=fout)
+        print("#", file=fout)
         print(
-            '# See (TODO insert url of doc) for the meaning of the reported values.',
+            "# See (TODO insert url of doc) for the meaning of the reported values.",
             file=fout,
         )
-        print('#' * 80 + '\n', file=fout)
+        print("#" * 80 + "\n", file=fout)
 
         # norms of each config
         if verbose >= 1:
-            print('#' * 80, file=fout)
-            print('Per configuration quantify\n', file=fout)
-            print('# config', end=' ' * 4, file=fout)
+            print("#" * 80, file=fout)
+            print("Per configuration quantify\n", file=fout)
+            print("# config", end=" " * 4, file=fout)
             if self.compute_energy:
-                print('energy difference norm', end=' ' * 4, file=fout)
+                print("energy difference norm", end=" " * 4, file=fout)
             if self.compute_forces:
-                print('forces difference norm', end=' ' * 4, file=fout)
-            print('config identifier', file=fout)
+                print("forces difference norm", end=" " * 4, file=fout)
+            print("config identifier", file=fout)
 
             for i, (enorm, fnorm, identifier) in enumerate(
                 zip(all_enorm, all_fnorm, all_identifier)
             ):
-                print('{:<10d}'.format(i), end=' ' * 4, file=fout)
+                print("{:<10d}".format(i), end=" " * 4, file=fout)
                 if self.compute_energy:
-                    print('{:.10e}'.format(enorm), end=' ' * 10, file=fout)
+                    print("{:.10e}".format(enorm), end=" " * 10, file=fout)
                 if self.compute_forces:
-                    print('{:.10e}'.format(fnorm), end=' ' * 10, file=fout)
+                    print("{:.10e}".format(fnorm), end=" " * 10, file=fout)
                 print(identifier, file=fout)
-            print('\n', file=fout)
+            print("\n", file=fout)
 
         # RMSE of all configs
-        print('#' * 80, file=fout)
-        print('RMSE for the dataset (all configurations).', file=fout)
+        print("#" * 80, file=fout)
+        print("RMSE for the dataset (all configurations).", file=fout)
         if self.compute_energy:
             e_rmse = np.linalg.norm(all_enorm) / len(all_enorm) ** 0.5
-            print('{:.10e}    # energy RMSE'.format(e_rmse), file=fout)
+            print("{:.10e}    # energy RMSE".format(e_rmse), file=fout)
         if self.compute_forces:
             f_rmse = np.linalg.norm(all_fnorm) / len(all_fnorm) ** 0.5
-            print('{:.10e}    # forces RMSE'.format(f_rmse), file=fout)
-        print('\n', file=fout)
+            print("{:.10e}    # forces RMSE".format(f_rmse), file=fout)
+        print("\n", file=fout)
 
         # difference of each atom
         if verbose >= 2:
-            print('#' * 80, file=fout)
+            print("#" * 80, file=fout)
             msg = (
-                'The differences of energy and forces are written to the directory '
+                "The differences of energy and forces are written to the directory "
                 '"energy_forces_RMSE-difference" in extended XYZ format.'
             )
-            print(split_string(msg, length=80, starter='#'), file=fout)
-            print('\n', file=fout)
+            print(split_string(msg, length=80, starter="#"), file=fout)
+            print("\n", file=fout)
 
-        msg = 'Finish analyzing energy and forces RMSE.'
-        log_entry(logger, msg, level='info')
+        msg = "Finish analyzing energy and forces RMSE."
+        log_entry(logger, msg, level="info")
 
     def _compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 
@@ -248,7 +247,7 @@ class EnergyForcesRMSE:
                 energy=ediff,
                 forces=fdiff,
                 stress=None,
-                fmt='extxyz',
+                fmt="extxyz",
             )
 
         return enorm, fnorm
@@ -262,7 +261,7 @@ def _get_config(compute_argument):
     """
     if isinstance(compute_argument, Iterable):
         # compute argument from Torch dataset; [0] because it is a batch of 1 element
-        conf = compute_argument[0]['configuration']
+        conf = compute_argument[0]["configuration"]
     else:
         # For KIM and built-in models, it is a compute argument class
         conf = compute_argument.conf
@@ -288,7 +287,7 @@ def _get_common_path(paths):
     For example, given paths = ['/A/B/c.x', '/A/B/D/e.x'], the returns `/A/B/`.
     """
     paths = [os.path.abspath(p) for p in paths]
-    common = ''
+    common = ""
 
     i = 0
     while True:
