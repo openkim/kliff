@@ -22,7 +22,7 @@ def update_version(version, path, key, in_quotes=False, extra_space=False):
 
 
 if __name__ == "__main__":
-    kliff_v = "0.1.5"
+    kliff_v = "0.1.6"
     kliff_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path = os.path.join(kliff_dir, "kliff", "__init__.py")
     update_version(kliff_v, path, "__version__", True, True)
