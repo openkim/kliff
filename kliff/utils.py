@@ -17,7 +17,7 @@ def torch_available():
         import torch
 
         return True
-    except ModuleNotFoundError:
+    except ImportError:
         return False
 
 
