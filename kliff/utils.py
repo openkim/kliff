@@ -12,12 +12,12 @@ def length_equal(a, b):
         return True
 
 
-def check_torch_available():
+def torch_available():
     try:
         import torch
 
         return True
-    except ImportError:
+    except ModuleNotFoundError:
         return False
 
 
@@ -43,13 +43,13 @@ def split_string(string, length=80, starter=None):
     while string:
         end = target_end
         if len(string) > end:
-            while end >= 0 and string[end] != ' ':
+            while end >= 0 and string[end] != " ":
                 end -= 1
             end += 1
         sub = string[:end].strip()
         if starter is not None:
-            sub = starter + ' ' + sub
+            sub = starter + " " + sub
         sub_string.append(sub)
         string = string[end:]
 
-    return '\n'.join(sub_string) + '\n'
+    return "\n".join(sub_string) + "\n"
