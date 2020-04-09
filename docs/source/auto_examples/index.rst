@@ -86,13 +86,13 @@ neural network potential.
     :class: sphx-glr-footer-gallery
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
     :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/mjwen/Applications/kliff/docs/source/auto_examples/auto_examples_python.zip>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
     :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/mjwen/Applications/kliff/docs/source/auto_examples/auto_examples_jupyter.zip>`
 

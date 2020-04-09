@@ -1,10 +1,12 @@
-.. note::
-    :class: sphx-glr-download-link-note
+.. only:: html
 
-    Click :ref:`here <sphx_glr_download_auto_examples_example_linear_regression.py>` to download the full example code
-.. rst-class:: sphx-glr-example-title
+    .. note::
+        :class: sphx-glr-download-link-note
 
-.. _sphx_glr_auto_examples_example_linear_regression.py:
+        Click :ref:`here <sphx_glr_download_auto_examples_example_linear_regression.py>`     to download the full example code
+    .. rst-class:: sphx-glr-example-title
+
+    .. _sphx_glr_auto_examples_example_linear_regression.py:
 
 
 .. _tut_linear_regression:
@@ -98,7 +100,7 @@ function of its calculator.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  0.798 seconds)
+   **Total running time of the script:** ( 0 minutes  1.421 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_linear_regression.py:
@@ -111,13 +113,13 @@ function of its calculator.
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
      :download:`Download Python source code: example_linear_regression.py <example_linear_regression.py>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
      :download:`Download Jupyter notebook: example_linear_regression.ipynb <example_linear_regression.ipynb>`
 

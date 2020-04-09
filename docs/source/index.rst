@@ -6,11 +6,17 @@
 KLIFF -- KIM-based Learning-Integrated Fitting Framework
 ========================================================
 
+KLIFF is an interatomic potential fitting package that can be used to fit both
+physics-motivated potentials (e.g. the Stillinger-Weber potential) and machine learning
+potentials (e.g. neural network potential).
+The trained potential can be deployed with the **kim-api**, which is supported by major
+simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among others.
+
+
 
 .. toctree::
     :maxdepth: 1
 
-    about
     changelog
 
 

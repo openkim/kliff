@@ -2,7 +2,8 @@
 
 To run:
     $ python genereate_apidoc.py
-which generates a directory named `tmp_apidoc`. Do a comparison of this file
+which generates a directory named `tmp_apidoc`. Do a comparison of the generated files
+and source/apidoc.
 
 You can provide an `exclude` list.
 
