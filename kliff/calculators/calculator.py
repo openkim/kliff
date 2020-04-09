@@ -1,10 +1,10 @@
+import logging
 from collections.abc import Iterable
-import kliff
 from ..dataset import Configuration
 from ..utils import length_equal
 from ..error import InputError
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Calculator:

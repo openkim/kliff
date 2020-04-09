@@ -1,15 +1,15 @@
 import os
 import multiprocessing as mp
+import logging
 import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallelCPU
 from torch.utils.data import DataLoader
-import kliff
 from ..dataset.dataset import Configuration
 from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CalculatorTorch:

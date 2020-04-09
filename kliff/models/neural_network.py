@@ -1,11 +1,11 @@
 import os
+import logging
 import numpy as np
 import torch
-import kliff
 from .model_torch import ModelTorch
 from ..log import log_entry
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class NeuralNetwork(ModelTorch):

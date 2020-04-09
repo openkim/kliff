@@ -1,11 +1,11 @@
 import os
 import numpy as np
 from collections import OrderedDict
-import kliff
+import logging
 from .extxyz import read_extxyz, write_extxyz
 from ..log import log_entry
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 implemented_format = dict()

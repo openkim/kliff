@@ -13,7 +13,7 @@ from ...neighbor import NeighborList
 from ...log import log_entry
 from . import sf
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SymmetryFunction(Descriptor):

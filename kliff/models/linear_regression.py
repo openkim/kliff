@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-import kliff
+import logging
 from torch.utils.data import DataLoader
 from .model_torch import ModelTorch
 from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class LinearRegression(ModelTorch):

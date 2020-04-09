@@ -1,12 +1,12 @@
 .. _install_model:
 
-===================
+===============
+Install a model
+===============
+
+
 Install a KIM model
 ===================
-
-
-Install a model from OpenKIM website
-====================================
 
 The ``kim-api-collections-management`` command line tool from the kim-api_ makes
 it easy to install a model archived on the OpenKIM_ website. You can do::
@@ -31,7 +31,7 @@ Install a KLIFF-trained model
 =============================
 
 As discussed in :ref:`tut_kim_sw` and :ref:`tut_nn`, you can write a trained
-model to a KIM potential that is compatible with the kim-api_ by:
+model to a KIM model that is compatible with the kim-api_ by:
 
 .. code-block:: python
 

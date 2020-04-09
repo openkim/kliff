@@ -1,10 +1,10 @@
 import os
+import logging
 import numpy as np
 import torch
 import torch.nn as nn
-import kliff
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ModelTorch(nn.Module):

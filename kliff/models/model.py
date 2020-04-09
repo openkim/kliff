@@ -1,11 +1,11 @@
 import sys
 import numpy as np
 from collections import OrderedDict
-import kliff
+import logging
 from .parameter import FittingParameter
 from ..log import log_entry
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ComputeArguments:

@@ -1,12 +1,12 @@
 import logging
 import numpy as np
-import kliff
+import logging
 from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
 from ...neighbor import NeighborList
 from . import bs
 
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Bispectrum(Descriptor):

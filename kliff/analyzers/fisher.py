@@ -2,9 +2,9 @@ import copy
 import numpy as np
 from ..log import log_entry
 from ..utils import split_string
-import kliff
+import logging
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Fisher:

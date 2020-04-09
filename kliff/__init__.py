@@ -1,6 +1,5 @@
-from .log import Logger
+from kliff.log import set_up_logger
 
+__version__ = "0.1.6"
 
-__version__ = '0.1.6'
-
-logger = Logger(level="info")
+set_up_logger()

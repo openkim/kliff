@@ -1,14 +1,14 @@
 import os
 import sys
+import logging
 import warnings
 import pickle
 from collections import OrderedDict
 from collections.abc import Iterable
 import numpy as np
-import kliff
 from ..error import InputError
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Parameter:

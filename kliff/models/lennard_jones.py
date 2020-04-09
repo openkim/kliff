@@ -1,10 +1,10 @@
 import numpy as np
-import kliff
+import logging
 from .model import ComputeArguments, Model
 from .parameter import Parameter, ParameterError
 from ..neighbor import NeighborList, assemble_forces, assemble_stress
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class LJComputeArguments(ComputeArguments):

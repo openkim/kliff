@@ -2,7 +2,6 @@ import os
 import numpy as np
 import logging
 from collections import OrderedDict
-import kliff
 from .model import ComputeArguments, Model
 from .parameter import Parameter
 from ..neighbor import assemble_forces, assemble_stress
@@ -17,7 +16,8 @@ try:
 except ImportError:
     kimpy_avail = False
 
-logger = kliff.logger.get_logger(__name__)
+
+logger = logging.getLogger(__name__)
 
 
 class KIMComputeArguments(ComputeArguments):

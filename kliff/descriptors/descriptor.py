@@ -3,11 +3,11 @@ import sys
 import pickle
 import numpy as np
 import multiprocessing as mp
-import kliff
+import logging
 from .. import parallel
 from ..log import log_entry
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Descriptor:

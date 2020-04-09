@@ -2,13 +2,13 @@ import os
 import sys
 from collections.abc import Iterable
 import numpy as np
+import logging
 from ..dataset import write_config
 from ..utils import split_string
 from ..log import log_entry
-import kliff
 
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class EnergyForcesRMSE:

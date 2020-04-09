@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import scipy.optimize
-import kliff
+import logging
 from . import parallel
 from .log import log_entry
 from .error import InputError, report_import_error
@@ -21,7 +21,7 @@ except ImportError:
     mpi4py_avail = False
 
 
-logger = kliff.logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
