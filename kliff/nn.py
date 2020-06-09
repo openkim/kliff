@@ -20,7 +20,7 @@ class Dropout(torch.nn.modules.dropout._DropoutNd):
     ------
         Input: [N, D] or [1, N, D]
         Output: [N, D] or [1, N, D] (same as Input)
-        The first dimension 1 is beause the dataloader provides only sample each
+        The first dimension 1 is because the dataloader provides only sample each
         iteration.
     """
 
