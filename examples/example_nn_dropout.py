@@ -113,12 +113,7 @@ configs = tset.get_configs()
 
 # calculator
 calc = CalculatorTorch(model)
-calc.create(
-    configs,
-    reuse=True,
-    fingerprints_path="fingerprints.pkl",
-    fingerprints_mean_and_stdev_path="fingerprints_mean_and_stdev.pkl",
-)
+calc.create(configs, reuse=True)
 
 
 ##########################################################################################
@@ -163,8 +158,18 @@ for epoch in range(5):
 
             optimizer.zero_grad()
 
-            e_ref = torch.stack([sample["energy"] for sample in batch])
-            f_ref = torch.cat([sample["forces"].reshape(-1) for sample in batch])
+            natoms = [sample["configuration"].get_number_of_atoms() for sample in batch]
+            energy_normalizer = torch.tensor(natoms, dtype=torch.float32)
+            force_normalizer = torch.tensor(
+                [n for n in natoms for _ in range(3 * n)], dtype=torch.float32
+            )
+            e_ref = (
+                torch.stack([sample["energy"] for sample in batch]) / energy_normalizer
+            )
+            f_ref = (
+                torch.cat([sample["forces"].reshape(-1) for sample in batch])
+                / force_normalizer
+            )
 
             energies = []
             forces = []
@@ -176,10 +181,11 @@ for epoch in range(5):
                 energies.append(torch.stack(energy_batch))
                 forces.append(torch.cat(forces_batch))
 
-            energies = torch.stack(energies)
-            forces = torch.stack(forces)
-            e_mean, e_var = torch.var_mean(energies, dim=0)
-            f_mean, f_var = torch.var_mean(forces, dim=0)
+            energies = torch.stack(energies) / energy_normalizer
+            forces = torch.stack(forces) / force_normalizer
+
+            e_var, e_mean = torch.var_mean(energies, dim=0)
+            f_var, f_mean = torch.var_mean(forces, dim=0)
             loss = loss_fn(e_mean, e_ref, e_var, f_mean, f_ref, f_var, f_weight=0.001)
 
             loss.backward()
