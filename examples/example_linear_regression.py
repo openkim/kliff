@@ -29,7 +29,7 @@ print("Number of configurations:", len(configs))
 
 # calculator
 calc = CalculatorTorch(model)
-calc.create(configs, reuse=True)
+calc.create(configs, reuse=False)
 
 
 ##########################################################################################

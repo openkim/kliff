@@ -21,11 +21,10 @@ symmetry functions.
 .. code-block:: default
 
 
-    from kliff.descriptors import SymmetryFunction
-    from kliff.dataset import Dataset
-    from kliff.models import LinearRegression
     from kliff.calculators import CalculatorTorch
-
+    from kliff.dataset import Dataset
+    from kliff.descriptors import SymmetryFunction
+    from kliff.models import LinearRegression
 
     descriptor = SymmetryFunction(
         cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
@@ -43,7 +42,7 @@ symmetry functions.
 
     # calculator
     calc = CalculatorTorch(model)
-    calc.create(configs, reuse=True)
+    calc.create(configs, reuse=False)
 
 
 
@@ -60,8 +59,16 @@ symmetry functions.
     400 configurations read from "Si_training_set/varying_alat"
     Number of configurations: 400
     Found existing fingerprints "fingerprints.pkl".
-    Reuse existing fingerprints.
-    Restore mean and stdev from "fingerprints_mean_and_stdev.pkl".
+    Delete existing fingerprints "fingerprints.pkl"
+    Start generating fingerprints.
+    Calculating mean and stdev.
+    Pickling fingerprints to "fingerprints.pkl"
+    Processing configuration: 0.
+    Processing configuration: 100.
+    Processing configuration: 200.
+    Processing configuration: 300.
+    Pickle 400 configurations finished.
+    Finish generating fingerprints.
 
 
 
@@ -100,7 +107,7 @@ function of its calculator.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.421 seconds)
+   **Total running time of the script:** ( 0 minutes  7.969 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_linear_regression.py:

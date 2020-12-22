@@ -74,6 +74,26 @@ neural network potential.
    :hidden:
 
    /auto_examples/example_nn_Si
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon">
+
+.. only:: html
+
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_dropout_thumb.png
+
+     :ref:`sphx_glr_auto_examples_example_nn_dropout.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_nn_dropout
 .. raw:: html
 
     <div class="sphx-glr-clear"></div>

@@ -3,10 +3,10 @@
     .. note::
         :class: sphx-glr-download-link-note
 
-        Click :ref:`here <sphx_glr_download_auto_examples_example_nn_Si.py>`     to download the full example code
+        Click :ref:`here <sphx_glr_download_auto_examples_example_nn_dropout.py>`     to download the full example code
     .. rst-class:: sphx-glr-example-title
 
-    .. _sphx_glr_auto_examples_example_nn_Si.py:
+    .. _sphx_glr_auto_examples_example_nn_dropout.py:
 
 
 .. _tut_nn:
@@ -35,11 +35,12 @@ Let's first import the modules that will be used in this example.
 .. code-block:: default
 
 
+    import torch
+
     from kliff import nn
     from kliff.calculators import CalculatorTorch
     from kliff.dataset import Dataset
     from kliff.descriptors import SymmetryFunction
-    from kliff.loss import Loss
     from kliff.models import NeuralNetwork
 
 
@@ -101,9 +102,11 @@ We can then build the NN model on top of the descriptor.
         # first hidden layer
         nn.Linear(descriptor.get_size(), N1),
         nn.Tanh(),
+        nn.Dropout(p=0.1),
         # second hidden layer
         nn.Linear(N1, N2),
         nn.Tanh(),
+        nn.Dropout(p=0.1),
         # output layer
         nn.Linear(N2, 1),
     )
@@ -152,7 +155,8 @@ fingerprints generated from the descriptor if it is present.
 
     # training set
     dataset_name = "Si_training_set/varying_alat"
-    tset = Dataset(path=dataset_name)
+    tset = Dataset()
+    tset.read(dataset_name)
     configs = tset.get_configs()
 
     # calculator
@@ -203,9 +207,75 @@ drives the loss down in a reasonable time.
 .. code-block:: default
 
 
-    loss = Loss(calc, residual_data={"forces_weight": 0.3})
-    result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
+    def nll(v, ref, var):
+        var = var.clone().detach()  # make var not dependent on model parameters
+        min_var = 1e-20 * torch.ones(len(var))
+        var = torch.max(var, min_var)
+        rst = torch.log(var) + (v - ref) ** 2 / var
+        rst = torch.sum(rst)
+        return rst
+
+
+    def loss_fn(e, ref_e, var_e, f, ref_f, var_f, f_weight, batch_size=100):
+        return 1 / batch_size * (nll(e, ref_e, var_e) + f_weight * nll(f, ref_f, var_f))
+
+
+    eval_times = 5
+
+    dataloader = calc.get_compute_arguments(batch_size=100)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    for epoch in range(5):
+        epoch_loss = 0
+        for batch in dataloader:
+
+            def closure():
+
+                optimizer.zero_grad()
+
+                natoms = [sample["configuration"].get_number_of_atoms() for sample in batch]
+                energy_normalizer = torch.tensor(natoms, dtype=torch.float32)
+                force_normalizer = torch.tensor(
+                    [n for n in natoms for _ in range(3 * n)], dtype=torch.float32
+                )
+                e_ref = (
+                    torch.stack([sample["energy"] for sample in batch]) / energy_normalizer
+                )
+                f_ref = (
+                    torch.cat([sample["forces"].reshape(-1) for sample in batch])
+                    / force_normalizer
+                )
+
+                energies = []
+                forces = []
+
+                for i in range(eval_times):
+                    results = calc.compute(batch)
+                    energy_batch = results["energy"]
+                    forces_batch = results["forces"]
+                    energies.append(torch.stack(energy_batch))
+                    forces.append(torch.cat(forces_batch))
+
+                energies = torch.stack(energies) / energy_normalizer
+                forces = torch.stack(forces) / force_normalizer
+
+                e_var, e_mean = torch.var_mean(energies, dim=0)
+                f_var, f_mean = torch.var_mean(forces, dim=0)
+                loss = loss_fn(e_mean, e_ref, e_var, f_mean, f_ref, f_var, f_weight=0.001)
+
+                loss.backward()
+
+                return loss
+
+            loss = optimizer.step(closure)
+            epoch_loss += float(loss)
+
+        print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
+        if epoch % 10 == 0:
+            path = "model_epoch{}.pkl".format(epoch)
+            model.save(path)
 
 
 
@@ -217,19 +287,11 @@ drives the loss down in a reasonable time.
 
  .. code-block:: none
 
-    Start minimization using optimization method: Adam.
-    Epoch = 0       loss = 7.3307518005e+01
-    Epoch = 1       loss = 7.2090658188e+01
-    Epoch = 2       loss = 7.1389846802e+01
-    Epoch = 3       loss = 7.0744289398e+01
-    Epoch = 4       loss = 7.0117307663e+01
-    Epoch = 5       loss = 6.9499519348e+01
-    Epoch = 6       loss = 6.8886828423e+01
-    Epoch = 7       loss = 6.8277154922e+01
-    Epoch = 8       loss = 6.7668611526e+01
-    Epoch = 9       loss = 6.7058618546e+01
-    Epoch = 10      loss = 6.6683935165e+01
-    Finish minimization using optimization method: Adam.
+    Epoch = 0       loss = 8.6609651733e+05
+    Epoch = 1       loss = 1.2849576367e+05
+    Epoch = 2       loss = 2.2271322119e+05
+    Epoch = 3       loss = 2.5512163110e+05
+    Epoch = 4       loss = 1.3115920654e+05
 
 
 
@@ -243,7 +305,6 @@ codes such as LAMMPS via the KIM API.
 
 
     model.save("./final_model.pkl")
-    loss.save_optimizer_stat("./optimizer_stat.pkl")
 
     model.write_kim_model()
 
@@ -273,10 +334,10 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  40.953 seconds)
+   **Total running time of the script:** ( 1 minutes  0.264 seconds)
 
 
-.. _sphx_glr_download_auto_examples_example_nn_Si.py:
+.. _sphx_glr_download_auto_examples_example_nn_dropout.py:
 
 
 .. only :: html
@@ -288,13 +349,13 @@ codes such as LAMMPS via the KIM API.
 
   .. container:: sphx-glr-download sphx-glr-download-python
 
-     :download:`Download Python source code: example_nn_Si.py <example_nn_Si.py>`
+     :download:`Download Python source code: example_nn_dropout.py <example_nn_dropout.py>`
 
 
 
   .. container:: sphx-glr-download sphx-glr-download-jupyter
 
-     :download:`Download Jupyter notebook: example_nn_Si.ipynb <example_nn_Si.ipynb>`
+     :download:`Download Jupyter notebook: example_nn_dropout.ipynb <example_nn_dropout.ipynb>`
 
 
 .. only:: html
