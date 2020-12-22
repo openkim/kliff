@@ -11,15 +11,16 @@ for key, value in cfg_vars.items():
 
 
 class get_pybind11_includes:
-    """Helper class to determine the pybind11 include path
+    """
+    Helper class to determine the pybind11 include path
 
-     The purpose of this class is to postpone importing pybind11 until it is actually
-     installed, so that the ``get_include()`` method can be invoked.
+    The purpose of this class is to postpone importing pybind11 until it is actually
+    installed, so that the ``get_include()`` method can be invoked.
 
-     see:
-     https://github.com/pybind/python_example/blob/master/setup.py
-     https://github.com/pybind/python_example/issues/32
-     """
+    see:
+    https://github.com/pybind/python_example/blob/master/setup.py
+    https://github.com/pybind/python_example/issues/32
+    """
 
     def __init__(self, user=False):
         self.user = user
@@ -64,7 +65,10 @@ bispectrum = Extension(
 
 neighlist = Extension(
     "kliff.neighbor.nl",
-    sources=["kliff/neighbor/neighbor_list.cpp", "kliff/neighbor/neighbor_list_bind.cpp"],
+    sources=[
+        "kliff/neighbor/neighbor_list.cpp",
+        "kliff/neighbor/neighbor_list_bind.cpp",
+    ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
     language="c++",
@@ -103,9 +107,6 @@ setup(
     description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
     long_description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
     classifiers=[
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: Common Development and Distribution License 1.0 (CDDL-1.0)",
         "Operating System :: OS Independent",
     ],
