@@ -104,8 +104,7 @@ model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 
 # training set
 dataset_name = "Si_training_set/varying_alat"
-tset = Dataset()
-tset.read(dataset_name)
+tset = Dataset(path=dataset_name)
 configs = tset.get_configs()
 
 # calculator

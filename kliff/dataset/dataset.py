@@ -4,14 +4,14 @@ from collections import OrderedDict
 
 import numpy as np
 
-from ..log import log_entry
-from .extxyz import read_extxyz, write_extxyz
+from kliff.log import log_entry
+from kliff.dataset.extxyz import read_extxyz, write_extxyz
+
 
 logger = logging.getLogger(__name__)
 
 
-implemented_format = dict()
-implemented_format["extxyz"] = ".xyz"
+SUPPORTED_FORMAT = {"extxyz": ".xyz"}
 
 
 class Configuration:
@@ -19,6 +19,11 @@ class Configuration:
 
     Parameters
     ----------
+
+    filename: str
+        Path to the file storing the atomic configuration. If `None`, atomic
+        information is not read.
+
     format: str
         Format of the file that stores the configuration. Currently, supported format
         includes: `extxyz`.
@@ -31,7 +36,9 @@ class Configuration:
         species such that atoms with the same species will have contiguous indices.
     """
 
-    def __init__(self, format="extxyz", identifier=None, order_by_species=True):
+    def __init__(
+        self, filename=None, format="extxyz", identifier=None, order_by_species=True
+    ):
         self.format = format
         self.id = identifier
         self.do_order = order_by_species
@@ -45,6 +52,9 @@ class Configuration:
         self.coords = None  # ndarray of shape(N, 3)
         self.forces = None  # ndarray of shape(N, 3)
         self.natoms_by_species = None  # dict
+
+        if filename is not None:
+            self.read(filename)
 
     def read(self, path):
         r"""Read configuration stored in a file.
@@ -202,19 +212,32 @@ class Dataset:
 
     Parameters
     ----------
+    path: str
+        Path of a file storing a configuration or path to a directory containing
+        multiple files. If given a directory, all the files in this directory and its
+        subdirectories with the extension corresponding to the specified format will
+        be read.
+
+    format: str
+        Format of the file that stores the configuration. Currently, supported format
+        includes: `extxyz`.
+
     order_by_species: bool
         If `True`, the atoms in each configuration will be ordered according to their
         species such that atoms with the same species will have contiguous indices.
 
     """
 
-    def __init__(self, order_by_species=True):
-        self.do_order = order_by_species
+    def __init__(self, path=None, format="extxyz", order_by_species=True):
+        self.order_by_species = order_by_species
         self.configs = []
+
+        if path is not None:
+            self.read(path, format)
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
-    def read(self, path, fmt="extxyz"):
+    def read(self, path, format="extxyz"):
         r"""Read an atomic configuration.
 
         Parameters
@@ -225,13 +248,16 @@ class Dataset:
             subdirectories with the extension corresponding to the specified format will
             be read.
 
-        fmt: str
+        format: str
             Format of the file that stores the configuration (e.g. 'extxyz').
         """
         try:
-            extension = implemented_format[fmt]
-        except KeyError as e:
-            report_error('{}\nNot supported data file format "{}".'.format(e, fmt))
+            extension = SUPPORTED_FORMAT[format]
+        except KeyError:
+            raise DatasetError(
+                f"Expect data format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+                "But got unsupported one: {format}."
+            )
 
         if os.path.isdir(path):
             dirpath = path
@@ -245,20 +271,21 @@ class Dataset:
             dirpath = os.path.dirname(path)
             all_files = [path]
 
-        configs = []
-        for f in all_files:
-            conf = Configuration(fmt, f, self.do_order)
-            conf.read(f)
-            configs.append(conf)
-
-        size = len(configs)
-        if size <= 0:
-            report_error(
-                'No dataset file with format "{}" found "{}".'.format(fmt, dirpath)
+        configs = [
+            Configuration(
+                f, format, identifier=f, order_by_species=self.order_by_species
             )
+            for f in all_files
+        ]
+
+        if len(configs) <= 0:
+            raise DatasetError(
+                f"No dataset file with format `{format}` found at {dirpath}."
+            )
+
         self.configs.extend(configs)
 
-        if self.do_order:
+        if self.order_by_species:
             # find species present in all configurations
             all_species = []
             for conf in self.configs:
@@ -327,11 +354,13 @@ def read_config(path, fmt="extxyz"):
         \sigma_{xy}]`. If the stresses are not provided in the file, return `None`.
     """
 
-    if fmt not in implemented_format:
-        report_error('Data file format "{}" not recognized.')
-
     if fmt == "extxyz":
         cell, PBC, species, coords, energy, forces, stress = read_extxyz(path)
+    else:
+        raise DatasetError(
+            f"Expect data format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+            "But got unsupported one: {fmt}."
+        )
 
     return cell, PBC, species, coords, energy, forces, stress
 
@@ -385,8 +414,11 @@ def write_config(
         \sigma_{xy}]`. If `None`, skip writing this information.
     """
 
-    if fmt not in implemented_format:
-        report_error('Data file format "{}" not recognized.')
+    if fmt not in SUPPORTED_FORMAT:
+        raise DatasetError(
+            f"Expect data format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+            "But got unsupported one: {fmt}."
+        )
 
     dirname = os.path.dirname(os.path.abspath(path))
     if not os.path.exists(dirname):
@@ -400,11 +432,3 @@ class DatasetError(Exception):
     def __init__(self, msg):
         super(DatasetError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg
-
-
-def report_error(msg):
-    log_entry(logger, msg, level="error")
-    raise DatasetError(msg)
