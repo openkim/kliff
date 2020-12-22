@@ -41,7 +41,7 @@ from kliff.models import NeuralNetwork
 # symmetry functions proposed by Behler and coworkers.
 
 descriptor = SymmetryFunction(
-    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
+    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set51", normalize=True
 )
 
 
@@ -110,7 +110,7 @@ configs = tset.get_configs()
 
 # calculator
 calc = CalculatorTorch(model)
-calc.create(configs, reuse=True)
+calc.create(configs)
 
 
 ##########################################################################################
