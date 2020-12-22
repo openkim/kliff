@@ -33,13 +33,13 @@ sys.path.append(os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 
 project = "KLIFF"
-copyright = "2019, Mingjian Wen"
+copyright = "2021, Mingjian Wen"
 author = "Mingjian Wen"
 
 # The short X.Y version
-version = "0.0"
+version = "0.1"
 # The full version, including alpha/beta/rc tags
-release = "0.0.1"
+release = "0.1.7"
 
 
 # -- General configuration ---------------------------------------------------

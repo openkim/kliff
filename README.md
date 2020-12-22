@@ -6,7 +6,7 @@
 [![Anaconda-Server Badge](https://img.shields.io/conda/vn/conda-forge/kliff.svg)](https://anaconda.org/conda-forge/kliff)
 [![PyPI](https://img.shields.io/pypi/v/kliff.svg)](https://pypi.python.org/pypi/kliff)
 
-###Documentation at: <https://kliff.readthedocs.io>
+### Documentation at: <https://kliff.readthedocs.io>
 
 KLIFF is an interatomic potential fitting package that can be used to fit
 physics-motivated (PM) potentials, as well as machine learning potentials such
@@ -31,10 +31,11 @@ pip install ./kliff
 ```
 
 To train a KIM model, `kim-api` and `kimpy` are needed; to train a machine learning 
-model `PyTorch` is needed. For more information on installing these packages, see 
+model, `PyTorch` is needed. For more information on installing these packages, see 
 [Installation](https://kliff.readthedocs.io/en/latest/installation.html).
 
-## A quick example to train an neural network potential
+## A quick example to train a neural network potential
+
 ```python
 from kliff import nn
 from kliff.calculators import CalculatorTorch
