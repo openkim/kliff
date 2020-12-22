@@ -67,13 +67,17 @@ class Tree:
                     prefix, connector, path, self.dirCount, self.dirCount
                 )
                 self.stack_num_all.append("rpls_num_all_{}".format(self.dirCount))
-                self.stack_num_current.append("rpls_num_current_{}".format(self.dirCount))
+                self.stack_num_current.append(
+                    "rpls_num_current_{}".format(self.dirCount)
+                )
                 self.dirCount += 1
                 sub_current, sub_all = self.walk(absolute, prefix_new)
                 num_all += sub_all
 
         self.string = self.string.replace(self.stack_num_all.pop(), str(num_all))
-        self.string = self.string.replace(self.stack_num_current.pop(), str(num_current))
+        self.string = self.string.replace(
+            self.stack_num_current.pop(), str(num_current)
+        )
 
         return num_current, num_all
 

@@ -11,7 +11,7 @@ import os
 import subprocess
 
 
-def get_files(path, extension=['.cpp', '.hpp', '.h']):
+def get_files(path, extension=[".cpp", ".hpp", ".h"]):
     all_srcs = []
     path = os.path.abspath(path)
     for root, dirs, files in os.walk(path):
@@ -29,9 +29,9 @@ def format_py_code(path):
         '"black"...'.format(path)
     )
     subprocess.call(
-        ['black', '--quiet', '--line-length', '90', '--skip-string-normalization', path]
+        ["black", "--quiet", "--line-length", "90", "--skip-string-normalization", path]
     )
-    print('Formatting .py files done.')
+    print("Formatting .py files done.")
 
 
 def format_cpp_code(path):
@@ -42,10 +42,10 @@ def format_cpp_code(path):
     )
     files = get_files(path)
     for f in files:
-        subprocess.call(['clang-format', '-style=file', '-i', f])
-    print('Formatting CPP files done.')
+        subprocess.call(["clang-format", "-style=file", "-i", f])
+    print("Formatting CPP files done.")
 
 
-if __name__ == '__main__':
-    format_py_code('../')
-    format_cpp_code('../')
+if __name__ == "__main__":
+    format_py_code("../")
+    format_cpp_code("../")

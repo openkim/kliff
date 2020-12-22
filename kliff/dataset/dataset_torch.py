@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset
+
 from ..descriptors.descriptor import load_fingerprints
 
 

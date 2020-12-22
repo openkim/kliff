@@ -8,13 +8,12 @@ In this tutorial, we train a neural network (NN) potential for SiC
 """
 
 
+from kliff import nn
+from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
-from kliff.models import NeuralNetwork
-from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
-from kliff import nn
 from kliff.loss import Loss
-
+from kliff.models import NeuralNetwork
 
 descriptor = SymmetryFunction(
     cut_name="cos",

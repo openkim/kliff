@@ -1,8 +1,7 @@
 from kliff.dataset import DataSet
-from kliff.modelparameters import ModelParameters
-from kliff.kimcalculator import KIMCalculator
 from kliff.fisher import Fisher
-
+from kliff.kimcalculator import KIMCalculator
+from kliff.modelparameters import ModelParameters
 
 # KIM model parameters
 model = "Three_Body_Stillinger_Weber_Si__MO_405512056662_004"

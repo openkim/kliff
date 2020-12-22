@@ -1,10 +1,10 @@
 import logging
-import numpy as np
-import logging
-from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
-from ...neighbor import NeighborList
-from . import bs
 
+import numpy as np
+
+from ...neighbor import NeighborList
+from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
+from . import bs
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,12 @@ class Bispectrum(Descriptor):
     """
 
     def __init__(
-        self, cut_dists, cut_name=None, hyperparams=None, normalize=True, dtype=np.float32
+        self,
+        cut_dists,
+        cut_name=None,
+        hyperparams=None,
+        normalize=True,
+        dtype=np.float32,
     ):
         super(Bispectrum, self).__init__(
             cut_dists, cut_name, hyperparams, normalize, dtype

@@ -1,9 +1,7 @@
 import kliff
+from kliff.calculators import KIM, WrapperCalculator
 from kliff.dataset import DataSet
-from kliff.calculators import KIM
-from kliff.calculators import WrapperCalculator
 from kliff.loss import Loss
-
 
 kliff.logger.set_level("debug")
 

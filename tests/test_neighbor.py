@@ -1,8 +1,7 @@
 import numpy as np
-from kliff.neighbor import NeighborList
-from kliff.dataset import Configuration
-from kliff.dataset import write_config
 
+from kliff.dataset import Configuration, write_config
+from kliff.neighbor import NeighborList
 
 target_coords = np.asarray(
     [

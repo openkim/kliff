@@ -1,9 +1,11 @@
+import logging
+
 import torch
 import torch.nn as nn
-import logging
 from torch.utils.data import DataLoader
-from .model_torch import ModelTorch
+
 from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
+from .model_torch import ModelTorch
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,9 @@ class LinearRegression(ModelTorch):
         r"""Fit the model using analytic solution."""
         fp = FingerprintsDataset(path)
 
-        loader = DataLoader(dataset=fp, batch_size=1, collate_fn=fingerprints_collate_fn)
+        loader = DataLoader(
+            dataset=fp, batch_size=1, collate_fn=fingerprints_collate_fn
+        )
 
         X, y = self.prepare_data(loader)
         A = torch.inverse(torch.mm(X.t(), X))

@@ -1,10 +1,9 @@
+from kliff import nn
+from kliff.analyzers import EnergyForcesRMSE
+from kliff.calculators import CalculatorTorch
+from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.models import NeuralNetwork
-from kliff import nn
-from kliff.dataset import Dataset
-from kliff.calculators import CalculatorTorch
-from kliff.analyzers import EnergyForcesRMSE
-
 
 # model
 descriptor = SymmetryFunction(

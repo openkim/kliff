@@ -1,6 +1,7 @@
 import numpy as np
-from . import nl
+
 from ..atomic_data import atomic_number, atomic_species
+from . import nl
 
 
 class NeighborList:
@@ -94,7 +95,9 @@ class NeighborList:
         num_cb = coords_cb.shape[0]
         num_pd = coords_pd.shape[0]
 
-        self.coords = np.asarray(np.concatenate((coords_cb, coords_pd)), dtype=np.double)
+        self.coords = np.asarray(
+            np.concatenate((coords_cb, coords_pd)), dtype=np.double
+        )
         self.species = np.concatenate((species_cb, species_pd))
         self.image = np.asarray(
             np.concatenate((np.arange(num_cb), image_pd)), dtype=np.intc

@@ -1,11 +1,13 @@
-import os
-import sys
 import logging
-import warnings
+import os
 import pickle
+import sys
+import warnings
 from collections import OrderedDict
 from collections.abc import Iterable
+
 import numpy as np
+
 from ..error import InputError
 
 logger = logging.getLogger(__name__)

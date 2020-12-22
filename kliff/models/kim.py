@@ -1,12 +1,14 @@
-import os
-import numpy as np
 import logging
+import os
 from collections import OrderedDict
+
+import numpy as np
+
+from ..error import SupportError, report_import_error
+from ..log import log_entry
+from ..neighbor import assemble_forces, assemble_stress
 from .model import ComputeArguments, Model
 from .parameter import Parameter
-from ..neighbor import assemble_forces, assemble_stress
-from ..log import log_entry
-from ..error import SupportError, report_import_error
 
 try:
     import kimpy
@@ -97,7 +99,9 @@ class KIMComputeArguments(ComputeArguments):
             # calculator can only handle energy and forces
             if support_status == kimpy.support_status.required:
                 if name != kim_can.partialEnergy and name != kim_can.partialForces:
-                    report_error('Unsupported required ComputeArgument "{}"'.format(name))
+                    report_error(
+                        'Unsupported required ComputeArgument "{}"'.format(name)
+                    )
 
             # supported property
             if name == kim_can.partialEnergy:
@@ -120,7 +124,9 @@ class KIMComputeArguments(ComputeArguments):
             # calculator only provides get_neigh
             if support_status == kimpy.support_status.required:
                 if name != kim_ccn.GetNeighborList:
-                    report_error('Unsupported required ComputeCallback "{}"'.format(name))
+                    report_error(
+                        'Unsupported required ComputeCallback "{}"'.format(name)
+                    )
 
     def refresh(self, influence_distance=None, params=None):
         self.influence_distance = influence_distance
@@ -168,7 +174,9 @@ class KIMComputeArguments(ComputeArguments):
             check_error(error, "nl.create_paddings")
 
             num_padding = padding_species_code.size
-            self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
+            self.num_particles = np.array(
+                [num_contributing + num_padding], dtype=np.intc
+            )
             tmp = np.concatenate((contributing_coords, padding_coords))
             self.coords = np.asarray(tmp, dtype=np.double)
             tmp = np.concatenate((contributing_species_code, padding_species_code))
@@ -303,7 +311,9 @@ class KIM(Model):
         if self.model_name is None:
             c = self.__class__.__name__
             raise KIMModelError(
-                '"model_name" is a mandatory argument for the "{}" calculator.'.format(c)
+                '"model_name" is a mandatory argument for the "{}" calculator.'.format(
+                    c
+                )
             )
 
         self.kim_model = self._initialize()

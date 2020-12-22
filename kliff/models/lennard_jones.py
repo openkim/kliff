@@ -1,8 +1,10 @@
-import numpy as np
 import logging
+
+import numpy as np
+
+from ..neighbor import NeighborList, assemble_forces, assemble_stress
 from .model import ComputeArguments, Model
 from .parameter import Parameter, ParameterError
-from ..neighbor import NeighborList, assemble_forces, assemble_stress
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,9 @@ class LJComputeArguments(ComputeArguments):
             try:
                 infl_dist = params["influence_distance"].get_value()[0]
             except KeyError:
-                raise ParameterError('"influence_distance" not provided by calculator."')
+                raise ParameterError(
+                    '"influence_distance" not provided by calculator."'
+                )
         self.influence_distance = infl_dist
 
         # create neighbor list

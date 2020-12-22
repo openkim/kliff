@@ -1,8 +1,9 @@
 import logging
 from collections.abc import Iterable
+
 from ..dataset import Configuration
-from ..utils import length_equal
 from ..error import InputError
+from ..utils import length_equal
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +63,17 @@ class Calculator:
             configs = [configs]
 
         if not length_equal(configs, use_energy):
-            raise InputError('Lengths of arguments "configs" and "use_energy" not equal.')
+            raise InputError(
+                'Lengths of arguments "configs" and "use_energy" not equal.'
+            )
         if not length_equal(configs, use_forces):
-            raise InputError('Lengths of arguments "configs" and "use_forces" not equal.')
+            raise InputError(
+                'Lengths of arguments "configs" and "use_forces" not equal.'
+            )
         if not length_equal(configs, use_stress):
-            raise InputError('Lengths of arguments "configs" and "use_stress" not equal.')
+            raise InputError(
+                'Lengths of arguments "configs" and "use_stress" not equal.'
+            )
 
         N = len(configs)
         if not isinstance(use_energy, Iterable):

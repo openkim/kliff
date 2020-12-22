@@ -25,13 +25,12 @@ In this tutorial, we train a neural network (NN) potential for silicon
 #
 # Let's first import the modules that will be used in this example.
 
+from kliff import nn
+from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
-from kliff.models import NeuralNetwork
-from kliff.calculators import CalculatorTorch
-from kliff import nn
 from kliff.loss import Loss
-
+from kliff.models import NeuralNetwork
 
 ##########################################################################################
 # Model

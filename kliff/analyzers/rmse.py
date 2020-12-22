@@ -1,12 +1,13 @@
+import logging
 import os
 import sys
 from collections.abc import Iterable
-import numpy as np
-import logging
-from ..dataset import write_config
-from ..utils import split_string
-from ..log import log_entry
 
+import numpy as np
+
+from ..dataset import write_config
+from ..log import log_entry
+from ..utils import split_string
 
 logger = logging.getLogger(__name__)
 

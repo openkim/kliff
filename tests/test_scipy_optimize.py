@@ -1,8 +1,9 @@
 import numpy as np
-from kliff.models import KIM
-from kliff.loss import Loss
+
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
+from kliff.loss import Loss
+from kliff.models import KIM
 
 
 def residual_fn(identifier, natoms, weight, prediction, reference, data):

@@ -1,8 +1,8 @@
 import kliff
-from kliff.dataset import Dataset
 from kliff.calculators import Calculator
-from kliff.models import LennardJones
+from kliff.dataset import Dataset
 from kliff.loss import Loss
+from kliff.models import LennardJones
 
 kliff.logger.set_level("debug")
 

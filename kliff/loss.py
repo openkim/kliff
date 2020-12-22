@@ -1,10 +1,12 @@
+import logging
 import os
+
 import numpy as np
 import scipy.optimize
-import logging
+
 from . import parallel
-from .log import log_entry
 from .error import InputError, report_import_error
+from .log import log_entry
 
 try:
     import torch
@@ -110,7 +112,11 @@ class Loss(object):
     """Objective function class to conduct the optimization."""
 
     def __new__(
-        self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
+        self,
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=None,
     ):
         """
         Parameters
@@ -202,7 +208,11 @@ class LossPhysicsMotivatedModel(object):
     scipy_least_squares_methods_not_supported_args = ["bounds"]
 
     def __init__(
-        self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
+        self,
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=None,
     ):
 
         self.calculator = calculator
@@ -589,7 +599,11 @@ class LossNeuralNetworkModel(object):
     ]
 
     def __init__(
-        self, calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=None
+        self,
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=None,
     ):
 
         if not torch_avail:
@@ -608,7 +622,9 @@ class LossNeuralNetworkModel(object):
 
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
-    def minimize(self, method, batch_size=100, num_epochs=1000, start_epoch=0, **kwargs):
+    def minimize(
+        self, method, batch_size=100, num_epochs=1000, start_epoch=0, **kwargs
+    ):
         r"""Minimize the loss.
 
         Parameters
@@ -676,7 +692,9 @@ class LossNeuralNetworkModel(object):
             print(str(e))
             idx = str(e).index("argument '") + 10
             err_arg = str(e)[idx:].strip("'")
-            msg = 'Argument "{}" not supported by optimizer "{}".'.format(err_arg, method)
+            msg = 'Argument "{}" not supported by optimizer "{}".'.format(
+                err_arg, method
+            )
             log_entry(logger, msg, level="error")
             raise InputError(msg)
 

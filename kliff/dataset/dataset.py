@@ -1,9 +1,11 @@
-import os
-import numpy as np
-from collections import OrderedDict
 import logging
-from .extxyz import read_extxyz, write_extxyz
+import os
+from collections import OrderedDict
+
+import numpy as np
+
 from ..log import log_entry
+from .extxyz import read_extxyz, write_extxyz
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +74,8 @@ class Configuration:
         if self.forces is not None:
             species, coords, forces = zip(
                 *sorted(
-                    zip(self.species, self.coords, self.forces), key=lambda pair: pair[0]
+                    zip(self.species, self.coords, self.forces),
+                    key=lambda pair: pair[0],
                 )
             )
             self.species = np.asarray(species)
@@ -334,7 +337,15 @@ def read_config(path, fmt="extxyz"):
 
 
 def write_config(
-    path, cell, PBC, species, coords, energy=None, forces=None, stress=None, fmt="extxyz"
+    path,
+    cell,
+    PBC,
+    species,
+    coords,
+    energy=None,
+    forces=None,
+    stress=None,
+    fmt="extxyz",
 ):
     r"""
     Write a configuration to a file in the specified format.

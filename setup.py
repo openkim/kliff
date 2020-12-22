@@ -1,7 +1,7 @@
-from setuptools import setup, Extension, find_packages
-from distutils.sysconfig import get_config_vars
 import os
+from distutils.sysconfig import get_config_vars
 
+from setuptools import Extension, find_packages, setup
 
 # remove `-Wstrict-prototypes' that is for C not C++
 cfg_vars = get_config_vars()

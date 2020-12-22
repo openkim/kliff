@@ -1,16 +1,19 @@
-import numpy as np
-import os
 import logging
+import os
 from collections import OrderedDict
+
+import numpy as np
+
 import kliff
+
+from ...log import log_entry
+from ...neighbor import NeighborList
 from ..descriptor import (
     Descriptor,
     generate_full_cutoff,
     generate_species_code,
     generate_unique_cutoff_pairs,
 )
-from ...neighbor import NeighborList
-from ...log import log_entry
 from . import sf
 
 logger = logging.getLogger(__name__)
@@ -245,7 +248,9 @@ class SymmetryFunction(Descriptor):
             elif name == "set30":
                 self.hyperparams = get_set30()
             else:
-                raise SymmetryFunctionError('hyperparams "{}" unrecognized.'.format(name))
+                raise SymmetryFunctionError(
+                    'hyperparams "{}" unrecognized.'.format(name)
+                )
         if not isinstance(self.hyperparams, OrderedDict):
             self.hyperparams = OrderedDict(self.hyperparams)
 

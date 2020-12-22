@@ -1,12 +1,13 @@
 """ Test symmetry functions values.
 The zeta_ref are taken from aenet by Nongnuch Artrith.
 """
-import numpy as np
 import itertools
-from kliff.descriptors import SymmetryFunction
-from kliff.dataset import Configuration
 from collections import OrderedDict
 
+import numpy as np
+
+from kliff.dataset import Configuration
+from kliff.descriptors import SymmetryFunction
 
 zeta_ref = [
     [

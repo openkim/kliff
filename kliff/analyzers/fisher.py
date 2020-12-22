@@ -1,8 +1,10 @@
 import copy
+import logging
+
 import numpy as np
+
 from ..log import log_entry
 from ..utils import split_string
-import logging
 
 logger = logging.getLogger(__name__)
 

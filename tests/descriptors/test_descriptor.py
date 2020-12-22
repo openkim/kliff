@@ -1,11 +1,10 @@
-import os
-import numpy as np
 import itertools
-from kliff.dataset import Configuration
-from kliff.descriptors.descriptor import Descriptor
-from kliff.descriptors.descriptor import load_fingerprints
-from kliff.descriptors.descriptor import DescriptorError
+import os
 
+import numpy as np
+
+from kliff.dataset import Configuration
+from kliff.descriptors.descriptor import Descriptor, DescriptorError, load_fingerprints
 
 # make up some data
 num_atoms = 4

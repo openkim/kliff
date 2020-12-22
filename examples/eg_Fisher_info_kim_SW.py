@@ -3,11 +3,10 @@ Fisher information for the SW potential.
 """
 
 
-from kliff.models import KIM
+from kliff.analyzers import Fisher
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
-from kliff.analyzers import Fisher
-
+from kliff.models import KIM
 
 ##########################################################################################
 # Select the parameters that will be used to compute the Fisher information. Only

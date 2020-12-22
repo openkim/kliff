@@ -34,11 +34,10 @@ on OpenKIM_.
 #
 # Let's first import the modules that will be used in this example.
 
-from kliff.models import KIM
-from kliff.loss import Loss
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
-
+from kliff.loss import Loss
+from kliff.models import KIM
 
 ##########################################################################################
 # Model

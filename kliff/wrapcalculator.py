@@ -1,7 +1,8 @@
-import numpy as np
 import collections
-import edn_format
 import os
+
+import edn_format
+import numpy as np
 
 
 class WrapCalculator:

@@ -1,9 +1,11 @@
-import os
-import sys
-import pickle
-import numpy as np
-import multiprocessing as mp
 import logging
+import multiprocessing as mp
+import os
+import pickle
+import sys
+
+import numpy as np
+
 from .. import parallel
 from ..log import log_entry
 
@@ -401,7 +403,9 @@ class Descriptor:
                 mean = data["mean"]
                 stdev = data["stdev"]
         except Exception as e:
-            msg = 'Cannot load mean and standard data from "{}". {}'.format(path, str(e))
+            msg = 'Cannot load mean and standard data from "{}". {}'.format(
+                path, str(e)
+            )
             raise DescriptorError(msg)
 
         if len(mean.shape) != 1 or mean.shape[0] != self.get_size():

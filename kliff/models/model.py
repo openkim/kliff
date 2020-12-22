@@ -1,9 +1,11 @@
-import sys
-import numpy as np
-from collections import OrderedDict
 import logging
-from .parameter import FittingParameter
+import sys
+from collections import OrderedDict
+
+import numpy as np
+
 from ..log import log_entry
+from .parameter import FittingParameter
 
 logger = logging.getLogger(__name__)
 

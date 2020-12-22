@@ -1,10 +1,12 @@
-import numpy as np
 import os
+
+import numpy as np
 import pytest
+
 from kliff.calculators import Calculator
+from kliff.dataset import Dataset
 from kliff.models import LennardJones
 from kliff.models.model import ModelError
-from kliff.dataset import Dataset
 
 
 def params_relation(params):

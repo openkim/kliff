@@ -8,11 +8,10 @@ In this tutorial, we train a linear regression model on the descriptors obtained
 symmetry functions.
 """
 
-from kliff.descriptors import SymmetryFunction
-from kliff.dataset import Dataset
-from kliff.models import LinearRegression
 from kliff.calculators import CalculatorTorch
-
+from kliff.dataset import Dataset
+from kliff.descriptors import SymmetryFunction
+from kliff.models import LinearRegression
 
 descriptor = SymmetryFunction(
     cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True

@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -101,7 +102,9 @@ class ModelTorch(nn.Module):
         elif mode == "eval":
             self.eval()
         else:
-            raise ModelTorchError('Unrecognized mode "{}" in model.load().'.format(mode))
+            raise ModelTorchError(
+                'Unrecognized mode "{}" in model.load().'.format(mode)
+            )
 
         # load descriptor mean and stdev
         dirname = os.path.dirname(path)

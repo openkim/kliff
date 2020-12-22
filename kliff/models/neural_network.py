@@ -1,9 +1,11 @@
-import os
 import logging
+import os
+
 import numpy as np
 import torch
-from .model_torch import ModelTorch
+
 from ..log import log_entry
+from .model_torch import ModelTorch
 
 logger = logging.getLogger(__name__)
 
@@ -245,7 +247,9 @@ class NeuralNetwork(ModelTorch):
             fout.write("#    KLIFF (https://kliff.readthedocs.io)\n")
             fout.write("#\n\n")
             fout.write("cmake_minimum_required(VERSION 3.4)\n\n")
-            fout.write("list(APPEND CMAKE_PREFIX_PATH $ENV{KIM_API_CMAKE_PREFIX_DIR})\n")
+            fout.write(
+                "list(APPEND CMAKE_PREFIX_PATH $ENV{KIM_API_CMAKE_PREFIX_DIR})\n"
+            )
             fout.write("find_package(KIM-API 2.0 REQUIRED CONFIG)\n")
             fout.write("if(NOT TARGET kim-api)\n")
             fout.write("  enable_testing()\n")

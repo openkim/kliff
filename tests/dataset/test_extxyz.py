@@ -1,6 +1,6 @@
 import numpy as np
-from kliff.dataset import Configuration
-from kliff.dataset import Dataset
+
+from kliff.dataset import Configuration, Dataset
 from kliff.dataset.extxyz import write_extxyz
 
 

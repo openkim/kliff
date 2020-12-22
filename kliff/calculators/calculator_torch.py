@@ -1,13 +1,14 @@
-import os
-import multiprocessing as mp
 import logging
+import multiprocessing as mp
+import os
+
 import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallelCPU
 from torch.utils.data import DataLoader
+
 from ..dataset.dataset import Configuration
 from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
-
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +171,11 @@ class CalculatorTorch:
         self.results["energy"] = energy_config
         self.results["forces"] = forces_config
         self.results["stress"] = stress_config
-        return {"energy": energy_config, "forces": forces_config, "stress": stress_config}
+        return {
+            "energy": energy_config,
+            "forces": forces_config,
+            "stress": stress_config,
+        }
 
     @staticmethod
     def compute_forces(denergy_dzeta, dzetadr):
@@ -291,7 +296,11 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         self.results["energy"] = energy_config
         self.results["forces"] = forces_config
         self.results["stress"] = stress_config
-        return {"energy": energy_config, "forces": forces_config, "stress": stress_config}
+        return {
+            "energy": energy_config,
+            "forces": forces_config,
+            "stress": stress_config,
+        }
 
 
 class CalculatorTorchDDPCPU(CalculatorTorch):
