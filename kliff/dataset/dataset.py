@@ -1,6 +1,8 @@
 import logging
 import os
 from collections import OrderedDict
+from typing import Optional
+from pathlib import Path
 
 import numpy as np
 
@@ -15,33 +17,37 @@ SUPPORTED_FORMAT = {"extxyz": ".xyz"}
 
 
 class Configuration:
-    r"""Class of atomic configuration.
+    """
+    Class of atomic configuration.
 
-    Parameters
-    ----------
+    This is used to store the information of an atomic configuration, e.g. supercell,
+    species, coords, energy, and forces.
 
-    filename: str
-        Path to the file storing the atomic configuration. If `None`, atomic
-        information is not read.
+    Args:
+        filename: Path to the file storing the atomic configuration. If `None`, atomic
+            information is not read.
 
-    format: str
-        Format of the file that stores the configuration. Currently, supported format
-        includes: `extxyz`.
+        format: Format of the file that stores the configuration, e.g. `extxyz`.
 
-    identifier: str
-        A unique identifier of the configuration.
+        identifier: A unique identifier of the configuration.
 
-    order_by_species: bool
-        If `True`, the atoms in the configuration will be ordered according to their
-        species such that atoms with the same species will have contiguous indices.
+        order_by_species: If `True`, the atoms in the configuration will be ordered
+            according to their species such that atoms with the same species will
+            have contiguous indices.
     """
 
     def __init__(
-        self, filename=None, format="extxyz", identifier=None, order_by_species=True
+        self,
+        filename: Optional[Path] = None,
+        format: str = "extxyz",
+        identifier: Optional[str] = None,
+        order_by_species: bool = True,
     ):
+        self.filename = filename
         self.format = format
         self.id = identifier
         self.do_order = order_by_species
+
         self.weight = 1.0
         self.natoms = None  # int
         self.cell = None  # ndarray of shape(3,3)
@@ -53,8 +59,8 @@ class Configuration:
         self.forces = None  # ndarray of shape(N, 3)
         self.natoms_by_species = None  # dict
 
-        if filename is not None:
-            self.read(filename)
+        if self.filename is not None:
+            self.read(self.filename)
 
     def read(self, path):
         r"""Read configuration stored in a file.

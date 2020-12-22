@@ -62,14 +62,14 @@ def autodoc_module(path, module):
         fout.write(".. automodule:: {}\n".format(module_name))
         fout.write("    :members:\n")
         fout.write("    :undoc-members:\n")
-        fout.write("    :show-inheritance:\n")
+        # fout.write("    :show-inheritance:\n")
         fout.write("    :inherited-members:\n")
 
 
 if __name__ == "__main__":
 
     # this will not be included, e.g. excludes = ['models']
-    excludes = ["cmdline", "lmplatconst", "wrapcalculator"]
+    excludes = ["cmdline", "wrapcalculator"]
 
     modules = get_all_modules()
     for exc in excludes:

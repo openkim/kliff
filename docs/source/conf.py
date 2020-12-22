@@ -57,6 +57,7 @@ extensions = [
     "sphinx.ext.imgmath",
     # 'sphinx.ext.mathjax',
     "sphinx.ext.napoleon",
+    "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
