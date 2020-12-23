@@ -6,7 +6,8 @@ import numpy as np
 
 
 class WrapCalculator:
-    """ Wrapper over user-defined predictor function.
+    """
+    Wrapper over user-defined predictor function.
 
     Parameters
     ----------

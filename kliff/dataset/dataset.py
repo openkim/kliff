@@ -357,9 +357,7 @@ class Dataset:
             )
 
         log_entry(
-            logger,
-            f"{len(configs)} configurations read from {path}",
-            level="info",
+            logger, f"{len(configs)} configurations read from {path}", level="info"
         )
 
         return configs

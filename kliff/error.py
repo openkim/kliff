@@ -35,12 +35,8 @@ class InitializationError(Exception):
 
 def report_import_error(package, classname=None):
     if classname is not None:
-        msg = 'To use "{}", the package "{}" is need. Please install it first.'.format(
-            classname, package
-        )
+        msg = f"To use `{classname}`, `{package}` is need. Please install it first."
     else:
-        msg = 'Package "{}" needed by "KLIFF" not found. Please install it first.'.format(
-            package
-        )
+        msg = f"Package `{package}` needed by KLIFF not found. Please install it first."
 
     raise ImportError(msg)

@@ -101,7 +101,8 @@ def split_dataset(source, target, nfold):
 
 
 class Command:
-    """Utility to manipulate dataset.
+    """
+    Utility to manipulate dataset.
     """
 
     @staticmethod

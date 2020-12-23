@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class Fisher:
-    r"""Fisher information matrix.
+    r"""
+    Fisher information matrix.
 
     Compute the Fisher information according to
 
@@ -36,7 +37,8 @@ class Fisher:
         self.delta_params = None
 
     def run(self, verbose=1):
-        """Compute the Fisher information matrix and the standard deviation.
+        """
+        Compute the Fisher information matrix and the standard deviation.
 
         Parameters
         ----------
@@ -130,7 +132,8 @@ class Fisher:
                     fout.write("\n")
 
     def _compute_jacobian_one_config(self, ca):
-        """Compute the Jacobian of forces w.r.t. parameters for one configuration.
+        """
+        Compute the Jacobian of forces w.r.t. parameters for one configuration.
 
         Parameters
         ----------
@@ -157,7 +160,8 @@ class Fisher:
         return j
 
     def _compute_forces_one_config(self, params, ca):
-        """ Compute forces using a specific set of model parameters.
+        """
+        Compute forces using a specific set of model parameters.
 
         Parameters
         ----------

@@ -9,7 +9,8 @@ def get_avail_params(model_name):
 
 
 class Command:
-    """Utility to manipulate dataset.
+    """
+    Utility to manipulate dataset.
     """
 
     @staticmethod
