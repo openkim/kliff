@@ -26,9 +26,7 @@ model.add_layers(
 model.load("./saved_model.pkl", mode="train")
 
 # dataset
-tset = Dataset()
-dataset_name = "Si_training_set"
-tset.read(dataset_name)
+tset = Dataset("Si_training_set")
 configs = tset.get_configs()
 
 # calculator

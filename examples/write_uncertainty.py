@@ -105,9 +105,7 @@ model.load("final_model.pkl", mode="train")  # mode == 'train' because we need d
 # fingerprints generated from the descriptor if it is present.
 
 # training set
-dataset_name = "Si_training_set/varying_alat"
-tset = Dataset()
-tset.read(dataset_name)
+tset = Dataset("Si_training_set/varying_alat")
 configs = tset.get_configs()
 
 # calculator

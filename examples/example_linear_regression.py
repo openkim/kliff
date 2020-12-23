@@ -21,9 +21,8 @@ descriptor = SymmetryFunction(
 model = LinearRegression(descriptor)
 
 # training set
-dataset_name = "Si_training_set/varying_alat"
-tset = Dataset()
-tset.read(dataset_name)
+dataset_path = "Si_training_set/varying_alat"
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 print("Number of configurations:", len(configs))
 

@@ -41,9 +41,7 @@ model.load(path="final_model.pkl", mode="train")
 
 
 # training set
-dataset_name = "Si_training_set/varying_alat"
-tset = Dataset()
-tset.read(dataset_name)
+tset = Dataset("Si_training_set/varying_alat")
 configs = tset.get_configs()
 
 # calculator

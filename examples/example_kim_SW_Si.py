@@ -107,9 +107,8 @@ model.echo_fitting_params()
 # KLIFF has a :class:`~kliff.dataset.Dataset` to deal with the training data (and possibly
 # test data). For the silicon training set, we can read and process the files by:
 
-dataset_name = "Si_training_set"
-tset = Dataset()
-tset.read(dataset_name)
+dataset_path = "Si_training_set"
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 

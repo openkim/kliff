@@ -6,9 +6,7 @@ from kliff.models import KIM
 model = KIM(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
 model.load("kliff_model.pkl")
 
-tset = Dataset()
-dataset_name = "Si_training_set"
-tset.read(dataset_name)
+tset = Dataset("Si_training_set")
 configs = tset.get_configs()
 
 calc = Calculator(model)

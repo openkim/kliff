@@ -105,9 +105,8 @@ model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 # fingerprints generated from the descriptor if it is present.
 
 # training set
-dataset_name = "Si_training_set/varying_alat"
-tset = Dataset()
-tset.read(dataset_name)
+dataset_path = "Si_training_set/varying_alat"
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator

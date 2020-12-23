@@ -19,9 +19,7 @@ model.set_fitting_params(
 )
 
 # dataset
-dataset_name = "tmp_tset"
-tset = Dataset()
-tset.read(dataset_name)
+tset = Dataset("tmp_tset")
 configs = tset.get_configs()
 
 # calculator

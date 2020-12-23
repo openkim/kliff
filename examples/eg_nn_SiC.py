@@ -55,9 +55,7 @@ model_c.set_save_metadata(prefix="./kliff_saved_model_c", start=5, frequency=2)
 
 
 # training set
-dataset_name = "SiC_training_set"
-tset = Dataset()
-tset.read(dataset_name)
+tset = Dataset("SiC_training_set")
 configs = tset.get_configs()
 
 # calculator

@@ -7,8 +7,7 @@ from kliff.models import LennardJones
 kliff.logger.set_level("debug")
 
 # training set
-tset = Dataset()
-tset.read("../tests/configs_extxyz/Si_4/")
+tset = Dataset("../tests/configs_extxyz/Si_4/")
 configs = tset.get_configs()
 
 # calculator

@@ -4,7 +4,7 @@ import os
 
 import torch
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallelCPU
+from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
 
 from ..dataset.dataset import Configuration
@@ -327,7 +327,7 @@ class CalculatorTorchDDPCPU(CalculatorTorch):
         zeta_stacked = torch.cat(zeta_config, dim=0)
 
         # evaluate model
-        model = DistributedDataParallelCPU(self.model)
+        model = DistributedDataParallel(self.model)
         energy_atom = model(zeta_stacked)
 
         # energy
