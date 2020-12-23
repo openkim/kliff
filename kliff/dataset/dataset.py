@@ -1,92 +1,260 @@
 import logging
 import os
-from collections import OrderedDict
-from typing import Optional
 from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import numpy as np
-
-from kliff.log import log_entry
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
-
+from kliff.log import log_entry
+from kliff.utils import to_path
 
 logger = logging.getLogger(__name__)
 
 
-SUPPORTED_FORMAT = {"extxyz": ".xyz"}
+# map from file_format to file extension
+SUPPORTED_FORMAT = {"xyz": ".xyz"}
 
 
 class Configuration:
-    """
+    r"""
     Class of atomic configuration.
 
     This is used to store the information of an atomic configuration, e.g. supercell,
     species, coords, energy, and forces.
 
     Args:
-        filename: Path to the file storing the atomic configuration. If `None`, atomic
-            information is not read.
+        cell: A 3x3 matrix of the lattice vectors. The first, second, and third rows are
+            :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
+        species: A list of N strings giving the species of the atoms, where N is the
+            number of atoms.
+        coords: A Nx3 matrix of the coordinates of the atoms, where N is the number of
+            atoms.
+        PBC: A list with 3 components indicating whether periodic boundary condition
+            is used along the directions of the first, second, and third lattice vectors.
+        energy: energy of the configuration.
+        forces: A Nx3 matrix of the forces on atoms, where N is the number of atoms.
+        stress: A list with 6 components in Voigt notation, i.e. it returns
+            :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
+            \sigma_{xy}]`. See: https://en.wikipedia.org/wiki/Voigt_notation
+        weight: weight of the configuration in the loss function.
+        identifier: a (unique) identifier of the configuration
 
-        format: Format of the file that stores the configuration, e.g. `extxyz`.
-
-        identifier: A unique identifier of the configuration.
-
-        order_by_species: If `True`, the atoms in the configuration will be ordered
-            according to their species such that atoms with the same species will
-            have contiguous indices.
     """
 
     def __init__(
         self,
-        filename: Optional[Path] = None,
-        format: str = "extxyz",
+        cell: np.ndarray,
+        species: List[str],
+        coords: np.ndarray,
+        PBC: List[bool],
+        energy: float = None,
+        forces: Optional[np.ndarray] = None,
+        stress: Optional[List[float]] = None,
+        weight: float = 1.0,
         identifier: Optional[str] = None,
-        order_by_species: bool = True,
     ):
-        self.filename = filename
-        self.format = format
-        self.id = identifier
-        self.do_order = order_by_species
+        self._cell = cell
+        self._species = species
+        self._coords = coords
+        self._PBC = PBC
+        self._energy = energy
+        self._forces = forces
+        self._stress = stress
+        self._weight = weight
+        self._identifier = identifier
 
-        self.weight = 1.0
-        self.natoms = None  # int
-        self.cell = None  # ndarray of shape(3,3)
-        self.PBC = None  # ndarray of shape(3,)
-        self.energy = None  # float
-        self.stress = None  # ndarray of shape(6,)
-        self.species = None  # ndarray of shape(N,)
-        self.coords = None  # ndarray of shape(N, 3)
-        self.forces = None  # ndarray of shape(N, 3)
-        self.natoms_by_species = None  # dict
-
-        if self.filename is not None:
-            self.read(self.filename)
-
-    def read(self, path):
-        r"""Read configuration stored in a file.
-
-        Parameters
-        ----------
-        path: str
-            Path to the file that stores the configuration.
+    @classmethod
+    def from_file(cls, filename: Path, file_format: str = "xyz"):
         """
-        (
-            self.cell,
-            self.PBC,
-            self.species,
-            self.coords,
-            self.energy,
-            self.forces,
-            self.stress,
-        ) = read_config(path, self.format)
-        self.natoms = len(self.species)
-        self.volume = abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
+        Read configuration from file.
 
-        if self.do_order:
-            self.order_by_species()
+        Args:
+            filename: Path to the file that stores the configuration.
+            file_format: Format of the file that stores the configuration (e.g. `xyz`).
+        """
+
+        if file_format == "xyz":
+            cell, species, coords, PBC, energy, forces, stress = read_extxyz(filename)
+        else:
+            raise ConfigurationError(
+                f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+                f"got: {file_format}."
+            )
+
+        cell = np.asarray(cell)
+        species = [str(i) for i in species]
+        coords = np.asarray(coords)
+        PBC = [bool(i) for i in PBC]
+        energy = float(energy) if energy is not None else None
+        forces = np.asarray(forces) if forces is not None else None
+        stress = [float(i) for i in stress] if stress is not None else None
+
+        return cls(cell, species, coords, PBC, energy, forces, stress)
+
+    def to_file(self, filename: Path, file_format: str = "xyz"):
+        """
+        Write the configuration to file.
+
+        Args:
+            filename: Path to the file that stores the configuration.
+            file_format: Format of the file that stores the configuration (e.g. `xyz`).
+        """
+        filename = to_path(filename)
+        if file_format == "xyz":
+            write_extxyz(
+                filename,
+                self.cell,
+                self.species,
+                self.coords,
+                self.PBC,
+                self.energy,
+                self.forces,
+                self.stress,
+            )
+        else:
+            raise ConfigurationError(
+                f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+                f"got: {file_format}."
+            )
+
+    @property
+    def cell(self) -> np.ndarray:
+        """
+        3x3 matrix of the lattice vectors of the configurations.
+        """
+        return self._cell
+
+    @property
+    def PBC(self) -> List[bool]:
+        """
+        A list with 3 components indicating whether periodic boundary condition
+        is used along the directions of the first, second, and third lattice vectors.
+        """
+        return self._PBC
+
+    @property
+    def species(self) -> List[str]:
+        """
+        Species string of all atoms.
+        """
+        return self._species
+
+    @property
+    def coords(self) -> np.ndarray:
+        """
+        A Nx3 matrix of the Cartesian coordinates of all atoms.
+        """
+        return self._coords
+
+    @property
+    def energy(self) -> Union[float, None]:
+        """
+        Potential energy of the configuration.
+        """
+        if self._energy is None:
+            raise ConfigurationError("Configuration does not contain energy.")
+        return self._energy
+
+    @property
+    def forces(self) -> np.ndarray:
+        """
+        Return a `Nx3` matrix of the forces on each atoms.
+        """
+        if self._forces is None:
+            raise ConfigurationError("Configuration does not contain forces.")
+        return self._forces
+
+    @property
+    def stress(self) -> List[float]:
+        r"""
+        Stress of the configuration.
+
+        The stress is given in Voigt notation i.e
+        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
+        \sigma_{xy}]`.
+
+        """
+        if self._stress is None:
+            raise ConfigurationError("Configuration does not contain stress.")
+        return self._stress
+
+    @property
+    def weight(self):
+        """
+        Get the weight of the configuration if the loss function.
+        """
+        return self._weight
+
+    @weight.setter
+    def weight(self, weight: float):
+        """
+        Set the weight of the configuration if the loss function.
+        """
+        self._weight = weight
+
+    @property
+    def identifier(self) -> str:
+        """
+        Return identifier of the configuration.
+        """
+        return self._identifier
+
+    @identifier.setter
+    def identifier(self, identifier: str):
+        """
+        Set the identifier of the configuration.
+        """
+        self._identifier = identifier
+
+    def get_num_atoms(self) -> int:
+        """
+        Return the total number of atoms in the configuration.
+        """
+        return len(self.species)
+
+    def get_num_atoms_by_species(self) -> Dict[str, int]:
+        """
+        Return a dictionary of the number of atoms with each species.
+        """
+        return self.count_atoms_by_species()
+
+    def get_volume(self) -> float:
+        """
+        Return volume of the configuration.
+        """
+        return abs(np.dot(np.cross(self.cell[0], self.cell[1]), self.cell[2]))
+
+    def count_atoms_by_species(
+        self, symbols: Optional[List[str]] = None
+    ) -> Dict[str, int]:
+        """
+        Count the number of atoms by species.
+
+        Args: symbols: species to count the occurrence. If `None`, all species present
+            in the configuration are used.
+
+        Returns:
+            {specie, count}: with `key` the species string, and `value` the number of
+                atoms with each species.
+        """
+
+        unique, counts = np.unique(self.species, return_counts=True)
+        symbols = unique if symbols is None else symbols
+
+        natoms_by_species = dict()
+        for s in symbols:
+            if s in unique:
+                natoms_by_species[s] = counts[list(unique).index(s)]
+            else:
+                natoms_by_species[s] = 0
+
+        return natoms_by_species
 
     def order_by_species(self):
-        r"""Order the atoms according to the species."""
+        """
+        Order the atoms according to the species such that atoms with the same species
+        have contiguous indices.
+        """
         if self.forces is not None:
             species, coords, forces = zip(
                 *sorted(
@@ -94,344 +262,125 @@ class Configuration:
                     key=lambda pair: pair[0],
                 )
             )
-            self.species = np.asarray(species)
-            self.coords = np.asarray(coords)
-            self.forces = np.asarray(forces)
+            self._species = np.asarray(species).tolist()
+            self._coords = np.asarray(coords)
+            self._forces = np.asarray(forces)
         else:
             species, coords = zip(
                 *sorted(zip(self.species, self.coords), key=lambda pair: pair[0])
             )
-            self.species = np.asarray(species)
-            self.coords = np.asarray(coords)
-
-    def count_atoms_by_species(self, symbols=None):
-        r"""Count the number of atoms with species `symbols` in the configuration.
-
-        Parameters
-        ----------
-        symbols: list
-            A list of species string. If `None`, the species that are already in the
-            configuration are used.
-
-        Return
-        ------
-        Return an OrderedDict with `keys` the species string specified in `symbols`, and
-        `values` the number of atoms with each species.
-        """
-
-        unique, counts = np.unique(self.species, return_counts=True)
-        symbols = unique if symbols is None else symbols
-
-        natoms_by_species = OrderedDict()
-        for s in symbols:
-            if s in unique:
-                natoms_by_species[s] = counts[list(unique).index(s)]
-            else:
-                natoms_by_species[s] = 0
-
-        self.natoms_by_species = natoms_by_species
-        return natoms_by_species
-
-    def get_identifier(self):
-        r"""Return the identifier of the configuration, which is specified at the
-        initialization of the class."""
-        return self.id
-
-    def get_number_of_atoms(self):
-        r"""Return the total number of atoms in the configuration."""
-        return self.natoms
-
-    def get_number_of_atoms_by_species(self):
-        r"""Return a dictionary of the number of atoms with each species."""
-        return self.count_atoms_by_species()
-
-    def get_cell(self):
-        r"""Return a 3x3 matrix of the lattice vectors of the configurations.
-
-        The first, second, and third rows are :math:`a_1`, :math:`a_2`, and :math:`a_3`,
-        respectively.
-        """
-        return self.cell.copy()
-
-    def get_volume(self):
-        r"""Return the volume of the configuration."""
-        return self.volume
-
-    def get_PBC(self):
-        r"""Return a list with 3 components indicating whether periodic boundary condition
-        is used along the directions of the first, second, and third lattice vectors.
-        """
-        return self.PBC.copy()
-
-    def get_species(self):
-        r"""Return a list of species string of all atoms."""
-        return self.species.copy()
-
-    def get_coordinates(self):
-        r"""Return a `Nx3` matrix of the Cartesian coordinates of all atoms."""
-        return self.coords.copy()
-
-    def get_energy(self):
-        r"""Return the potential energy of the configuration."""
-        if self.energy is None:
-            raise DatasetError("Configuration does not contain forces.")
-        return self.energy
-
-    def get_forces(self):
-        r"""Return a `Nx3` matrix of the forces on each atoms."""
-        if self.forces is None:
-            raise DatasetError("Configuration does not contain forces.")
-        return self.forces.copy()
-
-    def get_stress(self):
-        r"""Return the stress of the configuration.
-
-        It returns a list with 6 components in Voigt notation, i.e. it returns
-        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
-        \sigma_{xy}]`.
-
-        See Also
-        --------
-            https://en.wikipedia.org/wiki/Voigt_notation
-        """
-        if self.stress is None:
-            raise DatasetError("Configuration does not contain stress.")
-        return self.stress.copy()
-
-    def set_weight(self, weight):
-        r"""Set the weight of the configuration if the loss function.
-
-        Parameters
-        ----------
-        weight: float
-            The weight of the configuration.
-        """
-        self.weight = weight
-
-    def get_weight(self):
-        r"""Get the weight of the configuration if the loss function."""
-        return self.weight
+            self._species = np.asarray(species)
+            self._coords = np.asarray(coords)
 
 
 class Dataset:
-    r"""Dataset class to deal with multiple :class:`~kliff.dataset.Configuration`.
+    """
+    A dataset of multiple configurations (:class:`~kliff.dataset.Configuration`).
 
-    Parameters
-    ----------
-    path: str
-        Path of a file storing a configuration or path to a directory containing
-        multiple files. If given a directory, all the files in this directory and its
-        subdirectories with the extension corresponding to the specified format will
-        be read.
+    Args:
+        path: Path of a file storing a configuration or filename to a directory containing
+            multiple files. If given a directory, all the files in this directory and its
+            subdirectories with the extension corresponding to the specified file_format
+            will be read.
 
-    format: str
-        Format of the file that stores the configuration. Currently, supported format
-        includes: `extxyz`.
-
-    order_by_species: bool
-        If `True`, the atoms in each configuration will be ordered according to their
-        species such that atoms with the same species will have contiguous indices.
-
+        file_format: Format of the file that stores the configuration, e.g. `xyz`.
     """
 
-    def __init__(self, path=None, format="extxyz", order_by_species=True):
-        self.order_by_species = order_by_species
-        self.configs = []
+    def __init__(self, path: Optional[Path] = None, file_format="xyz"):
+        self.file_format = file_format
 
         if path is not None:
-            self.read(path, format)
+            self.configs = self._read(path, file_format)
 
-        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
-
-    def read(self, path, format="extxyz"):
-        r"""Read an atomic configuration.
-
-        Parameters
-        ----------
-        path: str
-            Path of a file storing a configuration or path to a directory containing
-            multiple files. If given a directory, all the files in this directory and its
-            subdirectories with the extension corresponding to the specified format will
-            be read.
-
-        format: str
-            Format of the file that stores the configuration (e.g. 'extxyz').
-        """
-        try:
-            extension = SUPPORTED_FORMAT[format]
-        except KeyError:
-            raise DatasetError(
-                f"Expect data format to be one of {list(SUPPORTED_FORMAT.keys())}, "
-                "But got unsupported one: {format}."
-            )
-
-        if os.path.isdir(path):
-            dirpath = path
-            all_files = []
-            for root, dirs, files in os.walk(dirpath):
-                for f in files:
-                    if f.endswith(extension):
-                        all_files.append(os.path.join(root, f))
-            all_files = sorted(all_files)
         else:
-            dirpath = os.path.dirname(path)
-            all_files = [path]
+            self.configs = []
 
-        configs = [
-            Configuration(
-                f, format, identifier=f, order_by_species=self.order_by_species
-            )
-            for f in all_files
-        ]
+    def add_configs(self, path: Path):
+        """
+        Read configurations from filename and added them to the existing set of
+        configurations.
 
-        if len(configs) <= 0:
-            raise DatasetError(
-                f"No dataset file with format `{format}` found at {dirpath}."
-            )
+        This is a convenience function to read configurations from different directory
+        on disk.
 
+        Args:
+            path: Path the directory (or filename) storing the configurations.
+        """
+
+        configs = self._read(path, self.file_format)
         self.configs.extend(configs)
 
-        if self.order_by_species:
-            # find species present in all configurations
-            all_species = []
-            for conf in self.configs:
-                conf_species = set(conf.get_species())
-                all_species.extend(conf_species)
-            all_species = set(all_species)
-            # find occurrence of species in each configuration
-            for conf in self.configs:
-                conf.natoms_by_species = conf.count_atoms_by_species(all_species)
-
-        msg = '{} configurations read from "{}"'.format(len(configs), path)
-        log_entry(logger, msg, level="info")
-
-    def get_configs(self):
-        r"""Get the configurations.
-
-        Return
-        ------
-            A list of :class:`~kliff.dataset.Configuration` instance.
+    def get_configs(self) -> List[Configuration]:
+        """
+        Get the configurations.
         """
         return self.configs
 
-    def get_num_configs(self):
-        """Return the number of configurations in the dataset"""
+    def get_num_configs(self) -> int:
+        """
+        Return the number of configurations in the dataset.
+        """
         return len(self.configs)
 
+    @staticmethod
+    def _read(path: Path, file_format: str = "xyz"):
+        """
+        Read atomic configurations from path.
+        """
+        try:
+            extension = SUPPORTED_FORMAT[file_format]
+        except KeyError:
+            raise DatasetError(
+                f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+                f"got: {file_format}."
+            )
 
-def read_config(path, fmt="extxyz"):
-    r"""Read configuration stored in a file.
+        path = to_path(path)
 
-    Parameters
-    ----------
-    path: str
-        Path to the file that stores the configuration.
+        if path.is_dir():
+            parent = path
+            all_files = []
+            for root, dirs, files in os.walk(parent):
+                for f in files:
+                    if f.endswith(extension):
+                        all_files.append(to_path(root).joinpath(f))
+            all_files = sorted(all_files)
+        else:
+            parent = path.parent
+            all_files = [path]
+        #
+        # if os.path.isdir(path):
+        #     dirpath = path
+        #     all_files = []
+        #     for root, dirs, files in os.walk(dirpath):
+        #         for f in files:
+        #             if f.endswith(extension):
+        #                 all_files.append(os.path.join(root, f))
+        #     all_files = sorted(all_files)
+        # else:
+        #     dirpath = os.path.dirname(path)
+        #     all_files = [path]
 
-    fmt: str
-        Format of the file that stores the configuration (e.g. `extxyz`).
+        configs = [Configuration.from_file(f, file_format) for f in all_files]
 
-    Returns
-    -------
-    cell: array
-        A 3x3 matrix of the lattice vectors.  The first, second, and third rows are
-        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
+        if len(configs) <= 0:
+            raise DatasetError(
+                f"No dataset file with file format `{file_format}` found at {parent}."
+            )
 
-    PBC: list
-        A list with 3 components indicating whether periodic boundary condition is used
-        along the directions of the first, second, and third lattice vectors.
-
-    species: list
-        A list of string with N component, where N is the number of atoms.
-
-    coords: array
-        A Nx3 matrix of the coordinates of the atoms, where N is the number of atoms.
-
-    energy: float or None
-        Potential energy of the configuration. If it is not provided in the file, return
-        `None`.
-
-    forces: array or None
-        A Nx3 array of the forces on atoms, where N is the number of atoms. If the forces
-        are not provided in the file, return `None`.
-
-    stress: list or None
-        A list with 6 components in Voigt notation, i.e. it returns
-        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
-        \sigma_{xy}]`. If the stresses are not provided in the file, return `None`.
-    """
-
-    if fmt == "extxyz":
-        cell, PBC, species, coords, energy, forces, stress = read_extxyz(path)
-    else:
-        raise DatasetError(
-            f"Expect data format to be one of {list(SUPPORTED_FORMAT.keys())}, "
-            "But got unsupported one: {fmt}."
+        log_entry(
+            logger,
+            f"{len(configs)} configurations read from {path}",
+            level="info",
         )
 
-    return cell, PBC, species, coords, energy, forces, stress
+        return configs
 
 
-def write_config(
-    path,
-    cell,
-    PBC,
-    species,
-    coords,
-    energy=None,
-    forces=None,
-    stress=None,
-    fmt="extxyz",
-):
-    r"""
-    Write a configuration to a file in the specified format.
-
-    Parameters
-    ----------
-    path: str
-        Path to the file that stores the configuration.
-
-    fmt: str
-        Format of the file that stores the configuration (e.g. `extxyz`).
-
-    cell: array
-        A 3x3 matrix of the lattice vectors.  The first, second, and third rows are
-        :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
-
-    PBC: list
-        A list with 3 components indicating whether periodic boundary condition is used
-        along the directions of the first, second, and third lattice vectors.
-
-    species: list
-        A list of string with N component, where N is the number of atoms.
-
-    coords: array
-        A Nx3 matrix of the coordinates of the atoms, where N is the number of atoms.
-
-    energy: float (optional)
-        Potential energy of the configuration. If `None`, skip writing this information.
-
-    forces: array (optional)
-        A Nx3 array of the forces on atoms, where N is the number of atoms. If `None`,
-        skip writing this information.
-
-    stress: list (optional)
-        A list with 6 components in Voigt notation, i.e. it returns
-        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
-        \sigma_{xy}]`. If `None`, skip writing this information.
-    """
-
-    if fmt not in SUPPORTED_FORMAT:
-        raise DatasetError(
-            f"Expect data format to be one of {list(SUPPORTED_FORMAT.keys())}, "
-            "But got unsupported one: {fmt}."
-        )
-
-    dirname = os.path.dirname(os.path.abspath(path))
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-
-    if fmt == "extxyz":
-        write_extxyz(path, cell, PBC, species, coords, energy, forces, stress)
+class ConfigurationError(Exception):
+    def __init__(self, msg):
+        super(ConfigurationError, self).__init__(msg)
+        self.msg = msg
 
 
 class DatasetError(Exception):

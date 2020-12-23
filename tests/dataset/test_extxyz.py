@@ -1,12 +1,5 @@
 import numpy as np
-
-from kliff.dataset import Configuration, Dataset
-from kliff.dataset.extxyz import write_extxyz
-
-
-def assert_1d_array(a, b):
-    for i, j in zip(a, b):
-        assert i == j
+from kliff.dataset.dataset import Configuration, Dataset
 
 
 def test_configuration(e=True, f=False, s=False, order=False):
@@ -19,37 +12,25 @@ def test_configuration(e=True, f=False, s=False, order=False):
         fname += "_stress"
     fname += ".xyz"
 
-    config = Configuration(format="extxyz", order_by_species=order)
-    config.read(fname)
+    config = Configuration.from_file(fname, file_format="xyz")
+    if order:
+        config.order_by_species()
 
-    natoms = config.get_number_of_atoms()
-    cell = config.get_cell()
-    PBC = config.get_PBC()
-    species = config.get_species()
-    coords = config.get_coordinates()
-    if e:
-        energy = config.get_energy()
-    if f:
-        forces = config.get_forces()
-    if s:
-        stress = config.get_stress()
-
-    assert natoms == 288
+    assert config.get_num_atoms() == 288
     assert np.allclose(
-        cell,
+        config.cell,
         [
             [33.337151, 0.035285, 0.03087],
             [0.027151, 25.621674, -0.000664],
             [0.027093, 9e-05, 30.262626],
         ],
     )
-    assert np.allclose(PBC, [1, 1, 1])
+    assert np.allclose(config.PBC, [1, 1, 1])
 
     if e:
-        assert energy == -5.302666
-
+        assert config.energy == -5.302666
     if s:
-        assert np.allclose(stress, [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
+        assert np.allclose(config.stress, [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
 
     if order:
         ref_species = ["Mo", "Mo", "Mo", "Mo", "Mo", "Mo"]
@@ -76,36 +57,26 @@ def test_configuration(e=True, f=False, s=False, order=False):
             [0.010127, 0.041539, 0.301571],
         ]
 
-    assert_1d_array(species[:6], ref_species)
-    assert np.allclose(coords[:3], ref_coords)
+    np.array_equal(config.species[:6], ref_species)
+    assert np.allclose(config.coords[:3], ref_coords)
     if f:
-        assert np.allclose(forces[:3], ref_forces)
+        assert np.allclose(config.forces[:3], ref_forces)
 
     natoms_by_species = config.count_atoms_by_species()
+
     assert natoms_by_species["Mo"] == 96
     assert natoms_by_species["S"] == 192
 
-    if not e:
-        energy = None
-    if not f:
-        forces = None
-    if not s:
-        stress = None
-    outname = fname.replace("./configs_extxyz/MoS2/MoS2", "tmp_Mos2")
-    write_extxyz(outname, cell, PBC, species, coords, energy, forces, stress)
 
-
-def test_dataset():
-    directory = "./configs_extxyz/MoS2"
-    tset = Dataset()
-    tset.read(directory)
-    configs = tset.get_configs()
-    assert len(configs) == 3
-
-
-if __name__ == "__main__":
+def test_config():
     test_configuration(True, False, False)
     test_configuration(True, True, False)
     test_configuration(True, True, True)
     test_configuration(True, True, True, order=True)
-    test_dataset()
+
+
+def test_dataset():
+    directory = "./configs_extxyz/MoS2"
+    tset = Dataset(directory)
+    configs = tset.get_configs()
+    assert len(configs) == 3

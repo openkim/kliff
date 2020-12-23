@@ -66,8 +66,7 @@ model.add_layers(
 
 # Training set (can be downloaded at: https://github.com/mjwen/kliff/blob/master/examples/Si_training_set.tar.gz)
 dataset_name = "Si_training_set/varying_alat"
-train_set = Dataset()
-train_set.read(dataset_name)
+train_set = Dataset(dataset_name)
 configs = train_set.get_configs()
 
 # Set up calculator to compute energy and forces for atomic configurations in the 

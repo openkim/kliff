@@ -1,63 +1,65 @@
+from pathlib import Path
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
+from kliff.error import InputError, KeyNotFoundError
 
-from ..error import InputError, KeyNotFoundError
 
+def read_extxyz(
+    filename: Path,
+) -> Tuple[
+    np.ndarray,
+    List[str],
+    np.ndarray,
+    List[bool],
+    Union[float, None],
+    Union[np.ndarray, None],
+    Union[List[float], None],
+]:
+    """
+    Read atomic configuration stored in extended xyz file_format.
 
-def read_extxyz(fname):
-    r"""Read atomic configuration stored in extended xyz format.
-
-    Parameters
-    ----------
-    fname: str
-        name of the extended xyz file
+    Args:
+        filename: filename to the extended xyz file
 
     Returns
-    -------
-    cell: 2D array of shape(3,3)
-        supercell lattice vectors
-
-    PBC: list of 3 bool
-        periodic boundary conditions
-
-    species: list of N str, where N is the number of atoms
-        species of atoms
-
-    coords: 2D array of shape (N, 3)
-        coordinates of atoms
-
-    energy: float (or None if not provided in file)
-        potential energy of the configuration
-
-    forces: 2D array of shape (N, 3) (or None if not provided in file)
-        forces on atoms
-
-    stress: list of 6 float (or None if not provided in file)
-        stress on the cell in Voigt notation
+        cell: 3x3 array, supercell lattice vectors
+        species: species of atoms
+        coords: Nx3 array, coordinates of atoms
+        PBC: periodic boundary conditions
+        energy: potential energy of the configuration; `None` if not provided in file
+        forces: Nx3 array, forces on atoms; `None` if not provided in file
+        stress: 1D array of size 6, stress on the cell in Voigt notation; `None` if not
+            provided in file
     """
-    with open(fname, "r") as fin:
+    with open(filename, "r") as fin:
         lines = fin.readlines()
 
         try:
             natoms = int(lines[0].split()[0])
         except ValueError as e:
-            raise InputError(
-                '{}.\nCorrupted data at line 1 of file "{}".'.format(e, fname)
-            )
+            raise InputError(f"{e}.\nCorrupted data at line 1 of file {filename}.")
 
-        # lattice vector, PBC, energy, and stress
+        # lattice vector
         line = lines[1].replace("'", '"')
-        cell = parse_key_value(line, "Lattice", "float", 9, fname)
+        cell = _parse_key_value(line, "Lattice", "float", 9, filename)
         cell = np.reshape(cell, (3, 3))
-        PBC = parse_key_value(line, "PBC", "int", 3, fname)
+
+        # PBC
+        PBC = _parse_key_value(line, "PBC", "int", 3, filename)
+
         # energy is optional
         try:
-            in_quotes = check_in_quotes(line, "Energy", fname)
-            energy = parse_key_value(line, "Energy", "float", 1, fname, in_quotes)[0]
+            in_quotes = _check_in_quotes(line, "Energy", filename)
+            energy = _parse_key_value(line, "Energy", "float", 1, filename, in_quotes)[
+                0
+            ]
         except KeyNotFoundError:
             energy = None
+
         # stress is optional
         try:
-            stress = parse_key_value(line, "Stress", "float", 6, fname)
+            stress = _parse_key_value(line, "Stress", "float", 6, filename)
         except KeyNotFoundError:
             stress = None
 
@@ -65,14 +67,15 @@ def read_extxyz(fname):
         species = []
         coords = []
         forces = []
-        # is forces provided
+
+        # if forces provided
         line = lines[2].strip().split()
         if len(line) == 4:
             has_forces = False
         elif len(line) == 7:
             has_forces = True
         else:
-            raise InputError('Corrupted data at line 3 of file "{}" .'.format(fname))
+            raise InputError(f"Corrupted data at line 3 of file {filename}.")
 
         try:
             num_lines = 0
@@ -81,9 +84,7 @@ def read_extxyz(fname):
                 line = line.strip().split()
                 if len(line) != 4 and len(line) != 7:
                     raise InputError(
-                        'Corrupted data at line {} of file "{}".'.format(
-                            num_lines + 3, fname
-                        )
+                        f'Corrupted data at line {num_lines + 3} of file "{filename}".'
                     )
                 if has_forces:
                     symbol, x, y, z, fx, fy, fz = line
@@ -96,59 +97,50 @@ def read_extxyz(fname):
                     coords.append([float(x), float(y), float(z)])
         except ValueError as e:
             raise InputError(
-                '{}.\nCorrupted data at line {} of file "{}".'.format(
-                    e, num_lines + 3, fname
-                )
+                f"{e}.\nCorrupted data at line {num_lines + 3} of file {filename}."
             )
 
         if num_lines != natoms:
             raise InputError(
-                'Corrupted data file "{}". Number of atoms is "{}", '
-                'whereas number of data lines is "{}".'.format(fname, natoms, num_lines)
+                f"Corrupted data file {filename}. Number of atoms is {natoms}, "
+                f"whereas number of data lines is {num_lines}."
             )
 
-        species = np.asarray(species)
         coords = np.asarray(coords)
         if has_forces:
             forces = np.asarray(forces)
         else:
             forces = None
-        return cell, PBC, species, coords, energy, forces, stress
+
+        return cell, species, coords, PBC, energy, forces, stress
 
 
 def write_extxyz(
-    fname, cell, PBC, species, coords, energy=None, forces=None, stress=None
+    filename: Path,
+    cell: np.ndarray,
+    species: List[str],
+    coords: np.ndarray,
+    PBC: List[bool],
+    energy: Optional[float] = None,
+    forces: Optional[np.ndarray] = None,
+    stress: Optional[List[float]] = None,
 ):
-    r"""Write configuration info to a file in extended xyz format.
+    """
+    Write configuration info to a file in extended xyz file_format.
 
-    Parameters
-    ----------
-    fname: str
-        name of the written file
-
-    cell: 2D array of shape(3,3)
-        supercell lattice vectors
-
-    PBC: list of 3 bool
-        periodic boundary conditions
-
-    species: list of N str, where N is the number of atoms
-        species of atoms
-
-    coords: 2D array of shape (N, 3)
-        coordinates of atoms
-
-    energy: float (optional)
-        potential energy of the configuration
-
-    forces: 2D array of shape (N, 3) (optional)
-        forces on atoms
-
-    stress: list of 6 float (optional)
-        stress on the cell in Voigt notation
+    Args:
+        filename: filename to the extended xyz file
+        cell: 3x3 array, supercell lattice vectors
+        species: species of atoms
+        coords: Nx3 array, coordinates of atoms
+        PBC: periodic boundary conditions
+        energy: potential energy of the configuration; If `None`, not write to file
+        forces: Nx3 array, forces on atoms; If `None`, not write to file
+        stress: 1D array of size 6, stress on the cell in Voigt notation; If `None`,
+            not write to file
     """
 
-    with open(fname, "w") as fout:
+    with open(filename, "w") as fout:
 
         # first line (number of atoms)
         natoms = len(species)
@@ -201,61 +193,26 @@ def write_extxyz(
             fout.write("\n")
 
 
-def check_key(line, key, fname):
-    r"""Check whether a key or its lowercase counter part is in line."""
-    if key not in line:
-        key_lower = key.lower()
-        if key_lower not in line:
-            raise KeyNotFoundError(
-                '"{}" not found at line 2 of file "{}".'.format(key, fname)
-            )
-        else:
-            key = key_lower
-    return key
-
-
-def check_in_quotes(line, key, fname):
-    r"""Check whether ``key=value`` or ``key="value"`` in line."""
-    key = check_key(line, key, fname)
-    value = line[line.index(key) :]
-    value = value[value.index("=") + 1 :]
-    value = value.lstrip(" ")
-    if value[0] == '"':
-        return True
-    else:
-        return False
-
-
-def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
+def _parse_key_value(
+    line: str, key: str, dtype: str, size: int, filename: Path, in_quotes: bool = True
+) -> List[Any]:
     r"""Given key, parse a string like ``other stuff key="value" other stuff`` to get
     value.
 
     If there is not space in value, the quotes `"` can be omitted.
 
-    Parameters
-    ----------
-    line: str
-        The string line.
+    Args:
+        line: The string line.
+        key: Keyword to parse.
+        dtype: Expected data type of value, `int` or `float`.
+        size: Expected size of value.
+        filename: File name where the line comes from.
 
-    key: str
-        Keyword to parse.
-
-    dtype: str
-        Expected data type of value, `int` or `float`.
-
-    size: int
-        Expected size of value.
-
-    fname: str
-        File name where the line comes from.
-
-    Return
-    ------
-    list
+    Returns:
         Values associated with key.
     """
     line = line.strip()
-    key = check_key(line, key, fname)
+    key = _check_key(line, key, filename)
     try:
         value = line[line.index(key) :]
         if in_quotes:
@@ -268,16 +225,12 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
             value = value[: value.index(" ")]
         value = value.split()
     except Exception as e:
-        raise InputError(
-            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(e, key, fname)
-        )
+        raise InputError(f"{e}.\nCorrupted {key} data at line 2 of file {filename}.")
 
     if len(value) != size:
         raise InputError(
-            'Incorrect size of "{}" at line 2 of file "{}";\n'
-            "required: {}, provided: {}. Possibly, the quotes do not match.".format(
-                key, fname, size, len(value)
-            )
+            f"Incorrect size of {key} at line 2 of file {filename};\n"
+            f"required: {size}, provided: {len(value)}. Possibly, the quotes not match."
         )
     try:
         if dtype == "float":
@@ -285,8 +238,33 @@ def parse_key_value(line, key, dtype, size, fname, in_quotes=True):
         elif dtype == "int":
             value = [int(i) for i in value]
     except Exception as e:
-        raise InputError(
-            '{}.\nCorrupted "{}" data at line 2 of file "{}".'.format(e, key, fname)
-        )
+        raise InputError(f"{e}.\nCorrupted {key} data at line 2 of file {filename}.")
 
-    return np.asarray(value)
+    return value
+
+
+def _check_key(line, key, filename):
+    """
+    Check whether a key or its lowercase counter part is in line.
+    """
+    if key not in line:
+        key_lower = key.lower()
+        if key_lower not in line:
+            raise KeyNotFoundError(f"{key} not found at line 2 of file {filename}.")
+        else:
+            key = key_lower
+    return key
+
+
+def _check_in_quotes(line, key, filename):
+    """
+    Check whether ``key=value`` or ``key="value"`` in line.
+    """
+    key = _check_key(line, key, filename)
+    value = line[line.index(key) :]
+    value = value[value.index("=") + 1 :]
+    value = value.lstrip(" ")
+    if value[0] == '"':
+        return True
+    else:
+        return False

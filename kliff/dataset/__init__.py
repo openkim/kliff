@@ -1,3 +1,4 @@
-from .dataset import Configuration, Dataset, read_config, write_config
+from .dataset import Configuration, Dataset
+from .extxyz import read_extxyz, write_extxyz
 
-__all__ = ["Configuration", "Dataset", "read_config", "write_config"]
+__all__ = ["Configuration", "Dataset", "read_extxyz", "write_extxyz"]
