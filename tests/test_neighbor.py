@@ -1,6 +1,5 @@
 import numpy as np
-
-from kliff.dataset import Configuration, write_config
+from kliff.dataset.dataset import Configuration
 from kliff.neighbor import NeighborList
 
 target_coords = np.asarray(
@@ -35,29 +34,25 @@ all_numneigh = [len(i) for i in all_indices]
 
 
 def test_neigh():
-    conf = Configuration()
-    fname = "configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz"
-    conf.read(fname)
+    conf = Configuration.from_file(
+        "configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz"
+    )
     conf.species[0] = "O"
 
     neigh = NeighborList(conf, infl_dist=2, padding_need_neigh=False)
-    fname = "tmp_test_neighbor.xyz"
-    cell = conf.get_cell()
-    PBC = conf.get_PBC()
     coords = neigh.get_coords()
     species = neigh.get_species()
-    write_config(fname, cell, PBC, species, coords, fmt="extxyz")
 
     assert np.allclose(coords, target_coords)
     assert np.array_equal(species, target_species)
 
     # contributing
-    for i in range(conf.get_number_of_atoms()):
+    for i in range(conf.get_num_atoms()):
         nei_indices, nei_coords, nei_species = neigh.get_neigh(i)
         assert np.allclose(nei_indices, all_indices[i])
 
     # padding
-    for i in range(conf.get_number_of_atoms(), len(coords)):
+    for i in range(conf.get_num_atoms(), len(coords)):
         nei_indices, nei_coords, nei_species = neigh.get_neigh(i)
         assert nei_indices.size == 0
         assert nei_coords.size == 0
@@ -66,7 +61,3 @@ def test_neigh():
     numneigh, neighlist = neigh.get_numneigh_and_neighlist_1D(request_padding=False)
     np.array_equal(numneigh, all_numneigh)
     np.array_equal(neighlist, np.concatenate(all_indices))
-
-
-if __name__ == "__main__":
-    test_neigh()

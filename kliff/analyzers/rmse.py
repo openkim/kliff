@@ -197,7 +197,7 @@ class EnergyForcesRMSE:
         self.calculator.compute(ca)
         conf = _get_config(ca)
         identifier = os.path.abspath(conf.get_identifier())
-        natoms = conf.get_number_of_atoms()
+        natoms = conf.get_num_atoms()
 
         if self.compute_energy:
             pred_e = self.calculator.get_energy(ca)
@@ -214,7 +214,7 @@ class EnergyForcesRMSE:
         if self.compute_forces:
             pred_f = self.calculator.get_forces(ca)
             pred_f = _to_numpy(pred_f, ca).reshape(-1, 3)
-            ref_f = conf.get_forces().reshape(-1, 3)
+            ref_f = conf.forces.reshape(-1, 3)
             fdiff = pred_f - ref_f
             fnorm = np.linalg.norm(fdiff)
             if normalize:
@@ -235,10 +235,10 @@ class EnergyForcesRMSE:
                 )
 
             path = os.path.join(prefix, base)
-            cell = conf.get_cell()
-            PBC = conf.get_PBC()
-            species = conf.get_species()
-            coords = conf.get_coordinates()
+            cell = conf.cell
+            PBC = conf.PBC
+            species = conf.species
+            coords = conf.coords
             write_config(
                 path,
                 cell,

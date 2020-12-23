@@ -104,7 +104,7 @@ class Bispectrum(Descriptor):
         numneigh, neighlist = nei.get_numneigh_and_neighlist_1D()
 
         Natoms = len(coords)
-        Ncontrib = conf.get_number_of_atoms()
+        Ncontrib = conf.get_num_atoms()
         Ndesc = self.get_size()
 
         if grad:
@@ -208,7 +208,8 @@ class Bispectrum(Descriptor):
         self._cdesc.set_weight(weight)
 
     def get_size(self):
-        """Return the size of descriptor.
+        """
+        Return the size of descriptor.
         """
         diagonal = self.hyperparams["diagonalstyle"]
         twojmax = int(2 * self.hyperparams["jmax"])

@@ -2,7 +2,6 @@ import itertools
 import os
 
 import numpy as np
-
 from kliff.dataset import Configuration
 from kliff.descriptors.descriptor import Descriptor, DescriptorError, load_fingerprints
 
@@ -82,8 +81,8 @@ class ExampleDescriptor(Descriptor):
 
 def test_descriptor():
     fname = "./configs_extxyz/Si.xyz"
-    conf = Configuration(format="extxyz", identifier=fname)
-    conf.read(fname)
+    conf = Configuration.from_file(fname)
+    conf.identifier = fname
     configs = [conf, conf]
 
     # reuse should be the last and `True` should be after `False` so as to test reuse for
@@ -153,7 +152,3 @@ def test_descriptor():
             else:
                 assert_mean_stdev(desc.mean, desc.stdev, None, None)
                 assert np.allclose(data["zeta"], _zeta)
-
-
-if __name__ == "__main__":
-    test_descriptor()

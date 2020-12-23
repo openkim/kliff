@@ -2,9 +2,8 @@ import logging
 import os
 from collections import OrderedDict
 
-import numpy as np
-
 import kliff
+import numpy as np
 
 from ...log import log_entry
 from ...neighbor import NeighborList
@@ -149,7 +148,7 @@ class SymmetryFunction(Descriptor):
         image = nei.image
         species = np.asarray([self.species_code[i] for i in nei.species], dtype=np.intc)
 
-        Ncontrib = conf.get_number_of_atoms()
+        Ncontrib = conf.get_num_atoms()
         Ndesc = len(self)
 
         grad = fit_forces or fit_stress

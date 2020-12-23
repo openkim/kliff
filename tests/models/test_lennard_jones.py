@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pytest
-
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.models import LennardJones
@@ -134,9 +133,7 @@ def test_lj():
 
     calc = Calculator(model)
 
-    dset = Dataset(order_by_species=False)
-    fname = "./configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz"
-    dset.read(fname)
+    dset = Dataset("./configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz")
     configs = dset.get_configs()
 
     energy_forces_stress(calc, configs, True, False, False)
@@ -150,7 +147,3 @@ def test_lj():
     sigma = model.get_model_params("sigma")
     epsilon = model.get_model_params("epsilon")
     assert np.allclose(sigma * 2, epsilon)
-
-
-if __name__ == "__main__":
-    test_lj()

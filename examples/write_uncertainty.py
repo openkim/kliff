@@ -26,7 +26,6 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # Let's first import the modules that will be used in this example.
 
 import torch
-
 from kliff import nn
 from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset

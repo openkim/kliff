@@ -74,10 +74,10 @@ class NeighborList:
         self.create_neigh()
 
     def create_neigh(self):
-        coords_cb = np.asarray(self.conf.get_coordinates(), dtype=np.double)
-        species_cb = self.conf.get_species()
-        cell = np.asarray(self.conf.get_cell(), dtype=np.double)
-        PBC = np.asarray(self.conf.get_PBC(), dtype=np.intc)
+        coords_cb = np.asarray(self.conf.coords, dtype=np.double)
+        species_cb = self.conf.species
+        cell = np.asarray(self.conf.cell, dtype=np.double)
+        PBC = np.asarray(self.conf.PBC, dtype=np.intc)
 
         # create padding atoms
         species_code_cb = np.asarray(
@@ -172,7 +172,7 @@ class NeighborList:
                 )
             N = len(self.coords)
         else:
-            N = self.conf.get_number_of_atoms()
+            N = self.conf.get_num_atoms()
 
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
         neigh_list_index = 0

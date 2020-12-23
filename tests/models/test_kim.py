@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.models import KIM
@@ -35,8 +34,7 @@ ref_forces = [
 def test_main():
 
     # training set
-    tset = Dataset()
-    tset.read("./configs_extxyz/Si_4")
+    tset = Dataset("./configs_extxyz/Si_4")
     configs = tset.get_configs()
 
     # model
@@ -70,7 +68,3 @@ def test_main():
     assert np.allclose(params["B"].get_value(), [x1[1]])
     # restore params
     calc.update_opt_params(x0)
-
-
-if __name__ == "__main__":
-    test_main()

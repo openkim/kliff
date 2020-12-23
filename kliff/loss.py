@@ -559,9 +559,9 @@ class LossPhysicsMotivatedModel(object):
         ref = calculator.get_reference(ca)
 
         conf = ca.conf
-        identifier = conf.get_identifier()
-        natoms = conf.get_number_of_atoms()
-        weight = conf.get_weight()
+        identifier = conf.identifier
+        weight = conf.weight
+        natoms = conf.get_num_atoms()
 
         residual = residual_fn(identifier, natoms, weight, pred, ref, residual_data)
 
@@ -805,9 +805,9 @@ class LossNeuralNetworkModel(object):
                 ref = ref_stress.reshape(-1)
 
         conf = sample["configuration"]
-        identifier = conf.get_identifier()
-        natoms = conf.get_number_of_atoms()
-        weight = conf.get_weight()
+        identifier = conf.identifier
+        weight = conf.weight
+        natoms = conf.get_num_atoms()
 
         residual = self.residual_fn(
             identifier, natoms, weight, pred, ref, self.residual_data

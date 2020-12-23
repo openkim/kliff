@@ -348,18 +348,6 @@ class Dataset:
         else:
             parent = path.parent
             all_files = [path]
-        #
-        # if os.path.isdir(path):
-        #     dirpath = path
-        #     all_files = []
-        #     for root, dirs, files in os.walk(dirpath):
-        #         for f in files:
-        #             if f.endswith(extension):
-        #                 all_files.append(os.path.join(root, f))
-        #     all_files = sorted(all_files)
-        # else:
-        #     dirpath = os.path.dirname(path)
-        #     all_files = [path]
 
         configs = [Configuration.from_file(f, file_format) for f in all_files]
 

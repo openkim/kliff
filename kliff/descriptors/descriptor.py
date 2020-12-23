@@ -237,13 +237,13 @@ class Descriptor:
 
                 # pickling data
                 zeta = np.asarray(zeta, self.dtype)
-                energy = np.asarray(conf.get_energy(), self.dtype)
+                energy = np.asarray(conf.energy, self.dtype)
                 if fit_forces:
                     dzetadr_f = np.asarray(dzetadr_f, self.dtype)
-                    forces = np.asarray(conf.get_forces(), self.dtype)
+                    forces = np.asarray(conf.forces, self.dtype)
                 if fit_stress:
                     dzetadr_s = np.asarray(dzetadr_s, self.dtype)
-                    stress = np.asarray(conf.get_stress(), self.dtype)
+                    stress = np.asarray(conf.stress, self.dtype)
                     volume = np.asarray(conf.get_volume(), self.dtype)
 
                 example = {"configuration": conf, "zeta": zeta, "energy": energy}

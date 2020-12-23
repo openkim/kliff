@@ -1,5 +1,4 @@
 import numpy as np
-
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
@@ -21,9 +20,7 @@ def init():
     model.set_fitting_params(sigma=[[2.0951, "fix"]])
     model.set_fitting_params(gamma=[[1.5]])
 
-    dataset_name = "./configs_extxyz/Si_4"
-    tset = Dataset()
-    tset.read(dataset_name)
+    tset = Dataset("./configs_extxyz/Si_4")
     configs = tset.get_configs()
 
     calc = Calculator(model)
@@ -74,13 +71,3 @@ def test_trf():
 
 def test_dogbox():
     least_squares("dogbox", [6.42575107, 1.54254652, 2.13551639])
-
-
-if __name__ == "__main__":
-    test_lbfgsb()
-    test_bfgs()
-    test_cg()
-    test_powell()
-    test_lm()
-    test_trf()
-    test_dogbox()

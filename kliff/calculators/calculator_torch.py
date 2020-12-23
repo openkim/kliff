@@ -236,7 +236,7 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
 
         for i, sample in enumerate(batch):
             zeta = sample["zeta"]
-            species = sample["configuration"].get_species()
+            species = sample["configuration"].species
             zeta.requires_grad_(True)
             zeta_config.append(zeta)
 

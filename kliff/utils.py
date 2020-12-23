@@ -1,4 +1,6 @@
 from collections.abc import Iterable
+from pathlib import Path
+from typing import Union
 
 
 def length_equal(a, b):
@@ -53,3 +55,10 @@ def split_string(string, length=80, starter=None):
         string = string[end:]
 
     return "\n".join(sub_string) + "\n"
+
+
+def to_path(path: Union[str, Path]) -> Path:
+    """
+    Convert str (or filename) to pathlib.Path.
+    """
+    return Path(path).expanduser().resolve()

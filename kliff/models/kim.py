@@ -143,11 +143,11 @@ class KIMComputeArguments(ComputeArguments):
         """
 
         # inquire information from conf
-        cell = np.asarray(self.conf.get_cell(), dtype=np.double)
-        PBC = np.asarray(self.conf.get_PBC(), dtype=np.intc)
-        contributing_coords = np.asarray(self.conf.get_coordinates(), dtype=np.double)
-        contributing_species = self.conf.get_species()
-        num_contributing = self.conf.get_number_of_atoms()
+        cell = np.asarray(self.conf.cell, dtype=np.double)
+        PBC = np.asarray(self.conf.PBC, dtype=np.intc)
+        contributing_coords = np.asarray(self.conf.coords, dtype=np.double)
+        contributing_species = self.conf.species
+        num_contributing = self.conf.get_num_atoms()
         self.num_contributing_particles = num_contributing
 
         # species support and code

@@ -5,7 +5,6 @@ import itertools
 from collections import OrderedDict
 
 import numpy as np
-
 from kliff.dataset import Configuration
 from kliff.descriptors import SymmetryFunction
 
@@ -296,8 +295,7 @@ def get_descriptor():
 
 def test_desc():
 
-    config = Configuration(format="extxyz")
-    config.read("./configs_extxyz/Si.xyz")
+    config = Configuration.from_file("./configs_extxyz/Si.xyz")
 
     desc = get_descriptor()
 
@@ -310,7 +308,3 @@ def test_desc():
             assert np.allclose(dzetadr_forces[0], dzetadr_forces_ref)
         if fit_stress:
             assert np.allclose(dzetadr_stress[0], dzetadr_stress_ref)
-
-
-if __name__ == "__main__":
-    test_desc()

@@ -1,5 +1,4 @@
 import numpy as np
-
 from kliff.dataset import Configuration
 from kliff.descriptors import Bispectrum
 
@@ -183,9 +182,7 @@ dzeta_dr_minus_121 = [
 
 def test_desc():
 
-    fname = "./configs_extxyz/Si.xyz"
-    conf = Configuration(format="extxyz")
-    conf.read(fname)
+    conf = Configuration.from_file("./configs_extxyz/Si.xyz")
 
     cut_name = "cos"
     cut_dists = {"Si-Si": 5.0}

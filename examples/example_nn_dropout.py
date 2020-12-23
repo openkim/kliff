@@ -26,7 +26,6 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # Let's first import the modules that will be used in this example.
 
 import torch
-
 from kliff import nn
 from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
@@ -158,7 +157,7 @@ for epoch in range(5):
 
             optimizer.zero_grad()
 
-            natoms = [sample["configuration"].get_number_of_atoms() for sample in batch]
+            natoms = [sample["configuration"].get_num_atoms() for sample in batch]
             energy_normalizer = torch.tensor(natoms, dtype=torch.float32)
             force_normalizer = torch.tensor(
                 [n for n in natoms for _ in range(3 * n)], dtype=torch.float32
