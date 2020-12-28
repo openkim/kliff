@@ -22,7 +22,7 @@ def read_extxyz(
     Args:
         filename: filename to the extended xyz file
 
-    Returns
+    Returns:
         cell: 3x3 array, supercell lattice vectors
         species: species of atoms
         coords: Nx3 array, coordinates of atoms
@@ -196,8 +196,8 @@ def write_extxyz(
 def _parse_key_value(
     line: str, key: str, dtype: str, size: int, filename: Path, in_quotes: bool = True
 ) -> List[Any]:
-    r"""Given key, parse a string like ``other stuff key="value" other stuff`` to get
-    value.
+    """
+    Given key, parse a string like ``other stuff key="value" other stuff`` to get value.
 
     If there is not space in value, the quotes `"` can be omitted.
 

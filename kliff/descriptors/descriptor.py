@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class Descriptor:
-    r"""Base class of atomic environment descriptors.
+    """
+    Base class of atomic environment descriptors.
 
     Process dataset to generate fingerprints. This is the base class for all descriptors,
     so it should not be used directly. Instead, descriptors built on top of this such as
@@ -331,7 +332,8 @@ class Descriptor:
         return mean, stdev
 
     def transform(self, conf, grad=False):
-        r"""Transform atomic coords to atomic environment descriptor values.
+        """
+        Transform atomic coords to atomic environment descriptor values.
 
         Parameters
         ----------

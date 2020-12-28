@@ -294,7 +294,9 @@ class Calculator:
 
 
 class _WrapperCalculator(object):
-    """Wrapper to deal with the fitting of multiple models."""
+    """
+    Wrapper to deal with the fitting of multiple models.
+    """
 
     def __init__(self, *calculators):
         """

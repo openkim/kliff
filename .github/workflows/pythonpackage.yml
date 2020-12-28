@@ -27,7 +27,8 @@ jobs:
     - name: Check with Python Black
       uses: psf/black@stable
 
-  build:
+
+  test:
 
     runs-on: ubuntu-latest
     strategy:

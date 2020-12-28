@@ -1,23 +1,22 @@
-import torch
-from torch.utils.data import Dataset
+from pathlib import Path
+from typing import Callable, Optional
 
-from ..descriptors.descriptor import load_fingerprints
+import torch
+from kliff.descriptors.descriptor import load_fingerprints
+from torch.utils.data import Dataset
 
 
 class FingerprintsDataset(Dataset):
-    r"""Atomic environment fingerprints dataset.
+    """
+    Atomic environment fingerprints dataset used by torch models.
 
-    Parameters
-    ----------
-    path: string
-        Path to the fingerprints file.
-
-    transform: callable (optional)
-        Optional transform to be applied on a sample.
+    Args:
+        filename: to the fingerprints file.
+        transform: transform to be applied on a sample.
     """
 
-    def __init__(self, path, transform=None):
-        self.fp = load_fingerprints(path)
+    def __init__(self, filename: Path, transform: Optional[Callable] = None):
+        self.fp = load_fingerprints(filename)
         self.transform = transform
 
     def __len__(self):
@@ -31,20 +30,17 @@ class FingerprintsDataset(Dataset):
 
 
 def fingerprints_collate_fn(batch):
-    r"""Convert a batch of samples into tensor.
+    """
+    Convert a batch of samples into tensor.
 
-    Unlike the default_collate_fn(), which stack samples in the batch (requiring each
+    Unlike the default collate_fn(), which stack samples in the batch (requiring each
     sample having the same dimension), this function does not do the stack.
 
-    Parameters
-    ----------
-    batch: list
-        A batch of samples.
+    Args:
+        batch: A batch of samples.
 
-    Returns
-    -------
-    tensor_batch: list
-        Transform each sample into a tensor.
+    Returns:
+        A list of tensor.
     """
     tensor_batch = []
     for i, sample in enumerate(batch):
