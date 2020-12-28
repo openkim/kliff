@@ -1,15 +1,14 @@
-from collections.abc import Iterable
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Union
 
 
 def length_equal(a, b):
-    if isinstance(a, Iterable) and isinstance(b, Iterable):
+    if isinstance(a, Sequence) and isinstance(b, Sequence):
         if len(a) == len(b):
             return True
         else:
             return False
-    # If one is Iterable and the other not, we treat them as equal because of broadcast
     else:
         return True
 

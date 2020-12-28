@@ -1,58 +1,62 @@
 import logging
-from collections.abc import Iterable
+from collections.abc import Sequence
+from typing import List, Union
 
-from ..dataset import Configuration
-from ..error import InputError
-from ..utils import length_equal
+from kliff.dataset.dataset import Configuration
+from kliff.models.model import Model
+from kliff.utils import length_equal
 
 logger = logging.getLogger(__name__)
 
 
 class Calculator:
-    r"""Calculator class to exchange information between model and an optimizer.
+    """
+    Calculator that exchanges information between model and optimizer.
 
-    It computes the `energy`, `forces`, etc. using a potential model, and provides these
+    It computes `energy`, `forces`, etc. using a potential model, and provides these
     properties, together with the corresponding reference data, to
     :class:`~kliff.loss.Loss` to construct a cost function for the optimizer.  In the
     reverse direction, it grab the new parameters from the optimizer and update the model
     with the new parameters.
 
-    Parameters
-    ----------
-    model: obj
-        An instance of the :class:`~kliff.models.Model` class.
+    Args:
+        model: An instance of :class:`~kliff.models.Model`.
     """
 
-    def __init__(self, model):
+    def __init__(self, model: Model):
         self.model = model
 
-    def create(self, configs, use_energy=True, use_forces=True, use_stress=False):
-        r"""Create compute arguments for a collection of configurations.
+    def create(
+        self,
+        configs: List[Configuration],
+        use_energy: Union[List[bool], bool] = True,
+        use_forces: Union[List[bool], bool] = True,
+        use_stress: Union[List[bool], bool] = False,
+    ):
+        """
+        Create compute arguments for a collection of configurations.
 
         By compute arguments, we mean the information needed by a model to carry on a
         calculation, such as the coordinates, species, cutoff distance, neighbor list,
         etc. Each configuration has its own compute arguments, and this function creates
         the compute arguments for all the configurations in ``configs``.
 
-        Parameters
-        ----------
-        configs: list
-            A list of :class:`~kliff.dataset.Configuration` instances.
+        Args:
+            configs: atomic configurations, i.e. :class:`~kliff.dataset.Configuration`
+                instances.
 
-        use_energy: list of bools (optional)
-            Whether to require the calculator to compute energy. Each component is for one
-            configuration in ``configs``. If a bool instead of a list is provided, it is
-            applied to all configurations.
+            use_energy: Whether to require the calculator to compute energy.
+                If a list of bool is provided, each component is for one configuration
+                in `configs`. If a bool is provided, it is applied to all configurations.
 
-        use_forces: list of bools (optional)
-            Whether to require the calculator to compute forces. Each component is for one
-            configuration in ``configs``. If a bool instead of a list is provided, it is
-            applied to all configurations.
+            use_forces: Whether to require the calculator to compute forces.
+                If a list of bool is provided, each component is for one configuration
+                in `configs`. If a bool is provided, it is applied to all configurations.
 
-        use_stress: list of bools (optional)
-            Whether to require the calculator to compute stress. Each component is for one
-            configuration in ``configs``. If a bool instead of a list is provided, it is
-            applied to all configurations.
+
+            use_stress: Whether to require the calculator to compute stress.
+                If a list of bool is provided, each component is for one configuration
+                in `configs`. If a bool is provided, it is applied to all configurations.
         """
 
         self.use_energy = use_energy
@@ -62,26 +66,29 @@ class Calculator:
         if isinstance(configs, Configuration):
             configs = [configs]
 
-        if not length_equal(configs, use_energy):
-            raise InputError(
-                'Lengths of arguments "configs" and "use_energy" not equal.'
+        if use_energy and not length_equal(configs, use_energy):
+            raise CalculatorError(
+                "Expect length of `configs` and `use_energy` have the same size; got "
+                f"{len(configs)} and {len(use_energy)}."
             )
-        if not length_equal(configs, use_forces):
-            raise InputError(
-                'Lengths of arguments "configs" and "use_forces" not equal.'
+        if use_forces and not length_equal(configs, use_forces):
+            raise CalculatorError(
+                "Expect length of `configs` and `use_forces` have the same size; got "
+                f"{len(configs)} and {len(use_forces)}."
             )
-        if not length_equal(configs, use_stress):
-            raise InputError(
-                'Lengths of arguments "configs" and "use_stress" not equal.'
+        if use_stress and not length_equal(configs, use_stress):
+            raise CalculatorError(
+                "Expect length of `configs` and `use_stresses` have the same size; got "
+                f"{len(configs)} and {len(use_stress)}."
             )
 
         N = len(configs)
-        if not isinstance(use_energy, Iterable):
-            use_energy = [use_energy for _ in range(N)]
-        if not isinstance(use_forces, Iterable):
-            use_forces = [use_forces for _ in range(N)]
-        if not isinstance(use_stress, Iterable):
-            use_stress = [use_stress for _ in range(N)]
+        if not isinstance(use_energy, Sequence):
+            use_energy = [use_energy] * N
+        if not isinstance(use_forces, Sequence):
+            use_forces = [use_forces] * N
+        if not isinstance(use_stress, Sequence):
+            use_stress = [use_stress] * N
 
         # update parameters from fitting parameters to model parameters
         # influence distance may be updated if the user set the related parameters
@@ -368,3 +375,9 @@ class _WrapperCalculator(object):
             N = len(calc.get_compute_arguments())
             calc_list.extend([calc] * N)
         return calc_list
+
+
+class CalculatorError(Exception):
+    def __init__(self, msg):
+        super(CalculatorError, self).__init__(msg)
+        self.msg = msg

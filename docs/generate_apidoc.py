@@ -69,7 +69,7 @@ def autodoc_module(path, module):
 if __name__ == "__main__":
 
     # this will not be included, e.g. excludes = ['models']
-    excludes = ["cmdline", "wrapcalculator"]
+    excludes = ["cmdline"]
 
     modules = get_all_modules()
     for exc in excludes:
