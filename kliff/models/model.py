@@ -1,122 +1,119 @@
 import logging
 import sys
-from collections import OrderedDict
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
-
-from ..log import log_entry
-from .parameter import FittingParameter
+from kliff.dataset.dataset import Configuration
+from kliff.models.parameter import OptimizingParameters, Parameter
+from kliff.utils import yaml_dump, yaml_load
 
 logger = logging.getLogger(__name__)
 
 
 class ComputeArguments:
-    r"""Implementation of code to compute energy, forces, and stress.
+    """
+    Compute property (e.g. energy, forces, and stress) for a configuration.
 
     This is the base class for other compute arguments. Typically, a user will not
     directly use this.
+
+    Args:
+        conf: atomic configurations
+        supported_species: species supported by the potential model, with chemical
+            symbol as key and integer code as value.
+        influence_distance: influence distance (aka cutoff distance) to calculate neighbors
+        compute_energy: whether to compute energy
+        compute_forces: whether to compute forces
+        compute_stress: whether to compute stress
     """
 
     implemented_property = []
 
     def __init__(
         self,
-        conf,
-        supported_species,
-        influence_distance,
-        compute_energy=True,
-        compute_forces=True,
-        compute_stress=False,
+        conf: Configuration,
+        supported_species: Dict[str, int],
+        influence_distance: float,
+        compute_energy: bool = True,
+        compute_forces: bool = True,
+        compute_stress: bool = False,
     ):
+
         self.conf = conf
         self.supported_species = supported_species
         self.influence_distance = influence_distance
         self.compute_energy = compute_energy
         self.compute_forces = compute_forces
         self.compute_stress = compute_stress
-        self.compute_property = self.check_compute_property()
-        self.results = dict([(i, None) for i in self.implemented_property])
 
-    def refresh(self, influence_distance=None, params=None):
-        r"""Refresh settings.
+        self.compute_property = self._check_compute_property()
+        self.results = {p: None for p in self.implemented_property}
 
-        Such as recreating the neighbor list due to the change of cutoff.
+    def compute(self, params: Dict[str, Parameter]):
         """
-        if influence_distance is not None:
-            infl_dist = influence_distance
-        else:
-            try:
-                infl_dist = params["influence_distance"].get_value()[0]
-            except KeyError:
-                report_error('"influence_distance" not provided by "params".')
-
-        self.influence_distance = infl_dist
-
-        # NOTE to be filled
-        # create neighbor list based on `infl_dist`
-
-    # TODO also check that the conf provide these properties
-    def check_compute_property(self):
-        def add_to_compute_property(compute_property, name):
-            if name not in self.implemented_property:
-                raise NotImplementedError('"{}" not implemented in model.'.format(name))
-            compute_property.append(name)
-
-        compute_property = []
-        if self.compute_energy:
-            add_to_compute_property(compute_property, "energy")
-        if self.compute_forces:
-            add_to_compute_property(compute_property, "forces")
-        if self.compute_stress:
-            add_to_compute_property(compute_property, "stress")
-        return compute_property
-
-    def compute(self, params):
-        r"""Compute the properties required by the compute flags, and store them in
+        Compute the properties required by the compute flags, and store them in
         self.results.
 
-        Parameters
-        ----------
-        params: dict of 1D array
-            Parameters of the model.
+        Args:
+            params: the parameters of the model.
 
-        Example
-        -------
-
-        energy = a_func_to_compute_energy()
-        forces = a_func_to_compute_forces()
-        stress = a_func_to_compute_stress()
-        self.results['energy'] = energy
-        self.results['forces'] = forces
-        self.results['stress'] = stress
+        Example:
+            energy = a_func_to_compute_energy()
+            forces = a_func_to_compute_forces()
+            stress = a_func_to_compute_stress()
+            self.results['energy'] = energy
+            self.results['forces'] = forces
+            self.results['stress'] = stress
         """
-        # NOTE to be filled
-        raise NotImplementedError('"compute" method of "ComputeArguments" not defined.')
+        raise NotImplementedError('"compute" method not implemented.')
 
-    def get_compute_flag(self, name):
+    def get_compute_flag(self, name: str) -> bool:
+        """
+        Check whether the model is asked to compute property.
+
+        Args:
+            name: name of the property, e.g. energy, forces, and stresses
+        """
         if name in self.compute_property:
             return True
         else:
             return False
 
-    def get_property(self, name):
-        if name not in self.compute_property:
-            report_error('Model not initialized to comptue "{}".'.format(name))
-        result = self.results[name]
-        if isinstance(result, np.ndarray):
-            result = result.copy()
-        return result
+    def get_property(self, name: str) -> Any:
+        """
+        Get a property by name.
 
-    def get_energy(self):
+        Args:
+            name: name of the property, e.g. energy, forces, and stresses
+        """
+        if name not in self.compute_property:
+            ModelError(f"Model not initialized to comptue `{name}`.")
+        return self.results[name]
+
+    def get_energy(self) -> float:
+        """
+        Potential energy.
+        """
         return self.get_property("energy")
 
-    def get_forces(self):
+    def get_forces(self) -> np.ndarray:
+        """
+        2D array of shape (N,3) of the forces on atoms, where N is the number of atoms
+        in the configuration.
+        """
         return self.get_property("forces")
 
-    def get_stress(self):
+    def get_stress(self) -> np.ndarray:
+        """
+        1D array of the virial stress, in Voigt notation.
+        """
         return self.get_property("stress")
 
-    def get_prediction(self):
+    def get_prediction(self) -> np.ndarray:
+        """
+        1D array of prediction from the model for the configuration.
+        """
         if self.compute_energy:
             energy = self.results["energy"]
             pred = np.asarray([energy])
@@ -133,7 +130,10 @@ class ComputeArguments:
 
         return pred
 
-    def get_reference(self):
+    def get_reference(self) -> np.ndarray:
+        """
+        1D array of reference values for the configuration.
+        """
         if self.compute_energy:
             energy = self.conf.energy
             ref = np.asarray([energy])
@@ -150,257 +150,361 @@ class ComputeArguments:
 
         return ref
 
+    def _check_compute_property(self):
+        compute_property = []
+        if self.compute_energy:
+            if "energy" not in self.implemented_property:
+                raise NotImplementedError("`Energy` not implemented in model.")
+            else:
+                compute_property.append("energy")
+        if self.compute_forces:
+            if "forces" not in self.implemented_property:
+                raise NotImplementedError("`Forces` not implemented in model.")
+            else:
+                compute_property.append("forces")
+        if self.compute_stress:
+            if "stress" not in self.implemented_property:
+                raise NotImplementedError("`Stress` not implemented in model.")
+            else:
+                compute_property.append("stress")
+
+        return compute_property
+
 
 class Model:
-    r"""Base class for all physics-motivated models.
+    """
+    Base class for all physics-motivated models.
 
     Typically, a user will not directly use this.
 
-    Parameters
-    ----------
-    model_name: str (optional)
-        Name of the model.
+    Args:
+        model_name: name of the model.
 
-    params_relation_callback: function (optional)
-        A callback function to set the relations between parameters, which are
-        called each minimization step after the optimizer updates the
-        parameters.
+        params_relation_callback: A callback function to set the relations between
+            parameters, which are called each minimization step after the optimizer
+            updates the parameters.
 
-        The function with be given the ModelParameters instance as argument, and
-        it can use get_value() and set_value() to manipulate the relation
-        between parameters.
+            The function with be given the a dictionary of
+            `~kliff.model.parameter.Parameter` as argument; a user can manipulate the
+            parameters to set some relation.
 
-        Example
-        -------
+            Example:
 
-        In the following example, we set the value of B[0] to 2 * A[0].
+            In the following example, we set the value of B[0] to 2 * A[0].
 
-        def params_relation(params):
-            A = params.get_value('A')
-            B = params.get_value('B')
-            B[0] = 2 * A[0]
-            params.set_value('B', B)
+            def params_relation(model_params):
+                A = model_params['A']
+                B = model_params['B']
+                B[0] = 2*A[0]
     """
 
-    def __init__(self, model_name=None, params_relation_callback=None):
-        # TODO params_relation_callbacks may not work for some minimization
-        # algorithms since abruptly change the parameter relation may result in
-        # loss to go up, then the optimization method can fail. So to a check to
-        # implement this only for the minimization methods that support it
-        # natively.
-        # Update: 2019/07/19
-        # This should be fine as long as the dependent parameter is not in the `fitting
-        # parameters` vector passed to an optimizer. The dependent parameter can just be
-        # thought as a implicit parameter.
-
+    def __init__(
+        self,
+        model_name: str = None,
+        params_relation_callback: Optional[Callable] = None,
+    ):
         self.model_name = model_name
-        if self.model_name is not None:
-            self.model_name = self.model_name.rstrip("/")
         self.params_relation_callback = params_relation_callback
 
-        # NOTE to be filled
-        self.params = OrderedDict()
-        # set up parameters of the calculator
-        # e.g.
-        # self.params['sigma'] = Parameter(0.5)
-        # self.params['epsilon'] = Parameter(0.4)
+        self.model_params = self.init_model_params()
+        self.opt_params = OptimizingParameters(self.model_params)
+        self.influence_distance = self.init_influence_distance()
+        self.supported_species = self.init_supported_species()
 
-        # NOTE to be filled
-        self.influence_distance = None
+    def init_model_params(self, *args, **kwargs) -> Dict[str, Parameter]:
+        """
+        Initialize the parameters of the model.
 
-        # NOTE to be filled, should a dictionary
-        # Key and value are species string and integer code, respectively.
-        # if None, it supportes any species
-        self.supported_species = None
+        Should return a dictionary of parameters.
 
-        # NOTE to be filled
-        self.compute_arguments_class = ComputeArguments
+        Example:
+            model_params = {"sigma": Parameter([0.5]
+                      "epsilon": Parameter([0.4])
 
-        # TODO maybe use metaclass to call this automatically after initialization
-        # NOTE do not forget to call this in the subclass
-        self.fitting_params = self.init_fitting_params(self.params)
+            return model_params
+        """
+        raise NotImplementedError("`init_model_params` not implemented.")
 
-    def write_kim_model(self, path=None):
-        # NOTE fill this
-        report_error("This model does not support writing to a KIM model.")
+    def init_influence_distance(self, *args, **kwargs) -> float:
+        """
+        Initialize the influence distance (aka cutoff distance) of the model.
 
-    def set_params_relation_callback(self, params_relation_callback):
-        r"""Register a function to set the relation between parameters."""
-        self.params_relation_callback = params_relation_callback
+        This is used to compute the neighbor list of each atom.
 
-    def get_influence_distance(self):
+        Example:
+            return 5.0
+        """
+        raise NotImplementedError("`init_influence_distance` not implemented.")
+
+    def init_supported_species(self, *args, **kwargs) -> Dict[str, int]:
+        """
+        Initialize the supported species of the model.
+
+        Should return a dict with chemical symbol as key and integer code as value.
+
+        Example:
+            return {"C:0, "O":1}
+        """
+        raise NotImplementedError("`init_supported_species` not implemented.")
+
+    def get_compute_argument_class(self):
+        # NOTE, change to the compute argument class as needed
+        # return ComputeArguments
+        raise NotImplementedError("`get_compute_argument_class` not implemented.")
+
+    def write_kim_model(self, path: Path = None):
+        raise NotImplementedError("`write_kim_model` not implemented yet.")
+
+    def get_influence_distance(self) -> float:
+        """
+        Return influence distance (aka cutoff distance) of the model.
+        """
         return self.influence_distance
 
-    def get_supported_species(self):
+    def get_supported_species(self) -> Dict[str, int]:
+        """
+        Return supported species of the model, a dict with chemical symbol as key and
+        integer code as value.
+        """
         return self.supported_species
 
-    def get_model_params(self, name):
-        r"""Return a copy of the values of parameter.
-
-        Parameters
-        ----------
-        name: string
-            Name of the parameter.
+    def get_model_params(self) -> Dict[str, Parameter]:
         """
-        if name in self.params:
-            return self.params[name].get_value()
-        else:
-            report_error('"{}" is not a parameter of calculator.'.format(name))
-
-    def set_model_params(self, name, value, check_shape=True):
-        r"""Update the parameter values.
-
-        Parameters
-        ----------
-        name: str
-            Name of the parameter.
-
-        value: list of floats
-            Value of hte parameter.
-
-        check_shape: bool
-            If ``True``, check the shape of ``value``.
+        Return all parameters of the model.
         """
-        if name in self.params:
-            self.params[name].set_value(value, check_shape)
-        else:
-            report_error('"{}" is not a parameter of the model.'.format(name))
+        return self.model_params
 
-    #    def save_model_params(self, path):
-    #        params = dict()
-    #        for i, j in self.params.items():
-    #            v = j.value
-    #            if isinstance(v, np.ndarray):
-    #                v = v.tolist()
-    #            params[i] = v
-    #        with open(path, 'w') as fout:
-    #            yaml.dump(params, fout, default_flow_style=False)
-    #
-    #    def load_model_params(self, path):
-    #        with open(path, 'r') as fin:
-    #            params = yaml.safe_load(fin)
-    #        for key, value in params.items():
-    #            self.set_model_params(key, value, check_shape=False)
-
-    def echo_model_params(self, path=None):
-        r"""Print the optimizable parameters.
-
-        Parameters
-        ----------
-        path: str (optional)
-            Path to print the information. if ``None``, print to stdout.
+    def echo_model_params(self, filename: Optional[Path] = sys.stdout) -> str:
         """
+        Echo the model parameters.
 
-        if path is not None:
-            fout = open(path, "w")
-        else:
-            fout = sys.stdout
+        Args:
+        filename: Path to write the model parameter info (e.g. sys.stdout) if `None`,
+            do not write.
 
-        print(file=fout)
-        print("#" + "=" * 80, file=fout)
-        print("# Available parameters to optimize.")
-        print(file=fout)
-        if self.model_name is None:
-            name = self.__class__.__name__
-        else:
-            name = self.model_name
-        print("# Model:", name, file=fout)
-        print("#" + "=" * 80, file=fout)
-        print(file=fout)
-        for name, p in self.params.items():
-            print("name:", name, file=fout)
-            print("value:", p.value, file=fout)
-            print("size:", p.size, file=fout)
-            print("dtype:", p.dtype, file=fout)
-            print("description:", p.description, file=fout)
-            print(file=fout)
+        Returns:
+            model parameters info in a string
+        """
+        s = "#" + "=" * 80 + "\n"
+        s += "# Available parameters to optimize.\n"
 
-        if path is not None:
-            fout.close()
+        name = self.__class__.__name__ if self.model_name is None else self.model_name
+        s += f"# Model: {name}\n"
 
-    def init_fitting_params(self, params):
-        return FittingParameter(params)
+        s += "#" + "=" * 80 + "\n\n"
 
-    def read_fitting_params(self, path):
-        self.fitting_params.read(path)
+        for name, p in self.model_params.items():
+            s += f"name: {name}\n"
+            s += f"value: {p.value}\n"
+            s += f"size: {len(p)}\n\n"
 
-    def set_fitting_params(self, **kwargs):
-        self.fitting_params.set(**kwargs)
+        if filename is not None:
+            if filename == sys.stdout:
+                filename.write(s)
+            else:
+                with open(filename, "w") as f:
+                    f.write(s)
 
-    def set_one_fitting_param(self, name, settings):
-        self.fitting_params.set_one(name, settings)
+        return s
 
-    #    def save_fitting_params(self, path):
-    #        self.fitting_params.save(path)
-    #
-    #    def load_fitting_params(self, path):
-    #        self.fitting_params.load(path)
+    def read_opt_params(self, filename: Path):
+        """
+        Read optimizing parameters from a file.
 
-    def echo_fitting_params(self, path=None):
-        self.fitting_params.echo_params(path)
+        Each parameter is a 1D array, and each component of the parameter array should be
+        listed in a new line. Each line can contains 1, 2, or 3 elements, described in
+        details below:
 
-    def get_number_of_opt_params(self):
-        return self.fitting_params.get_number_of_opt_params()
+        1st element: float or `DEFAULT`
+            Initial guess of the parameter component. If `DEFAULT` (case insensitive), the
+            value from the calculator is used as the initial guess.
 
-    def get_opt_params(self):
-        return self.fitting_params.get_opt_params()
+        The 2nd and 3rd elements are optional.
 
-    def get_opt_param_name_value_and_indices(self, k):
-        return self.fitting_params.get_opt_param_name_value_and_indices(k)
+        If 2 elements are provided:
 
-    def has_opt_params_bounds(self):
-        return self.fitting_params.has_opt_params_bounds()
+        2nd element: `FIX` (case insensitive)
+            If `FIX`, the corresponding component will not be optimized.
 
-    def get_opt_params_bounds(self):
-        return self.fitting_params.get_opt_params_bounds()
+        If 3 elements are provided:
 
-    def update_fitting_params(self, opt_params):
-        r"""Update from optimizer to fitting params."""
-        self.fitting_params.update_params(opt_params)
+        2nd element: float or `INF` (case insensitive)
+            Lower bound of the parameter. `INF` indicates that the lower bound is
+            negative infinite, i.e. no lower bound is applied.
 
-    # TODO if parameters relation set, remove the parameters from fitting params
-    # or at least check it is not in the fitting params
+        3rd element: float or `INF` (case insensitive)
+            Upper bound of the parameter. `INF` indicates that the upper bound is
+            positive infinite, i.e. no upper bound is applied.
+
+        Instead of reading fitting parameters from a file, you can also setting them
+        using a dictionary by calling the `set_opt_params()` or `set_one_opt_params()`
+        method.
+
+        Args:
+            filename: path to file that includes the fitting parameters.
+
+        Example:
+
+            # put the below in a file, say `model_params.txt` and you can read the fitting
+            # parameters by this_class.read(filename="model_params.txt")
+
+            A
+            DEFAULT
+            1.1
+
+            B
+            DEFAULT FIX
+            1.1     FIX
+
+            C
+            DEFAULT  0.1  INF
+            1.0      INF  2.1
+            2.0      FIX
+        """
+        return self.opt_params.read(filename)
+
+    def set_opt_params(self, **kwargs):
+        """
+        Set the parameters that will be optimized.
+
+        One or more parameters can be set. Each argument is for one parameter, where the
+        argument name is the parameter name, the value of the argument is the
+        settings(including initial value, fix flag, lower bound, and upper bound).
+
+        The value of the argument should be a list of list, where each inner list is for
+        one component of the parameter, which can contain 1, 2, or 3 elements.
+         See `~kliff.model.model.Model.read_opt_params()` for the options of the elements.
+
+        Example:
+           instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
+        """
+        return self.opt_params.set(**kwargs)
+
+    def set_one_opt_param(self, name: str, settings: List[List[Any]]):
+        """
+        Set one parameter that will be optimized.
+
+        The name of the parameter should be given as the first entry of a list (or tuple),
+        and then each data line should be given in in a list.
+
+        Args:
+            name: name of a fitting parameter
+            settings: initial value, flag to fix a parameter, lower and upper bounds of a
+                parameter.
+
+        Example:
+            name = 'param_A'
+            settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
+            instance.set_one(name, settings)
+        """
+        return self.opt_params.set_one(name, settings)
+
+    def echo_opt_params(self, filename: Path = sys.stdout):
+        """
+        Echo the optimizing parameter to a file.
+        """
+        return self.opt_params.echo_opt_params(filename)
+
+    def get_num_opt_params(self) -> int:
+        """
+        Number of optimizing parameters.
+
+        This is the total number of model parameter components. For example,
+        if the model has two parameters set to be optimized and each have two components,
+        this will be four.
+        """
+        return self.opt_params.get_num_opt_params()
+
+    def get_opt_params(self) -> np.ndarray:
+        """
+         Nest all optimizing parameter values (except the fixed ones) to a 1D array.
+
+        The obtained values can be provided to the optimizer as the starting parameters.
+
+        This is the opposite operation of update_model_params().
+
+        Returns:
+            opt_params: A 1D array of nested optimizing parameter values.
+        """
+        return self.opt_params.get_opt_params()
+
+    def update_model_params(self, params: Sequence[float]):
+        """
+        Update the optimizing parameter values from a sequence of float.
+
+        This is the opposite operation of get_opt_params().
+
+        Note, self.model_params will be updated as well, since self.opt_params is
+        initialized from self.model_params without copying the `Parameter` instance.
+
+        Args:
+            params: updated parameter values from the optimizer.
+        """
+        self.opt_params.update_opt_params(params)
+
+    def get_opt_param_name_value_and_indices(
+        self, index: int
+    ) -> Tuple[str, float, int, int]:
+        """
+        Get the `name`, `value`, `parameter_index`, and `component_index` of optimizing
+        parameter in slot `index`.
+
+        Args:
+            index: slot index of the optimizing parameter
+        """
+        return self.opt_params.get_opt_param_name_value_and_indices(index)
+
+    def get_opt_params_bounds(self) -> List[Tuple[int, int]]:
+        """
+        Get the lower and upper bounds of optimizing parameters.
+        """
+        return self.opt_params.get_opt_params_bounds()
+
+    def has_opt_params_bounds(self) -> bool:
+        """
+        Whether bounds are set for some parameters.
+        """
+        return self.opt_params.has_opt_params_bounds()
+
+    # TODO if parameters relation set, remove the parameters from fitting model_params
+    #   or at least check it is not in the fitting model_params
     def apply_params_relation(self):
-        r"""Force user-specified relation between parameters."""
+        """
+        Force user-specified relation between parameters.
+        """
         if self.params_relation_callback is not None:
-            self.params_relation_callback(self.fitting_params)
+            self.params_relation_callback(self.model_params)
 
-    def update_model_params(self):
-        r"""Update from fitting params to model params."""
-        for name, attr in self.fitting_params.params.items():
-            self.set_model_params(name, attr["value"], check_shape=False)
-
-    def save(self, path):
-        r"""Save a model to disk.
-
-        Parameters
-        ----------
-        path: str
-            Path where to store the model.
+    def save(self, filename: Path):
         """
-        self.fitting_params.save(path)
+        Save a model to disk.
 
-    def load(self, path):
-        r"""Load a model on disk into memory.
-
-        Parameters
-        ----------
-        path: str
-            Path where the model is stored.
+        Args:
+            filename: Path where to store the model.
         """
-        self.fitting_params.load(path)
-        self.update_model_params()
+        d = {
+            "@module": self.__class__.__module__,
+            "@class": self.__class__.__name__,
+            "opt_params": self.opt_params.as_dict(),
+        }
+        yaml_dump(d, filename)
+
+    def load(self, filename: Path):
+        """
+        Load a model on disk into memory.
+
+        Args:
+            filename: Path where the model is stored.
+        """
+        d = yaml_load(filename)
+        self.opt_params = OptimizingParameters.from_dict(d["opt_params"])
+
+        # Set model_params to opt_params.model_params since they should share the
+        # underlying `Parameter` objects
+        self.model_params = self.opt_params.model_params
 
 
 class ModelError(Exception):
     def __init__(self, msg):
         super(ModelError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg
-
-
-def report_error(msg):
-    log_entry(logger, msg, level="error")
-    raise ModelError(msg)

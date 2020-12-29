@@ -15,8 +15,8 @@ model = LennardJones()
 # model.echo_model_params()
 
 # fitting parameters
-model.set_fitting_params(sigma=[["default"]], epsilon=[["default"]])
-# model.echo_fitting_params()
+model.set_opt_params(sigma=[["default"]], epsilon=[["default"]])
+# model.echo_opt_params()
 
 calc = Calculator(model)
 calc.create(configs)
@@ -27,5 +27,5 @@ with Loss(calc, nprocs=1) as loss:
 
 
 # print optimized parameters
-model.echo_fitting_params()
+model.echo_opt_params()
 model.save_model_params()

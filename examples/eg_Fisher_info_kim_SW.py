@@ -14,7 +14,7 @@ from kliff.models import KIM
 # Fisher information matrix will be equal to the total size of the parameters specified
 # here.
 model = KIM(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
-model.set_fitting_params(
+model.set_opt_params(
     A=[["default"]], B=[["default"]], sigma=[["default"]], gamma=[["default"]]
 )
 

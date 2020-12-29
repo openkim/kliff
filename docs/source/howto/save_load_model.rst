@@ -22,8 +22,8 @@ model by:
 which creates a pickled file named ``kliff_model.pkl`` in the current working
 directory. All the information related to the model are saved to the file,
 including the final values of the parameters, the constraints on the parameters
-(such as the bounds on parameters set via :meth:`~kliff.models.Model.set_one_fitting_param`
-or :meth:`~kliff.models.Model.set_fitting_params`), and others.
+(such as the bounds on parameters set via :meth:`~kliff.models.Model.set_one_opt_param`
+or :meth:`~kliff.models.Model.set_opt_params`), and others.
 
 
 Load a model

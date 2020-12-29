@@ -1,13 +1,21 @@
-from ..utils import torch_available
-from .kim import KIM
-from .lennard_jones import LennardJones
-from .model import ComputeArguments, Model
+from kliff.models.kim import KIM
+from kliff.models.lennard_jones import LennardJones
+from kliff.models.model import ComputeArguments, Model
+from kliff.models.parameter import OptimizingParameters, Parameter
+from kliff.utils import torch_available
 
-__all__ = ["ComputeArguments", "Model", "LennardJones", "KIM"]
+__all__ = [
+    "Parameter",
+    "OptimizingParameters",
+    "ComputeArguments",
+    "Model",
+    "LennardJones",
+    "KIM",
+]
 
 if torch_available():
-    from .linear_regression import LinearRegression
-    from .model_torch import ModelTorch
-    from .neural_network import NeuralNetwork
+    from kliff.models.linear_regression import LinearRegression
+    from kliff.models.model_torch import ModelTorch
+    from kliff.models.neural_network import NeuralNetwork
 
     __all__.extend(["ModelTorch", "NeuralNetwork", "LinearRegression"])

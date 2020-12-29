@@ -66,10 +66,10 @@ model.echo_model_params()
 # Now that we know what parameters are available for fitting, we can optimize all or a
 # subset of them to reproduce the training set.
 
-model.set_fitting_params(
+model.set_opt_params(
     A=[[5.0, 1.0, 20]], B=[["default"]], sigma=[[2.0951, "fix"]], gamma=[[1.5]]
 )
-model.echo_fitting_params()
+model.echo_opt_params()
 
 
 ##########################################################################################
@@ -92,7 +92,7 @@ model.echo_fitting_params()
 #   list the lower and upper bounds for the parameters, respectively. A bound could be
 #   provided as a numerical values or ``None``. The latter indicates no bound is applied.
 #
-# The call of ``model.echo_fitting_params()`` prints out the fitting parameters that we
+# The call of ``model.echo_opt_params()`` prints out the fitting parameters that we
 # require KLIFF to optimize. The number ``1`` after the name of each parameter indicates
 # the size of the parameter.
 #
@@ -165,7 +165,7 @@ loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 # evaluations. If satisfied with the fitted model, you can also write it as a KIM model
 # that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
 
-model.echo_fitting_params()
+model.echo_opt_params()
 model.save("kliff_model.pkl")
 model.write_kim_model()
 model.load("kliff_model.pkl")

@@ -2,7 +2,6 @@ import logging
 import os
 from collections import OrderedDict
 
-import kliff
 import numpy as np
 
 from ...log import log_entry
