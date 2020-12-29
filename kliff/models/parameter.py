@@ -1,9 +1,6 @@
 import logging
-import os
-import pickle
 import sys
 import warnings
-from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -175,7 +172,7 @@ class Parameter(MSONable):
         )
 
 
-class OptimizingParameters:
+class OptimizingParameters(MSONable):
     """
     A collection of paramters that will be optimized.
 
@@ -196,7 +193,7 @@ class OptimizingParameters:
         self.model_params = model_params
 
         # list of optimizing param names
-        self.params = []
+        self._params = []
 
         # individual components of parameters that are optimized
         self._index = []
@@ -238,8 +235,8 @@ class OptimizingParameters:
 
         Example:
 
-            # put the below in a file, say `params.txt` and you can read the fitting
-            # parameters by this_class.read(filename="params.txt")
+            # put the below in a file, say `model_params.txt` and you can read the fitting
+            # parameters by this_class.read(filename="model_params.txt")
 
             A
             DEFAULT
@@ -264,7 +261,7 @@ class OptimizingParameters:
             name = lines[num_line].strip()
             num_line += 1
 
-            if name in self.params:
+            if name in self._params:
                 warnings.warn(
                     f"file `{filename}`, line {num_line}. Parameter `{name}` already "
                     f"set. Reset it.",
@@ -296,13 +293,14 @@ class OptimizingParameters:
 
         The value of the argument should be a list of list, where each inner list is for
         one component of the parameter, which can contain 1, 2, or 3 elements.  See
-        `~kliff.model.parameter.OptimizingParameters.read()` for the options of the elements.
+        `~kliff.model.parameter.OptimizingParameters.read()` for the options of the
+        elements.
 
         Example:
             instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
         """
         for name, settings in kwargs.items():
-            if name in self.params:
+            if name in self._params:
                 msg = f"Parameter `{name}` already set. Reset it."
                 warnings.warn(msg, category=Warning)
 
@@ -350,11 +348,11 @@ class OptimizingParameters:
 
         self._set_index(name)
 
-        if name not in self.params:
-            self.params.append(name)
+        if name not in self._params:
+            self._params.append(name)
 
     def echo_opt_params(
-        self, filename: Optional[Path] = None, echo_size: bool = True
+        self, filename: Optional[Path] = sys.stdout, echo_size: bool = True
     ) -> str:
         """
         Get the optimizing parameters as a string and/or print to file (stdout).
@@ -373,7 +371,7 @@ class OptimizingParameters:
         s += "# Model parameters that are optimized.\n"
         s += "#" + "=" * 80 + "\n\n"
 
-        for name in self.params:
+        for name in self._params:
             p = self.model_params[name]
 
             if echo_size:
@@ -414,148 +412,19 @@ class OptimizingParameters:
 
         return s
 
-    #
-    # def echo_opt_params(self, filename: Optional[Path] = None, print_size: bool = True):
-    #     """
-    #     Print the optimizing parameters to file or stdout.
-    #
-    #     Args:
-    #         filename: Path to the file to output the optimizing parameters. If `None`,
-    #             print to stdout.
-    #         print_size: Whether to print the size of parameters. (Each parameter
-    #             may have one or more components).
-    #     """
-    #
-    #     if filename is not None:
-    #         fout = open(filename, "w")
-    #     else:
-    #         fout = sys.stdout
-    #
-    #     print("#" + "=" * 80, file=fout)
-    #     print("# Model parameters that are optimized.", file=fout)
-    #     print("#" + "=" * 80, file=fout)
-    #     print(file=fout)
-    #
-    #     for name, attr in self.params.items():
-    #         if print_size:
-    #             print(name, attr["size"], file=fout)
-    #         else:
-    #             print(name, file=fout)
-    #
-    #         for i in range(attr["size"]):
-    #             print("{:24.16e}".format(attr["value"][i]), end=" ", file=fout)
-    #
-    #             if attr["fix"][i]:
-    #                 print("fix", end=" ", file=fout)
-    #
-    #             lb = attr["lower_bound"][i]
-    #             ub = attr["upper_bound"][i]
-    #             has_lb = lb is not None
-    #             has_ub = ub is not None
-    #             has_bounds = has_lb or has_ub
-    #             if has_bounds:
-    #                 if has_lb:
-    #                     print("{:24.16e}".format(lb), end=" ", file=fout)
-    #                 else:
-    #                     print("None", end=" ", file=fout)
-    #                 if has_ub:
-    #                     print("{:24.16e}".format(ub), end=" ", file=fout)
-    #                 else:
-    #                     print("None", end=" ", file=fout)
-    #             print(file=fout)
-    #
-    #         print(file=fout)
-    #
-    #     if filename is not None:
-    #         fout.close()
+    def get_num_opt_params(self) -> int:
+        """
+        Number of optimizing parameters.
 
-    # # TODO change save and load to use yaml file instead of pickle
-    # def save(self, filename: Path):
-    #     """Save the fitting parameters to file."""
-    #     filename = os.path.abspath(filename)
-    #     dirname = os.path.dirname(filename)
-    #     if not os.path.exists(dirname):
-    #         os.makedirs(dirname)
-    #     with open(filename, "wb") as f:
-    #         pickle.dump(self.params, f)
-    #
-    # def load(self, filename: Path):
-    #     """Load the fitting parameters from file."""
-    #     # restore parameters
-    #     with open(filename, "rb") as f:
-    #         self.params = pickle.load(f)
-    #     # restore index
-    #     self._index = []
-    #     for name in self.params.keys():
-    #         self._set_index(name)
-
-    # def get_names(self) -> List[str]:
-    #     """
-    #     Return a list of parameter names.
-    #     """
-    #     return list(self.params.keys())
-    #
-    # def get_size(self, name: str):
-    #     """
-    #     Get the parameter size.
-    #
-    #     Args:
-    #         name: parameter name
-    #     """
-    #     return self.params[name]["size"]
-    #
-    # def get_value(self, name: str):
-    #     """
-    #     Get the value of the parameter.
-    #
-    #     Args:
-    #         name: parameter name
-    #     """
-    #
-    #     return self.params[name]["value"].copy()
-    #
-    # def set_value(self, name: str, value: List[float]):
-    #     """
-    #     Set the parameter value.
-    #
-    #     Typically, you will not call this, but call set_one().
-    #
-    #     Args:
-    #         name: name of the parameter
-    #         value: parameter values
-    #     """
-    #     self.params[name]["value"] = np.asarray(value)
-    #
-    # def get_lower_bound(self, name: str):
-    #     """
-    #     Lower bonds of a parameter.
-    #
-    #     Args:
-    #         name: parameter name
-    #     """
-    #     return self.params[name]["lower_bound"].copy()
-    #
-    # def get_upper_bound(self, name: str):
-    #     """
-    #     Upper bonds of parameter.
-    #
-    #     Args:
-    #         name: parameter name
-    #     """
-    #     return self.params[name]["upper_bound"].copy()
-    #
-    # def get_fix(self, name: str):
-    #     """
-    #     Whether parameter is fixed.
-    #
-    #     Args:
-    #         name: parameter name
-    #     """
-    #     return self.params[name]["fix"].copy()
+        This is the total number of model parameter components. For example,
+        if the model has two parameters set to be optimized and each have two components,
+        this will be four.
+        """
+        return len(self._index)
 
     def get_opt_params(self) -> np.ndarray:
         """
-        Nest all optimizing parameter values (except the fixed ones) to a list.
+        Nest all optimizing parameter values (except the fixed ones) to a 1D array.
 
         The obtained values can be provided to the optimizer as the starting parameters.
 
@@ -585,16 +454,6 @@ class OptimizingParameters:
             name = self._index[k].name
             c_idx = self._index[k].c_idx
             self.model_params[name][c_idx] = val
-
-    def get_num_opt_params(self) -> int:
-        """
-        Number of optimizing parameters.
-
-        This is the total number of model parameter components. For example,
-        if the model has two parameters set to be optimized and each have two components,
-        this will be four.
-        """
-        return len(self._index)
 
     def get_opt_param_name_value_and_indices(
         self, index: int
@@ -736,6 +595,27 @@ class OptimizingParameters:
                     self._index[already_in] = idx
                 else:
                     self._index.append(idx)
+
+    def as_dict(self):
+        return {
+            "@module": self.__class__.__module__,
+            "@class": self.__class__.__name__,
+            "model_params": {k: v.as_dict() for k, v in self.model_params.items()},
+            "params": self._params,
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        c = cls(
+            model_params={
+                k: Parameter.from_dict(v) for k, v in d["model_params"].items()
+            }
+        )
+        c._params = d["params"]
+        for name in d["params"]:
+            cls._set_index(name)
+
+        return c
 
 
 class _Index:
