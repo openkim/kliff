@@ -1,6 +1,9 @@
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Union
+
+import yaml
 
 
 def length_equal(a, b):
@@ -61,3 +64,25 @@ def to_path(path: Union[str, Path]) -> Path:
     Convert str (or filename) to pathlib.Path.
     """
     return Path(path).expanduser().resolve()
+
+
+def create_directory(path: Union[str, Path], is_directory=False):
+    p = to_path(path)
+    if is_directory:
+        dirname = p
+    else:
+        dirname = p.parent
+    if not dirname.exists():
+        os.makedirs(dirname)
+
+
+def yaml_dump(obj, filename):
+    create_directory(filename)
+    with open(to_path(filename), "w") as f:
+        yaml.dump(obj, f, default_flow_style=False)
+
+
+def yaml_load(filename):
+    with open(to_path(filename), "r") as f:
+        obj = yaml.safe_load(f)
+    return obj

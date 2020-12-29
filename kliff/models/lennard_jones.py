@@ -1,47 +1,48 @@
 import logging
+from typing import Callable, Dict, Optional
 
 import numpy as np
-
-from ..neighbor import NeighborList, assemble_forces, assemble_stress
-from .model import ComputeArguments, Model
-from .parameter import Parameter, ParameterError
+from kliff.dataset.dataset import Configuration
+from kliff.models.model import ComputeArguments, Model
+from kliff.models.parameter import Parameter, ParameterError
+from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
 
 logger = logging.getLogger(__name__)
 
 
 class LJComputeArguments(ComputeArguments):
-    """Lennard-Jones 6-12 potential model built within KLIFF."""
+    """
+    KLIFF built-in Lennard-Jones 6-12 potential computation functions.
+    """
 
     implemented_property = ["energy", "forces", "stress"]
 
-    def __init__(self, *args, **kwargs):
-        super(LJComputeArguments, self).__init__(*args, **kwargs)
-        self.refresh(self.influence_distance)
+    def __init__(
+        self,
+        conf: Configuration,
+        supported_species: Dict[str, int],
+        influence_distance: float,
+        compute_energy: bool = True,
+        compute_forces: bool = True,
+        compute_stress: bool = False,
+    ):
+        super(LJComputeArguments, self).__init__(
+            conf,
+            supported_species,
+            influence_distance,
+            compute_energy,
+            compute_forces,
+            compute_stress,
+        )
 
-    def refresh(self, influence_distance=None, params=None):
-        """
-        Refresh settings.
+        self.neigh = NeighborList(
+            self.conf, influence_distance, padding_need_neigh=False
+        )
 
-        Recreating the neighbor list due to the change of influence distance.
-        """
-        if influence_distance is not None:
-            infl_dist = influence_distance
-        else:
-            try:
-                infl_dist = params["influence_distance"].get_value()[0]
-            except KeyError:
-                raise ParameterError(
-                    '"influence_distance" not provided by calculator."'
-                )
-        self.influence_distance = infl_dist
-
-        # create neighbor list
-        self.neigh = NeighborList(self.conf, infl_dist, padding_need_neigh=False)
-
-    def compute(self, params):
-        epsilon = params["epsilon"].get_value()[0]
-        sigma = params["sigma"].get_value()[0]
-        rcut = params["cutoff"].get_value()[0]
+    def compute(self, params: Dict[str, Parameter]):
+        epsilon = params["epsilon"][0]
+        sigma = params["sigma"][0]
+        rcut = params["cutoff"][0]
         coords = self.conf.coords
 
         coords_including_padding = self.neigh.coords
@@ -107,14 +108,29 @@ class LJComputeArguments(ComputeArguments):
 
 
 class LennardJones(Model):
-    def __init__(self, model_name=None, params_relation_callback=None):
+    """
+    KLIFF built-in Lennard-Jones 6-12 potential model.
+    """
+
+    def __init__(
+        self, model_name="LJ6-12", params_relation_callback: Optional[Callable] = None
+    ):
         super(LennardJones, self).__init__(model_name, params_relation_callback)
 
-        self.params["epsilon"] = Parameter(value=[1.0])
-        self.params["sigma"] = Parameter(value=[2.0])
-        self.params["cutoff"] = Parameter(value=[5.0])
-        self.compute_arguments_class = LJComputeArguments
-        self.fitting_params = self.init_fitting_params(self.params)
+    def init_model_params(self):
+        model_params = {
+            "epsilon": Parameter(value=[1.0]),
+            "sigma": Parameter(value=[2.0]),
+            "cutoff": Parameter(value=[5.0]),
+        }
 
-    def get_influence_distance(self):
-        return self.params["cutoff"].get_value()[0]
+        return model_params
+
+    def init_influence_distance(self):
+        return 5.0
+
+    def init_supported_species(self):
+        return None
+
+    def get_compute_argument_class(self):
+        return LJComputeArguments
