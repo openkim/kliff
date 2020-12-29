@@ -1,10 +1,10 @@
 import sys
 
-from kliff.models import KIM
+from kliff.models import KIMModel
 
 
 def get_avail_params(model_name):
-    model = KIM(model_name)
+    model = KIMModel(model_name)
     model.echo_model_params()
 
 

@@ -37,7 +37,7 @@ on OpenKIM_.
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
-from kliff.models import KIM
+from kliff.models import KIMModel
 
 ##########################################################################################
 # Model
@@ -46,7 +46,7 @@ from kliff.models import KIM
 # We first create a KIM model for the SW potential, and print out all the available
 # parameters that can be optimized (we call this ``model parameters``).
 
-model = KIM(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
 model.echo_model_params()
 
 

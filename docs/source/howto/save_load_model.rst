@@ -34,7 +34,7 @@ potential discussed in :ref:`tut_kim_sw`, it can be loaded by:
 
 .. code-block:: python
 
-     model = KIM(model_name='Three_Body_Stillinger_Weber_Si__MO_405512056662_004')
+     model = KIMModel(model_name='Three_Body_Stillinger_Weber_Si__MO_405512056662_004')
      path = './kliff_model.pkl'
      model.load(path)
 

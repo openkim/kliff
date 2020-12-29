@@ -182,11 +182,9 @@ class Model:
 
         params_relation_callback: A callback function to set the relations between
             parameters, which are called each minimization step after the optimizer
-            updates the parameters.
-
-            The function with be given the a dictionary of
-            `~kliff.model.parameter.Parameter` as argument; a user can manipulate the
-            parameters to set some relation.
+            updates the parameters. The function with be given a dictionary of
+            :meth:`~kliff.model.parameter.Parameter` as argument, which can
+            then be manipulated to set relations between parameters.
 
             Example:
 

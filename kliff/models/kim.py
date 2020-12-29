@@ -1,14 +1,15 @@
 import logging
 import os
-from collections import OrderedDict
+from pathlib import Path
+from typing import Callable, Dict, Optional, Sequence
 
 import numpy as np
-
-from ..error import SupportError, report_import_error
-from ..log import log_entry
-from ..neighbor import assemble_forces, assemble_stress
-from .model import ComputeArguments, Model
-from .parameter import Parameter
+from kliff.dataset.dataset import Configuration
+from kliff.error import SupportError, report_import_error
+from kliff.log import log_entry
+from kliff.models.model import ComputeArguments, Model
+from kliff.models.parameter import Parameter
+from kliff.neighbor import assemble_forces, assemble_stress
 
 try:
     import kimpy
@@ -23,24 +24,50 @@ logger = logging.getLogger(__name__)
 
 
 class KIMComputeArguments(ComputeArguments):
-    r"""KIM potentials arguments.
+    """
+    KIMModel potentials arguments.
 
-    Parameters
-    ----------
-    kim_ca: KIM compute argument
-
-    supported_species: dict
-        Key and value are species string and integer code, respectively.
+    Args:
+        kim_ca: KIM compute argument, can be created by
+            :meth:`~kliff.models.KIMModels.create_a_compute_argument()`.
+        conf: atomic configurations
+        supported_species: species supported by the potential model, with chemical
+            symbol as key and integer code as value.
+        influence_distance: influence distance (aka cutoff distance) to calculate neighbors
+        compute_energy: whether to compute energy
+        compute_forces: whether to compute forces
+        compute_stress: whether to compute stress
     """
 
     implemented_property = []
 
-    def __init__(self, kim_ca, *args, **kwargs):
+    def __init__(
+        self,
+        kim_ca,
+        config: Configuration,
+        supported_species: Dict[str, int],
+        influence_distance: float,
+        compute_energy: bool = True,
+        compute_forces: bool = True,
+        compute_stress: bool = False,
+    ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
 
+        # kim compute argument
         self.kim_ca = kim_ca
-        super(KIMComputeArguments, self).__init__(*args, **kwargs)
+
+        # get supported property
+        self._get_implemented_property()
+
+        super(KIMComputeArguments, self).__init__(
+            config,
+            supported_species,
+            influence_distance,
+            compute_energy,
+            compute_forces,
+            compute_stress,
+        )
 
         # neighbor list
         self.neigh = None
@@ -59,28 +86,13 @@ class KIMComputeArguments(ComputeArguments):
         self.forces = None
 
         self._init_neigh()
-
-        self.refresh(self.influence_distance)
-
-    def check_compute_property(self):
-        def add_to_compute_property(compute_property, name):
-            if name not in self.implemented_property:
-                raise NotImplementedError(
-                    '"{}" not implemented in calculator.'.format(name)
-                )
-            compute_property.append(name)
-
-        self._get_implemented_property()
-        compute_property = []
-        if self.compute_energy:
-            add_to_compute_property(compute_property, "energy")
-        if self.compute_forces:
-            add_to_compute_property(compute_property, "forces")
-        if self.compute_stress:
-            add_to_compute_property(compute_property, "stress")
-        return compute_property
+        self._update_neigh(influence_distance)
+        self._register_data(compute_energy, compute_forces)
 
     def _get_implemented_property(self):
+        """ "
+        Get implemented property of model.
+        """
 
         # check compute arguments
         kim_can = kimpy.compute_argument_name
@@ -99,9 +111,7 @@ class KIMComputeArguments(ComputeArguments):
             # calculator can only handle energy and forces
             if support_status == kimpy.support_status.required:
                 if name != kim_can.partialEnergy and name != kim_can.partialForces:
-                    report_error(
-                        'Unsupported required ComputeArgument "{}"'.format(name)
-                    )
+                    report_error(f"Unsupported required ComputeArgument `{name}`")
 
             # supported property
             if name == kim_can.partialEnergy:
@@ -124,22 +134,23 @@ class KIMComputeArguments(ComputeArguments):
             # calculator only provides get_neigh
             if support_status == kimpy.support_status.required:
                 if name != kim_ccn.GetNeighborList:
-                    report_error(
-                        'Unsupported required ComputeCallback "{}"'.format(name)
-                    )
+                    report_error(f"Unsupported required ComputeCallback `{name}`")
 
-    def refresh(self, influence_distance=None, params=None):
-        self.influence_distance = influence_distance
-        self.update_neigh(influence_distance)
-        self.register_data(self.compute_energy, self.compute_forces)
+    def _init_neigh(self):
 
-    def update_neigh(self, influence_distance):
-        r"""Update neighbor list and model input.
+        # create neighbor list
+        neigh = nl.initialize()
+        self.neigh = neigh
 
-        Parameters
-        ----------
+        # register get neigh callback
+        error = self.kim_ca.set_callback_pointer(
+            kimpy.compute_callback_name.GetNeighborList, nl.get_neigh_kim(), neigh
+        )
+        check_error(error, "compute_arguments.set_callback_pointer")
 
-        influence_distance: float
+    def _update_neigh(self, influence_distance: float):
+        """
+        Update neighbor list and model input.
         """
 
         # inquire information from conf
@@ -157,7 +168,7 @@ class KIMComputeArguments(ComputeArguments):
             if s in self.supported_species:
                 species_map[s] = self.supported_species[s]
             else:
-                report_error('species "{}" not supported by model'.format(s))
+                report_error(f"species `{s}` not supported by model")
         contributing_species_code = np.array(
             [species_map[s] for s in contributing_species], dtype=np.intc
         )
@@ -183,6 +194,7 @@ class KIMComputeArguments(ComputeArguments):
             self.species_code = np.asarray(tmp, dtype=np.intc)
             self.particle_contributing = np.ones(self.num_particles[0], dtype=np.intc)
             self.particle_contributing[num_contributing:] = 0
+
             # TODO check whether padding need neigh and create accordingly
             # for now, create neigh for all atoms, including paddings
             need_neigh = np.ones(self.num_particles[0], dtype=np.intc)
@@ -204,8 +216,10 @@ class KIMComputeArguments(ComputeArguments):
         )
         check_error(error, "nl.build")
 
-    def register_data(self, compute_energy=True, compute_forces=True):
-        r"""Register model input and output data in KIM API."""
+    def _register_data(self, compute_energy=True, compute_forces=True):
+        """
+        Register model input and output data in KIM API.
+        """
 
         # check whether model support energy and forces
         kim_can = kimpy.compute_argument_name
@@ -282,137 +296,58 @@ class KIMComputeArguments(ComputeArguments):
             stress = assemble_stress(self.coords, self.forces, volume)
             self.results["stress"] = stress
 
-    def _init_neigh(self):
-
-        # create neighborlist
-        neigh = nl.initialize()
-        self.neigh = neigh
-
-        # register get neigh callback
-        error = self.kim_ca.set_callback_pointer(
-            kimpy.compute_callback_name.GetNeighborList, nl.get_neigh_kim(), neigh
-        )
-        check_error(error, "compute_arguments.set_callback_pointer")
-
     def __del__(self):
-        """Garbage collection to destroy the neighbor list automatically"""
+        """
+        Garbage collection to destroy the neighbor list automatically.
+        """
         if self.neigh is not None:
             nl.clean(self.neigh)
             self.neigh = None
 
 
-class KIM(Model):
-    def __init__(self, model_name=None, params_relation_callback=None):
+class KIMModel(Model):
+    """
+    A general interface to any KIM model.
+
+    Args:
+        model_name: name of a KIM model. Available models can be found at:
+            https://openkim.org.
+            For example `SW_StillingerWeber_1985_Si__MO_405512056662_005`.
+        params_relation_callback: A callback function to set the relations between
+            parameters, which are called each minimization step after the optimizer
+            updates the parameters. The function with be given a dictionary of
+            :meth:`~kliff.model.parameter.Parameter` as argument, which can
+            then be manipulated to set relations between parameters.
+
+            Example:
+
+            In the following example, we set the value of B[0] to 2 * A[0].
+
+            def params_relation(model_params):
+                A = model_params['A']
+                B = model_params['B']
+                B[0] = 2*A[0]
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        params_relation_callback: Optional[Callable] = None,
+    ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
 
-        super(KIM, self).__init__(model_name, params_relation_callback)
+        self.kim_model = self._create_kim_model(model_name)
 
-        if self.model_name is None:
-            c = self.__class__.__name__
-            raise KIMModelError(
-                '"model_name" is a mandatory argument for the "{}" calculator.'.format(
-                    c
-                )
-            )
+        super(KIMModel, self).__init__(model_name, params_relation_callback)
 
-        self.kim_model = self._initialize()
-        self.params = self.inquire_params()
+    def init_model_params(self) -> Dict[str, Parameter]:
+        return self.get_kim_model_params()
 
-        self.compute_arguments_class = KIMComputeArguments
-        self.fitting_params = self.init_fitting_params(self.params)
-
-        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
-
-    def _initialize(self):
-        r"""Initialize the KIM object"""
-        units_accepted, model, error = kimpy.model.create(
-            kimpy.numbering.zeroBased,
-            kimpy.length_unit.A,
-            kimpy.energy_unit.eV,
-            kimpy.charge_unit.e,
-            kimpy.temperature_unit.K,
-            kimpy.time_unit.ps,
-            self.model_name,
-        )
-        check_error(error, "kimpy.model.create")
-        if not units_accepted:
-            report_error("requested units not accepted in kimpy.model.create")
-        return model
-
-    def inquire_params(self):
-        r"""Inquire the KIM model to get all parameters. """
-        params = OrderedDict()
-
-        num_params = self.kim_model.get_number_of_parameters()
-        for i in range(num_params):
-            out = self.kim_model.get_parameter_metadata(i)
-            dtype, extent, name, description, error = out
-            check_error(error, "model.get_parameter_data_type_extent_and_description")
-
-            values = []
-            for j in range(extent):
-                if str(dtype) == "Double":
-                    value, error = self.kim_model.get_parameter_double(i, j)
-                    check_error(error, "model.get_parameter_double")
-                elif str(dtype) == "Int":
-                    value, error = self.kim_model.get_parameter_int(i, j)
-                    check_error(error, "model.get_parameter_int")
-                else:  # should never reach here
-                    report_error('get unexpeced parameter data type "{}"'.format(dtype))
-                values.append(value)
-                params[name] = Parameter(
-                    value=values, dtype=dtype, description=description
-                )
-        return params
-
-    def create_a_kim_compute_argument(self):
-        kim_ca, error = self.kim_model.compute_arguments_create()
-        check_error(error, "kim_model.compute_arguments_create")
-        return kim_ca
-
-    def update_model_params(self):
-        """ Update from fitting params to model params. """
-
-        # only update optimizing components
-        num_params = self.get_number_of_opt_params()
-        for i in range(num_params):
-            _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
-            self.kim_model.set_parameter(p_idx, c_idx, value)
-
-        # refresh model
-        self.kim_model.clear_then_refresh()
-
-        # TODO this seems unnecessary
-        # the correct way is to reimplement set_model_param, get_model_param,
-        # and echo_model_param. Also, inquire_model_params seems could be used as
-        # get_model_params.
-        # the consideration is that we need a parameters object to be passed to
-        # FittingParams. This should not be a problem.
-        # update model params of the model class
-        for name, attr in self.fitting_params.params.items():
-            self.set_model_params(name, attr["value"], check_shape=False)
-
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            params = self.inquire_params()
-            s = ""
-            for name, p in params.items():
-                s += "\nname: {}\n".format(name)
-                s += p.to_string()
-            log_entry(logger, s, level="debug")
-
-    def get_influence_distance(self):
-        r"""Return the influence distance of a model."""
+    def init_influence_distance(self) -> float:
         return self.kim_model.get_influence_distance()
 
-    def get_supported_species(self):
-        r"""Get all the supported species.
-
-        Return
-        ------
-        species: dict
-            Key and value are species string and integer code, respectively.
-        """
+    def init_supported_species(self) -> Dict[str, int]:
         species = {}
         num_kim_species = kimpy.species_name.get_number_of_species_names()
 
@@ -428,45 +363,135 @@ class KIM(Model):
 
         return species
 
-    def write_kim_model(self, path=None):
-        r"""Write out a KIM model that can be used directly with the kim-api.
+    def get_compute_argument_class(self):
+        return KIMComputeArguments
+
+    @staticmethod
+    def _create_kim_model(model_name: str):
+        """
+        Create a new kim model.
+        """
+        units_accepted, model, error = kimpy.model.create(
+            kimpy.numbering.zeroBased,
+            kimpy.length_unit.A,
+            kimpy.energy_unit.eV,
+            kimpy.charge_unit.e,
+            kimpy.temperature_unit.K,
+            kimpy.time_unit.ps,
+            model_name,
+        )
+        check_error(error, "kimpy.model.create")
+        if not units_accepted:
+            report_error("requested units not accepted in kimpy.model.create")
+        return model
+
+    def get_kim_model_params(self) -> Dict[str, Parameter]:
+        """
+        Inquire the KIM model to get all the parameters.
+
+        Returns:
+            {name, parameter}, all parameters in a kim model.
+        """
+        params = dict()
+
+        num_params = self.kim_model.get_number_of_parameters()
+        for i in range(num_params):
+            out = self.kim_model.get_parameter_metadata(i)
+            dtype, extent, name, description, error = out
+            check_error(error, "model.get_parameter_data_type_extent_and_description")
+
+            values = []
+            for j in range(extent):
+                if str(dtype) == "Double":
+                    val, error = self.kim_model.get_parameter_double(i, j)
+                    check_error(error, "model.get_parameter_double")
+                    values.append(val)
+                elif str(dtype) == "Int":
+                    val, error = self.kim_model.get_parameter_int(i, j)
+                    check_error(error, "model.get_parameter_int")
+                    values.append(val)
+                else:  # should never reach here
+                    report_error(f"get unexpected parameter data type `{dtype}`")
+
+                params[name] = Parameter(value=values, index=i)
+
+        return params
+
+    def create_a_kim_compute_argument(self):
+        """
+        Create a compute argument for the KIM model.
+        """
+        kim_ca, error = self.kim_model.compute_arguments_create()
+        check_error(error, "kim_model.compute_arguments_create")
+
+        return kim_ca
+
+    def update_model_params(self, params: Sequence[float]):
+        """
+        Update optimizing parameters (a sequence used by the optimizer) to the kim model.
+        """
+        # update from opt params to model params
+        self.opt_params.update_opt_params(params)
+
+        # update from model params to kim params
+        n = self.get_num_opt_params()
+        for i in range(n):
+            _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
+            self.kim_model.set_parameter(p_idx, c_idx, value)
+
+        # refresh model
+        self.kim_model.clear_then_refresh()
+
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            params = self.get_kim_model_params()
+            s = ""
+            for name, p in params.items():
+                s += f"\nname: {name}\n"
+                s += str(p.as_dict())
+            log_entry(logger, s, level="debug")
+
+    def write_kim_model(self, path: Path = None):
+        """
+        Write out a KIM model that can be used directly with the kim-api.
 
         This function typically write two files to `path`: (1) CMakeLists.txt, and (2)
-        a parameter file like A.params. `path` will be created if it does not exist.
+        a parameter file like A.model_params. `path` will be created if it does not exist.
 
-        Parameters
-        ----------
-        path: str (optional)
-            Path to the newly trained model.  If `None`, it is set to
-            `./MODEL_NAME_kliff_trained`, where `MODEL_NAME` is the `model_name` that
-            provided at the instantiation of this class.
+        Args:
+            path: Path to the a directory to store the model. If `None`, it is set to
+                `./MODEL_NAME_kliff_trained`, where `MODEL_NAME` is the `model_name` that
+                provided at the initialization of this class.
 
-        Note
-        ----
-        This only works for parameterized KIM models that support the writing of
-        parameters.
+        Note:
+            This only works for parameterized KIMModel models that support the writing of
+            parameters.
         """
         present, required, error = self.kim_model.is_routine_present(
             kimpy.model_routine_name.WriteParameterizedModel
         )
         check_error(error, "kim_model.is_routine_is_routine_present")
         if not present:
-            raise SupportError("This KIM model does not support writing parameters.")
+            raise SupportError(
+                "This KIMModel model does not support writing parameters."
+            )
 
         if path is None:
             model_name = self.model_name + "_kliff_trained"
-            path = os.path.join(os.getcwd(), model_name)
+            path = Path.cwd().joinpath(model_name)
         else:
-            path = os.path.abspath(path)
-            model_name = os.path.basename(path)
-        if not os.path.exists(path):
+            path = Path(path).expanduser().resolve()
+            model_name = path.name
+
+        if not path.exists():
             os.makedirs(path)
+
+        path = str(path)
+        model_name = str(model_name)
 
         error = self.kim_model.write_parameterized_model(path, model_name)
         check_error(error, "kim_model.write_parameterized_model")
 
-        msg = 'KLIFF trained model write to "{}"'.format(path)
-        log_entry(logger, msg, level="info")
+        log_entry(logger, f"KLIFF trained model write to `{path}`", level="info")
 
 
 class KIMModelError(Exception):
@@ -474,13 +499,10 @@ class KIMModelError(Exception):
         super(KIMModelError, self).__init__(msg)
         self.msg = msg
 
-    def __expr__(self):
-        return self.msg
-
 
 def check_error(error, msg):
     if error != 0 and error is not None:
-        msg = 'Calling "{}" failed.\nSee "kim.log" for more information.'.format(msg)
+        msg = f"Calling `{msg}` failed.\nSee `kim.log` for more information."
         log_entry(logger, msg, level="error")
         raise KIMModelError(msg)
 

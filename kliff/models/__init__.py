@@ -1,4 +1,4 @@
-from kliff.models.kim import KIM
+from kliff.models.kim import KIMModel
 from kliff.models.lennard_jones import LennardJones
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import OptimizingParameters, Parameter
@@ -10,7 +10,7 @@ __all__ = [
     "ComputeArguments",
     "Model",
     "LennardJones",
-    "KIM",
+    "KIMModel",
 ]
 
 if torch_available():
