@@ -1,11 +1,10 @@
 import os
+import warnings
 
 import numpy as np
 import pytest
-from kliff.calculators import Calculator
-from kliff.dataset import Dataset
-from kliff.models import LennardJones
-from kliff.models.model import ModelError
+from kliff.dataset import Configuration
+from kliff.models.lennard_jones import LennardJones, LJComputeArguments
 
 
 def params_relation(params):
@@ -28,7 +27,7 @@ def delete_tmp_params(fname):
 
 
 def energy_forces_stress(
-    calc, configs, use_energy=False, use_forces=False, use_stress=False
+    model, config, use_energy=False, use_forces=False, use_stress=False
 ):
 
     pred_energy = -56.08345486063805
@@ -60,44 +59,41 @@ def energy_forces_stress(
     ]
     ref_stress = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6]
 
-    calc.create(configs, use_energy, use_forces, use_stress)
-    cas = calc.get_compute_arguments()
-    ca = cas[0]
-    calc.compute(ca)
+    ca = LJComputeArguments(
+        config,
+        supported_species=None,
+        influence_distance=model.get_influence_distance(),
+        compute_energy=use_energy,
+        compute_forces=use_forces,
+        compute_stress=use_stress,
+    )
 
     assert ca.get_compute_flag("energy") == use_energy
     assert ca.get_compute_flag("forces") == use_forces
     assert ca.get_compute_flag("stress") == use_stress
 
-    try:
-        energy = calc.get_energy(ca)
+    ca.compute(model.get_model_params())
+
+    energy = ca.get_energy()
+    if use_energy:
         assert energy == pytest.approx(pred_energy, 1e-6)
-    except ModelError as e:
-        if use_energy:
-            raise ModelError(e)
-        else:
-            pass
+    else:
+        assert energy == None
 
-    try:
-        forces = calc.get_forces(ca)
+    forces = ca.get_forces()
+    if use_forces:
         assert np.allclose(forces[:6], pred_forces)
-    except ModelError as e:
-        if use_forces:
-            raise ModelError(e)
-        else:
-            pass
+    else:
+        assert forces == None
 
-    try:
-        stress = calc.get_stress(ca)
+    stress = ca.get_stress()
+    if use_stress:
         assert np.allclose(stress, pred_stress)
-    except ModelError as e:
-        if use_stress:
-            raise ModelError(e)
-        else:
-            pass
+    else:
+        assert stress == None
 
-    pred = calc.get_prediction(ca)
-    ref = calc.get_reference(ca)
+    pred = ca.get_prediction()
+    ref = ca.get_reference()
 
     if use_energy:
         assert pred[0] == pytest.approx(pred_energy, 1e-6)
@@ -116,34 +112,31 @@ def energy_forces_stress(
 
 
 def test_lj():
-    model = LennardJones()
+    model = LennardJones(params_relation_callback=params_relation)
 
-    # set params directly
-    model.set_fitting_params(sigma=[[1.1, "fix"]], epsilon=[[2.1, None, 3.0]])
+    # set optimizing parameters
+    model.set_opt_params(sigma=[[1.1, "fix"]], epsilon=[[2.1, None, 3.0]])
 
-    model.update_model_params()
-    # model.echo_model_params()
-    # model.echo_fitting_params()
+    # model.update_model_params()
+    model.echo_model_params()
+    model.echo_opt_params()
 
-    # set params by reading from file (the same as set params directly)
-    # fname = 'tmp_lj.params'
-    # write_tmp_params(fname)
-    # model.read_fitting_params(fname)
-    # delete_tmp_params(fname)
+    with warnings.catch_warnings():  # context manager to ignore warning
+        warnings.simplefilter("ignore")
 
-    calc = Calculator(model)
+        # set model_params by reading from file (the same as set model_params directly)
+        filename = "tmp_lj_params.txt"
+        write_tmp_params(filename)
+        model.read_opt_params(filename)
+        delete_tmp_params(filename)
 
-    dset = Dataset("./configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz")
-    configs = dset.get_configs()
+        model.echo_model_params()
+        model.echo_opt_params()
 
-    energy_forces_stress(calc, configs, True, False, False)
-    energy_forces_stress(calc, configs, True, True, False)
-    energy_forces_stress(calc, configs, True, True, True)
+    config = Configuration.from_file(
+        "./configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz"
+    )
 
-    # params relation callback
-    model.set_params_relation_callback(params_relation)
-    x0 = calc.get_opt_params()
-    calc.update_opt_params(x0)
-    sigma = model.get_model_params("sigma")
-    epsilon = model.get_model_params("epsilon")
-    assert np.allclose(sigma * 2, epsilon)
+    energy_forces_stress(model, config, True, False, False)
+    energy_forces_stress(model, config, True, True, False)
+    energy_forces_stress(model, config, True, True, True)
