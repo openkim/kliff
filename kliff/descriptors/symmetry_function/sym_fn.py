@@ -543,6 +543,3 @@ class SymmetryFunctionError(Exception):
     def __init__(self, msg):
         super(SymmetryFunctionError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg

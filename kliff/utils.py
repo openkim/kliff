@@ -1,8 +1,10 @@
 import os
+import random
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Union
 
+import numpy as np
 import yaml
 
 
@@ -57,6 +59,20 @@ def split_string(string, length=80, starter=None):
         string = string[end:]
 
     return "\n".join(sub_string) + "\n"
+
+
+def seed_all(seed=35, cudnn_benchmark=False, cudnn_deterministic=False):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    if torch_available():
+        import torch
+
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # if using multi-GPU
+        torch.backends.cudnn.benchmark = cudnn_benchmark
+        torch.backends.cudnn.deterministic = cudnn_deterministic
 
 
 def to_path(path: Union[str, Path]) -> Path:

@@ -238,6 +238,3 @@ class BispectrumError(Exception):
         super(BispectrumError, self).__init__(msg)
 
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg

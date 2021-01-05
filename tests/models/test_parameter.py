@@ -1,5 +1,4 @@
 import warnings
-from collections import OrderedDict
 
 import numpy as np
 from kliff.models.parameter import OptimizingParameters, Parameter, ParameterError
@@ -19,7 +18,7 @@ def test_parameter():
     except ParameterError:
         pass
 
-    p = Parameter(np.asarray([2.2, 3.3]))
+    p = Parameter(np.asarray([2.2, 3.3]), index=0)
     assert p.value == [2.2, 3.3]
     assert p.fixed == [False, False]
     assert p.lower_bound == [None, None]
@@ -47,6 +46,7 @@ def test_parameter():
         "lower_bound": [1.1, None],
         "upper_bound": [5.5, None],
         "name": None,
+        "index": 0,
     }
     assert p.as_dict() == d
     p1 = Parameter.from_dict(d)

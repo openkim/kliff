@@ -230,8 +230,9 @@ class Configuration:
         """
         Count the number of atoms by species.
 
-        Args: symbols: species to count the occurrence. If `None`, all species present
-            in the configuration are used.
+        Args:
+            symbols: species to count the occurrence. If `None`, all species present
+                in the configuration are used.
 
         Returns:
             {specie, count}: with `key` the species string, and `value` the number of
@@ -282,7 +283,6 @@ class Dataset:
             multiple files. If given a directory, all the files in this directory and its
             subdirectories with the extension corresponding to the specified file_format
             will be read.
-
         file_format: Format of the file that stores the configuration, e.g. `xyz`.
     """
 

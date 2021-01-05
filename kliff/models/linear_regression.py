@@ -23,7 +23,9 @@ class LinearRegression(ModelTorch):
         return self.layer(x)
 
     def fit(self, path):
-        r"""Fit the model using analytic solution."""
+        """
+        Fit the model using analytic solution.
+        """
         fp = FingerprintsDataset(path)
 
         loader = DataLoader(

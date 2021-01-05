@@ -1,51 +1,49 @@
 import logging
 import os
+from pathlib import Path
+from typing import List, Optional
 
 import numpy as np
 import torch
-
-from ..log import log_entry
-from .model_torch import ModelTorch
+from kliff.descriptors.descriptor import Descriptor
+from kliff.models.model_torch import ModelTorch
 
 logger = logging.getLogger(__name__)
 
 
 class NeuralNetwork(ModelTorch):
-    r"""Neural Network model.
+    """
+    Neural Network model.
 
     A feed-forward neural network model.
 
-    Parameters
-    ----------
-    descriptor: object
-        A descriptor that transforms atomic environment information to the fingerprints,
-        which are used as the input for the neural network.
-
-    seed: int (optional)
-        Global seed for random numbers.
+    Args:
+        descriptor:
+            A descriptor that transforms atomic environment information to the fingerprints,
+            which are used as the input for the neural network.
+        seed: Global seed for random numbers.
     """
 
-    def __init__(self, descriptor, seed=35):
+    def __init__(self, descriptor: Descriptor, seed=35):
         super(NeuralNetwork, self).__init__(descriptor, seed)
 
         self.layers = None
 
-        logger.info('"{}" instantiated.'.format(self.__class__.__name__))
+        logger.info(f"`{self.__class__.__name__}` instantiated.")
 
     def add_layers(self, *layers):
-        r"""Add layers to the sequential model.
+        """
+        Add layers to the sequential model.
 
-        Parameters
-        ----------
-        layers: torch.nn layers
-            ``torch.nn`` layers that are used to build a sequential model.  Available ones
-            including: torch.nn.Linear, torch.nn.Dropout, and torch.nn.Sigmoid among
-            others. See https://pytorch.org/docs/stable/nn.html for a full list of
-            torch.nn layers.
+        Args:
+            layers: torch.nn layers ``torch.nn`` layers that are used to build a
+                sequential model. Available ones including: torch.nn.Linear,
+                torch.nn.Dropout, and torch.nn.Sigmoid among others.
+                See https://pytorch.org/docs/stable/nn.html for a full list.
         """
         if self.layers is not None:
-            report_error(
-                '"add_layers" called multiple times. It should be called only once.'
+            raise NeuralNetworkError(
+                "`add_layers()` called multiple times. It should be called only once."
             )
         else:
             self.layers = []
@@ -57,13 +55,14 @@ class NeuralNetwork(ModelTorch):
 
         # check shape of first layer and last layer
         first = self.layers[0]
-        if first.in_features != len(self.descriptor):
-            report_error(
-                '"in_features" of first layer should be equal to descriptor size.'
+        if first.in_features != self.descriptor.get_size():
+            raise NeuralNetworkError(
+                f"Expect `in_features` of first layer ({first.in_features}) be equal "
+                f"to descriptor size ({self.descriptor.get_size()})."
             )
         last = self.layers[-1]
         if last.out_features != 1:
-            report_error('"out_features" of last layer should be 1.')
+            raise NeuralNetworkError("`out_features` of last layer should be 1.")
 
         # cast types
         self.type(self.dtype)
@@ -73,50 +72,47 @@ class NeuralNetwork(ModelTorch):
             x = layer(x)
         return x
 
-    def write_kim_model(self, path=None, driver_name=None, dropout_ensemble_size=None):
-        """Write out a model that is compatible with the KIM API.
+    def write_kim_model(
+        self,
+        path: Optional[Path] = None,
+        driver_name: str = "DUNN__MD_292677547454_000",
+        dropout_ensemble_size: int = None,
+    ):
+        """
+        Write out a model that is compatible with the KIM API.
 
-        Parameters
-        ----------
-        path: string (optional)
-            Path to write the model (i.e. the model name). If ``None``, defaults to
-            ``NeuralNetwork_KLIFF__MO_000000111111_000``.
-
-        driver_name: string (optional)
-            Name of the model driver.
-
-        dropout_ensemble_size: int (optional)
-            Size of the dropout ensemble. Ignored if not fitting a dropout NN. If
-            ``None``, defaults to 100.
+        Args:
+            path: Path to write the model. If `None`, defaults to
+                `./NeuralNetwork_KLIFF__MO_000000111111_000`.
+            driver_name: Name of the model driver.
+            dropout_ensemble_size: Size of the dropout ensemble. Ignored if not
+                fitting a dropout NN. Otherwise, defaults to 100 if `None`.
         """
 
         if path is None:
-            modelname = "NeuralNetwork_KLIFF__MO_000000111111_000"
-            path = os.path.join(os.getcwd(), modelname)
+            model_name = "NeuralNetwork_KLIFF__MO_000000111111_000"
+            path = Path.cwd().joinpath(model_name)
         else:
-            path = os.path.abspath(path)
-            modelname = os.path.basename(path)
-        if not os.path.exists(path):
+            path = Path(path).expanduser().resolve()
+            model_name = str(path.name)
+        if not path.exists():
             os.makedirs(path)
-        if driver_name is None:
-            driver_name = "DUNN__MD_292677547454_000"
 
         desc_name = "descriptor.params"
         nn_name = "NN.params"
         dropout_name = "dropout_binary.params"
 
-        paramfiles = [desc_name, nn_name, dropout_name]
-        self.write_kim_cmakelists(
-            path, modelname, driver_name, paramfiles, version="2.0.0"
+        param_files = [desc_name, nn_name, dropout_name]
+        self._write_kim_cmakelists(
+            path, model_name, driver_name, param_files, version="2.0.0"
         )
-        self.write_kim_params(path, nn_name)
+        self._write_kim_params(path, nn_name)
         self.descriptor.write_kim_params(path, desc_name)
-        self.write_kim_dropout_binary(path, dropout_name, dropout_ensemble_size)
+        self._write_kim_dropout_binary(path, dropout_name, dropout_ensemble_size)
 
-        msg = 'KLIFF trained model write to "{}"'.format(path)
-        log_entry(logger, msg, level="info")
+        logger.info(f"KLIFF trained model write to {path}")
 
-    def write_kim_params(self, path, fname="NN.params"):
+    def _write_kim_params(self, path, filename="NN.params"):
 
         weights, biases = self._get_weights_and_biases()
         activations = self._get_activations()
@@ -126,7 +122,7 @@ class NeuralNetwork(ModelTorch):
         # see https://pytorch.org/docs/stable/nn.html#linear
         weights = [torch.t(w) for w in weights]
 
-        with open(os.path.join(path, fname), "w") as fout:
+        with open(path.joinpath(filename), "w") as fout:
             # header
             fout.write("#" + "=" * 80 + "\n")
             fout.write(
@@ -199,7 +195,9 @@ class NeuralNetwork(ModelTorch):
                         fout.write("{:15.7e}".format(item))
                 fout.write("\n\n")
 
-    def write_kim_dropout_binary(self, path, fname="dropout_binary.params", size=None):
+    def _write_kim_dropout_binary(
+        self, path, filename="dropout_binary.params", size=None
+    ):
 
         drop_ratios = self._get_drop_ratios()
         keep_prob = [1.0 - i for i in drop_ratios]
@@ -213,7 +211,7 @@ class NeuralNetwork(ModelTorch):
             if size is None:
                 size = 100
 
-        with open(os.path.join(path, fname), "w") as fout:
+        with open(path.joinpath(filename), "w") as fout:
             fout.write("#" + "=" * 80 + "\n")
             fout.write(
                 "# Dropout binary parameters file generated by KLIFF.\n"
@@ -240,8 +238,10 @@ class NeuralNetwork(ModelTorch):
                     fout.write("\n")
 
     @staticmethod
-    def write_kim_cmakelists(path, modelname, driver_name, paramfiles, version):
-        with open(os.path.join(path, "CMakeLists.txt"), "w") as fout:
+    def _write_kim_cmakelists(
+        path: Path, model_name: str, driver_name: str, param_files: List[str], version
+    ):
+        with open(path.joinpath("CMakeLists.txt"), "w") as fout:
             fout.write("#\n")
             fout.write("# Contributors:\n")
             fout.write("#    KLIFF (https://kliff.readthedocs.io)\n")
@@ -259,30 +259,30 @@ class NeuralNetwork(ModelTorch):
             fout.write("    LANGUAGES CXX C Fortran)\n")
             fout.write("endif()\n\n")
             fout.write("add_kim_api_model_library(\n")
-            fout.write('  NAME            "{}"\n'.format(modelname))
-            fout.write('  DRIVER_NAME     "{}"\n'.format(driver_name))
+            fout.write(f'  NAME            "{model_name}"\n')
+            fout.write(f'  DRIVER_NAME     "{driver_name}"\n')
             fout.write("  PARAMETER_FILES")
-            for s in paramfiles:
+            for s in param_files:
                 fout.write(' "{}"'.format(s))
             fout.write("\n")
             fout.write("  )\n")
 
     def _group_layers(
         self,
-        param_layer=["Linear"],
-        activ_layer=["Sigmoid", "Tanh", "ReLU", "ELU"],
-        dropout_layer=["Dropout"],
+        param_layer=("Linear",),
+        activ_layer=("Sigmoid", "Tanh", "ReLU", "ELU"),
+        dropout_layer=("Dropout",),
     ):
-        r"""Divide all the layers into groups.
+        """
+        Divide all the layers into groups.
 
         The first group is either an empty list or a `Dropout` layer for the input layer.
         The last group typically contains only a `Linear` layer.  For other groups, each
         group contains two, or three layers. `Linear` layer and an activation layer are
         mandatory, and a third `Dropout` layer is optional.
 
-        Return
-        ------
-        groups: list of list of layers
+        Returns:
+            groups: list of list of layers
         """
 
         groups = []
@@ -292,24 +292,25 @@ class NeuralNetwork(ModelTorch):
         for i, layer in enumerate(self.layers):
             name = layer.__class__.__name__
             if name not in supported:
-                report_error(
-                    'Layer "{}" not supported by KIM model. Cannot proceed '
-                    "to write.".format(name)
+                raise NeuralNetworkError(
+                    f"Layer `{name}` not supported by KIM model. Cannot proceed "
+                    "to write."
                 )
 
             if name in activ_layer:
                 if i == 0:
-                    report_error('First layer cannot be a "{}" layer'.format(name))
+                    raise NeuralNetworkError(f"First layer cannot be a `{name}` layer")
                 if self.layers[i - 1].__class__.__name__ not in param_layer:
-                    report_error(
-                        'Cannot convert to KIM model. a "{}" layer must follow '
-                        'a "Linear" layer.'.format(name)
+                    raise NeuralNetworkError(
+                        f"Cannot convert to KIM model. a `{name}` layer must follow "
+                        'a "Linear" layer.'
                     )
+
             if name[:7] in dropout_layer:
                 if self.layers[i - 1].__class__.__name__ not in activ_layer:
-                    report_error(
-                        'Cannot convert to KIM model. a "{}" layer must follow '
-                        "an activation layer.".format(name)
+                    raise NeuralNetworkError(
+                        f"Cannot convert to KIM model. a `{name}` layer must follow "
+                        "an activation layer."
                     )
             if name in param_layer:
                 groups.append(new_group)
@@ -320,7 +321,9 @@ class NeuralNetwork(ModelTorch):
         return groups, param_layer, activ_layer, dropout_layer
 
     def _get_weights_and_biases(self):
-        r"""Get weights and biases of all layers that have weights and biases."""
+        """
+        Get weights and biases of all layers that have weights and biases.
+        """
 
         groups, supported, _, _ = self._group_layers()
 
@@ -338,7 +341,9 @@ class NeuralNetwork(ModelTorch):
         return weights, biases
 
     def _get_activations(self):
-        r"""Get the activation of all layers."""
+        """
+        Get the activation of all layers.
+        """
 
         groups, _, supported, _ = self._group_layers()
 
@@ -352,7 +357,9 @@ class NeuralNetwork(ModelTorch):
         return activations
 
     def _get_drop_ratios(self):
-        r"""Get the dropout ratio of all layers."""
+        """
+        Get the dropout ratio of all layers.
+        """
 
         groups, _, _, supported = self._group_layers()
 
@@ -384,11 +391,3 @@ class NeuralNetworkError(Exception):
     def __init__(self, msg):
         super(NeuralNetworkError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg
-
-
-def report_error(msg):
-    log_entry(logger, msg, level="error")
-    raise NeuralNetworkError(msg)

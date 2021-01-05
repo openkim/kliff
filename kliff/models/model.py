@@ -187,13 +187,12 @@ class Model:
             then be manipulated to set relations between parameters.
 
             Example:
+                In the following example, we set the value of ``B[0]`` to ``2 * A[0]``::
 
-            In the following example, we set the value of B[0] to 2 * A[0].
-
-            def params_relation(model_params):
-                A = model_params['A']
-                B = model_params['B']
-                B[0] = 2*A[0]
+                    def params_relation(model_params):
+                        A = model_params['A']
+                        B = model_params['B']
+                        B[0] = 2*A[0]
     """
 
     def __init__(
@@ -277,8 +276,8 @@ class Model:
         Echo the model parameters.
 
         Args:
-        filename: Path to write the model parameter info (e.g. sys.stdout) if `None`,
-            do not write.
+            filename: Path to write the model parameter info (e.g. sys.stdout) if `None`,
+                do not write.
 
         Returns:
             model parameters info in a string

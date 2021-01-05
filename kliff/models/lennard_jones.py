@@ -4,7 +4,7 @@ from typing import Callable, Dict, Optional
 import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import ComputeArguments, Model
-from kliff.models.parameter import Parameter, ParameterError
+from kliff.models.parameter import Parameter
 from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
 
 logger = logging.getLogger(__name__)
