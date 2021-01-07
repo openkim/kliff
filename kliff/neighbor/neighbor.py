@@ -1,13 +1,15 @@
-import numpy as np
+from typing import Dict, List, Tuple
 
-from ..atomic_data import atomic_number, atomic_species
+import numpy as np
+from kliff.atomic_data import atomic_number, atomic_species
+from kliff.dataset.dataset import Configuration
+
 from . import nl
 
 
 class NeighborList:
-    r"""Neighbor list class .
-
-    This is based on kimpy.neighlist.
+    """
+    Neighbor list class.
 
     This uses the same approach that `LAMMPS` and `KIM` adopt: The atoms in the
     configuration (assuming a total of N atoms) are named contributing atoms, and padding
@@ -15,46 +17,36 @@ class NeighborList:
     numbered as 1, 2, ... N-1, and the padding atoms are numbered as N, N+1, N+2...
     Neighbors of atom can include both contributing atoms and padding atoms.
 
-    Parameters
-    ----------
-    conf: Configuration object
-        It stores the atoms information.
+    Args:
+        conf: atomic configuration.
+        infl_dist: Influence distance, within which atoms are interacting with each other.
+            In literatures, this is usually referred as ``cutoff``.
+        padding_need_neigh: Whether to generate neighbors for padding atoms.
 
-    infl_dist: float
-        Influence distance, within which atoms are interacting with each other. In
-        literatures, this is usually referred as `cutoff`.
+    Attributes:
+        coords: 2D array
+            Coordinates of contributing and padding atoms.
+        species: list
+            Species string of contributing and padding atoms.
+        image: 1D array
+            Atom index, of which an atom is an image. The image of a contributing atom is
+            itself.
+        padding_coords: 2D array
+            Coordinates of padding atoms.
+        padding_species: list
+            Species string and padding atoms.
+        padding_image: 1D array
+            Atom index, of which a padding atom is an image.
 
-    padding_need_neigh: bool
-        Whether to generate neighbors for padding atoms.
-
-    Attributes
-    ----------
-    coords: 2D array
-        Coordinates of contributing and padding atoms.
-
-    species: list
-        Species string of contributing and padding atoms.
-
-    image: 1D array
-        Atom index, of which an atom is an image. The image of a contributing atom is
-        itself.
-
-    padding_coords: 2D array
-        Coordinates of padding atoms.
-
-    padding_species: list
-        Species string and padding atoms.
-
-    padding_image: 1D array
-        Atom index, of which a padding atom is an image.
-
-    Note
-    ----
-    To get the total force on a contributing atom, the forces on all padding atoms who are
-    images of the contributing atom should be added back to the contributing atom.
+    Note:
+        To get the total force on a contributing atom, the forces on all padding atoms
+        that are images of the contributing atom should be added back to the contributing
+        atom.
     """
 
-    def __init__(self, conf, infl_dist, padding_need_neigh=False):
+    def __init__(
+        self, conf: Configuration, infl_dist: float, padding_need_neigh: bool = False
+    ):
         self.conf = conf
         self.infl_dist = infl_dist
         self.padding_need_neigh = padding_need_neigh
@@ -112,24 +104,18 @@ class NeighborList:
         error = nl.build(self.neigh, self.coords, self.infl_dist, cutoffs, need_neigh)
         check_error(error, "nl.build")
 
-    def get_neigh(self, index):
-        r"""Get the indices, coordinates, and species string of a given atom.
+    def get_neigh(self, index: int) -> Tuple[List[int], np.array, List[str]]:
+        """
+        Get the indices, coordinates, and species string of a given atom.
 
-        Parameters
-        ----------
-        index: int
-            Atom number whose neighbor info is requested.
+        Args:
+            index: Atom number whose neighbor info is requested.
 
-        Returns
-        -------
-        neigh_indices: list
-            Indices of neighbor atoms in self.coords and self.species.
-
-        neigh_coords: 2D array
-            Coordinates of neighbor atoms.
-
-        neigh_species: list
-            Species symbol of neighbor atoms.
+        Returns:
+            neigh_indices: Indices of neighbor atoms in self.coords and self.species.
+            neigh_coords: 2D array of shape (N, 3), where N is the number of neighbors.
+                Coordinates of neighbor atoms.
+            neigh_species: Species symbol of neighbor atoms.
         """
 
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
@@ -141,28 +127,26 @@ class NeighborList:
 
         neigh_coords = self.coords[neigh_indices]
         neigh_species = self.species[neigh_indices]
+
         return neigh_indices, neigh_coords, neigh_species
 
-    def get_numneigh_and_neighlist_1D(self, request_padding=False):
-        r"""Get the number of neighbors and neighbor list for all atoms.
+    def get_numneigh_and_neighlist_1D(
+        self, request_padding: bool = False
+    ) -> Tuple[np.array, np.array]:
+        """
+        Get the number of neighbors and neighbor list for all atoms.
 
-        Parameters
-        ----------
-        request_padding: bool
-            If ``True``, the returned number of neighbors and neighbor list include
-            those for padding atoms; If ``False``, only return these for contributing
-            atoms.
+        Args:
+            request_padding: If ``True``, the returned number of neighbors and neighbor
+                list include those for padding atoms; If ``False``, only return these
+                for contributing atoms.
 
-        Return
-        ------
-        numneigh: 1D array
-            Number of neighbors for all atoms.
-
-        neighlist: 1D array
-            Indices of the neighbors for all atoms stacked into a 1D array. Its total
-            length is ``sum(numneigh)``, and the first ``numneigh[0]`` components are the
-            neighbors of atom `0`, the next ``numneigh[1]`` components are the neighbors
-            of atom `1` ....
+        Returns:
+            numneigh: 1D array; number of neighbors for all atoms.
+            neighlist: 1D array; indices of the neighbors for all atoms stacked into a
+                1D array. Its total length is ``sum(numneigh)``, and the first
+                ``numneigh[0]`` components are the neighbors of atom `0`, the next
+                ``numneigh[1]`` components are the neighbors of atom `1` ....
         """
         if request_padding:
             if not self.padding_need_neigh:
@@ -191,80 +175,96 @@ class NeighborList:
 
         return numneigh, neighlist
 
-    def get_coords(self):
-        r"""Return coords of both contributing and padding atoms."""
+    def get_coords(self) -> np.array:
+        """
+        Return coords of both contributing and padding atoms.
+        Shape (N,3).
+        """
         return self.coords.copy()
 
-    def get_species(self):
-        r"""Return species of both contributing and padding atoms."""
+    def get_species(self) -> List[str]:
+        """
+        Return species of both contributing and padding atoms.
+        """
         return self.species[:]
 
-    def get_species_code(self, mapping):
-        r"""Integer species code of both contributing and padding atoms.
+    def get_species_code(self, mapping: Dict[str, int]) -> np.array:
+        """
+        Integer species code of both contributing and padding atoms.
 
-        Parameters
-        ----------
-        mapping: dict
-            A mapping between species string and its code.
+        Args:
+            mapping: A mapping between species string and its code.
 
-        Return
-        1D array
-            Integer species code.
+        Returns:
+            1D array of integer species code.
         """
         return np.asarray([mapping[s] for s in self.species], dtype=np.intc)
 
-    def get_image(self):
-        r"""Return image of both contributing and padding atoms."""
+    def get_image(self) -> np.array:
+        """
+        Return image of both contributing and padding atoms.
+
+        It is a 1D array of atom index, of which an atom is an image.
+
+        Note:
+            The image of a contributing atom is itself.
+        """
         return self.image.copy()
 
-    def get_padding_coords(self):
-        r"""Return coords of padding atoms."""
+    def get_padding_coords(self) -> np.array:
+        """
+        Return coords of padding atoms, 2D array of shape (N,3), where N is the number
+        of padding atoms.
+        """
         return self.padding_coords.copy()
 
-    def get_padding_speices(self):
-        r"""Return species string of padding atoms."""
+    def get_padding_speices(self) -> List[str]:
+        """
+        Return species string of padding atoms.
+        """
         return self.padding_speices[:]
 
-    def get_padding_species_code(self, mapping):
-        r"""Integer species code of padding atoms.
+    def get_padding_species_code(self, mapping: Dict[str, int]) -> np.array:
+        """
+        Integer species code of padding atoms.
 
-        Parameters
-        ----------
-        mapping: dict
-            A mapping between species string and its code.
+        Args:
+            mapping: A mapping between species string and its code.
 
-        Return
-        ------
-        1D array
-            Integer species code.
+        Returns:
+            1D array of integer species code for padding atoms.
         """
         return np.asarray([mapping[s] for s in self.padding_species], dtype=np.intc)
 
-    def get_padding_image(self):
-        r"""Return image of padding atoms."""
+    def get_padding_image(self) -> np.array:
+        """
+        Return image of padding atoms.
+
+        It is a 1D array of atom index, of which a padding atom is an image.
+
+        """
         return self.padding_image.copy()
 
     def __del__(self):
         nl.clean(self.neigh)
 
 
-def assemble_forces(forces, n, padding_image):
-    r"""Assemble forces on padding atoms back to contributing atoms.
+def assemble_forces(forces: np.array, n: int, padding_image: np.array) -> np.array:
+    """
+    Assemble forces on padding atoms back to contributing atoms.
 
-    Parameters
-    ----------
-    forces: 2D array
-      forces on both contributing and padding atoms
+    Args:
+        forces: Partial forces on both contributing and padding atoms. 2D array of shape
+            (Nc+Np, 3). where Nc is the number of contributing atoms, and Np is the
+            number of padding atoms. The first Nc rows are the forces for contributing
+            atoms.
+        n: Number of contributing atoms, i.e. Nc.
+        padding_image: atom index, of which the padding atom is an image. 1D int array
+            of shape (Np,).
 
-    n: int
-      number of contributing atoms
-
-    padding_image: 1D int array
-      atom number, of which the padding atom is an image
-
-    Return
-    ------
-      Total forces on contributing atoms.
+    Returns:
+        Total forces on contributing atoms. 2D array of shape (Nc, 3), where Nc is the
+        number of contributing atoms.
     """
 
     # numpy slicing does not make a copy !!!
@@ -289,19 +289,23 @@ def assemble_forces(forces, n, padding_image):
     return total_forces
 
 
-def assemble_stress(coords, forces, volume):
-    r"""Calculate the stress using the negative f dot r method.
+def assemble_stress(coords: np.array, forces: np.array, volume: float) -> np.array:
+    """
+    Calculate the virial stress using the negative f dot r method.
 
-    Parameters
-    ----------
-    coords: 2D array
-        Coordinates of both contributing and padding atoms.
+    Args:
+        coords: Coordinates of both contributing and padding atoms. 2D array of shape
+            (Nc+Np, 3), where Nc is the number of contributing atoms, and Np is the
+            number of padding atoms. The first Nc rows are the coords of contributing
+            atoms.
+        forces: Partial forces on both contributing and padding atoms. 2D array of shape
+            (Nc+Np, 3), where Nc is the number of contributing atoms, and Np is the
+            number of padding atoms. The first Nc rows are the forces on contributing
+            atoms.
+        volume: Volume of the configuration.
 
-    forces: 2D array
-        Partial forces on both contributing and padding atoms.
-
-    volume: float
-        Volume of the configuration.
+    Return:
+        Virial stress in Voigt notation. 1D array of shape (6,).
     """
 
     stress = np.zeros(6)
