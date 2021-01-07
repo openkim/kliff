@@ -27,17 +27,14 @@ def torch_available():
         return False
 
 
-def split_string(string, length=80, starter=None):
-    r"""Insert `\n` into long string such that each line has size no more than `length`.
+def split_string(string: str, length=80, starter: str = None):
+    r"""
+    Insert `\n` into long string such that each line has size no more than `length`.
 
-    Parameters
-    ----------
-    length: int
-        Targeted length of the each line.
-
-    starter: string
-        String to insert at the beginning of each line.
-
+    Args:
+        string: The string to split.
+        length: Targeted length of the each line.
+        starter: String to insert at the beginning of each line.
     """
 
     if starter is not None:

@@ -4,21 +4,19 @@ from torch.nn import *
 
 # redefine Dropout layer
 class Dropout(torch.nn.modules.dropout._DropoutNd):
-    r"""A Dropout layer that zeros the same element of descriptor values for all
-    atoms.
+    """
+    A Dropout layer that zeros the same element of descriptor values for all atoms.
 
     Note `torch.nn.Dropout` dropout each component independently.
 
-    Parameters
-    ----------
-    p: float
-        probability of an element to be zeroed. Default: 0.5
+    Args:
+        p: float
+            probability of an element to be zeroed. Default: 0.5
 
-    inplace: bool
-        If set to `True`, will do this operation in-place. Default: `False`
+        inplace: bool
+            If set to `True`, will do this operation in-place. Default: `False`
 
-    Shapes
-    ------
+    Shapes:
         Input: [N, D] or [1, N, D]
         Output: [N, D] or [1, N, D] (same as Input)
         The first dimension 1 is because the dataloader provides only sample each

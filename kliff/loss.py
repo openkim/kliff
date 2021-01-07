@@ -4,9 +4,9 @@ import os
 import numpy as np
 import scipy.optimize
 
-from . import parallel
-from .error import InputError, report_import_error
-from .log import log_entry
+from kliff import parallel
+from kliff.error import report_import_error
+from kliff.log import log_entry
 
 try:
     import torch
@@ -157,7 +157,7 @@ class Loss(object):
                 if key not in default:
                     msg = '"{}" not supported by "residual_data".'.format(key)
                     log_entry(logger, msg, level="error")
-                    raise InputError(msg)
+                    raise LossError(msg)
                 else:
                     default[key] = value
         return default
@@ -222,16 +222,6 @@ class LossPhysicsMotivatedModel(object):
         self.residual_data = residual_data if residual_data is not None else dict()
         self.calculator_type = calculator.__class__.__name__
 
-        if self.calculator_type == "WrapperCalculator":
-            calculators = self.calculator.calculators
-        else:
-            calculators = [self.calculator]
-        for calc in calculators:
-            infl_dist = calc.model.get_influence_distance()
-            cas = calc.get_compute_arguments()
-            for ca in cas:
-                ca.refresh(infl_dist)
-
         logger.info('"{}" instantiated.'.format(self.__class__.__name__))
 
     def minimize(self, method, **kwargs):
@@ -258,7 +248,7 @@ class LossPhysicsMotivatedModel(object):
         log_entry(logger, msg, level="info")
 
         # update final optimized parameters
-        self.calculator.update_opt_params(result.x)
+        self.calculator.update_model_params(result.x)
 
         return result
 
@@ -415,7 +405,7 @@ class LossPhysicsMotivatedModel(object):
         """
 
         # publish params x to predictor
-        self.calculator.update_opt_params(x)
+        self.calculator.update_model_params(x)
 
         cas = self.calculator.get_compute_arguments()
 
@@ -483,7 +473,7 @@ class LossPhysicsMotivatedModel(object):
             # broadcast parameters
             x = comm.bcast(x, root=0)
             # publish params x to predictor
-            self.calculator.update_opt_params(x)
+            self.calculator.update_model_params(x)
 
             residual = []
             for ca in cas:
@@ -696,7 +686,7 @@ class LossNeuralNetworkModel(object):
                 err_arg, method
             )
             log_entry(logger, msg, level="error")
-            raise InputError(msg)
+            raise LossError(msg)
 
         epoch = 0
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
@@ -830,6 +820,3 @@ class LossError(Exception):
     def __init__(self, msg):
         super(LossError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg

@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 from kliff.dataset.dataset import Configuration
-from kliff.error import SupportError, report_import_error
+from kliff.error import report_import_error
 from kliff.log import log_entry
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
@@ -533,9 +533,7 @@ class KIMModel(Model):
         )
         check_error(error, "kim_model.is_routine_is_routine_present")
         if not present:
-            raise SupportError(
-                "This KIMModel model does not support writing parameters."
-            )
+            raise KIMModelError("This KIM model does not support writing parameters.")
 
         if path is None:
             model_name = self.model_name + "_kliff_trained"
