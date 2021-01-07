@@ -30,47 +30,102 @@ ref_forces = [
 ]
 
 
-def test_main():
+class TestKIM:
+    def test_compute(self):
 
-    # training set
-    data = Dataset("./configs_extxyz/Si_4")
-    configs = data.get_configs()
+        # model
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        model = KIMModel(modelname)
 
-    # model
-    modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
-    model = KIMModel(modelname)
+        # training set
+        data = Dataset("./configs_extxyz/Si_4")
+        configs = data.get_configs()
 
-    # compute arguments
-    compute_arguments = []
-    for conf in configs:
-        ca = model.create_a_kim_compute_argument()
-        compute_arguments.append(
-            KIMComputeArguments(
-                ca,
-                conf,
-                supported_species=model.get_supported_species(),
-                influence_distance=model.get_influence_distance(),
+        # compute arguments
+        compute_arguments = []
+        for conf in configs:
+            ca = model.create_a_kim_compute_argument()
+            compute_arguments.append(
+                KIMComputeArguments(
+                    ca,
+                    conf,
+                    supported_species=model.get_supported_species(),
+                    influence_distance=model.get_influence_distance(),
+                )
             )
+        for i, ca in enumerate(compute_arguments):
+            ca.compute(model.kim_model)
+            energy = ca.get_energy()
+            forces = ca.get_forces()[:3]
+
+            assert energy == pytest.approx(ref_energies[i], 1e-6)
+            assert np.allclose(forces, ref_forces[i])
+
+    def test_set_one_param(self):
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        model = KIMModel(modelname)
+
+        # parameters
+        params = model.get_model_params()
+
+        # keep the original copy
+        sigma = params["sigma"][0]
+
+        model.set_one_opt_param(name="sigma", settings=[[sigma + 0.1]])
+
+        assert params["sigma"][0] == sigma + 0.1
+
+        # internal kim params
+        kim_params = model.get_kim_model_params()
+        assert kim_params["sigma"][0] == sigma + 0.1
+
+    def test_set_opt_params(self):
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        model = KIMModel(modelname)
+
+        # parameters
+        params = model.get_model_params()
+        sigma = params["sigma"][0]
+        A = params["A"][0]
+
+        model.set_opt_params(sigma=[[sigma + 0.1]], A=[[A + 0.1]])
+
+        assert params["sigma"][0] == sigma + 0.1
+        assert params["A"][0] == A + 0.1
+
+        # internal kim params
+        kim_params = model.get_kim_model_params()
+        assert kim_params["sigma"][0] == sigma + 0.1
+        assert kim_params["A"][0] == A + 0.1
+
+    def test_get_update_params(self):
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        model = KIMModel(modelname)
+
+        # parameters
+        params = model.get_model_params()
+        sigma = params["sigma"][0]
+        A = params["A"][0]
+
+        # optimizing parameters
+        # B will not be optimized, only providing initial guess
+        model.set_opt_params(
+            sigma=[["default"]], B=[["default", "fix"]], A=[["default"]]
         )
-    for i, ca in enumerate(compute_arguments):
-        ca.compute(model.kim_model)
-        energy = ca.get_energy()
-        forces = ca.get_forces()[:3]
 
-        assert energy == pytest.approx(ref_energies[i], 1e-6)
-        assert np.allclose(forces, ref_forces[i])
+        x0 = model.get_opt_params()
+        assert x0[0] == sigma
+        assert x0[1] == A
+        assert len(x0) == 2
+        assert model.get_num_opt_params() == 2
 
-    # Cannot set them all by calling this function only once, because the assertion
-    # depends on order
-    model.set_opt_params(sigma=[["default"]])
-    model.set_opt_params(A=[["default", "fix"]])
-    model.set_opt_params(B=[["default"]])
+        x1 = [i + 0.1 for i in x0]
+        model.update_model_params(x1)
 
-    # update params
-    x0 = model.get_opt_params()
-    x1 = [i + 0.1 for i in x0]
-    model.update_model_params(x1)
+        assert params["sigma"][0] == sigma + 0.1
+        assert params["A"][0] == A + 0.1
 
-    params = model.get_kim_model_params()
-    assert np.allclose(params["sigma"].value, [x1[0]])
-    assert np.allclose(params["B"].value, [x1[1]])
+        # internal kim params
+        kim_params = model.get_kim_model_params()
+        assert kim_params["sigma"][0] == sigma + 0.1
+        assert kim_params["A"][0] == A + 0.1
