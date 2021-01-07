@@ -57,7 +57,7 @@ Other methods of the calculator include:
 - `Optimizing parameters`:
   :meth:`~kliff.calculators.Calculator.get_opt_params`,
   :meth:`~kliff.calculators.Calculator.get_opt_params_bounds`,
-  :meth:`~kliff.calculators.Calculator.update_opt_params`.
+  :meth:`~kliff.calculators.Calculator.update_model_params`.
 
 .. seealso::
     See :class:`kliff.calculators.Calculator` for a complete list of the member

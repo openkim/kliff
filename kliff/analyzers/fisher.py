@@ -155,7 +155,7 @@ class Fisher:
         j = Jfunc(copy.deepcopy(original_params), ca)
 
         # restore params back
-        self.calculator.update_opt_params(original_params)
+        self.calculator.update_model_params(original_params)
 
         return j
 
@@ -176,7 +176,7 @@ class Fisher:
         forces: 1D array
             the forces on atoms in this configuration
         """
-        self.calculator.update_opt_params(params)
+        self.calculator.update_model_params(params)
         self.calculator.compute(ca)
         forces = self.calculator.get_forces(ca)
         forces = np.reshape(forces, (-1,))
