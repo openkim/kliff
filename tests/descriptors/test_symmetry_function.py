@@ -1,8 +1,10 @@
-""" Test symmetry functions values.
+"""
+Test symmetry functions values.
 The zeta_ref are taken from aenet by Nongnuch Artrith.
 """
 import itertools
 from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
 from kliff.dataset import Configuration
@@ -294,8 +296,8 @@ def get_descriptor():
 
 
 def test_desc():
-
-    config = Configuration.from_file("./configs_extxyz/Si.xyz")
+    test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
+    config = Configuration.from_file(test_file_path.joinpath("Si.xyz"))
 
     desc = get_descriptor()
 

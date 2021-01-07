@@ -1,5 +1,6 @@
 import itertools
 import os
+from pathlib import Path
 
 import numpy as np
 from kliff.dataset import Configuration
@@ -80,9 +81,10 @@ class ExampleDescriptor(Descriptor):
 
 
 def test_descriptor():
-    fname = "./configs_extxyz/Si.xyz"
+    test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
+    fname = test_file_path.joinpath("Si.xyz")
     conf = Configuration.from_file(fname)
-    conf.identifier = fname
+    conf.identifier = str(fname)
     configs = [conf, conf]
 
     # reuse should be the last and `True` should be after `False` so as to test reuse for

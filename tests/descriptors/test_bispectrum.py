@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from kliff.dataset import Configuration
 from kliff.descriptors import Bispectrum
@@ -182,7 +184,8 @@ dzeta_dr_minus_121 = [
 
 def test_desc():
 
-    conf = Configuration.from_file("./configs_extxyz/Si.xyz")
+    test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
+    conf = Configuration.from_file(test_file_path.joinpath("Si.xyz"))
 
     cut_name = "cos"
     cut_dists = {"Si-Si": 5.0}
@@ -206,7 +209,3 @@ def test_desc():
     zeta, dzeta_dr = desc.transform(conf, grad=False)
     assert np.allclose(zeta, zeta_ref)
     assert dzeta_dr is None
-
-
-if __name__ == "__main__":
-    test_desc()

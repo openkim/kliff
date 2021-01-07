@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 from kliff.calculators import Calculator
@@ -33,7 +35,8 @@ ref_forces = [
 
 class TestCalculator:
     def test_compute(self):
-        tset = Dataset("../configs_extxyz/Si_4")
+        test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
+        tset = Dataset(test_file_path.joinpath("Si_4"))
         configs = tset.get_configs()
 
         modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
