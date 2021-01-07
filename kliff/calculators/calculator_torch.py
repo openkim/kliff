@@ -1,6 +1,8 @@
 import logging
 import multiprocessing as mp
 import os
+from pathlib import Path
+from typing import List, Optional
 
 import torch
 import torch.distributed as dist
@@ -14,12 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class CalculatorTorch:
-    r"""A calculator based on PyTorch.
+    """
+    A calculator for torch based models.
 
-    Parameters
-    ----------
-    model: obj
-        Instance of :class:`~kliff.neuralnetwork.NeuralNetwork`.
+    Args:
+        model: torch models, e.g. :class:`~kliff.neuralnetwork.NeuralNetwork`.
     """
 
     implemented_property = ["energy", "forces", "stress"]
@@ -38,53 +39,37 @@ class CalculatorTorch:
 
     def create(
         self,
-        configs,
-        use_energy=True,
-        use_forces=True,
-        use_stress=False,
-        reuse=False,
-        fingerprints_path=None,
-        fingerprints_mean_and_stdev_path=None,
-        serial=False,
-        nprocs=mp.cpu_count(),
+        configs: List[Configuration],
+        use_energy: bool = True,
+        use_forces: bool = True,
+        use_stress: bool = False,
+        fingerprints_path: Optional[Path] = None,
+        fingerprints_mean_and_stdev_path: Optional[Path] = None,
+        reuse: bool = False,
+        serial: bool = False,
+        nprocs: int = mp.cpu_count(),
     ):
-        r"""Process configs into fingerprints.
+        """
+        Process configs to generate fingerprints.
 
-        Parameters
-        ----------
-
-        configs: list of Configuration object
-
-        use_energy: bool (optional)
-            Whether to require the calculator to compute energy.
-
-        use_forces: bool (optional)
-            Whether to require the calculator to compute forces.
-
-        use_stress: bool (optional)
-            Whether to require the calculator to compute stress.
-
-        reuse: bool (optional)
-            If ``True``, reuse the fingerprints if found existing one. If ``False``,
-            generate fingerprints from scratch no matter there is existing one or not.
-
-        fingerprints_path: string (optional)
-            Path to the generated fingerprints. If ``None``, default to
-            ``./fingerprint.pkl``.
-
-        fingerprints_mean_and_stdev_path: string (optional)
-            Path to the mean and standard deviation of the fingerprints. If ``normalize``
-            is not required by a descriptor, this is ignored. Otherwise, the mean and
-            standard deviation read from ``fingerprints_mean_and_stdev_path``, are used to
-            normalize the fingerprints. If ``None``, mean and standard deviation will be
-            calculated from the descriptors and write to
-            ``./fingerprints_mean_and_stdev.pkl``;
-
-        serial: bool (optional)
-            Compute fingerprints in serial mode. Memory efficient.
-
-        nprocs: int (optional)
-            Number of processes to use. If ``serial`` is ``True``, this is ignored..
+        Args:
+            configs: atomic configurations
+            use_energy: Whether to require the calculator to compute energy.
+            use_forces: Whether to require the calculator to compute forces.
+            use_stress: Whether to require the calculator to compute stress.
+            fingerprints_path: Path to the to be generated fingerprints. If ``None``,
+            default to ``./fingerprint.pkl``.
+            fingerprints_mean_and_stdev_path: Path to the mean and standard deviation of
+                the fingerprints. If ``normalize`` is not required by a descriptor,
+                this is ignored. Otherwise, the mean and standard deviation read from
+                ``fingerprints_mean_and_stdev_path``, are used to normalize the
+                fingerprints. If ``None``, mean and standard deviation will be calculated
+                from the descriptors and write to ``./fingerprints_mean_and_stdev.pkl``;
+            reuse: If ``True``, reuse the fingerprints if found existing one. Otherwise,
+                generate fingerprints from scratch no matter there is existing one or not.
+            serial: Compute fingerprints in serial mode. Memory efficient.
+            nprocs: Number of processes to use to generate the fingerprints.
+                If ``serial`` is ``True``, this is ignored.
         """
 
         self.configs = configs
@@ -107,8 +92,10 @@ class CalculatorTorch:
             nprocs,
         )
 
-    def get_compute_arguments(self, batch_size=1):
-        r"""Return a list of compute arguments, each associated with a configuration."""
+    def get_compute_arguments(self, batch_size: int = 1):
+        """
+        Return the dataloader with batch size set to ``batch_size``.
+        """
         fname = self.fingerprints_path
         fp = FingerprintsDataset(fname)
         loader = DataLoader(
@@ -355,6 +342,3 @@ class CalculatorTorchError(Exception):
     def __init__(self, msg):
         super(CalculatorTorchError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg
