@@ -161,7 +161,7 @@ class Calculator:
         return compute_arguments.get_forces()
 
     def get_stress(self, compute_arguments) -> np.array:
-        """
+        r"""
         Get the stress of a configuration.
 
         Args:
