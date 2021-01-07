@@ -127,7 +127,7 @@ class LennardJones(Model):
         return model_params
 
     def init_influence_distance(self):
-        return 5.0
+        return self.model_params["cutoff"][0]
 
     def init_supported_species(self):
         return None

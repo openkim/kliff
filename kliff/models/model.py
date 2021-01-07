@@ -375,7 +375,10 @@ class Model:
         Example:
            instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
         """
-        return self.opt_params.set(**kwargs)
+        self.opt_params.set(**kwargs)
+
+        # reset influence distance in case it depends on parameters and changes
+        self.init_influence_distance()
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """
@@ -394,7 +397,10 @@ class Model:
             settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
             instance.set_one(name, settings)
         """
-        return self.opt_params.set_one(name, settings)
+        self.opt_params.set_one(name, settings)
+
+        # reset influence distance in case it depends on parameters and changes
+        self.init_influence_distance()
 
     def echo_opt_params(self, filename: Path = sys.stdout):
         """
@@ -439,6 +445,9 @@ class Model:
         """
         self.opt_params.update_opt_params(params)
 
+        if self.params_relation_callback is not None:
+            self.params_relation_callback(self.model_params)
+
     def get_opt_param_name_value_and_indices(
         self, index: int
     ) -> Tuple[str, float, int, int]:
@@ -462,15 +471,6 @@ class Model:
         Whether bounds are set for some parameters.
         """
         return self.opt_params.has_opt_params_bounds()
-
-    # TODO if parameters relation set, remove the parameters from fitting model_params
-    #   or at least check it is not in the fitting model_params
-    def apply_params_relation(self):
-        """
-        Force user-specified relation between parameters.
-        """
-        if self.params_relation_callback is not None:
-            self.params_relation_callback(self.model_params)
 
     def save(self, filename: Path):
         """

@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Callable, Dict, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 from kliff.dataset.dataset import Configuration
@@ -426,12 +426,74 @@ class KIMModel(Model):
 
         return kim_ca
 
+    def set_opt_params(self, **kwargs):
+        """
+        Set the parameters that will be optimized.
+
+        One or more parameters can be set. Each argument is for one parameter, where the
+        argument name is the parameter name, the value of the argument is the
+        settings(including initial value, fix flag, lower bound, and upper bound).
+
+        The value of the argument should be a list of list, where each inner list is for
+        one component of the parameter, which can contain 1, 2, or 3 elements.
+         See `~kliff.model.model.Model.read_opt_params()` for the options of the elements.
+
+        Example:
+           instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
+        """
+        self.opt_params.set(**kwargs)
+
+        # update kim internal model param (note, set_one will update model_params)
+        for name, _ in kwargs.items():
+            p_idx = self.model_params[name].index
+            for c_idx, v in enumerate(self.model_params[name].value):
+                self.kim_model.set_parameter(p_idx, c_idx, v)
+
+        self.kim_model.clear_then_refresh()
+
+        # reset influence distance in case it changes
+        self.init_influence_distance()
+
+    def set_one_opt_param(self, name: str, settings: List[List[Any]]):
+        """
+        Set one parameter that will be optimized.
+
+        The name of the parameter should be given as the first entry of a list (or tuple),
+        and then each data line should be given in in a list.
+
+        Args:
+            name: name of a fitting parameter
+            settings: initial value, flag to fix a parameter, lower and upper bounds of a
+                parameter.
+
+        Example:
+            name = 'param_A'
+            settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
+            instance.set_one(name, settings)
+        """
+        self.opt_params.set_one(name, settings)
+
+        # update kim internal model param (note, set_one will update model_params)
+        p_idx = self.model_params[name].index
+        for c_idx, v in enumerate(self.model_params[name].value):
+            self.kim_model.set_parameter(p_idx, c_idx, v)
+
+        self.kim_model.clear_then_refresh()
+
+        # reset influence distance in case it changes
+        self.init_influence_distance()
+
     def update_model_params(self, params: Sequence[float]):
         """
         Update optimizing parameters (a sequence used by the optimizer) to the kim model.
         """
         # update from opt params to model params
-        self.opt_params.update_opt_params(params)
+        # TODO, in super().update_model_params(), we have parameter relation set,
+        #   these parameters need to be updated here as well. However, in general
+        #   we do not know how parameters are modified in parameter_relation,
+        #   and it seems the only hope is to keep a copy of parameters and do some
+        #   comparison to check which are modified and then set them.
+        super().update_model_params(params)
 
         # update from model params to kim params
         n = self.get_num_opt_params()

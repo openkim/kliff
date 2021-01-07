@@ -346,6 +346,19 @@ class OptimizingParameters(MSONable):
                     f"parameter `{name}`."
                 )
 
+            # probably setting cutoff?
+            if "cut" in name:
+                # and not fix it?
+                if not (num_items == 2 and line[0].lower() == "fix"):
+                    warnings.warn(
+                        f"Parameter `{name}` seems to be a cutoff distance. KLIFF does "
+                        f"not support optimizing cutoff. Remove it from your "
+                        f"optimizing parameter or make it a `fix` parameter if you "
+                        f"want to use a different cutoff distance from the default "
+                        f"value in the model. Ignore this if `{name}` is not a cutoff "
+                        f"distance."
+                    )
+
         self._set_index(name)
 
         if name not in self._params:
@@ -428,7 +441,7 @@ class OptimizingParameters(MSONable):
 
         The obtained values can be provided to the optimizer as the starting parameters.
 
-        This is the opposite operation of update_opt_params().
+        This is the opposite operation of update_model_params().
 
         Returns:
             opt_params: A 1D array of nested optimizing parameter values.

@@ -7,13 +7,6 @@ from kliff.dataset import Configuration
 from kliff.models.lennard_jones import LennardJones, LJComputeArguments
 
 
-def params_relation(params):
-    sigma = params.get_value("sigma")
-    epsilon = params.get_value("epsilon")
-    epsilon[0] = 2 * sigma[0]
-    params.set_value("epsilon", epsilon)
-
-
 def write_tmp_params(fname):
     with open(fname, "w") as fout:
         fout.write("sigma\n")
@@ -112,12 +105,17 @@ def energy_forces_stress(
 
 
 def test_lj():
+    def params_relation(params):
+        sigma = params.get_value("sigma")
+        epsilon = params.get_value("epsilon")
+        epsilon[0] = 2 * sigma[0]
+        params.set_value("epsilon", epsilon)
+
     model = LennardJones(params_relation_callback=params_relation)
 
     # set optimizing parameters
     model.set_opt_params(sigma=[[1.1, "fix"]], epsilon=[[2.1, None, 3.0]])
 
-    # model.update_model_params()
     model.echo_model_params()
     model.echo_opt_params()
 
