@@ -151,7 +151,6 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     """
 
     # shuffle and divide into nprocs equally-numbered parts
-    # TODO this could be improved by schedule job according to number of atoms
     if tuple_X:
         pairs = [(i, *x) for i, x in enumerate(X)]  # to make array_split work
     else:

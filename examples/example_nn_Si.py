@@ -135,8 +135,8 @@ result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 # also write the trained model to a KIM model such that it can be used in other simulation
 # codes such as LAMMPS via the KIM API.
 
-model.save("./final_model.pkl")
-loss.save_optimizer_stat("./optimizer_stat.pkl")
+model.save("final_model.pkl")
+loss.save_optimizer_state("optimizer_stat.pkl")
 
 model.write_kim_model()
 

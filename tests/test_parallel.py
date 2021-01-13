@@ -36,7 +36,3 @@ def test_main():
 
     results = parmap2(func, zip(X, Y), 1, nprocs=2, tuple_X=True)
     assert np.array_equal(results, XpYp1)
-
-
-if __name__ == "__main__":
-    test_main()

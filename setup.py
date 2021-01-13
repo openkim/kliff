@@ -98,7 +98,7 @@ setup(
     version=get_version(),
     packages=find_packages(),
     setup_requires=["pybind11"],
-    install_requires=["scipy", "pybind11", "pytest", "pyyaml"],
+    install_requires=["pybind11", "scipy", "pyyaml", "monty"],
     ext_modules=[sym_fn, bispectrum, neighlist],
     scripts=kliff_scripts,
     author="Mingjian Wen",

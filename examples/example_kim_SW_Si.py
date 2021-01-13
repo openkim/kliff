@@ -166,9 +166,9 @@ loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 # that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
 
 model.echo_opt_params()
-model.save("kliff_model.pkl")
+model.save("kliff_model.yaml")
 model.write_kim_model()
-model.load("kliff_model.pkl")
+model.load("kliff_model.yaml")
 
 
 ##########################################################################################

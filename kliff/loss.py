@@ -668,8 +668,10 @@ class LossNeuralNetworkModel(object):
         self.calculator = calculator
         self.nprocs = nprocs
 
-        self.residual_fn = residual_fn
-        self.residual_data = residual_data if residual_data is not None else dict()
+        self.residual_fn = (
+            energy_forces_residual if residual_fn is None else residual_fn
+        )
+        self.residual_data = residual_data
 
         self.optimizer = None
         self.optimizer_state_path = None
@@ -864,13 +866,13 @@ class LossNeuralNetworkModel(object):
 
         return loss
 
-    def save_optimizer_stat(self, path="optimizer_stat.pkl"):
+    def save_optimizer_state(self, path="optimizer_state.pkl"):
         """
         Save the state dict of optimizer to disk.
         """
         torch.save(self.optimizer.state_dict(), path)
 
-    def load_optimizer_stat(self, path="optimizer_stat.pkl"):
+    def load_optimizer_state(self, path="optimizer_state.pkl"):
         """
         Load the state dict of optimizer from file.
         """
