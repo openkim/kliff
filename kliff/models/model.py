@@ -472,7 +472,7 @@ class Model:
         """
         return self.opt_params.has_opt_params_bounds()
 
-    def save(self, filename: Path):
+    def save(self, filename: Path = "trained_model.yaml"):
         """
         Save a model to disk.
 
@@ -486,7 +486,7 @@ class Model:
         }
         yaml_dump(d, filename)
 
-    def load(self, filename: Path):
+    def load(self, filename: Path = "trained_model.yaml"):
         """
         Load a model on disk into memory.
 

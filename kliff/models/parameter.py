@@ -626,7 +626,7 @@ class OptimizingParameters(MSONable):
         )
         c._params = d["params"]
         for name in d["params"]:
-            cls._set_index(name)
+            c._set_index(name)
 
         return c
 
