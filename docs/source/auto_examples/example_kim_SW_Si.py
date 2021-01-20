@@ -23,9 +23,10 @@ on OpenKIM_.
 # silicon structures, as well as configurations drawn from molecular dynamics trajectories
 # at different temperatures.
 # Download the training set :download:`Si_training_set.tar.gz
-# <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
-# and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``. The data is stored in
-# **extended xyz** format, and see :ref:`doc.dataset` for more information of this format.
+# <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`.
+# (It will be automatically downloaded if not present.)
+# The data is stored in # **extended xyz** format, and see :ref:`doc.dataset` for more
+# information of this format.
 #
 # .. warning::
 #    The ``Si_training_set`` is just a toy data set for the purpose to demonstrate how to
@@ -37,7 +38,8 @@ on OpenKIM_.
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
-from kliff.models import KIM
+from kliff.models import KIMModel
+from kliff.utils import download_dataset
 
 ##########################################################################################
 # Model
@@ -46,7 +48,7 @@ from kliff.models import KIM
 # We first create a KIM model for the SW potential, and print out all the available
 # parameters that can be optimized (we call this ``model parameters``).
 
-model = KIM(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
 model.echo_model_params()
 
 
@@ -66,10 +68,10 @@ model.echo_model_params()
 # Now that we know what parameters are available for fitting, we can optimize all or a
 # subset of them to reproduce the training set.
 
-model.set_fitting_params(
+model.set_opt_params(
     A=[[5.0, 1.0, 20]], B=[["default"]], sigma=[[2.0951, "fix"]], gamma=[[1.5]]
 )
-model.echo_fitting_params()
+model.echo_opt_params()
 
 
 ##########################################################################################
@@ -92,7 +94,7 @@ model.echo_fitting_params()
 #   list the lower and upper bounds for the parameters, respectively. A bound could be
 #   provided as a numerical values or ``None``. The latter indicates no bound is applied.
 #
-# The call of ``model.echo_fitting_params()`` prints out the fitting parameters that we
+# The call of ``model.echo_opt_params()`` prints out the fitting parameters that we
 # require KLIFF to optimize. The number ``1`` after the name of each parameter indicates
 # the size of the parameter.
 #
@@ -107,9 +109,8 @@ model.echo_fitting_params()
 # KLIFF has a :class:`~kliff.dataset.Dataset` to deal with the training data (and possibly
 # test data). For the silicon training set, we can read and process the files by:
 
-dataset_name = "Si_training_set"
-tset = Dataset()
-tset.read(dataset_name)
+dataset_path = download_dataset(dataset_name="Si_training_set")
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 
@@ -166,10 +167,10 @@ loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 # evaluations. If satisfied with the fitted model, you can also write it as a KIM model
 # that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
 
-model.echo_fitting_params()
-model.save("kliff_model.pkl")
+model.echo_opt_params()
+model.save("kliff_model.yaml")
 model.write_kim_model()
-model.load("kliff_model.pkl")
+# model.load("kliff_model.yaml")
 
 
 ##########################################################################################

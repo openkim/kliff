@@ -8,12 +8,44 @@
 Tutorials
 =========
 
-To learn how to use KLIFF, begin with the tutorials. The :ref:`tut_kim_sw` example
-is a good entry point to see the basics of training a physics-motivated potential,
-and the :ref:`tut_nn` example walks through the steps to train a machine-learning
-neural network potential.
+To learn how to use KLIFF, begin with the tutorials.
+
+:ref:`tut_kim_sw`: a good entry point to see the basics of training a physics-motivated
+potential.
+
+:ref:`tut_nn`: walks through the steps to train a machine-learning neural network
+potential.
+
+:ref:`tut_nn_multi_spec`: similar to :ref:`tut_nn`, but train for a system of multiple
+species.
+
+:ref:`tut_lj`: similar to :ref:`tut_kim_sw` (where a KIM model is used), here the
+Lennard-Jones model built in KLIFF is used.
+
+More examples can be found at `<https://github.com/mjwen/kliff/tree/master/examples>`_.
 
 
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Lennard-Jones potential that is build in KLIFF (i.e. not models ar...">
+
+.. only:: html
+
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_lennard_jones_thumb.png
+     :alt: Train a Lennard-Jones potential
+
+     :ref:`sphx_glr_auto_examples_example_lennard_jones.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_lennard_jones
 
 .. raw:: html
 
@@ -22,6 +54,7 @@ neural network potential.
 .. only:: html
 
  .. figure:: /auto_examples/images/thumb/sphx_glr_example_linear_regression_thumb.png
+     :alt: Train a linear regression potential
 
      :ref:`sphx_glr_auto_examples_example_linear_regression.py`
 
@@ -42,6 +75,7 @@ neural network potential.
 .. only:: html
 
  .. figure:: /auto_examples/images/thumb/sphx_glr_example_kim_SW_Si_thumb.png
+     :alt: Train a Stillinger-Weber potential
 
      :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py`
 
@@ -57,11 +91,12 @@ neural network potential.
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon">
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon.">
 
 .. only:: html
 
  .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
+     :alt: Train a neural network potential
 
      :ref:`sphx_glr_auto_examples_example_nn_Si.py`
 
@@ -77,13 +112,14 @@ neural network potential.
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon">
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for a system containing two species:...">
 
 .. only:: html
 
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_dropout_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_SiC_thumb.png
+     :alt: Train a neural network potential for SiC
 
-     :ref:`sphx_glr_auto_examples_example_nn_dropout.py`
+     :ref:`sphx_glr_auto_examples_example_nn_SiC.py`
 
 .. raw:: html
 
@@ -93,7 +129,7 @@ neural network potential.
 .. toctree::
    :hidden:
 
-   /auto_examples/example_nn_dropout
+   /auto_examples/example_nn_SiC
 .. raw:: html
 
     <div class="sphx-glr-clear"></div>
@@ -108,13 +144,13 @@ neural network potential.
 
   .. container:: sphx-glr-download sphx-glr-download-python
 
-    :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/mjwen/Applications/kliff/docs/source/auto_examples/auto_examples_python.zip>`
+    :download:`Download all examples in Python source code: auto_examples_python.zip </auto_examples/auto_examples_python.zip>`
 
 
 
   .. container:: sphx-glr-download sphx-glr-download-jupyter
 
-    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/mjwen/Applications/kliff/docs/source/auto_examples/auto_examples_jupyter.zip>`
+    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip </auto_examples/auto_examples_jupyter.zip>`
 
 
 .. only:: html

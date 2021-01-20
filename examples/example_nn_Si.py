@@ -147,6 +147,5 @@ model.write_kim_model()
 # .. note::
 #    Now we have trained an NN for a single specie Si. If you have multiple species in
 #    your system and want to use different parameters for different species,
-#    take a look at the SiC_ example.
+#    take a look at the :ref:`tut_nn_multi_spec` example.
 #
-# .. _SiC: https://github.com/mjwen/kliff/blob/master/examples/eg_nn_SiC.py

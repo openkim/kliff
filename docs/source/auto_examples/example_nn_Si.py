@@ -4,7 +4,7 @@
 Train a neural network potential
 ================================
 
-In this tutorial, we train a neural network (NN) potential for silicon
+In this tutorial, we train a neural network (NN) potential for silicon.
 
 """
 
@@ -14,7 +14,7 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # compressed and stretched diamond silicon structures (the same training set used in
 # :ref:`tut_kim_sw`).
 # Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
-# and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``.
+# (It will be automatically downloaded if it is not present.)
 # The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
 # information of this format.
 #
@@ -31,6 +31,7 @@ from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
+from kliff.utils import download_dataset
 
 ##########################################################################################
 # Model
@@ -103,8 +104,9 @@ model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 # fingerprints generated from the descriptor if it is present.
 
 # training set
-dataset_name = "Si_training_set/varying_alat"
-tset = Dataset(path=dataset_name)
+dataset_path = download_dataset(dataset_name="Si_training_set")
+dataset_path = dataset_path.joinpath("varying_alat")
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator
@@ -135,8 +137,8 @@ result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 # also write the trained model to a KIM model such that it can be used in other simulation
 # codes such as LAMMPS via the KIM API.
 
-model.save("./final_model.pkl")
-loss.save_optimizer_stat("./optimizer_stat.pkl")
+model.save("final_model.pkl")
+loss.save_optimizer_state("optimizer_stat.pkl")
 
 model.write_kim_model()
 
@@ -145,6 +147,5 @@ model.write_kim_model()
 # .. note::
 #    Now we have trained an NN for a single specie Si. If you have multiple species in
 #    your system and want to use different parameters for different species,
-#    take a look at the SiC_ example.
+#    take a look at the :ref:`tut_nn_multi_spec` example.
 #
-# .. _SiC: https://github.com/mjwen/kliff/blob/master/examples/eg_nn_SiC.py

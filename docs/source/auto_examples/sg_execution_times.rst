@@ -5,14 +5,16 @@
 
 Computation times
 =================
-**00:40.953** total execution time for **auto_examples** files:
+**00:35.161** total execution time for **auto_examples** files:
 
 +-----------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)                         | 00:40.953 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)                         | 00:35.161 | 0.0 MB |
 +-----------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                 | 00:00.000 | 0.0 MB |
 +-----------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_lennard_jones.py` (``example_lennard_jones.py``)         | 00:00.000 | 0.0 MB |
++-----------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_linear_regression.py` (``example_linear_regression.py``) | 00:00.000 | 0.0 MB |
 +-----------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_nn_dropout.py` (``example_nn_dropout.py``)               | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_nn_SiC.py` (``example_nn_SiC.py``)                       | 00:00.000 | 0.0 MB |
 +-----------------------------------------------------------------------------------------------+-----------+--------+
