@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 import numpy as np
 from kliff.log import log_entry
-from kliff.utils import split_string
+from kliff.utils import create_directory, split_string
 
 logger = logging.getLogger(__name__)
 
@@ -92,20 +92,23 @@ class EnergyForcesRMSE:
         all_identifier = []
 
         # common path of dataset
-        ids = [_get_config(ca).get_identifier() for ca in cas]
-        common = _get_common_path(ids)
+        paths = [_get_config(ca).path for ca in cas]
+        common = _get_common_path(paths)
 
         for i, ca in enumerate(cas):
             if i % 100 == 0:
                 msg = "Processing configuration {}.".format(i)
                 log_entry(logger, msg, level="info")
+
             prefix = "analysis_energy_forces_RMSE-difference"
+            create_directory(prefix, is_directory=True)
+
             enorm, fnorm = self._compute_single_config(
                 ca, normalize, verbose, common, prefix
             )
             all_enorm.append(enorm)
             all_fnorm.append(fnorm)
-            all_identifier.append(_get_config(ca).get_identifier())
+            all_identifier.append(_get_config(ca).identifier)
         all_enorm = np.asarray(all_enorm)
         all_fnorm = np.asarray(all_fnorm)
         all_identifier = np.asarray(all_identifier)
@@ -196,13 +199,13 @@ class EnergyForcesRMSE:
 
         self.calculator.compute(ca)
         conf = _get_config(ca)
-        identifier = os.path.abspath(conf.get_identifier())
+        conf_path = os.path.abspath(conf.path)
         natoms = conf.get_num_atoms()
 
         if self.compute_energy:
             pred_e = self.calculator.get_energy(ca)
             pred_e = _to_numpy(pred_e, ca)
-            ref_e = conf.get_energy()
+            ref_e = conf.energy
             ediff = pred_e - ref_e
             enorm = abs(ediff)
             if normalize:
@@ -225,12 +228,12 @@ class EnergyForcesRMSE:
 
         # write the difference to extxyz files
         if verbose >= 2:
-            if identifier.startswith(common_path):
-                base = identifier[len(common_path) :]
+            if conf_path.startswith(common_path):
+                base = conf_path[len(common_path) :]
             else:
                 raise AnalyzerError(
                     'identifier "{}" not start with common_path "{}".'.format(
-                        identifier, common_path
+                        conf_path, common_path
                     )
                 )
 

@@ -111,9 +111,9 @@ class Configuration:
                 self.species,
                 self.coords,
                 self.PBC,
-                self.energy,
-                self.forces,
-                self.stress,
+                self._energy,
+                self._forces,
+                self._stress,
             )
         else:
             raise ConfigurationError(
