@@ -170,7 +170,7 @@ loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 model.echo_opt_params()
 model.save("kliff_model.yaml")
 model.write_kim_model()
-model.load("kliff_model.yaml")
+# model.load("kliff_model.yaml")
 
 
 ##########################################################################################
