@@ -7,7 +7,6 @@ import scipy.optimize
 
 from kliff import parallel
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.calculators.calculator_torch import CalculatorTorch
 from kliff.error import report_import_error
 from kliff.log import log_entry
 
@@ -175,18 +174,17 @@ class Loss:
 
     def __new__(
         self,
-        calculator: Union[Calculator, CalculatorTorch],
+        calculator,
         nprocs: int = 1,
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
     ):
-
-        if isinstance(calculator, CalculatorTorch):
-            return LossNeuralNetworkModel(
+        if isinstance(calculator, Calculator):
+            return LossPhysicsMotivatedModel(
                 calculator, nprocs, residual_fn, residual_data
             )
         else:
-            return LossPhysicsMotivatedModel(
+            return LossNeuralNetworkModel(
                 calculator, nprocs, residual_fn, residual_data
             )
 
@@ -236,7 +234,7 @@ class LossPhysicsMotivatedModel:
 
     def __init__(
         self,
-        calculator: Union[Calculator, CalculatorTorch],
+        calculator: Calculator,
         nprocs: int = 1,
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
@@ -646,7 +644,7 @@ class LossNeuralNetworkModel(object):
 
     def __init__(
         self,
-        calculator: Union[Calculator, CalculatorTorch],
+        calculator,
         nprocs: int = 1,
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
