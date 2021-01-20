@@ -2,15 +2,16 @@ import logging
 import multiprocessing as mp
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import torch
 import torch.distributed as dist
+from kliff.dataset.dataset import Configuration
+from kliff.dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
+from kliff.models.model_torch import ModelTorch
+from kliff.models.neural_network import NeuralNetwork
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
-
-from ..dataset.dataset import Configuration
-from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class CalculatorTorch:
 
     implemented_property = ["energy", "forces", "stress"]
 
-    def __init__(self, model):
+    def __init__(self, model: ModelTorch):
 
         self.model = model
         self.dtype = self.model.descriptor.dtype
@@ -185,7 +186,17 @@ class CalculatorTorch:
 
 
 class CalculatorTorchSeparateSpecies(CalculatorTorch):
-    def __init__(self, models):
+    """
+    A calculator supporting models of difference species.
+
+    Args:
+        models: {species:model} with species specifying the chemical symbol for the model.
+    """
+
+    def __init__(
+        self,
+        models: Dict[str, NeuralNetwork],
+    ):
         self.models = models
 
         self.dtype = None
@@ -194,7 +205,8 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
                 self.dtype = m.descriptor.dtype
             else:
                 if self.dtype != m.descriptor.dtype:
-                    raise CalculatorTorchError('inconsistent "dtype" from descriptors.')
+                    raise CalculatorTorchError("inconsistent `dtype` from descriptors.")
+
         # TODO change this (we now temporarily set model to the last one)
         self.model = m
 
@@ -230,7 +242,7 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
             for s, z in zip(species, zeta):
                 # TODO move check to somewhere else to speed up computation
                 if s not in supported_species:
-                    raise CalculatorTorchError('no model for species ""'.format(s))
+                    raise CalculatorTorchError(f"No model for species: {s}")
                 else:
                     zeta_by_species[s].append(z)
                     config_id_by_species[s].append(i)
@@ -244,12 +256,14 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
                 continue
 
             z_tensor = torch.stack(zeta)  # convert a list of tensor to tensor
-            energy = self.model(z_tensor)
+            energy = self.models[s](z_tensor)
+
             for e_atom, i in zip(energy, config_id_by_species[s]):
                 if energy_config[i] is None:
                     energy_config[i] = e_atom
                 else:
-                    energy_config[i] += e_atom
+                    # note cannot use +=, energy e_atom is a view
+                    energy_config[i] = energy_config[i] + e_atom
 
         # forces and stress
         if not self.use_forces:

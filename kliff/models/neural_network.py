@@ -110,7 +110,9 @@ class NeuralNetwork(ModelTorch):
         self.descriptor.write_kim_params(path, desc_name)
         self._write_kim_dropout_binary(path, dropout_name, dropout_ensemble_size)
 
-        logger.info(f"KLIFF trained model write to {path}")
+        msg = f"KLIFF trained model write to {path}"
+        print(msg)
+        logger.info(msg)
 
     def _write_kim_params(self, path, filename="NN.params"):
 

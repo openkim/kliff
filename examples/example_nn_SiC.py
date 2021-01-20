@@ -1,10 +1,12 @@
 """
 .. _tut_nn_multi_spec:
 
-Train a neural network potential
-================================
+Train a neural network potential for SiC
+========================================
 
-In this tutorial, we train a neural network (NN) potential for SiC
+In this tutorial, we train a neural network (NN) potential for a system containing two
+species: Si and C. This is very similar to the training for systems containing a single
+species (take a look at :ref:`tut_nn` for training for Si if you haven't yet).
 """
 
 
@@ -18,7 +20,7 @@ from kliff.models import NeuralNetwork
 descriptor = SymmetryFunction(
     cut_name="cos",
     cut_dists={"Si-Si": 5.0, "C-C": 5.0, "Si-C": 5.0},
-    hyperparams="set30",
+    hyperparams="set51",
     normalize=True,
 )
 
@@ -55,12 +57,12 @@ model_c.set_save_metadata(prefix="./kliff_saved_model_c", start=5, frequency=2)
 
 
 # training set
-tset = Dataset("SiC_training_set")
+tset = Dataset(path="SiC_training_set")
 configs = tset.get_configs()
 
 # calculator
 calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
-calc.create(configs, reuse=True)
+calc.create(configs, reuse=False)
 
 # loss
 loss = Loss(calc, residual_data={"forces_weight": 0.3})
@@ -72,6 +74,6 @@ result = loss.minimize(method="Adam", num_epochs=10, batch_size=4, lr=0.001)
 # also write the trained model to a KIM model such that it can be used in other simulation
 # codes such as LAMMPS via the KIM API.
 
-model_si.save("./final_model_si.pkl")
-model_c.save("./final_model_c.pkl")
-loss.save_optimizer_stat("./optimizer_stat.pkl")
+model_si.save("final_model_si.pkl")
+model_c.save("final_model_c.pkl")
+loss.save_optimizer_state("optimizer_stat.pkl")
