@@ -99,7 +99,7 @@ def download_dataset(dataset_name: str) -> Path:
 
         # download
         url = (
-            f"https://raw.githubusercontent.com/mjwen/kliff/type_hint/examples/"
+            f"https://raw.githubusercontent.com/mjwen/kliff/master/examples/"
             f"{dataset_name}.tar.gz"
         )
 
