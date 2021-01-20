@@ -99,7 +99,8 @@ def download_dataset(dataset_name: str) -> Path:
 
         # download
         url = (
-            f"https://github.com/mjwen/kliff/blob/master/examples/{dataset_name}.tar.gz"
+            f"https://raw.githubusercontent.com/mjwen/kliff/type_hint/examples/"
+            f"{dataset_name}.tar.gz"
         )
 
         with requests.get(url, stream=True) as r:
@@ -110,7 +111,10 @@ def download_dataset(dataset_name: str) -> Path:
 
         # untar
         tf = tarfile.open(tarball, "r:gz")
-        tf.extractall(path)
+        tf.extractall(path.parent)
+
+        # # remove tarball
+        # tarball.unlink()
 
     return path
 

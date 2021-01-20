@@ -62,6 +62,7 @@ class Configuration:
         self._stress = stress
         self._weight = weight
         self._identifier = identifier
+        self._path = None
 
     @classmethod
     def from_file(cls, filename: Path, file_format: str = "xyz"):
@@ -89,7 +90,10 @@ class Configuration:
         forces = np.asarray(forces) if forces is not None else None
         stress = [float(i) for i in stress] if stress is not None else None
 
-        return cls(cell, species, coords, PBC, energy, forces, stress)
+        self = cls(cell, species, coords, PBC, energy, forces, stress)
+        self._path = to_path(filename)
+
+        return self
 
     def to_file(self, filename: Path, file_format: str = "xyz"):
         """
@@ -205,6 +209,14 @@ class Configuration:
         Set the identifier of the configuration.
         """
         self._identifier = identifier
+
+    @property
+    def path(self) -> Union[Path, None]:
+        """
+        Return the path of the file containing the configuration. If the configuration
+        is not read from a file, return None.
+        """
+        return self._path
 
     def get_num_atoms(self) -> int:
         """
