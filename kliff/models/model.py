@@ -1,7 +1,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
 from kliff.dataset.dataset import Configuration
@@ -271,7 +271,9 @@ class Model:
         """
         return self.model_params
 
-    def echo_model_params(self, filename: Optional[Path] = sys.stdout) -> str:
+    def echo_model_params(
+        self, filename: Union[Path, TextIO, None] = sys.stdout
+    ) -> str:
         """
         Echo the model parameters.
 
@@ -296,11 +298,11 @@ class Model:
             s += f"size: {len(p)}\n\n"
 
         if filename is not None:
-            if filename == sys.stdout:
-                filename.write(s)
-            else:
+            if isinstance(filename, (str, Path)):
                 with open(filename, "w") as f:
                     f.write(s)
+            else:
+                filename.write(s)
 
         return s
 
@@ -402,7 +404,7 @@ class Model:
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
 
-    def echo_opt_params(self, filename: Path = sys.stdout):
+    def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
         Echo the optimizing parameter to a file.
         """

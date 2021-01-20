@@ -2,7 +2,7 @@ import logging
 import sys
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
 from monty.json import MSONable
@@ -365,7 +365,7 @@ class OptimizingParameters(MSONable):
             self._params.append(name)
 
     def echo_opt_params(
-        self, filename: Optional[Path] = sys.stdout, echo_size: bool = True
+        self, filename: Union[Path, TextIO, None] = sys.stdout, echo_size: bool = True
     ) -> str:
         """
         Get the optimizing parameters as a string and/or print to file (stdout).
@@ -417,11 +417,11 @@ class OptimizingParameters(MSONable):
             s += "\n"
 
         if filename is not None:
-            if filename == sys.stdout:
-                filename.write(s)
-            else:
+            if isinstance(filename, (str, Path)):
                 with open(filename, "w") as f:
                     f.write(s)
+            else:
+                filename.write(s)
 
         return s
 
