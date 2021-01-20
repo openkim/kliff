@@ -1,3 +1,4 @@
 pybind11
 matplotlib
 sphinx-gallery
+sphinx-autodoc-typehints
