@@ -27,6 +27,11 @@ tests/fingerprints/
 tmp_*
 *_kliff_trained/
 
+# dataset
+Si_training_set_4_configs
+Si_training_set
+SiC_training_set
+
 # special for docs
 docs/build
 docs/source/_static

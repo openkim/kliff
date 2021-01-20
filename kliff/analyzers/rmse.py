@@ -4,16 +4,15 @@ import sys
 from collections.abc import Iterable
 
 import numpy as np
-
-from ..dataset import write_config
-from ..log import log_entry
-from ..utils import split_string
+from kliff.log import log_entry
+from kliff.utils import split_string
 
 logger = logging.getLogger(__name__)
 
 
 class EnergyForcesRMSE:
-    r"""Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
+    r"""
+    Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
 
     The `energy difference norm` for a configuration is defined as:
 
@@ -53,7 +52,8 @@ class EnergyForcesRMSE:
         self.compute_forces = forces
 
     def run(self, normalize=True, sort=None, path=None, verbose=1):
-        r"""Run the RMSE analyzer.
+        """
+        Run the RMSE analyzer.
 
         Parameters
         ----------
@@ -235,27 +235,14 @@ class EnergyForcesRMSE:
                 )
 
             path = os.path.join(prefix, base)
-            cell = conf.cell
-            PBC = conf.PBC
-            species = conf.species
-            coords = conf.coords
-            write_config(
-                path,
-                cell,
-                PBC,
-                species,
-                coords,
-                energy=ediff,
-                forces=fdiff,
-                stress=None,
-                fmt="extxyz",
-            )
+            conf.to_file(path)
 
         return enorm, fnorm
 
 
 def _get_config(compute_argument):
-    """Get the configuration attached to a compute argument.
+    """
+    Get the configuration attached to a compute argument.
 
     For KIM model and Torch model, the way is different. It would be better to unify these
     two. The method here is very vulnerable.
@@ -271,7 +258,8 @@ def _get_config(compute_argument):
 
 
 def _to_numpy(x, compute_argument):
-    """Convert to a numpy array from a tensor.
+    """
+    Convert to a numpy array from a tensor.
 
     `compute_argument` is needed to determine whether ``x`` is a list of tensor of a numpy
     array.
@@ -283,7 +271,8 @@ def _to_numpy(x, compute_argument):
 
 
 def _get_common_path(paths):
-    """Find the common path of a list of paths.
+    """
+    Find the common path of a list of paths.
 
     For example, given paths = ['/A/B/c.x', '/A/B/D/e.x'], the returns `/A/B/`.
     """
@@ -313,6 +302,3 @@ class AnalyzerError(Exception):
     def __init__(self, msg):
         super(AnalyzerError, self).__init__(msg)
         self.msg = msg
-
-    def __expr__(self):
-        return self.msg

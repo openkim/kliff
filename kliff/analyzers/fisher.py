@@ -2,9 +2,7 @@ import copy
 import logging
 
 import numpy as np
-
-from ..log import log_entry
-from ..utils import split_string
+from kliff.utils import split_string
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +55,8 @@ class Fisher:
         """
 
         msg = "Start computing Fisher information matrix."
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
+        print(msg)
 
         I_all = []
 
@@ -65,7 +64,9 @@ class Fisher:
         for i, ca in enumerate(cas):
             if i % 100 == 0:
                 msg = "Processing configuration {}.".format(i)
-                log_entry(logger, msg, level="info")
+                logger.info(msg)
+                print(msg)
+
             dfdp = self._compute_jacobian_one_config(ca)
             I_all.append(np.dot(dfdp.T, dfdp))
         I = np.mean(I_all, axis=0)
@@ -73,7 +74,8 @@ class Fisher:
 
         self._write_result(I, I_stdev, verbose)
         msg = "Finish computing Fisher information matrix."
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
+        print(msg)
 
         return I, I_stdev
 
@@ -145,7 +147,7 @@ class Fisher:
             import numdifftools as nd
         except ImportError as e:
             raise ImportError(
-                +'{}\nFisher information analyzer needs "numdifftools". Please install '
+                '{}\nFisher information analyzer needs "numdifftools". Please install '
                 "it first.".format(str(e))
             )
 
