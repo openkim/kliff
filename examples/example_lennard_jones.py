@@ -1,5 +1,5 @@
 """
-.. tut_lj:
+.. _tut_lj:
 
 Train a Lennard-Jones potential
 ===============================
@@ -9,6 +9,8 @@ models archived on OpenKIM_). From a user's perspective, a KLIFF built-in model 
 different from a KIM model.
 
 Compare this with :ref:`tut_kim_sw`.
+
+.. _OpenKIM: https://openkim.org
 """
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
