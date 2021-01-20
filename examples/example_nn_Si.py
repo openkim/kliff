@@ -4,7 +4,7 @@
 Train a neural network potential
 ================================
 
-In this tutorial, we train a neural network (NN) potential for silicon
+In this tutorial, we train a neural network (NN) potential for silicon.
 
 """
 
@@ -14,7 +14,7 @@ In this tutorial, we train a neural network (NN) potential for silicon
 # compressed and stretched diamond silicon structures (the same training set used in
 # :ref:`tut_kim_sw`).
 # Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
-# and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``.
+# (It will be automatically downloaded if it is not present.)
 # The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
 # information of this format.
 #
@@ -31,6 +31,7 @@ from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
+from kliff.utils import download_dataset
 
 ##########################################################################################
 # Model
@@ -103,7 +104,8 @@ model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 # fingerprints generated from the descriptor if it is present.
 
 # training set
-dataset_path = "Si_training_set/varying_alat"
+dataset_path = download_dataset(dataset_name="Si_training_set")
+dataset_path = dataset_path.joinpath("varying_alat")
 tset = Dataset(dataset_path)
 configs = tset.get_configs()
 

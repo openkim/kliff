@@ -12,6 +12,7 @@ from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.models import LinearRegression
+from kliff.utils import download_dataset
 
 descriptor = SymmetryFunction(
     cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
@@ -21,7 +22,8 @@ descriptor = SymmetryFunction(
 model = LinearRegression(descriptor)
 
 # training set
-dataset_path = "Si_training_set/varying_alat"
+dataset_path = download_dataset(dataset_name="Si_training_set")
+dataset_path = dataset_path.joinpath("varying_alat")
 tset = Dataset(dataset_path)
 configs = tset.get_configs()
 print("Number of configurations:", len(configs))

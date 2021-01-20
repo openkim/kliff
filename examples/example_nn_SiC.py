@@ -6,7 +6,7 @@ Train a neural network potential for SiC
 
 In this tutorial, we train a neural network (NN) potential for a system containing two
 species: Si and C. This is very similar to the training for systems containing a single
-species (take a look at :ref:`tut_nn` for training for Si if you haven't yet).
+specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 """
 
 
@@ -16,6 +16,7 @@ from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
+from kliff.utils import download_dataset
 
 descriptor = SymmetryFunction(
     cut_name="cos",
@@ -57,7 +58,8 @@ model_c.set_save_metadata(prefix="./kliff_saved_model_c", start=5, frequency=2)
 
 
 # training set
-tset = Dataset(path="SiC_training_set")
+dataset_path = download_dataset(dataset_name="SiC_training_set")
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator

@@ -1,5 +1,8 @@
 """
 Fisher information for the SW potential.
+
+See `A force-matching Stillinger-Weber potential for MoS2: Parameterization and Fisher
+information theory based sensitivity analysis <https://doi.org/10.1063/1.5007842>`_
 """
 
 
@@ -7,6 +10,7 @@ from kliff.analyzers import Fisher
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.models import KIMModel
+from kliff.utils import download_dataset
 
 ##########################################################################################
 # Select the parameters that will be used to compute the Fisher information. Only
@@ -19,7 +23,8 @@ model.set_opt_params(
 )
 
 # dataset
-tset = Dataset("tmp_tset")
+dataset_path = download_dataset(dataset_name="Si_training_set_4_configs")
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator

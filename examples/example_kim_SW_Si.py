@@ -23,9 +23,10 @@ on OpenKIM_.
 # silicon structures, as well as configurations drawn from molecular dynamics trajectories
 # at different temperatures.
 # Download the training set :download:`Si_training_set.tar.gz
-# <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
-# and extract the tarball: ``$ tar xzf Si_training_set.tar.gz``. The data is stored in
-# **extended xyz** format, and see :ref:`doc.dataset` for more information of this format.
+# <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`.
+# (It will be automatically downloaded if not present.)
+# The data is stored in # **extended xyz** format, and see :ref:`doc.dataset` for more
+# information of this format.
 #
 # .. warning::
 #    The ``Si_training_set`` is just a toy data set for the purpose to demonstrate how to
@@ -38,6 +39,7 @@ from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
+from kliff.utils import download_dataset
 
 ##########################################################################################
 # Model
@@ -107,7 +109,7 @@ model.echo_opt_params()
 # KLIFF has a :class:`~kliff.dataset.Dataset` to deal with the training data (and possibly
 # test data). For the silicon training set, we can read and process the files by:
 
-dataset_path = "Si_training_set"
+dataset_path = download_dataset(dataset_name="Si_training_set")
 tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
