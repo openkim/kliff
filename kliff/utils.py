@@ -1,10 +1,12 @@
 import os
 import random
+import tarfile
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Union
 
 import numpy as np
+import requests
 import yaml
 
 
@@ -77,6 +79,40 @@ def to_path(path: Union[str, Path]) -> Path:
     Convert str (or filename) to pathlib.Path.
     """
     return Path(path).expanduser().resolve()
+
+
+def download_dataset(dataset_name: str) -> Path:
+    """
+    Download dataset and untar it.
+
+    Args:
+        dataset_name: name of the dataset
+
+    Returns:
+        Path to the dataset
+    """
+    path = to_path(dataset_name)
+
+    if not path.exists():
+
+        tarball = path.with_suffix(".tar.gz")
+
+        # download
+        url = (
+            f"https://github.com/mjwen/kliff/blob/master/examples/{dataset_name}.tar.gz"
+        )
+
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with open(tarball, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        # untar
+        tf = tarfile.open(tarball, "r:gz")
+        tf.extractall(path)
+
+    return path
 
 
 def create_directory(path: Union[str, Path], is_directory=False):
