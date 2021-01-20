@@ -11,7 +11,7 @@ from kliff.utils import download_dataset
 
 model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
 
-# load the trained model with optimized parameters
+# load the trained model back
 # model.load("kliff_model.yaml")
 
 

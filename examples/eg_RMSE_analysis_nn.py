@@ -1,9 +1,15 @@
+"""
+Compute the root-mean-square error (RMSE) of model prediction and reference values from
+the dataset.
+"""
+
 from kliff import nn
 from kliff.analyzers import EnergyForcesRMSE
 from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.models import NeuralNetwork
+from kliff.utils import download_dataset
 
 # model
 descriptor = SymmetryFunction(
@@ -23,15 +29,18 @@ model.add_layers(
     # output layer
     nn.Linear(N2, 1),
 )
-model.load("./saved_model.pkl", mode="train")
+
+# load the trained model back
+# model.load("./saved_model.pkl", mode="eval")
 
 # dataset
-tset = Dataset("Si_training_set")
+dataset_path = download_dataset(dataset_name="Si_training_set")
+tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator
 calc = CalculatorTorch(model)
-calc.create(configs, reuse=True)
+calc.create(configs, reuse=False)
 
 # analyzer
 analyzer = EnergyForcesRMSE(calc)

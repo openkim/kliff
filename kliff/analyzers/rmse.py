@@ -101,8 +101,6 @@ class EnergyForcesRMSE:
                 log_entry(logger, msg, level="info")
 
             prefix = "analysis_energy_forces_RMSE-difference"
-            create_directory(prefix, is_directory=True)
-
             enorm, fnorm = self._compute_single_config(
                 ca, normalize, verbose, common, prefix
             )
@@ -238,6 +236,7 @@ class EnergyForcesRMSE:
                 )
 
             path = os.path.join(prefix, base)
+            create_directory(path)
             conf.to_file(path)
 
         return enorm, fnorm
