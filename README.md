@@ -43,6 +43,7 @@ from kliff.descriptors import SymmetryFunction
 from kliff.dataset import Dataset
 from kliff.models import NeuralNetwork
 from kliff.loss import Loss
+from kliff.utils import download_dataset
 
 # Descriptor to featurize atomic configurations  
 descriptor = SymmetryFunction(
@@ -64,9 +65,11 @@ model.add_layers(
     nn.Linear(N2, 1),
 )
 
-# Training set (can be downloaded at: https://github.com/mjwen/kliff/blob/master/examples/Si_training_set.tar.gz)
-dataset_name = "Si_training_set/varying_alat"
-train_set = Dataset(dataset_name)
+# Training set (dataset will be downloaded from: 
+# https://github.com/mjwen/kliff/blob/master/examples/Si_training_set.tar.gz)
+dataset_path = download_dataset(dataset_name="Si_training_set")
+dataset_path = dataset_path.join("varying_alat")
+train_set = Dataset(dataset_path)
 configs = train_set.get_configs()
 
 # Set up calculator to compute energy and forces for atomic configurations in the 
@@ -94,7 +97,6 @@ Detailed explanation and more tutorial examples can be found in the
 - Low level API for creating complex NN models
 - Parallel execution
 - [PyTorch](https://pytorch.org) backend for NN
-
 
 ## Contact
 

@@ -4,6 +4,24 @@
 Change Log
 ==========
 
+v2.0.0 (2021/01/19)
+===================
+
+- add type hint for all codes
+
+- reorganize model and parameters to make it more robust
+
+- add more docstring for many undocumented class and functions
+
+
+v0.1.7 (2020/12/20)
+===================
+
+- add GitHub actions to automatically deploy to PyPI
+
+- add a simple example to README
+
+
 v0.1.5 (2020/2/13)
 ==================
 
