@@ -10,7 +10,7 @@ class KeyNotFoundError(Exception):
         self.msg = msg
 
 
-def report_import_error(package, classname=None):
+def report_import_error(package, classname: str = None):
     if classname is not None:
         msg = f"To use `{classname}`, `{package}` is need. Please install it first."
     else:

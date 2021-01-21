@@ -304,9 +304,9 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         }
 
 
-class CalculatorTorchDDPCPU(CalculatorTorch):
+class CalculatorTorchDDP(CalculatorTorch):
     def __init__(self, model, rank, world_size):
-        super(CalculatorTorchDDPCPU, self).__init__(model)
+        super(self).__init__(model)
         self.set_up(rank, world_size)
 
     def set_up(self, rank, world_size):
