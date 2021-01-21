@@ -7,19 +7,52 @@ Installation
 
 KLIFF requires:
 
-- Python_ 3.5 or newer.
+- Python_ 3.6 or newer.
 - A C++ compiler that supports C++11.
 
-KLIFF is built on top of KIM, either to fit physics-motivated potentials
-archived on OpenKIM_ or to deploy the trained potential. To get KLIFF to work,
-two prerequisite packages --- kim-api_ and kimpy_ --- need to be installed
-first.
+
+KLIFF
+=====
+
+The easiest way to install KLIFF is using a package manager, do either
+
+.. code-block:: bash
+
+   $ conda intall -c conda-forge kliff
+
+or
+
+.. code-block:: bash
+
+   $ pip install kliff
+
+Alternatively, you can install from source:
+
+.. code-block:: bash
+
+    $ git clone https://github.com/mjwen/kliff
+    $ pip install ./kliff
+
+
+Optional
+========
+
+KLIFF is built on top of KIM to fit physics-motivated potentials archived on OpenKIM_.
+To get KLIFF work with OpenKIM_ potential models, two other packages --- kim-api_ and
+kimpy_ --- are needed.
 
 
 kim-api
-=======
-A detailed installing steps are provided at kim-api_, so please refer to the
-instructions there to install.
+-------
+
+kim-api_ can be installed via conda:
+
+.. code-block:: bash
+
+    $ conda install -c conda-forge kim-api
+
+Other installation methods are provided at kim-api_; refer to the instructions there
+for more information.
 
 .. note::
     After installation, you can do ``$ kim-api-collections-management list``.
@@ -31,41 +64,25 @@ instructions there to install.
 
 
 kimpy
-=====
-kimpy_ is on PyPI and it can be installed by
+-----
+.. code-block:: bash
+
+    $ conda-install -c conda-forge kimpy
+
+or
 
 .. code-block:: bash
 
     $ pip install kimpy
 
 
-KLIFF
-=====
+PyTorch
+-------
 
-After getting kim-api_ and kimpy_ to work, you can install KLIFF via
-
-Package manager
----------------
-.. code-block:: bash
-
-   $ pip install kliff
-
-From source
------------
-.. code-block:: bash
-
-    $ git clone https://github.com/mjwen/kliff
-    $ pip install ./kliff
-
-
-
-Optional
-========
-
-KLIFF takes advantage of PyTorch_ to build neural network models and conduct the
-training. So if you want to train neural network potentials, PyTorch_ needs to
-be installed. Please follow the instructions given on the official PyTorch_
-website to install it.
+For machine learning potentials, KLIFF takes advantage of PyTorch_ to build neural
+network models and conduct the training. So if you want to train neural network
+potentials, PyTorch_ needs to be installed.
+Please follow the instructions given on the official PyTorch_ website to install it.
 
 
 .. _Python: http://www.python.org
