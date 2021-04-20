@@ -5,6 +5,6 @@ __all__ = ["Calculator"]
 
 
 if torch_available():
-    from .calculator_torch import CalculatorTorch, CalculatorTorchDDPCPU
+    from .calculator_torch import CalculatorTorch
 
-    __all__.extend(["CalculatorTorch", "CalculatorTorchDDPCPU"])
+    __all__.extend(["CalculatorTorch"])
