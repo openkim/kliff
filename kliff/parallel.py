@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import random
+import sys
 
 import numpy as np
 
@@ -61,12 +62,14 @@ def parmap1(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     >>> parmap1(func, zip(X, Y), 1, tuple_X=True, nprocs=2)  # [1,3,5]
     """
 
-    q_in = mp.Queue(nprocs)
-    q_out = mp.Queue()
+    ctx = get_context()
+
+    q_in = ctx.Queue(nprocs)
+    q_out = ctx.Queue()
 
     processes = []
     for _ in range(nprocs):
-        p = mp.Process(target=_func1, args=(f, q_in, q_out))
+        p = ctx.Process(target=_func1, args=(f, q_in, q_out))
         p.daemon = True
         p.start()
         processes.append(p)
@@ -150,6 +153,8 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     >>> parmap2(func, zip(X, Y), 1, tuple_X=True, nprocs=2)  # [1,3,5]
     """
 
+    ctx = get_context()
+
     # shuffle and divide into nprocs equally-numbered parts
     if tuple_X:
         pairs = [(i, *x) for i, x in enumerate(X)]  # to make array_split work
@@ -161,8 +166,8 @@ def parmap2(f, X, *args, tuple_X=False, nprocs=mp.cpu_count()):
     processes = []
     managers = []
     for i in range(nprocs):
-        manager_end, worker_end = mp.Pipe(duplex=False)
-        p = mp.Process(target=_func2, args=(f, groups[i], args, worker_end))
+        manager_end, worker_end = ctx.Pipe(duplex=False)
+        p = ctx.Process(target=_func2, args=(f, groups[i], args, worker_end))
         p.daemon = True
         p.start()
         processes.append(p)
@@ -197,3 +202,11 @@ def get_MPI_world_size():
         return MPI.COMM_WORLD.Get_size()
     else:
         return 1
+
+
+def get_context():
+    if sys.platform == "darwin":
+        ctx = mp.get_context("fork")
+    else:
+        ctx = mp.get_context()
+    return ctx
