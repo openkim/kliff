@@ -60,8 +60,7 @@ jobs:
 
         # install SW driver and model
         cd $KIMAPI_DIR
-        kim-api-collections-management install user SW__MD_335816936951_004
-        kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_005
+        kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
