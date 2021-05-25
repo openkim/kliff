@@ -25,7 +25,7 @@ class get_pybind11_includes:
     def __str__(self):
         import pybind11
 
-        return pybind11.get_include(self.user)
+        return pybind11.get_include()
 
 
 def get_includes():
@@ -93,7 +93,7 @@ setup(
     packages=find_packages(),
     setup_requires=["pybind11"],
     install_requires=["requests", "pybind11", "scipy", "pyyaml", "monty"],
-    entry_points={"console_scripts": ["kliff = kliff.bin.cli:main"]},
+    entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     ext_modules=[sym_fn, bispectrum, neighlist],
     author="Mingjian Wen",
     author_email="wenxx151@gmail.com",
