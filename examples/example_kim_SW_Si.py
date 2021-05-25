@@ -41,6 +41,10 @@ from kliff.loss import Loss
 from kliff.models import KIMModel
 from kliff.utils import download_dataset
 
+# needed for Python 3.8 on macOS
+# import multiprocessing as mp
+# mp.set_start_method("fork")
+
 ##########################################################################################
 # Model
 # -----
