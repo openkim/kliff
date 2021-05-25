@@ -22,9 +22,6 @@ class get_pybind11_includes:
     https://github.com/pybind/python_example/issues/32
     """
 
-    def __init__(self, user=False):
-        self.user = user
-
     def __str__(self):
         import pybind11
 
@@ -32,7 +29,7 @@ class get_pybind11_includes:
 
 
 def get_includes():
-    return [get_pybind11_includes(), get_pybind11_includes(user=True)]
+    return [get_pybind11_includes()]
 
 
 def get_extra_compile_args():
@@ -90,17 +87,14 @@ def get_version(fname=os.path.join("kliff", "__init__.py")):
     return version
 
 
-kliff_scripts = ["bin/kliff"]
-
-
 setup(
     name="kliff",
     version=get_version(),
     packages=find_packages(),
     setup_requires=["pybind11"],
     install_requires=["requests", "pybind11", "scipy", "pyyaml", "monty"],
+    entry_points={"console_scripts": ["kliff = kliff.bin.cli:main"]},
     ext_modules=[sym_fn, bispectrum, neighlist],
-    scripts=kliff_scripts,
     author="Mingjian Wen",
     author_email="wenxx151@gmail.com",
     url="https://github.com/mjwen/kliff",
