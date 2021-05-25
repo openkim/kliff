@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
@@ -20,7 +22,8 @@ def init():
     model.set_opt_params(sigma=[[2.0951, "fix"]])
     model.set_opt_params(gamma=[[1.5]])
 
-    tset = Dataset("./configs_extxyz/Si_4")
+    path = Path(__file__).parent.joinpath("configs_extxyz/Si_4")
+    tset = Dataset(path)
     configs = tset.get_configs()
 
     calc = Calculator(model)

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 from kliff.dataset import Dataset
@@ -38,7 +40,8 @@ class TestKIM:
         model = KIMModel(modelname)
 
         # training set
-        data = Dataset("./configs_extxyz/Si_4")
+        path = Path(__file__).parents[1].joinpath("configs_extxyz/Si_4")
+        data = Dataset(path)
         configs = data.get_configs()
 
         # compute arguments

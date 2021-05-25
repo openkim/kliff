@@ -1,16 +1,18 @@
+from pathlib import Path
+
 import numpy as np
 from kliff.dataset.dataset import Configuration, Dataset
 
 
 def test_configuration(e=True, f=False, s=False, order=False):
-    fname = "./configs_extxyz/MoS2/MoS2"
+    path = Path(__file__).parents[1].joinpath("configs_extxyz/MoS2")
     if e:
-        fname += "_energy"
+        fname = path.joinpath("MoS2_energy.xyz")
     if f:
-        fname += "_forces"
+        fname = path.joinpath("MoS2_energy_forces.xyz")
     if s:
-        fname += "_stress"
-    fname += ".xyz"
+        fname = path.joinpath("MoS2_energy_forces_stress.xyz")
+    fname = fname.as_posix()
 
     config = Configuration.from_file(fname, file_format="xyz")
     if order:
@@ -76,7 +78,7 @@ def test_config():
 
 
 def test_dataset():
-    directory = "./configs_extxyz/MoS2"
+    directory = Path(__file__).parents[1].joinpath("configs_extxyz/MoS2").as_posix()
     tset = Dataset(directory)
     configs = tset.get_configs()
     assert len(configs) == 3

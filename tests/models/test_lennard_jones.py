@@ -1,5 +1,6 @@
 import os
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -131,9 +132,12 @@ def test_lj():
         model.echo_model_params()
         model.echo_opt_params()
 
-    config = Configuration.from_file(
-        "./configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz"
+    path = (
+        Path(__file__)
+        .parents[1]
+        .joinpath("configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz")
     )
+    config = Configuration.from_file(path)
 
     energy_forces_stress(model, config, True, False, False)
     energy_forces_stress(model, config, True, True, False)

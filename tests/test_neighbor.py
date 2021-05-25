@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.neighbor import NeighborList
@@ -34,9 +36,10 @@ all_numneigh = [len(i) for i in all_indices]
 
 
 def test_neigh():
-    conf = Configuration.from_file(
-        "configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz"
-    )
+    path = Path(__file__).parent
+    path = path.joinpath("configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz")
+
+    conf = Configuration.from_file(path)
     conf.species[0] = "O"
 
     neigh = NeighborList(conf, infl_dist=2, padding_need_neigh=False)
