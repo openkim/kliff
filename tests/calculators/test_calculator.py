@@ -39,7 +39,7 @@ class TestCalculator:
         tset = Dataset(test_file_path.joinpath("Si_4"))
         configs = tset.get_configs()
 
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
         model = KIMModel(modelname)
 
         # calculator
@@ -55,7 +55,7 @@ class TestCalculator:
             assert np.allclose(forces, ref_forces[i])
 
     def test_parameter(self):
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
         model = KIMModel(modelname)
 
         # parameters

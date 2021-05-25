@@ -36,7 +36,7 @@ class TestKIM:
     def test_compute(self):
 
         # model
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
         model = KIMModel(modelname)
 
         # training set
@@ -65,7 +65,7 @@ class TestKIM:
             assert np.allclose(forces, ref_forces[i])
 
     def test_set_one_param(self):
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
         model = KIMModel(modelname)
 
         # parameters
@@ -83,7 +83,7 @@ class TestKIM:
         assert kim_params["sigma"][0] == sigma + 0.1
 
     def test_set_opt_params(self):
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
         model = KIMModel(modelname)
 
         # parameters
@@ -102,7 +102,7 @@ class TestKIM:
         assert kim_params["A"][0] == A + 0.1
 
     def test_get_update_params(self):
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_005"
+        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
         model = KIMModel(modelname)
 
         # parameters

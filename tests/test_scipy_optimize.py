@@ -13,7 +13,7 @@ def residual_fn(identifier, natoms, weight, prediction, reference, data):
 
 
 def init():
-    model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
+    model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
 
     # Cannot set them all by calling this function only once, because the assertion
     # depends on order

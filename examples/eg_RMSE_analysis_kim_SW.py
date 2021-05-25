@@ -9,7 +9,7 @@ from kliff.dataset import Dataset
 from kliff.models import KIMModel
 from kliff.utils import download_dataset
 
-model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
 
 # load the trained model back
 # model.load("kliff_model.yaml")

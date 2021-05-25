@@ -287,7 +287,7 @@ class KIMModel(Model):
     Args:
         model_name: name of a KIM model. Available models can be found at:
             https://openkim.org.
-            For example `SW_StillingerWeber_1985_Si__MO_405512056662_005`.
+            For example `SW_StillingerWeber_1985_Si__MO_405512056662_006`.
         params_relation_callback: A callback function to set the relations between
             parameters, which are called each minimization step after the optimizer
             updates the parameters. The function with be given a dictionary of

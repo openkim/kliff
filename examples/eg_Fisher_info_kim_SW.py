@@ -17,7 +17,7 @@ from kliff.utils import download_dataset
 # parameters specified below will be use, others will be kept fixed. The size of the
 # Fisher information matrix will be equal to the total size of the parameters specified
 # here.
-model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
 model.set_opt_params(
     A=[["default"]], B=[["default"]], sigma=[["default"]], gamma=[["default"]]
 )
