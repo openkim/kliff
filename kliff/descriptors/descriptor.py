@@ -5,9 +5,8 @@ import pickle
 import sys
 
 import numpy as np
-
-from .. import parallel
-from ..log import log_entry
+from kliff import parallel
+from kliff.log import log_entry
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,8 @@ class Descriptor:
         serial=False,
         nprocs=mp.cpu_count(),
     ):
-        r"""Convert data set to fingerprints.
+        """
+        Convert data set to fingerprints.
 
         Parameters
         ----------
@@ -283,7 +283,8 @@ class Descriptor:
         return zeta, dzetadr_forces, dzetadr_stress
 
     def welford_mean_and_stdev(self, configs):
-        r"""Compute the mean and standard deviation of fingerprints.
+        """
+        Compute the mean and standard deviation of fingerprints.
 
         This running mean and standard method proposed by Welford is memory-efficient.
         Besides, it outperforms the naive method from suffering numerical instability for
@@ -367,27 +368,27 @@ class Descriptor:
         raise NotImplementedError('"write_kim_params" not implemented.')
 
     def get_size(self):
-        r"""Return the size of the descriptor vector."""
+        """Return the size of the descriptor vector."""
         return self.size
 
     def get_mean(self):
-        r"""Return a list of the mean of the fingerprints."""
+        """Return a list of the mean of the fingerprints."""
         return self.mean.copy()
 
     def get_stdev(self):
-        r"""Return a list of the standard deviation of the fingerprints."""
+        """Return a list of the standard deviation of the fingerprints."""
         return self.stdev.copy()
 
     def get_dtype(self):
-        r"""Return the data type of the fingerprints."""
+        """Return the data type of the fingerprints."""
         return self.dtype
 
     def get_cutoff(self):
-        r"""Return the name and values of cutoff. """
+        """Return the name and values of cutoff."""
         return self.cut_name, self.cut_dists
 
     def get_hyperparams(self):
-        r"""Return the hyperparameters of descriptors. """
+        """Return the hyperparameters of descriptors."""
         return self.hyperparams
 
     def dump_mean_stdev(self, path):
@@ -423,15 +424,13 @@ class Descriptor:
 
 
 def load_fingerprints(path):
-    r"""Read preprocessed data.
+    """
+    Read preprocessed data.
 
     Parameters
     ----------
     path: str
         Path to the pickled data file.
-
-    fit_forces: bool
-        Whether to fit to forces.
 
     Return
     ------
@@ -453,7 +452,8 @@ def load_fingerprints(path):
 
 
 def generate_full_cutoff(cutoff):
-    r"""Generate a full binary cutoff dictionary.
+    """
+    Generate a full binary cutoff dictionary.
 
     For species pair `S1-S2` in the ``cutoff`` dictionary, add key `S2-S1` to it, with
     the same value as `S1-S2`.
@@ -494,7 +494,8 @@ def generate_full_cutoff(cutoff):
 
 
 def generate_unique_cutoff_pairs(cutoff):
-    r"""Generate a full binary cutoff dictionary.
+    """
+    Generate a full binary cutoff dictionary.
 
     For species pair `S1-S2` in the ``cutoff`` dictionary, remove key `S2-S1` from it if
     `S1` is different from `S2`.
@@ -527,7 +528,8 @@ def generate_unique_cutoff_pairs(cutoff):
 
 
 def generate_species_code(cutoff):
-    r"""Generate species code info from cutoff dictionary.
+    """
+    Generate species code info from cutoff dictionary.
 
     Parameters
     ----------

@@ -92,8 +92,7 @@ void Bispectrum::build_indexlist()
 {
   switch (diagonalstyle)
   {
-    case 0:
-    {
+    case 0: {
       int idxj_count = 0;
       for (int j1 = 0; j1 <= twojmax; ++j1)
       {
@@ -101,7 +100,9 @@ void Bispectrum::build_indexlist()
         {
           for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2);
                j += 2)
-          { idxj_count++; }
+          {
+            idxj_count++;
+          }
         }
       }
 
@@ -128,13 +129,14 @@ void Bispectrum::build_indexlist()
       return;
       break;
     }
-    case 1:
-    {
+    case 1: {
       int idxj_count = 0;
       for (int j1 = 0; j1 <= twojmax; ++j1)
       {
         for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
-        { idxj_count++; }
+        {
+          idxj_count++;
+        }
       }
 
       // indexList can be changed here
@@ -156,8 +158,7 @@ void Bispectrum::build_indexlist()
       return;
       break;
     }
-    case 2:
-    {
+    case 2: {
       int idxj_count = 0;
       for (int j1 = 0; j1 <= twojmax; ++j1) { idxj_count++; }
 
@@ -177,8 +178,7 @@ void Bispectrum::build_indexlist()
       return;
       break;
     }
-    case 3:
-    {
+    case 3: {
       int idxj_count = 0;
       for (int j1 = 0; j1 <= twojmax; ++j1)
       {
@@ -308,7 +308,9 @@ void Bispectrum::compute_B(double const * coordinates,
       // rij vec and
       double rvec[DIM];
       for (int dim = 0; dim < DIM; ++dim)
-      { rvec[dim] = coords(j, dim) - coords(i, dim); }
+      {
+        rvec[dim] = coords(j, dim) - coords(i, dim);
+      }
 
       double const rsq
           = rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2];
@@ -339,7 +341,9 @@ void Bispectrum::compute_B(double const * coordinates,
     copy_bi2bvec();
 
     for (int icoeff = 0; icoeff < ncoeff; icoeff++)
-    { zeta[i * ncoeff + icoeff] = bvec[icoeff]; }
+    {
+      zeta[i * ncoeff + icoeff] = bvec[icoeff];
+    }
 
     // for neighbors of I within cutoff:
     // compute dUi/drj and dBi/drj
@@ -520,39 +524,41 @@ void Bispectrum::copy_bi2bvec()
 {
   switch (diagonalstyle)
   {
-    case (0):
-    {
+    case (0): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         for (int j2 = 0; j2 <= j1; ++j2)
         {
           for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2);
                j += 2)
-          { bvec[ncount++] = barray(j1, j2, j); }
+          {
+            bvec[ncount++] = barray(j1, j2, j);
+          }
         }
       }
       return;
       break;
     }
-    case (1):
-    {
+    case (1): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
-        { bvec[ncount++] = barray(j1, j1, j); }
+        {
+          bvec[ncount++] = barray(j1, j1, j);
+        }
       }
       return;
       break;
     }
-    case (2):
-    {
+    case (2): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
-      { bvec[ncount++] = barray(j1, j1, j1); }
+      {
+        bvec[ncount++] = barray(j1, j1, j1);
+      }
       return;
       break;
     }
-    case (3):
-    {
+    case (3): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         for (int j2 = 0; j2 <= j1; ++j2)
@@ -952,8 +958,7 @@ void Bispectrum::copy_dbi2dbvec()
 {
   switch (diagonalstyle)
   {
-    case (0):
-    {
+    case (0): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         for (int j2 = 0; j2 <= j1; ++j2)
@@ -971,8 +976,7 @@ void Bispectrum::copy_dbi2dbvec()
       return;
     }
     break;
-    case (1):
-    {
+    case (1): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         for (int j = 0; j <= std::min(twojmax, 2 * j1); j += 2)
@@ -986,8 +990,7 @@ void Bispectrum::copy_dbi2dbvec()
       return;
     }
     break;
-    case (2):
-    {
+    case (2): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         dbvec(ncount, 0) = dbarray(j1, j1, j1, 0);
@@ -998,8 +1001,7 @@ void Bispectrum::copy_dbi2dbvec()
       return;
     }
     break;
-    case (3):
-    {
+    case (3): {
       for (int j1 = 0, ncount = 0; j1 <= twojmax; ++j1)
       {
         for (int j2 = 0; j2 <= j1; ++j2)
@@ -1151,11 +1153,11 @@ double Bispectrum::compute_sfac(double const r, double const rcut_in)
     case (0): return 1.0; break;
     case (1):
       return (r <= rmin0) ? 1.0
-                          : (r > rcut_in) ? 0.0
-                                          : 0.5
-                                                * (std::cos((r - rmin0) * MY_PI
-                                                            / (rcut_in - rmin0))
-                                                   + 1.0);
+             : (r > rcut_in)
+                 ? 0.0
+                 : 0.5
+                       * (std::cos((r - rmin0) * MY_PI / (rcut_in - rmin0))
+                          + 1.0);
       break;
     default: return 0.0;
   }
@@ -1655,7 +1657,9 @@ void Bispectrum::init_rootpqarray()
   for (int p = 1; p <= twojmax; p++)
   {
     for (int q = 1; q <= twojmax; q++)
-    { rootpqarray(p, q) = std::sqrt(static_cast<double>(p) / q); }
+    {
+      rootpqarray(p, q) = std::sqrt(static_cast<double>(p) / q);
+    }
   }
 }
 
@@ -1739,8 +1743,7 @@ int Bispectrum::compute_ncoeff()
 {
   switch (diagonalstyle)
   {
-    case (0):
-    {
+    case (0): {
       int ncount(0);
       for (int j1 = 0; j1 <= twojmax; ++j1)
       {
@@ -1748,14 +1751,15 @@ int Bispectrum::compute_ncoeff()
         {
           for (int j = std::abs(j1 - j2); j <= std::min(twojmax, j1 + j2);
                j += 2)
-          { ncount++; }
+          {
+            ncount++;
+          }
         }
       }
       return ncount;
     }
     break;
-    case (1):
-    {
+    case (1): {
       int ncount(0);
       for (int j1 = 0; j1 <= twojmax; ++j1)
       {
@@ -1764,15 +1768,13 @@ int Bispectrum::compute_ncoeff()
       return ncount;
     }
     break;
-    case (2):
-    {
+    case (2): {
       int ncount(0);
       for (int j1 = 0; j1 <= twojmax; ++j1) { ncount++; }
       return ncount;
     }
     break;
-    case (3):
-    {
+    case (3): {
       int ncount(0);
       for (int j1 = 0; j1 <= twojmax; ++j1)
       {

@@ -100,7 +100,9 @@ void Descriptor::add_descriptor(char const * name,
   num_params_.push_back(col);
 
   if (strcmp(name, "g4") == 0 || strcmp(name, "g5") == 0)
-  { has_three_body_ = true; }
+  {
+    has_three_body_ = true;
+  }
 }
 
 int Descriptor::read_parameter_file(FILE * const filePointer)
@@ -447,7 +449,9 @@ void Descriptor::generate_one_atom(int const i,
     // Compute rij
     double rij[DIM];
     for (int dim = 0; dim < DIM; ++dim)
-    { rij[dim] = coordinates[j][dim] - coordinates[i][dim]; }
+    {
+      rij[dim] = coordinates[j][dim] - coordinates[i][dim];
+    }
 
     double const rijsq = rij[0] * rij[0] + rij[1] * rij[1] + rij[2] * rij[2];
     double const rijmag = std::sqrt(rijsq);
@@ -460,7 +464,9 @@ void Descriptor::generate_one_atom(int const i,
     for (std::size_t p = 0; p < name_.size(); ++p)
     {
       if (name_[p] != "g1" && name_[p] != "g2" && name_[p] != "g3")
-      { continue; }
+      {
+        continue;
+      }
 
       int idx = starting_index_[p];
 
@@ -952,7 +958,9 @@ void Descriptor::echo_input()
     for (int m = 0; m < rows; ++m)
     {
       for (int n = 0; n < cols; ++n)
-      { std::cout << params_.at(i).at(m, n) << " "; }
+      {
+        std::cout << params_.at(i).at(m, n) << " ";
+      }
       std::cout << std::endl;
     }
     std::cout << std::endl;
@@ -964,11 +972,15 @@ void Descriptor::echo_input()
   std::cout << "means:" << std::endl;
 
   for (size_t i = 0; i < feature_mean_.size(); ++i)
-  { std::cout << feature_mean_.at(i) << std::endl; }
+  {
+    std::cout << feature_mean_.at(i) << std::endl;
+  }
 
   std::cout << "stds:" << std::endl;
   for (size_t i = 0; i < feature_std_.size(); ++i)
-  { std::cout << feature_std_.at(i) << std::endl; }
+  {
+    std::cout << feature_std_.at(i) << std::endl;
+  }
 }
 
 #undef LOG_ERROR

@@ -1265,8 +1265,8 @@ _Array_Basic<DataType>::~_Array_Basic()
 }
 
 template<class DataType>
-_Array_Basic<DataType> & _Array_Basic<DataType>::
-operator=(_Array_Basic<DataType> const & other)
+_Array_Basic<DataType> &
+_Array_Basic<DataType>::operator=(_Array_Basic<DataType> const & other)
 {
   m.resize(other.size());
   std::copy(other.m.begin(), other.m.end(), m.begin());
@@ -1274,8 +1274,8 @@ operator=(_Array_Basic<DataType> const & other)
 }
 
 template<class DataType>
-_Array_Basic<DataType> & _Array_Basic<DataType>::
-operator=(_Array_Basic<DataType> && other)
+_Array_Basic<DataType> &
+_Array_Basic<DataType>::operator=(_Array_Basic<DataType> && other)
 {
   m = std::move(other.m);
   return *this;
@@ -1354,15 +1354,13 @@ inline void _Array_Basic<DataType>::_range_check(int _n,
 
 template<class DataType>
 Array1DView<DataType>::Array1DView(std::size_t const count, DataType * array) :
-    _extentZero(count),
-    m(array)
+    _extentZero(count), m(array)
 {
 }
 
 template<class DataType>
 Array1DView<DataType>::Array1DView(Array1DView<DataType> const & other) :
-    _extentZero(other._extentZero),
-    m(other.m)
+    _extentZero(other._extentZero), m(other.m)
 {
 }
 
@@ -1436,9 +1434,7 @@ template<class DataType>
 Array2DView<DataType>::Array2DView(std::size_t const extentZero,
                                    std::size_t const extentOne,
                                    DataType * array) :
-    _extentZero(extentZero),
-    _extentOne(extentOne),
-    m(array)
+    _extentZero(extentZero), _extentOne(extentOne), m(array)
 {
 }
 
@@ -1454,9 +1450,7 @@ Array2DView<DataType>::Array2DView(std::size_t const extentZero,
 
 template<class DataType>
 Array2DView<DataType>::Array2DView(Array2DView<DataType> const & other) :
-    _extentZero(other._extentZero),
-    _extentOne(other._extentOne),
-    m(other.m)
+    _extentZero(other._extentZero), _extentOne(other._extentOne), m(other.m)
 {
 }
 
@@ -1518,8 +1512,7 @@ inline DataType const Array2DView<DataType>::at(int i, int j) const
 template<class DataType>
 Array2DView<DataType>::j_operator::j_operator(Array2DView<DataType> & _array,
                                               int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
@@ -1538,15 +1531,15 @@ DataType & Array2DView<DataType>::j_operator::operator[](int j)
 }
 
 template<class DataType>
-const typename Array2DView<DataType>::j_operator Array2DView<DataType>::
-operator[](int i) const
+const typename Array2DView<DataType>::j_operator
+Array2DView<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
 
 template<class DataType>
-typename Array2DView<DataType>::j_operator Array2DView<DataType>::
-operator[](int i)
+typename Array2DView<DataType>::j_operator
+Array2DView<DataType>::operator[](int i)
 {
   return j_operator(*this, i);
 }
@@ -1627,8 +1620,8 @@ inline Array1DView<DataType> Array3DView<DataType>::data_1D(int i, int j)
 }
 
 template<class DataType>
-inline const DataType Array3DView<DataType>::
-operator()(int i, int j, int k) const
+inline const DataType
+Array3DView<DataType>::operator()(int i, int j, int k) const
 {
   std::size_t const _n = (i * _extentOne + j) * _extentTwo + k;
   return m[_n];
@@ -1664,23 +1657,20 @@ inline DataType & Array3DView<DataType>::at(int i, int j, int k)
 template<class DataType>
 Array3DView<DataType>::j_operator::j_operator(Array3DView<DataType> & _array,
                                               int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
 template<class DataType>
 Array3DView<DataType>::j_operator::k_operator::k_operator(
     Array3DView<DataType> & _array, int i, int j) :
-    k_array(_array),
-    _i(i),
-    _j(j)
+    k_array(_array), _i(i), _j(j)
 {
 }
 
 template<class DataType>
-const DataType Array3DView<DataType>::j_operator::k_operator::
-operator[](int k) const
+const DataType
+Array3DView<DataType>::j_operator::k_operator::operator[](int k) const
 {
   std::size_t const _n
       = (_i * k_array._extentOne + _j) * k_array._extentTwo + k;
@@ -1697,28 +1687,28 @@ DataType & Array3DView<DataType>::j_operator::k_operator::operator[](int k)
 
 template<class DataType>
 const typename Array3DView<DataType>::j_operator::k_operator
-    Array3DView<DataType>::j_operator::operator[](int j) const
+Array3DView<DataType>::j_operator::operator[](int j) const
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
 typename Array3DView<DataType>::j_operator::k_operator
-    Array3DView<DataType>::j_operator::operator[](int j)
+Array3DView<DataType>::j_operator::operator[](int j)
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
-const typename Array3DView<DataType>::j_operator Array3DView<DataType>::
-operator[](int i) const
+const typename Array3DView<DataType>::j_operator
+Array3DView<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
 
 template<class DataType>
-typename Array3DView<DataType>::j_operator Array3DView<DataType>::
-operator[](int i)
+typename Array3DView<DataType>::j_operator
+Array3DView<DataType>::operator[](int i)
 {
   return j_operator(*this, i);
 }
@@ -1811,8 +1801,8 @@ inline Array1DView<DataType> Array4DView<DataType>::data_1D(int i, int j, int k)
 }
 
 template<class DataType>
-inline const DataType Array4DView<DataType>::
-operator()(int i, int j, int k, int l) const
+inline const DataType
+Array4DView<DataType>::operator()(int i, int j, int k, int l) const
 {
   std::size_t const _n
       = ((i * _extentOne + j) * _extentTwo + k) * _extentThree + l;
@@ -1855,33 +1845,28 @@ inline DataType & Array4DView<DataType>::at(int i, int j, int k, int l)
 template<class DataType>
 Array4DView<DataType>::j_operator::j_operator(Array4DView<DataType> & _array,
                                               int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
 template<class DataType>
 Array4DView<DataType>::j_operator::k_operator::k_operator(
     Array4DView<DataType> & _array, int i, int j) :
-    k_array(_array),
-    _i(i),
-    _j(j)
+    k_array(_array), _i(i), _j(j)
 {
 }
 
 template<class DataType>
 Array4DView<DataType>::j_operator::k_operator::l_operator::l_operator(
     Array4DView<DataType> & _array, int i, int j, int k) :
-    l_array(_array),
-    _i(i),
-    _j(j),
-    _k(k)
+    l_array(_array), _i(i), _j(j), _k(k)
 {
 }
 
 template<class DataType>
-const DataType Array4DView<DataType>::j_operator::k_operator::l_operator::
-operator[](int l) const
+const DataType
+Array4DView<DataType>::j_operator::k_operator::l_operator::operator[](
+    int l) const
 {
   std::size_t const _n
       = ((_i * l_array._extentOne + _j) * l_array._extentTwo + _k)
@@ -1891,8 +1876,8 @@ operator[](int l) const
 }
 
 template<class DataType>
-DataType & Array4DView<DataType>::j_operator::k_operator::l_operator::
-operator[](int l)
+DataType &
+Array4DView<DataType>::j_operator::k_operator::l_operator::operator[](int l)
 {
   std::size_t const _n
       = ((_i * l_array._extentOne + _j) * l_array._extentTwo + _k)
@@ -1903,42 +1888,42 @@ operator[](int l)
 
 template<class DataType>
 const typename Array4DView<DataType>::j_operator::k_operator::l_operator
-    Array4DView<DataType>::j_operator::k_operator::operator[](int k) const
+Array4DView<DataType>::j_operator::k_operator::operator[](int k) const
 {
   return l_operator(k_array, _i, _j, k);
 }
 
 template<class DataType>
 typename Array4DView<DataType>::j_operator::k_operator::l_operator
-    Array4DView<DataType>::j_operator::k_operator::operator[](int k)
+Array4DView<DataType>::j_operator::k_operator::operator[](int k)
 {
   return l_operator(k_array, _i, _j, k);
 }
 
 template<class DataType>
 const typename Array4DView<DataType>::j_operator::k_operator
-    Array4DView<DataType>::j_operator::operator[](int j) const
+Array4DView<DataType>::j_operator::operator[](int j) const
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
 typename Array4DView<DataType>::j_operator::k_operator
-    Array4DView<DataType>::j_operator::operator[](int j)
+Array4DView<DataType>::j_operator::operator[](int j)
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
-const typename Array4DView<DataType>::j_operator Array4DView<DataType>::
-operator[](int i) const
+const typename Array4DView<DataType>::j_operator
+Array4DView<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
 
 template<class DataType>
-typename Array4DView<DataType>::j_operator Array4DView<DataType>::
-operator[](int i)
+typename Array4DView<DataType>::j_operator
+Array4DView<DataType>::operator[](int i)
 {
   return j_operator(*this, i);
 }
@@ -1956,9 +1941,7 @@ inline void Array4DView<DataType>::_range_check(int _n, std::size_t tsize) const
 
 template<class DataType>
 Array2D<DataType>::Array2D() :
-    _Array_Basic<DataType>(),
-    _extentZero(0),
-    _extentOne(0)
+    _Array_Basic<DataType>(), _extentZero(0), _extentOne(0)
 {
 }
 
@@ -2013,8 +1996,8 @@ Array2D<DataType>::~Array2D()
 }
 
 template<class DataType>
-Array2D<DataType> & Array2D<DataType>::
-operator=(Array2D<DataType> const & other)
+Array2D<DataType> &
+Array2D<DataType>::operator=(Array2D<DataType> const & other)
 {
   _Array_Basic<DataType>::operator=(other);
   _extentZero = other._extentZero;
@@ -2103,8 +2086,7 @@ inline DataType const Array2D<DataType>::at(int i, int j) const
 
 template<class DataType>
 Array2D<DataType>::j_operator::j_operator(Array2D<DataType> & _array, int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
@@ -2123,8 +2105,8 @@ DataType & Array2D<DataType>::j_operator::operator[](int j)
 }
 
 template<class DataType>
-const typename Array2D<DataType>::j_operator Array2D<DataType>::
-operator[](int i) const
+const typename Array2D<DataType>::j_operator
+Array2D<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
@@ -2137,10 +2119,7 @@ typename Array2D<DataType>::j_operator Array2D<DataType>::operator[](int i)
 
 template<class DataType>
 Array3D<DataType>::Array3D() :
-    _Array_Basic<DataType>(),
-    _extentZero(0),
-    _extentOne(0),
-    _extentTwo(0)
+    _Array_Basic<DataType>(), _extentZero(0), _extentOne(0), _extentTwo(0)
 {
 }
 
@@ -2203,8 +2182,8 @@ Array3D<DataType>::~Array3D()
 }
 
 template<class DataType>
-Array3D<DataType> & Array3D<DataType>::
-operator=(Array3D<DataType> const & other)
+Array3D<DataType> &
+Array3D<DataType>::operator=(Array3D<DataType> const & other)
 {
   _Array_Basic<DataType>::operator=(other);
   _extentZero = other._extentZero;
@@ -2312,23 +2291,20 @@ inline DataType & Array3D<DataType>::at(int i, int j, int k)
 
 template<class DataType>
 Array3D<DataType>::j_operator::j_operator(Array3D<DataType> & _array, int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
 template<class DataType>
 Array3D<DataType>::j_operator::k_operator::k_operator(
     Array3D<DataType> & _array, int i, int j) :
-    k_array(_array),
-    _i(i),
-    _j(j)
+    k_array(_array), _i(i), _j(j)
 {
 }
 
 template<class DataType>
-const DataType Array3D<DataType>::j_operator::k_operator::
-operator[](int k) const
+const DataType
+Array3D<DataType>::j_operator::k_operator::operator[](int k) const
 {
   std::size_t const _n
       = (_i * k_array._extentOne + _j) * k_array._extentTwo + k;
@@ -2345,21 +2321,21 @@ DataType & Array3D<DataType>::j_operator::k_operator::operator[](int k)
 
 template<class DataType>
 const typename Array3D<DataType>::j_operator::k_operator
-    Array3D<DataType>::j_operator::operator[](int j) const
+Array3D<DataType>::j_operator::operator[](int j) const
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
 typename Array3D<DataType>::j_operator::k_operator
-    Array3D<DataType>::j_operator::operator[](int j)
+Array3D<DataType>::j_operator::operator[](int j)
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
-const typename Array3D<DataType>::j_operator Array3D<DataType>::
-operator[](int i) const
+const typename Array3D<DataType>::j_operator
+Array3D<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
@@ -2449,8 +2425,8 @@ Array4D<DataType>::~Array4D()
 }
 
 template<class DataType>
-Array4D<DataType> & Array4D<DataType>::
-operator=(Array4D<DataType> const & other)
+Array4D<DataType> &
+Array4D<DataType>::operator=(Array4D<DataType> const & other)
 {
   _Array_Basic<DataType>::operator=(other);
   _extentZero = other._extentZero;
@@ -2539,8 +2515,8 @@ inline void Array4D<DataType>::resize(int const extentZero,
 }
 
 template<class DataType>
-inline const DataType Array4D<DataType>::
-operator()(int i, int j, int k, int l) const
+inline const DataType
+Array4D<DataType>::operator()(int i, int j, int k, int l) const
 {
   std::size_t const _n
       = ((i * _extentOne + j) * _extentTwo + k) * _extentThree + l;
@@ -2581,33 +2557,27 @@ inline DataType & Array4D<DataType>::at(int i, int j, int k, int l)
 
 template<class DataType>
 Array4D<DataType>::j_operator::j_operator(Array4D<DataType> & _array, int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
 template<class DataType>
 Array4D<DataType>::j_operator::k_operator::k_operator(
     Array4D<DataType> & _array, int i, int j) :
-    k_array(_array),
-    _i(i),
-    _j(j)
+    k_array(_array), _i(i), _j(j)
 {
 }
 
 template<class DataType>
 Array4D<DataType>::j_operator::k_operator::l_operator::l_operator(
     Array4D<DataType> & _array, int i, int j, int k) :
-    l_array(_array),
-    _i(i),
-    _j(j),
-    _k(k)
+    l_array(_array), _i(i), _j(j), _k(k)
 {
 }
 
 template<class DataType>
-const DataType Array4D<DataType>::j_operator::k_operator::l_operator::
-operator[](int l) const
+const DataType
+Array4D<DataType>::j_operator::k_operator::l_operator::operator[](int l) const
 {
   std::size_t const _n
       = ((_i * l_array._extentOne + _j) * l_array._extentTwo + _k)
@@ -2617,8 +2587,8 @@ operator[](int l) const
 }
 
 template<class DataType>
-DataType & Array4D<DataType>::j_operator::k_operator::l_operator::
-operator[](int l)
+DataType &
+Array4D<DataType>::j_operator::k_operator::l_operator::operator[](int l)
 {
   std::size_t const _n
       = ((_i * l_array._extentOne + _j) * l_array._extentTwo + _k)
@@ -2629,35 +2599,35 @@ operator[](int l)
 
 template<class DataType>
 const typename Array4D<DataType>::j_operator::k_operator::l_operator
-    Array4D<DataType>::j_operator::k_operator::operator[](int k) const
+Array4D<DataType>::j_operator::k_operator::operator[](int k) const
 {
   return l_operator(k_array, _i, _j, k);
 }
 
 template<class DataType>
 typename Array4D<DataType>::j_operator::k_operator::l_operator
-    Array4D<DataType>::j_operator::k_operator::operator[](int k)
+Array4D<DataType>::j_operator::k_operator::operator[](int k)
 {
   return l_operator(k_array, _i, _j, k);
 }
 
 template<class DataType>
 const typename Array4D<DataType>::j_operator::k_operator
-    Array4D<DataType>::j_operator::operator[](int j) const
+Array4D<DataType>::j_operator::operator[](int j) const
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
 typename Array4D<DataType>::j_operator::k_operator
-    Array4D<DataType>::j_operator::operator[](int j)
+Array4D<DataType>::j_operator::operator[](int j)
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
-const typename Array4D<DataType>::j_operator Array4D<DataType>::
-operator[](int i) const
+const typename Array4D<DataType>::j_operator
+Array4D<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
@@ -2757,8 +2727,8 @@ Array5D<DataType>::~Array5D()
 }
 
 template<class DataType>
-Array5D<DataType> & Array5D<DataType>::
-operator=(Array5D<DataType> const & other)
+Array5D<DataType> &
+Array5D<DataType>::operator=(Array5D<DataType> const & other)
 {
   _Array_Basic<DataType>::operator=(other);
   _extentZero = other._extentZero;
@@ -2872,8 +2842,8 @@ inline void Array5D<DataType>::resize(int const extentZero,
 }
 
 template<class DataType>
-inline const DataType Array5D<DataType>::
-operator()(int i, int j, int k, int l, int n) const
+inline const DataType
+Array5D<DataType>::operator()(int i, int j, int k, int l, int n) const
 {
   std::size_t const _n
       = (((i * _extentOne + j) * _extentTwo + k) * _extentThree + l)
@@ -2883,8 +2853,8 @@ operator()(int i, int j, int k, int l, int n) const
 }
 
 template<class DataType>
-inline DataType & Array5D<DataType>::
-operator()(int i, int j, int k, int l, int n)
+inline DataType &
+Array5D<DataType>::operator()(int i, int j, int k, int l, int n)
 {
   std::size_t const _n
       = (((i * _extentOne + j) * _extentTwo + k) * _extentThree + l)
@@ -2925,45 +2895,35 @@ inline DataType & Array5D<DataType>::at(int i, int j, int k, int l, int n)
 
 template<class DataType>
 Array5D<DataType>::j_operator::j_operator(Array5D<DataType> & _array, int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
 template<class DataType>
 Array5D<DataType>::j_operator::k_operator::k_operator(
     Array5D<DataType> & _array, int i, int j) :
-    k_array(_array),
-    _i(i),
-    _j(j)
+    k_array(_array), _i(i), _j(j)
 {
 }
 
 template<class DataType>
 Array5D<DataType>::j_operator::k_operator::l_operator::l_operator(
     Array5D<DataType> & _array, int i, int j, int k) :
-    l_array(_array),
-    _i(i),
-    _j(j),
-    _k(k)
+    l_array(_array), _i(i), _j(j), _k(k)
 {
 }
 
 template<class DataType>
 Array5D<DataType>::j_operator::k_operator::l_operator::n_operator::n_operator(
     Array5D<DataType> & _array, int i, int j, int k, int l) :
-    n_array(_array),
-    _i(i),
-    _j(j),
-    _k(k),
-    _l(l)
+    n_array(_array), _i(i), _j(j), _k(k), _l(l)
 {
 }
 
 template<class DataType>
 const DataType
-    Array5D<DataType>::j_operator::k_operator::l_operator::n_operator::
-    operator[](int n) const
+Array5D<DataType>::j_operator::k_operator::l_operator::n_operator::operator[](
+    int n) const
 {
   std::size_t const _n
       = (((_i * n_array._extentOne + _j) * n_array._extentTwo + _k)
@@ -2975,8 +2935,9 @@ const DataType
 }
 
 template<class DataType>
-DataType & Array5D<DataType>::j_operator::k_operator::l_operator::n_operator::
-operator[](int n)
+DataType &
+Array5D<DataType>::j_operator::k_operator::l_operator::n_operator::operator[](
+    int n)
 {
   std::size_t const _n
       = (((_i * n_array._extentOne + _j) * n_array._extentTwo + _k)
@@ -2989,50 +2950,49 @@ operator[](int n)
 
 template<class DataType>
 const typename Array5D<DataType>::j_operator::k_operator::l_operator::n_operator
-    Array5D<DataType>::j_operator::k_operator::l_operator::
-    operator[](int l) const
+Array5D<DataType>::j_operator::k_operator::l_operator::operator[](int l) const
 {
   return n_operator(l_array, _i, _j, _k, l);
 }
 
 template<class DataType>
 typename Array5D<DataType>::j_operator::k_operator::l_operator::n_operator
-    Array5D<DataType>::j_operator::k_operator::l_operator::operator[](int l)
+Array5D<DataType>::j_operator::k_operator::l_operator::operator[](int l)
 {
   return n_operator(l_array, _i, _j, _k, l);
 }
 
 template<class DataType>
 const typename Array5D<DataType>::j_operator::k_operator::l_operator
-    Array5D<DataType>::j_operator::k_operator::operator[](int k) const
+Array5D<DataType>::j_operator::k_operator::operator[](int k) const
 {
   return l_operator(k_array, _i, _j, k);
 }
 
 template<class DataType>
 typename Array5D<DataType>::j_operator::k_operator::l_operator
-    Array5D<DataType>::j_operator::k_operator::operator[](int k)
+Array5D<DataType>::j_operator::k_operator::operator[](int k)
 {
   return l_operator(k_array, _i, _j, k);
 }
 
 template<class DataType>
 const typename Array5D<DataType>::j_operator::k_operator
-    Array5D<DataType>::j_operator::operator[](int j) const
+Array5D<DataType>::j_operator::operator[](int j) const
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
 typename Array5D<DataType>::j_operator::k_operator
-    Array5D<DataType>::j_operator::operator[](int j)
+Array5D<DataType>::j_operator::operator[](int j)
 {
   return k_operator(j_array, _i, j);
 }
 
 template<class DataType>
-const typename Array5D<DataType>::j_operator Array5D<DataType>::
-operator[](int i) const
+const typename Array5D<DataType>::j_operator
+Array5D<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }

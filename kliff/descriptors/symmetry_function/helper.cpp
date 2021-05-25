@@ -44,8 +44,7 @@ void getNextDataLine(FILE * const cstream,
                      int const maxSize,
                      int * endOfFileFlag)
 {
-  do
-  {
+  do {
     if (std::fgets(nextLinePtr, maxSize, cstream) == NULL)
     {
       *endOfFileFlag = 1;
@@ -54,7 +53,9 @@ void getNextDataLine(FILE * const cstream,
 
     while (nextLinePtr[0] == ' ' || nextLinePtr[0] == '\t'
            || nextLinePtr[0] == '\n' || nextLinePtr[0] == '\r')
-    { nextLinePtr++; }
+    {
+      nextLinePtr++;
+    }
 
   } while ((std::strncmp("#", nextLinePtr, 1) == 0)
            || (strlen(nextLinePtr) == 0));

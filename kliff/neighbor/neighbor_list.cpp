@@ -4,9 +4,9 @@
 #include "helper.hpp"
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <sstream>
 #include <vector>
-#include <limits>
 
 #define DIM 3
 #define TOL 1.0e-10
@@ -96,9 +96,13 @@ int nbl_build(NeighList * const nl,
     for (int j = 0; j < DIM; j++)
     {
       if (max[j] < coordinates[DIM * i + j])
-      { max[j] = coordinates[DIM * i + j]; }
+      {
+        max[j] = coordinates[DIM * i + j];
+      }
       if (min[j] > coordinates[DIM * i + j])
-      { min[j] = coordinates[DIM * i + j]; }
+      {
+        min[j] = coordinates[DIM * i + j];
+      }
     }
   }
 
@@ -135,7 +139,9 @@ int nbl_build(NeighList * const nl,
 
   double * cutsqs = new double[numberOfCutoffs];
   for (int i = 0; i < numberOfCutoffs; i++)
-  { cutsqs[i] = cutoffs[i] * cutoffs[i]; }
+  {
+    cutsqs[i] = cutoffs[i] * cutoffs[i];
+  }
 
   // temporary neigh container
   std::vector<std::vector<int> > tmp_neigh(numberOfCutoffs);
@@ -285,7 +291,7 @@ int nbl_create_paddings(int const numberOfParticles,
   int error = inverse(tcell, fcell);
   if (error) { return error; }
 
-  double* frac_coords = new double[DIM * numberOfParticles];
+  double * frac_coords = new double[DIM * numberOfParticles];
   double min[DIM] = {1e10, 1e10, 1e10};
   double max[DIM] = {-1e10, -1e10, -1e10};
   for (int i = 0; i < numberOfParticles; i++)
@@ -361,22 +367,34 @@ int nbl_create_paddings(int const numberOfParticles,
           // size=1
           if (i == -size[0]
               && x - min[0] < static_cast<double>(size[0]) - ratio[0])
-          { continue; }
+          {
+            continue;
+          }
           if (i == size[0]
               && max[0] - x < static_cast<double>(size[0]) - ratio[0])
-          { continue; }
+          {
+            continue;
+          }
           if (j == -size[1]
               && y - min[1] < static_cast<double>(size[1]) - ratio[1])
-          { continue; }
+          {
+            continue;
+          }
           if (j == size[1]
               && max[1] - y < static_cast<double>(size[1]) - ratio[1])
-          { continue; }
+          {
+            continue;
+          }
           if (k == -size[2]
               && z - min[2] < static_cast<double>(size[2]) - ratio[2])
-          { continue; }
+          {
+            continue;
+          }
           if (k == size[2]
               && max[2] - z < static_cast<double>(size[2]) - ratio[2])
-          { continue; }
+          {
+            continue;
+          }
 
           // fractional coordinates of padding atom at
           double atom_coords[3] = {i + x, j + y, k + z};

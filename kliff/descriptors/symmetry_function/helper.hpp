@@ -767,8 +767,8 @@ _Array_Basic<DataType>::~_Array_Basic()
 }
 
 template<class DataType>
-_Array_Basic<DataType> & _Array_Basic<DataType>::
-operator=(_Array_Basic<DataType> const & other)
+_Array_Basic<DataType> &
+_Array_Basic<DataType>::operator=(_Array_Basic<DataType> const & other)
 {
   m.resize(other.size());
   std::copy(other.m.begin(), other.m.end(), m.begin());
@@ -776,8 +776,8 @@ operator=(_Array_Basic<DataType> const & other)
 }
 
 template<class DataType>
-_Array_Basic<DataType> & _Array_Basic<DataType>::
-operator=(_Array_Basic<DataType> && other)
+_Array_Basic<DataType> &
+_Array_Basic<DataType>::operator=(_Array_Basic<DataType> && other)
 {
   m = std::move(other.m);
   return *this;
@@ -856,15 +856,13 @@ inline void _Array_Basic<DataType>::_range_check(int _n,
 
 template<class DataType>
 Array1DView<DataType>::Array1DView(std::size_t const count, DataType * array) :
-    _extentZero(count),
-    m(array)
+    _extentZero(count), m(array)
 {
 }
 
 template<class DataType>
 Array1DView<DataType>::Array1DView(Array1DView<DataType> const & other) :
-    _extentZero(other._extentZero),
-    m(other.m)
+    _extentZero(other._extentZero), m(other.m)
 {
 }
 
@@ -938,9 +936,7 @@ template<class DataType>
 Array2DView<DataType>::Array2DView(std::size_t const extentZero,
                                    std::size_t const extentOne,
                                    DataType * array) :
-    _extentZero(extentZero),
-    _extentOne(extentOne),
-    m(array)
+    _extentZero(extentZero), _extentOne(extentOne), m(array)
 {
 }
 
@@ -956,9 +952,7 @@ Array2DView<DataType>::Array2DView(std::size_t const extentZero,
 
 template<class DataType>
 Array2DView<DataType>::Array2DView(Array2DView<DataType> const & other) :
-    _extentZero(other._extentZero),
-    _extentOne(other._extentOne),
-    m(other.m)
+    _extentZero(other._extentZero), _extentOne(other._extentOne), m(other.m)
 {
 }
 
@@ -1020,8 +1014,7 @@ inline DataType const Array2DView<DataType>::at(int i, int j) const
 template<class DataType>
 Array2DView<DataType>::j_operator::j_operator(Array2DView<DataType> & _array,
                                               int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
@@ -1040,15 +1033,15 @@ DataType & Array2DView<DataType>::j_operator::operator[](int j)
 }
 
 template<class DataType>
-const typename Array2DView<DataType>::j_operator Array2DView<DataType>::
-operator[](int i) const
+const typename Array2DView<DataType>::j_operator
+Array2DView<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
 
 template<class DataType>
-typename Array2DView<DataType>::j_operator Array2DView<DataType>::
-operator[](int i)
+typename Array2DView<DataType>::j_operator
+Array2DView<DataType>::operator[](int i)
 {
   return j_operator(*this, i);
 }
@@ -1066,9 +1059,7 @@ inline void Array2DView<DataType>::_range_check(int _n, std::size_t tsize) const
 
 template<class DataType>
 Array2D<DataType>::Array2D() :
-    _Array_Basic<DataType>(),
-    _extentZero(0),
-    _extentOne(0)
+    _Array_Basic<DataType>(), _extentZero(0), _extentOne(0)
 {
 }
 
@@ -1123,8 +1114,8 @@ Array2D<DataType>::~Array2D()
 }
 
 template<class DataType>
-Array2D<DataType> & Array2D<DataType>::
-operator=(Array2D<DataType> const & other)
+Array2D<DataType> &
+Array2D<DataType>::operator=(Array2D<DataType> const & other)
 {
   _Array_Basic<DataType>::operator=(other);
   _extentZero = other._extentZero;
@@ -1213,8 +1204,7 @@ inline DataType const Array2D<DataType>::at(int i, int j) const
 
 template<class DataType>
 Array2D<DataType>::j_operator::j_operator(Array2D<DataType> & _array, int i) :
-    j_array(_array),
-    _i(i)
+    j_array(_array), _i(i)
 {
 }
 
@@ -1233,8 +1223,8 @@ DataType & Array2D<DataType>::j_operator::operator[](int j)
 }
 
 template<class DataType>
-const typename Array2D<DataType>::j_operator Array2D<DataType>::
-operator[](int i) const
+const typename Array2D<DataType>::j_operator
+Array2D<DataType>::operator[](int i) const
 {
   return j_operator(*this, i);
 }
