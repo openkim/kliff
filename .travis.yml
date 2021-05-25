@@ -36,7 +36,7 @@ install:
   - kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_005
 
   # kimpy
-  - pip install kimpy==0.3.0
+  - pip install kimpy
 
 
 script:
