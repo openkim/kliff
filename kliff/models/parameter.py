@@ -174,7 +174,7 @@ class Parameter(MSONable):
 
 class OptimizingParameters(MSONable):
     """
-    A collection of paramters that will be optimized.
+    A collection of parameters that will be optimized.
 
     This can be all the parameters of a model or a subset of the parameters of a model.
     The behavior of individual component of a parameter can also be controlled. For

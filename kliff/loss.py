@@ -260,7 +260,7 @@ class LossPhysicsMotivatedModel:
 
         logger.info(f"`{self.__class__.__name__}` instantiated.")
 
-    def minimize(self, method: str, **kwargs):
+    def minimize(self, method: str = "L-BFGS-B", **kwargs):
         """
         Minimize the loss.
 
@@ -678,7 +678,7 @@ class LossNeuralNetworkModel(object):
 
     def minimize(
         self,
-        method: str,
+        method: str = "Adam",
         batch_size: int = 100,
         num_epochs: int = 1000,
         start_epoch: int = 0,

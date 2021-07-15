@@ -11,6 +11,7 @@ from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
 from kliff.neighbor import assemble_forces, assemble_stress
 
+# TODO 1) use kliff nl, not kipy one; 2) update kliff nl to be the same as kimpy one
 try:
     import kimpy
     from kimpy import neighlist as nl
