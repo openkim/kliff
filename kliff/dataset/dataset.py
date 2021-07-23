@@ -51,7 +51,7 @@ class Configuration:
         forces: Optional[np.ndarray] = None,
         stress: Optional[List[float]] = None,
         weight: float = 1.0,
-        identifier: Optional[str] = None,
+        identifier: Optional[Union[str, Path]] = None,
     ):
         self._cell = cell
         self._species = species
@@ -64,6 +64,7 @@ class Configuration:
         self._identifier = identifier
         self._path = None
 
+    # TODO enable config weight read in from file
     @classmethod
     def from_file(cls, filename: Path, file_format: str = "xyz"):
         """
@@ -90,7 +91,9 @@ class Configuration:
         forces = np.asarray(forces) if forces is not None else None
         stress = [float(i) for i in stress] if stress is not None else None
 
-        self = cls(cell, species, coords, PBC, energy, forces, stress)
+        self = cls(
+            cell, species, coords, PBC, energy, forces, stress, identifier=str(filename)
+        )
         self._path = to_path(filename)
 
         return self

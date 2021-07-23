@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 
 import numpy as np
@@ -93,6 +92,8 @@ class ModelTorch(nn.Module):
         fname = filename.parent.joinpath("mean_and_stdev.pkl")
         self.descriptor.dump_mean_stdev(fname)
 
+    # TODO set a default running dir (not the current dir) and dump all stuff there,
+    #  except the log
     def load(self, filename: Path, mode: str = "train"):
         """
         Load a model on disk into memory.
