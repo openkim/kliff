@@ -16,12 +16,14 @@ try:
     torch_avail = True
 except ImportError:
     torch_avail = False
+
 try:
     from mpi4py import MPI
 
     mpi4py_avail = True
 except ImportError:
     mpi4py_avail = False
+
 try:
     from geodesicLM import geodesiclm
 
@@ -373,7 +375,7 @@ class LossPhysicsMotivatedModel:
                 # geodesic LM
                 if method == "geodesiclm":
                     if not geodesicLM_avail:
-                        report_import_error("geodesciLM")
+                        report_import_error("geodesiclm")
                     else:
                         minimize_fn = geodesiclm
                 else:
@@ -424,11 +426,13 @@ class LossPhysicsMotivatedModel:
             x = self.calculator.get_opt_params()
             if method in self.scipy_least_squares_methods:
                 if method == "geodesiclm":
-                    from geodesicLM import geodesiclm
-
-                    minimize_fn = geodesiclm
+                    if not geodesicLM_avail:
+                        report_import_error("geodesiclm")
+                    else:
+                        minimize_fn = geodesiclm
                 else:
                     minimize_fn = scipy.optimize.least_squares
+
                 func = self._get_residual
             elif method in self.scipy_minimize_methods:
                 minimize_fn = scipy.optimize.minimize
@@ -709,9 +713,6 @@ class LossNeuralNetworkModel(object):
         self.num_epochs = num_epochs
         self.start_epoch = start_epoch
 
-        # data loader
-        loader = self.calculator.get_compute_arguments(batch_size)
-
         # model save metadata
         save_prefix = self.calculator.model.save_prefix
         save_start = self.calculator.model.save_start
@@ -749,7 +750,10 @@ class LossNeuralNetworkModel(object):
             log_entry(logger, msg, level="error")
             raise LossError(msg)
 
-        epoch = 0
+        # data loader
+        loader = self.calculator.get_compute_arguments(batch_size)
+
+        epoch = 0  # in case never enters loop
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
 
             # get the loss without any optimization if continue a training
@@ -793,6 +797,12 @@ class LossNeuralNetworkModel(object):
             epoch_loss += float(loss)
         return epoch_loss
 
+    # TODO this is nice since it is simple and gives user the opportunity to provide a
+    #  loss function based on each data point. However, this is slow without
+    #  vectorization. Should definitely modify it and use vectorized loss function.
+    #  The way going forward is to batch all necessary info in dataloader.
+    #  The downsides is that then analytic and machine learning models will have
+    #  different interfaces.
     def _get_loss_batch(self, batch: List[Any], normalize: bool = True):
         """
         Compute the loss of a batch of samples.
