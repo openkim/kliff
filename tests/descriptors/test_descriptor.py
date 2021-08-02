@@ -94,7 +94,7 @@ def test_descriptor():
     ):
         desc = ExampleDescriptor(normalize)
         desc.generate_fingerprints(
-            configs, fit_forces, fit_stress, reuse=reuse, serial=serial
+            configs, fit_forces, fit_stress, reuse=reuse, use_welford_method=serial
         )
         data = load_fingerprints("fingerprints.pkl")[0]
 

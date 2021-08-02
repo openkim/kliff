@@ -3,16 +3,15 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-
-from ...log import log_entry
-from ...neighbor import NeighborList
-from ..descriptor import (
+from kliff.descriptors.descriptor import (
     Descriptor,
     generate_full_cutoff,
     generate_species_code,
     generate_unique_cutoff_pairs,
 )
-from . import sf
+from kliff.descriptors.symmetry_function import sf
+from kliff.log import log_entry
+from kliff.neighbor import NeighborList
 
 logger = logging.getLogger(__name__)
 
