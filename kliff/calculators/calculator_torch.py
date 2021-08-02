@@ -8,6 +8,8 @@ from kliff.dataset.dataset import Configuration
 from kliff.dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 from kliff.models.model_torch import ModelTorch
 from kliff.models.neural_network import NeuralNetwork
+from kliff.utils import to_path
+from loguru import logger
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
 
@@ -40,8 +42,10 @@ class CalculatorTorch:
         use_energy: bool = True,
         use_forces: bool = True,
         use_stress: bool = False,
-        fingerprints_path: Optional[Union[Path, str]] = None,
-        fingerprints_mean_and_stdev_path: Optional[Union[Path, str]] = None,
+        fingerprints_filename: Union[Path, str] = "fingerprints.pkl",
+        fingerprints_mean_stdev_filename: Optional[
+            Union[Path, str]
+        ] = "fingerprints_mean_and_stdev.pkl",
         reuse: bool = False,
         use_welford_method: bool = False,
         nprocs: int = 1,
@@ -54,16 +58,14 @@ class CalculatorTorch:
             use_energy: Whether to require the calculator to compute energy.
             use_forces: Whether to require the calculator to compute forces.
             use_stress: Whether to require the calculator to compute stress.
-            fingerprints_path: Path to the to be generated fingerprints. If ``None``,
-            default to ``./fingerprint.pkl``.
-            fingerprints_mean_and_stdev_path: Path to the mean and standard deviation of
-                the fingerprints. If ``normalize`` is not required by a descriptor,
-                this is ignored. Otherwise, the mean and standard deviation read from
-                ``fingerprints_mean_and_stdev_path``, are used to normalize the
-                fingerprints. If ``None``, mean and standard deviation will be calculated
-                from the descriptors and write to ``./fingerprints_mean_and_stdev.pkl``;
-            reuse: If ``True``, reuse the fingerprints if found existing one. Otherwise,
-                generate fingerprints from scratch no matter there is existing one or not.
+            fingerprints_filename: Path to save the generated fingerprints.
+                If `reuse=True`, Will not generate the fingerprints, but directly use the
+                one provided via this file.
+            fingerprints_mean_stdev_filename: Path to save the mean and standard deviation
+                of the fingerprints. If `reuse=True`, Will not generate new fingerprints
+                mean and stdev, but directly use the one provided via this file.
+                If `normalize` is not required by a descriptor, this is ignored.
+            reuse: Whether to reuse provided fingerprints.
             use_welford_method: Whether to compute mean and standard deviation using the
                 Welford method, which is memory efficient. See
                 https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -80,21 +82,40 @@ class CalculatorTorch:
         if isinstance(configs, Configuration):
             configs = [configs]
 
+        # reuse existing file
+        if reuse:
+            path = to_path(fingerprints_filename)
+            if not path.exists():
+                raise CalculatorTorchError(
+                    f"You specified `reuse=True` to reuse the fingerprints stored in "
+                    f"`{path}` This file does not exists."
+                )
+            logger.info(f"Reuse fingerprints `{path}`")
+
+            if self.model.descriptor.normalize:
+                path = to_path(fingerprints_mean_stdev_filename)
+                if not path.exists():
+                    raise CalculatorTorchError(
+                        f"You specified `reuse=True` to reuse the fingerprints. The mean "
+                        f"and stdev file of the fingerprints `{path}` does not exists."
+                    )
+                logger.info(f"Reuse fingerprints mean and stdev `{path}`")
+
         # generate fingerprints and pickle it
-        self.fingerprints_path = self.model.descriptor.generate_fingerprints(
-            configs,
-            use_forces,
-            use_stress,
-            reuse,
-            fingerprints_path,
-            fingerprints_mean_and_stdev_path,
-            use_welford_method,
-            nprocs,
-        )
+        else:
+            self.fingerprints_path = self.model.descriptor.generate_fingerprints(
+                configs,
+                use_forces,
+                use_stress,
+                fingerprints_filename,
+                fingerprints_mean_stdev_filename,
+                use_welford_method,
+                nprocs,
+            )
 
     def get_compute_arguments(self, batch_size: int = 1):
         """
-        Return the dataloader with batch size set to ``batch_size``.
+        Return the dataloader with batch size set to `batch_size`.
         """
         fname = self.fingerprints_path
         fp = FingerprintsDataset(fname)

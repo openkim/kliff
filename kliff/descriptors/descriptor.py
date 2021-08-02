@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from kliff import parallel
 from kliff.dataset import Configuration
+from kliff.utils import create_directory, to_path
 from loguru import logger
 
 
@@ -56,23 +57,27 @@ class Descriptor:
         self.normalize = normalize
         self.dtype = dtype
 
+        # size, mean, and stdev of fingerprints; mean and stdev will be used only when
+        # `normalize=True`
         self.size = None
         self.mean = None
         self.stdev = None
+        self._has_mean_stdev = False
 
     def generate_fingerprints(
         self,
         configs: List[Configuration],
         fit_forces: bool = False,
         fit_stress: bool = False,
-        reuse: bool = False,
-        fingerprints_path: Optional[Union[Path, str]] = None,
-        fingerprints_mean_and_stdev_path: Optional[Union[Path, str]] = None,
+        fingerprints_filename: Union[Path, str] = "fingerprints.pkl",
+        fingerprints_mean_stdev_filename: Optional[
+            Union[Path, str]
+        ] = "fingerprints_mean_and_stdev.pkl",
         use_welford_method: bool = False,
         nprocs: int = 1,
     ):
         """
-        Convert dataset to fingerprints.
+        Convert all configurations to their fingerprints.
 
         Args:
             configs: Dataset configurations
@@ -80,100 +85,63 @@ class Descriptor:
                 coordinates so as to compute forces.
             fit_stress: Whether to compute the gradient of fingerprints w.r.t. atomic
                 coordinates so as to compute stress.
-            reuse: Whether to reuse the previous generated fingerprints if one is found.
-            fingerprints_path: Path to fingerprints. Default to `fingerprints.pkl`.
-            fingerprints_mean_and_stdev_path: Path to the mean and standard deviation of
-            fingerprints. If `None`, default to `fingerpints_mean_and_stdev.pkl`.
-                Only needed if `normalize = True` at instantiation.
             use_welford_method: Whether to compute mean and standard deviation using the
                 Welford method, which is memory efficient. See
                 https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+            fingerprints_filename: Path to dump fingerprints to a pickle file.
+            fingerprints_mean_stdev_filename: Path to dump the mean and standard
+                deviation of the fingerprints as a pickle file. If `normalize=False`
+                for the descriptor, this is ignored.
+
             nprocs: Number of processes used to generate the fingerprints. If `1`, run
                 in serial mode, otherwise `nprocs` processes will be forked via
                 multiprocessing to do the work.
         """
 
-        if fingerprints_path is None:
-            fname = "fingerprints.pkl"
-        else:
-            fname = fingerprints_path
+        # compute mean and stdev
+        if self.normalize and not self._has_mean_stdev:
+            logger.info("Start computing mean and stdev of fingerprints.")
 
-        if fingerprints_mean_and_stdev_path is None:
-            mean_stdev_name = "fingerprints_mean_and_stdev.pkl"
-            mean_stdev_provided = False
-        else:
-            mean_stdev_name = fingerprints_mean_and_stdev_path
-            mean_stdev_provided = True
-
-        def restore_mean_and_stdev():
-            self.load_mean_stdev(mean_stdev_name)
-            logger.info(f"Restore mean and stdev from {mean_stdev_name}.")
-
-        # restore data
-        if os.path.exists(fname):
-            msg = 'Found existing fingerprints "{}".'.format(fname)
-            logger.info(msg)
-            if not reuse:
-                os.remove(fname)
-                msg = 'Delete existing fingerprints "{}"'.format(fname)
-                logger.info(msg)
+            if use_welford_method:
+                logger.info(
+                    "Computing fingerprint mean and stdev using the Welford method."
+                )
+                self.mean, self.stdev = self._welford_mean_and_stdev(configs)
+                zeta, dzetadr_forces, dzetadr_stress = None, None, None
             else:
-                msg = "Reuse existing fingerprints."
-                logger.info(msg)
-                if self.normalize:
-                    restore_mean_and_stdev()
-                return fname
+                zeta, dzetadr_forces, dzetadr_stress = self._calc_zeta_dzetadr(
+                    configs, fit_forces, fit_stress, nprocs
+                )
+                stacked = np.concatenate(zeta)
+                self.mean = np.mean(stacked, axis=0)
+                self.stdev = np.std(stacked, axis=0)
 
-        # generate data
-        msg = "Start generating fingerprints."
-        logger.info(msg)
+            logger.info("Finish computing mean and stdev of fingerprints.")
 
-        if use_welford_method:
-            all_zeta, all_dzetadr_forces, all_dzetadr_stress = None, None, None
-
-            if self.normalize:
-                if mean_stdev_provided:
-                    restore_mean_and_stdev()
-                else:
-                    self.mean, self.stdev = self.welford_mean_and_stdev(configs)
-                    self.dump_mean_stdev(mean_stdev_name)
-                    msg = "Calculating mean and stdev."
-                    logger.info(msg)
-        else:
-            all_zeta, all_dzetadr_forces, all_dzetadr_stress = self._calc_zeta_dzetadr(
-                configs, fit_forces, fit_stress, nprocs
+            # save to file
+            self.dump_mean_stdev(fingerprints_mean_stdev_filename)
+            logger.info(
+                f"Fingerprints mean and stdev save to {fingerprints_mean_stdev_filename}."
             )
 
-            if self.normalize:
-                if mean_stdev_provided:
-                    restore_mean_and_stdev()
-                else:
-                    if all_zeta is not None:
-                        stacked = np.concatenate(all_zeta)
-                        self.mean = np.mean(stacked, axis=0)
-                        self.stdev = np.std(stacked, axis=0)
-                    else:
-                        self.mean, self.stdev = self.welford_mean_and_stdev(configs)
-                    self.dump_mean_stdev(mean_stdev_name)
-                    msg = "Calculating mean and stdev."
-                    logger.info(msg)
+        else:
+            zeta, dzetadr_forces, dzetadr_stress = None, None, None
 
-        self.dump_fingerprints(
-            configs,
-            fname,
-            all_zeta,
-            all_dzetadr_forces,
-            all_dzetadr_stress,
-            fit_forces,
-            fit_stress,
-        )
+        # generate fingerprints
+        if fingerprints_filename is not None:
+            self._dump_fingerprints(
+                configs,
+                fingerprints_filename,
+                zeta,
+                dzetadr_forces,
+                dzetadr_stress,
+                fit_forces,
+                fit_stress,
+            )
 
-        msg = "Finish generating fingerprints."
-        logger.info(msg)
+        return fingerprints_filename
 
-        return fname
-
-    def dump_fingerprints(
+    def _dump_fingerprints(
         self,
         configs,
         fname,
@@ -183,19 +151,18 @@ class Descriptor:
         fit_forces,
         fit_stress,
     ):
+        """
+        Dump fingerprints to a pickle file.
+        """
 
-        msg = 'Pickling fingerprints to "{}"'.format(fname)
-        logger.info(msg)
+        logger.info(f"Pickling fingerprints to `{fname}`")
 
-        dirname = os.path.dirname(os.path.abspath(fname))
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        create_directory(fname, is_directory=False)
 
         with open(fname, "ab") as f:
             for i, conf in enumerate(configs):
                 if i % 100 == 0:
-                    msg = "Processing configuration: {}.".format(i)
-                    logger.info(msg)
+                    logger.info(f"Processing configuration: {i}.")
 
                 if all_zeta is None:
                     zeta, dzetadr_f, dzetadr_s = self.transform(
@@ -238,33 +205,32 @@ class Descriptor:
 
                 pickle.dump(example, f)
 
-        msg = "Pickle {} configurations finished.".format(len(configs))
-        logger.info(msg)
+        logger.info(f"Pickle {len(configs)} configurations finished.")
 
     def _calc_zeta_dzetadr(self, configs, fit_forces, fit_stress, nprocs=1):
         """
         Calculate the fingerprints and maybe its gradients w.r.t the atomic coords.
         """
-        try:
+        if nprocs == 1:
+            zeta = []
+            dzetadr_forces = []
+            dzetadr_stress = []
+            for conf in configs:
+                z, dzdr_f, dzdr_s = self.transform(conf, fit_forces, fit_stress)
+                zeta.append(z)
+                dzetadr_forces.append(dzdr_f)
+                dzetadr_stress.append(dzdr_s)
+        else:
             rslt = parallel.parmap1(
                 self.transform, configs, fit_forces, fit_stress, nprocs=nprocs
             )
             zeta = [pair[0] for pair in rslt]
             dzetadr_forces = [pair[1] for pair in rslt]
             dzetadr_stress = [pair[2] for pair in rslt]
-        except MemoryError as e:
-            msg = (
-                f"{e}. MemoryError occurs in calculating fingerprints using parallel. "
-                "Fallback to use a serial version."
-            )
-            logger.info(msg)
 
-            zeta = None
-            dzetadr_forces = None
-            dzetadr_stress = None
         return zeta, dzetadr_forces, dzetadr_stress
 
-    def welford_mean_and_stdev(self, configs: List[Configuration]):
+    def _welford_mean_and_stdev(self, configs: List[Configuration]):
         """
         Compute the mean and standard deviation of fingerprints.
 
@@ -278,15 +244,13 @@ class Descriptor:
         See Also:
             https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         """
-        msg = "Welford method to calculate mean and standard deviation."
-        logger.info(msg)
 
         # number of features
         conf = configs[0]
         zeta, _, _ = self.transform(conf, fit_forces=False, fit_stress=False)
         size = zeta.shape[1]
 
-        # starting Welford's method
+        # Welford's method
         n = 0
         mean = np.zeros(size)
         M2 = np.zeros(size)
@@ -300,14 +264,10 @@ class Descriptor:
                 M2 += delta * delta2
 
             if i % 100 == 0:
-                msg = "Processing configuration: {}.".format(i)
-                logger.info(msg)
+                logger.info("Processing configuration: {i}.")
                 sys.stdout.flush()
 
         stdev = np.sqrt(M2 / n)  # not the unbiased
-
-        msg = "Finish mean and standard deviation calculation using Welford method."
-        logger.info(msg)
 
         return mean, stdev
 
@@ -378,20 +338,26 @@ class Descriptor:
         """Return the hyperparameters of descriptors."""
         return self.hyperparams
 
-    def dump_mean_stdev(self, path):
+    def dump_mean_stdev(self, path: Union[Path, str]):
         """
         Save mean and stdev info to a file.
+
+        Args:
+            path: path to to file.
         """
-        dirname = os.path.dirname(os.path.abspath(path))
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        path = to_path(path)
+        create_directory(path, is_directory=False)
+
         data = {"mean": self.mean, "stdev": self.stdev}
         with open(path, "wb") as f:
             pickle.dump(data, f)
 
-    def load_mean_stdev(self, path):
+    def load_mean_stdev(self, path: Union[Path, str]):
         """
         Load mean and stdev info from a file.
+
+        Args:
+            path: path to to file.
         """
         try:
             with open(path, "rb") as f:
@@ -399,19 +365,18 @@ class Descriptor:
                 mean = data["mean"]
                 stdev = data["stdev"]
         except Exception as e:
-            msg = 'Cannot load mean and standard data from "{}". {}'.format(
-                path, str(e)
+            raise DescriptorError(
+                f"Cannot load mean and standard data from `{path}`. {str(e)}"
             )
-            raise DescriptorError(msg)
 
         if len(mean.shape) != 1 or mean.shape[0] != self.get_size():
-            msg = 'Corrupted mean data from "{}".'.format(path)
-            raise DescriptorError(msg)
+            raise DescriptorError(f"Corrupted mean data from `{path}`.")
+
         if len(stdev.shape) != 1 or stdev.shape[0] != self.get_size():
-            msg = 'Corrupted standard deviation data from "{}".'.format(path)
-            raise DescriptorError(msg)
+            raise DescriptorError("Corrupted standard deviation data from `{path}`.")
 
         self.mean, self.stdev = mean, stdev
+        self._has_mean_stdev = True
 
         return mean, stdev
 
@@ -420,7 +385,7 @@ def load_fingerprints(path: Union[Path, str]):
     """
     Read preprocessed fingerprints from file.
 
-    This is the reverse operation of Descriptor.dump_fingerprints.
+    This is the reverse operation of Descriptor._dump_fingerprints.
 
     Args:
         path: Path to the pickled data file.
