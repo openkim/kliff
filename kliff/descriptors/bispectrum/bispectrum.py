@@ -1,10 +1,13 @@
 import logging
 
 import numpy as np
-
-from ...neighbor import NeighborList
-from ..descriptor import Descriptor, generate_full_cutoff, generate_species_code
-from . import bs
+from kliff.descriptors.bispectrum import bs
+from kliff.descriptors.descriptor import (
+    Descriptor,
+    generate_full_cutoff,
+    generate_species_code,
+)
+from kliff.neighbor import NeighborList
 
 logger = logging.getLogger(__name__)
 

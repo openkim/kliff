@@ -1,8 +1,7 @@
 import logging
-import multiprocessing as mp
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import torch
 import torch.distributed as dist
@@ -44,11 +43,11 @@ class CalculatorTorch:
         use_energy: bool = True,
         use_forces: bool = True,
         use_stress: bool = False,
-        fingerprints_path: Optional[Path] = None,
-        fingerprints_mean_and_stdev_path: Optional[Path] = None,
+        fingerprints_path: Optional[Union[Path, str]] = None,
+        fingerprints_mean_and_stdev_path: Optional[Union[Path, str]] = None,
         reuse: bool = False,
-        serial: bool = False,
-        nprocs: int = mp.cpu_count(),
+        use_welford_method: bool = False,
+        nprocs: int = 1,
     ):
         """
         Process configs to generate fingerprints.
@@ -68,9 +67,12 @@ class CalculatorTorch:
                 from the descriptors and write to ``./fingerprints_mean_and_stdev.pkl``;
             reuse: If ``True``, reuse the fingerprints if found existing one. Otherwise,
                 generate fingerprints from scratch no matter there is existing one or not.
-            serial: Compute fingerprints in serial mode. Memory efficient.
-            nprocs: Number of processes to use to generate the fingerprints.
-                If ``serial`` is ``True``, this is ignored.
+            use_welford_method: Whether to compute mean and standard deviation using the
+                Welford method, which is memory efficient. See
+                https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+            nprocs: Number of processes used to generate the fingerprints. If `1`, run
+                in serial mode, otherwise `nprocs` processes will be forked via
+                multiprocessing to do the work.
         """
 
         self.configs = configs
@@ -81,7 +83,7 @@ class CalculatorTorch:
         if isinstance(configs, Configuration):
             configs = [configs]
 
-        # generate pickled fingerprints
+        # generate fingerprints and pickle it
         self.fingerprints_path = self.model.descriptor.generate_fingerprints(
             configs,
             use_forces,
@@ -89,7 +91,7 @@ class CalculatorTorch:
             reuse,
             fingerprints_path,
             fingerprints_mean_and_stdev_path,
-            serial,
+            use_welford_method,
             nprocs,
         )
 

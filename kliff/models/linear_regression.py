@@ -2,10 +2,9 @@ import logging
 
 import torch
 import torch.nn as nn
+from kliff.dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
+from kliff.models.model_torch import ModelTorch
 from torch.utils.data import DataLoader
-
-from ..dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
-from .model_torch import ModelTorch
 
 logger = logging.getLogger(__name__)
 

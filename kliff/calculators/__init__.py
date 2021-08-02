@@ -1,5 +1,5 @@
-from ..utils import torch_available
-from .calculator import Calculator
+from kliff.calculators.calculator import Calculator
+from kliff.utils import torch_available
 
 __all__ = ["Calculator"]
 
