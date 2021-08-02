@@ -94,6 +94,13 @@ class ModelTorch(nn.Module):
 
     # TODO set a default running dir (not the current dir) and dump all stuff there,
     #  except the log
+
+    # TODO when we load model back, we load descriptor mean and stdev back as well.
+    #  However, this is not effective since descriptor.generate_fingerprints
+    #  still asks a path mean_and_stdev, and that path is provided to user.
+    #  Should modify it such that a user does not need to do it. Also, change all load
+    #  back stuff to state_dict() as pytorch.
+
     def load(self, filename: Path, mode: str = "train"):
         """
         Load a model on disk into memory.

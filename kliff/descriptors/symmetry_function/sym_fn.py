@@ -9,7 +9,7 @@ from kliff.descriptors.descriptor import (
     generate_species_code,
     generate_unique_cutoff_pairs,
 )
-from kliff.descriptors.symmetry_function import sf
+from kliff.descriptors.symmetry_function import sf  # C extension
 from kliff.log import log_entry
 from kliff.neighbor import NeighborList
 

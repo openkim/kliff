@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from kliff.descriptors.bispectrum import bs
+from kliff.descriptors.bispectrum import bs  # C extension
 from kliff.descriptors.descriptor import (
     Descriptor,
     generate_full_cutoff,

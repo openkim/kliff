@@ -11,7 +11,6 @@ from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
 from kliff.neighbor import assemble_forces, assemble_stress
 
-# TODO 1) use kliff nl, not kipy one; 2) update kliff nl to be the same as kimpy one
 try:
     import kimpy
     from kimpy import neighlist as nl
@@ -91,25 +90,40 @@ class KIMComputeArguments(ComputeArguments):
         self._register_data(compute_energy, compute_forces)
 
     def _get_implemented_property(self):
-        """ "
+        """
         Get implemented property of model.
         """
 
         # check compute arguments
-        kim_can = kimpy.compute_argument_name
-        N = kim_can.get_number_of_compute_argument_names()
+        try:
+            kim_can = kimpy.compute_argument_name
+            N = kim_can.get_number_of_compute_argument_names()
+        except RuntimeError:
+            raise kimpy.KimPyError(
+                "Calling `kim_can.get_number_of_compute_argument_names()` failed."
+            )
 
         for i in range(N):
-            name = kim_can.get_compute_argument_name(i)
+            try:
+                name = kim_can.get_compute_argument_name(i)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_can.get_compute_argument_name()` failed."
+                )
 
-            dtype = kim_can.get_compute_argument_data_type(name)
+            # dtype = kim_can.get_compute_argument_data_type(name)
 
-            support_status = self.kim_ca.get_argument_support_status(name)
+            try:
+                support_status = self.kim_ca.get_argument_support_status(name)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.get_argument_support_status()` failed."
+                )
 
             # calculator can only handle energy and forces
             if support_status == kimpy.support_status.required:
                 if name != kim_can.partialEnergy and name != kim_can.partialForces:
-                    report_error(f"Unsupported required ComputeArgument `{name}`")
+                    KIMModelError(f"Unsupported required ComputeArgument `{name}`")
 
             # supported property
             if name == kim_can.partialEnergy:
@@ -120,27 +134,49 @@ class KIMComputeArguments(ComputeArguments):
 
         # check compute callbacks
         kim_ccn = kimpy.compute_callback_name
-        num_callbacks = kim_ccn.get_number_of_compute_callback_names()
+
+        try:
+            num_callbacks = kim_ccn.get_number_of_compute_callback_names()
+        except RuntimeError:
+            raise kimpy.KimPyError(
+                "Calling `kim_ccn.get_number_of_compute_callback_names()` failed."
+            )
 
         for i in range(num_callbacks):
-            name = kim_ccn.get_compute_callback_name(i)
+            try:
+                name = kim_ccn.get_compute_callback_name(i)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ccn.get_compute_callback_name()` failed."
+                )
 
-            support_status = self.kim_ca.get_callback_support_status(name)
+            try:
+                support_status = self.kim_ca.get_callback_support_status(name)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.get_callback_support_status()` failed."
+                )
 
             # calculator only provides get_neigh
             if support_status == kimpy.support_status.required:
                 if name != kim_ccn.GetNeighborList:
-                    report_error(f"Unsupported required ComputeCallback `{name}`")
+                    KIMModelError(f"Unsupported required ComputeCallback `{name}`")
 
     def _init_neigh(self):
 
         # create neighbor list
-        neigh = nl.create()
+        try:
+            neigh = nl.create()
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `nl.create()` failed.")
 
         # register get neigh callback
-        self.kim_ca.set_callback_pointer(
-            kimpy.compute_callback_name.GetNeighborList, nl.get_neigh_kim(), neigh
-        )
+        try:
+            self.kim_ca.set_callback_pointer(
+                kimpy.compute_callback_name.GetNeighborList, nl.get_neigh_kim(), neigh
+            )
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `kim_ca.set_callback_pointer()` failed.")
 
         self.neigh = neigh
 
@@ -164,24 +200,28 @@ class KIMComputeArguments(ComputeArguments):
             if s in self.supported_species:
                 species_map[s] = self.supported_species[s]
             else:
-                report_error(f"species `{s}` not supported by model")
+                KIMModelError(f"species `{s}` not supported by model")
+
         contributing_species_code = np.array(
             [species_map[s] for s in contributing_species], dtype=np.intc
         )
 
         if any(PBC):  # need padding atoms
 
-            (
-                padding_coords,
-                padding_species_code,
-                self.padding_image_of,
-            ) = nl.create_paddings(
-                influence_distance,
-                cell,
-                PBC,
-                contributing_coords,
-                contributing_species_code,
-            )
+            try:
+                (
+                    padding_coords,
+                    padding_species_code,
+                    self.padding_image_of,
+                ) = nl.create_paddings(
+                    influence_distance,
+                    cell,
+                    PBC,
+                    contributing_coords,
+                    contributing_species_code,
+                )
+            except RuntimeError:
+                raise kimpy.KimPyError("Calling `nl.create_paddings()` failed.")
 
             num_padding = padding_species_code.size
             self.num_particles = np.array(
@@ -194,7 +234,6 @@ class KIMComputeArguments(ComputeArguments):
             self.particle_contributing = np.ones(self.num_particles[0], dtype=np.intc)
             self.particle_contributing[num_contributing:] = 0
 
-            # TODO check whether padding need neigh and create accordingly
             # for now, create neigh for all atoms, including paddings
             need_neigh = np.ones(self.num_particles[0], dtype=np.intc)
 
@@ -206,12 +245,15 @@ class KIMComputeArguments(ComputeArguments):
             self.particle_contributing = np.ones(num_contributing, dtype=np.intc)
             need_neigh = self.particle_contributing
 
-        self.neigh.build(
-            self.coords,
-            influence_distance,
-            np.asarray([influence_distance], dtype=np.double),
-            need_neigh,
-        )
+        try:
+            self.neigh.build(
+                self.coords,
+                influence_distance,
+                np.asarray([influence_distance], dtype=np.double),
+                need_neigh,
+            )
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `neigh.build()` failed.")
 
     def _register_data(self, compute_energy=True, compute_forces=True):
         """
@@ -222,51 +264,96 @@ class KIMComputeArguments(ComputeArguments):
         kim_can = kimpy.compute_argument_name
         if compute_energy:
             name = kim_can.partialEnergy
-            support_status = self.kim_ca.get_argument_support_status(name)
+
+            try:
+                support_status = self.kim_ca.get_argument_support_status(name)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.get_argument_support_status()` failed."
+                )
+
             if not (
                 support_status == kimpy.support_status.required
                 or support_status == kimpy.support_status.optional
             ):
-                report_error("Energy not supported by model")
+                KIMModelError("Energy not supported by model")
 
         if compute_forces:
             name = kim_can.partialForces
-            support_status = self.kim_ca.get_argument_support_status(name)
+
+            try:
+                support_status = self.kim_ca.get_argument_support_status(name)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.get_argument_support_status()` failed."
+                )
+
             if not (
                 support_status == kimpy.support_status.required
                 or support_status == kimpy.support_status.optional
             ):
-                report_error("Forces not supported by model")
+                KIMModelError("Forces not supported by model")
 
         # register argument
-        self.kim_ca.set_argument_pointer(kim_can.numberOfParticles, self.num_particles)
+        try:
+            self.kim_ca.set_argument_pointer(
+                kim_can.numberOfParticles, self.num_particles
+            )
 
-        self.kim_ca.set_argument_pointer(
-            kim_can.particleSpeciesCodes, self.species_code
-        )
+            self.kim_ca.set_argument_pointer(
+                kim_can.particleSpeciesCodes, self.species_code
+            )
 
-        self.kim_ca.set_argument_pointer(
-            kim_can.particleContributing, self.particle_contributing
-        )
+            self.kim_ca.set_argument_pointer(
+                kim_can.particleContributing, self.particle_contributing
+            )
 
-        self.kim_ca.set_argument_pointer(kim_can.coordinates, self.coords)
+            self.kim_ca.set_argument_pointer(kim_can.coordinates, self.coords)
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `kim_ca.set_argument_pointer()` failed.")
 
         if compute_energy:
             self.energy = np.array([0.0], dtype=np.double)
-            self.kim_ca.set_argument_pointer(kim_can.partialEnergy, self.energy)
+            try:
+                self.kim_ca.set_argument_pointer(kim_can.partialEnergy, self.energy)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.set_argument_pointer()` failed."
+                )
+
         else:
             self.energy = None
-            self.kim_ca.set_argument_null_pointer(kim_can.partialEnergy)
+            try:
+                self.kim_ca.set_argument_null_pointer(kim_can.partialEnergy)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.set_argument_null_pointer()` failed."
+                )
 
         if compute_forces:
             self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
-            self.kim_ca.set_argument_pointer(kim_can.partialForces, self.forces)
+            try:
+                self.kim_ca.set_argument_pointer(kim_can.partialForces, self.forces)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.set_argument_pointer()` failed."
+                )
+
         else:
             self.forces = None
-            self.kim_ca.set_argument_null_pointer(kim_can.partialForces)
+            try:
+                self.kim_ca.set_argument_null_pointer(kim_can.partialForces)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_ca.set_argument_null_pointer()` failed."
+                )
 
     def compute(self, kim_model):
-        kim_model.compute(self.kim_ca)
+
+        try:
+            kim_model.compute(self.kim_ca)
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `kim_model.compute()` failed.")
 
         if self.compute_energy:
             self.results["energy"] = self.energy[0]
@@ -325,11 +412,31 @@ class KIMModel(Model):
 
     def init_supported_species(self) -> Dict[str, int]:
         species = {}
-        num_kim_species = kimpy.species_name.get_number_of_species_names()
+
+        try:
+            num_kim_species = kimpy.species_name.get_number_of_species_names()
+        except RuntimeError:
+            raise kimpy.KimPyError(
+                "Calling `kimpy.species_name.get_number_of_species_names()` failed."
+            )
 
         for i in range(num_kim_species):
-            species_name = kimpy.species_name.get_species_name(i)
-            supported, code = self.kim_model.get_species_support_and_code(species_name)
+            try:
+                species_name = kimpy.species_name.get_species_name(i)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kimpy.species_name.get_species_name()` failed."
+                )
+
+            try:
+                supported, code = self.kim_model.get_species_support_and_code(
+                    species_name
+                )
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_model.get_species_support_and_code()` failed."
+                )
+
             if supported:
                 species[str(species_name)] = code
 
@@ -343,17 +450,21 @@ class KIMModel(Model):
         """
         Create a new kim model.
         """
-        units_accepted, model = kimpy.model.create(
-            kimpy.numbering.zeroBased,
-            kimpy.length_unit.A,
-            kimpy.energy_unit.eV,
-            kimpy.charge_unit.e,
-            kimpy.temperature_unit.K,
-            kimpy.time_unit.ps,
-            model_name,
-        )
+        try:
+            units_accepted, model = kimpy.model.create(
+                kimpy.numbering.zeroBased,
+                kimpy.length_unit.A,
+                kimpy.energy_unit.eV,
+                kimpy.charge_unit.e,
+                kimpy.temperature_unit.K,
+                kimpy.time_unit.ps,
+                model_name,
+            )
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `kimpy.model.create()` failed.")
+
         if not units_accepted:
-            report_error("requested units not accepted in kimpy.model.create")
+            KIMModelError("requested units not accepted in kimpy.model.create")
         return model
 
     def get_kim_model_params(self) -> Dict[str, Parameter]:
@@ -363,22 +474,49 @@ class KIMModel(Model):
         Returns:
             {name, parameter}, all parameters in a kim model.
         """
-        params = dict()
+        try:
+            num_params = self.kim_model.get_number_of_parameters()
+        except RuntimeError:
+            raise kimpy.KimPyError(
+                "Calling `kim_model.get_number_of_parameters()` failed."
+            )
 
-        num_params = self.kim_model.get_number_of_parameters()
+        params = dict()
         for i in range(num_params):
-            dtype, extent, name, description = self.kim_model.get_parameter_metadata(i)
+            try:
+                (
+                    dtype,
+                    extent,
+                    name,
+                    description,
+                ) = self.kim_model.get_parameter_metadata(i)
+            except RuntimeError:
+                raise kimpy.KimPyError(
+                    "Calling `kim_model.get_parameter_metadata()` failed."
+                )
 
             values = []
             for j in range(extent):
                 if str(dtype) == "Double":
-                    val = self.kim_model.get_parameter_double(i, j)
+                    try:
+                        val = self.kim_model.get_parameter_double(i, j)
+                    except RuntimeError:
+                        raise kimpy.KimPyError(
+                            "Calling `kim_model.get_parameter_double()` failed."
+                        )
                     values.append(val)
+
                 elif str(dtype) == "Int":
-                    val = self.kim_model.get_parameter_int(i, j)
+                    try:
+                        val = self.kim_model.get_parameter_int(i, j)
+                    except RuntimeError:
+                        raise kimpy.KimPyError(
+                            "Calling `kim_model.get_parameter_int()` failed."
+                        )
                     values.append(val)
+
                 else:  # should never reach here
-                    report_error(f"get unexpected parameter data type `{dtype}`")
+                    KIMModelError(f"get unexpected parameter data type `{dtype}`")
 
                 params[name] = Parameter(value=values, index=i)
 
@@ -388,7 +526,12 @@ class KIMModel(Model):
         """
         Create a compute argument for the KIM model.
         """
-        kim_ca = self.kim_model.compute_arguments_create()
+        try:
+            kim_ca = self.kim_model.compute_arguments_create()
+        except RuntimeError:
+            raise kimpy.KimPyError(
+                "Calling `kim_model.compute_arguments_create()` failed."
+            )
 
         return kim_ca
 
@@ -413,9 +556,17 @@ class KIMModel(Model):
         for name, _ in kwargs.items():
             p_idx = self.model_params[name].index
             for c_idx, v in enumerate(self.model_params[name].value):
-                self.kim_model.set_parameter(p_idx, c_idx, v)
+                try:
+                    self.kim_model.set_parameter(p_idx, c_idx, v)
+                except RuntimeError:
+                    raise kimpy.KimPyError(
+                        "Calling `kim_model.set_parameter()` failed."
+                    )
 
-        self.kim_model.clear_then_refresh()
+        try:
+            self.kim_model.clear_then_refresh()
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
         # reset influence distance in case it changes
         self.init_influence_distance()
@@ -442,9 +593,15 @@ class KIMModel(Model):
         # update kim internal model param (note, set_one will update model_params)
         p_idx = self.model_params[name].index
         for c_idx, v in enumerate(self.model_params[name].value):
-            self.kim_model.set_parameter(p_idx, c_idx, v)
+            try:
+                self.kim_model.set_parameter(p_idx, c_idx, v)
+            except RuntimeError:
+                raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
-        self.kim_model.clear_then_refresh()
+        try:
+            self.kim_model.clear_then_refresh()
+        except RuntimeError:
+            raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
         # reset influence distance in case it changes
         self.init_influence_distance()
@@ -465,7 +622,10 @@ class KIMModel(Model):
         n = self.get_num_opt_params()
         for i in range(n):
             _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
-            self.kim_model.set_parameter(p_idx, c_idx, value)
+            try:
+                self.kim_model.set_parameter(p_idx, c_idx, value)
+            except RuntimeError:
+                raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
         # refresh model
         self.kim_model.clear_then_refresh()
@@ -522,15 +682,3 @@ class KIMModelError(Exception):
     def __init__(self, msg):
         super(KIMModelError, self).__init__(msg)
         self.msg = msg
-
-
-def check_error(error, msg):
-    if error != 0 and error is not None:
-        msg = f"Calling `{msg}` failed.\nSee `kim.log` for more information."
-        log_entry(logger, msg, level="error")
-        raise KIMModelError(msg)
-
-
-def report_error(msg):
-    log_entry(logger, msg, level="error")
-    raise KIMModelError(msg)

@@ -151,7 +151,6 @@ class NeuralNetwork(ModelTorch):
             fout.write("  # size of each layer (last must be 1)\n")
 
             # activation function
-            # TODO enable writing different activations for each layer
             activation = activations[0]
             fout.write("{}    # activation function\n".format(activation))
 
