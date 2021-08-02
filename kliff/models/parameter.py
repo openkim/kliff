@@ -1,4 +1,3 @@
-import logging
 import sys
 import warnings
 from pathlib import Path
@@ -6,8 +5,6 @@ from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
 from monty.json import MSONable
-
-logger = logging.getLogger(__name__)
 
 
 class Parameter(MSONable):

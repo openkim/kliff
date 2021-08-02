@@ -1,4 +1,3 @@
-import logging
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
@@ -6,10 +5,10 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.error import report_import_error
-from kliff.log import log_entry
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
 from kliff.neighbor import assemble_forces, assemble_stress
+from loguru import logger
 
 try:
     import kimpy
@@ -18,9 +17,6 @@ try:
     kimpy_avail = True
 except ImportError:
     kimpy_avail = False
-
-
-logger = logging.getLogger(__name__)
 
 
 class KIMComputeArguments(ComputeArguments):
@@ -630,13 +626,13 @@ class KIMModel(Model):
         # refresh model
         self.kim_model.clear_then_refresh()
 
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            params = self.get_kim_model_params()
-            s = ""
-            for name, p in params.items():
-                s += f"\nname: {name}\n"
-                s += str(p.as_dict())
-            log_entry(logger, s, level="debug")
+        # TODO only do it when we know it is debug level
+        params = self.get_kim_model_params()
+        s = ""
+        for name, p in params.items():
+            s += f"\nname: {name}\n"
+            s += str(p.as_dict())
+        logger.debug(s)
 
     def write_kim_model(self, path: Path = None):
         """
@@ -675,7 +671,7 @@ class KIMModel(Model):
 
         self.kim_model.write_parameterized_model(path, model_name)
 
-        log_entry(logger, f"KLIFF trained model write to `{path}`", level="info")
+        logger.info(f"KLIFF trained model write to `{path}`")
 
 
 class KIMModelError(Exception):

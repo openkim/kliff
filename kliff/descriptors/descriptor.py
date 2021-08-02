@@ -1,4 +1,3 @@
-import logging
 import os
 import pickle
 import sys
@@ -8,9 +7,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from kliff import parallel
 from kliff.dataset import Configuration
-from kliff.log import log_entry
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class Descriptor:
@@ -110,27 +107,26 @@ class Descriptor:
 
         def restore_mean_and_stdev():
             self.load_mean_stdev(mean_stdev_name)
-            msg = 'Restore mean and stdev from "{}".'.format(mean_stdev_name)
-            log_entry(logger, msg, level="info")
+            logger.info(f"Restore mean and stdev from {mean_stdev_name}.")
 
         # restore data
         if os.path.exists(fname):
             msg = 'Found existing fingerprints "{}".'.format(fname)
-            log_entry(logger, msg, level="info")
+            logger.info(msg)
             if not reuse:
                 os.remove(fname)
                 msg = 'Delete existing fingerprints "{}"'.format(fname)
-                log_entry(logger, msg, level="info")
+                logger.info(msg)
             else:
                 msg = "Reuse existing fingerprints."
-                log_entry(logger, msg, level="info")
+                logger.info(msg)
                 if self.normalize:
                     restore_mean_and_stdev()
                 return fname
 
         # generate data
         msg = "Start generating fingerprints."
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
 
         if use_welford_method:
             all_zeta, all_dzetadr_forces, all_dzetadr_stress = None, None, None
@@ -142,7 +138,7 @@ class Descriptor:
                     self.mean, self.stdev = self.welford_mean_and_stdev(configs)
                     self.dump_mean_stdev(mean_stdev_name)
                     msg = "Calculating mean and stdev."
-                    log_entry(logger, msg, level="info")
+                    logger.info(msg)
         else:
             all_zeta, all_dzetadr_forces, all_dzetadr_stress = self._calc_zeta_dzetadr(
                 configs, fit_forces, fit_stress, nprocs
@@ -160,7 +156,7 @@ class Descriptor:
                         self.mean, self.stdev = self.welford_mean_and_stdev(configs)
                     self.dump_mean_stdev(mean_stdev_name)
                     msg = "Calculating mean and stdev."
-                    log_entry(logger, msg, level="info")
+                    logger.info(msg)
 
         self.dump_fingerprints(
             configs,
@@ -173,7 +169,7 @@ class Descriptor:
         )
 
         msg = "Finish generating fingerprints."
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
 
         return fname
 
@@ -189,7 +185,7 @@ class Descriptor:
     ):
 
         msg = 'Pickling fingerprints to "{}"'.format(fname)
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
 
         dirname = os.path.dirname(os.path.abspath(fname))
         if not os.path.exists(dirname):
@@ -199,7 +195,7 @@ class Descriptor:
             for i, conf in enumerate(configs):
                 if i % 100 == 0:
                     msg = "Processing configuration: {}.".format(i)
-                    log_entry(logger, msg, level="info")
+                    logger.info(msg)
 
                 if all_zeta is None:
                     zeta, dzetadr_f, dzetadr_s = self.transform(
@@ -243,7 +239,7 @@ class Descriptor:
                 pickle.dump(example, f)
 
         msg = "Pickle {} configurations finished.".format(len(configs))
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
 
     def _calc_zeta_dzetadr(self, configs, fit_forces, fit_stress, nprocs=1):
         """
@@ -261,7 +257,7 @@ class Descriptor:
                 f"{e}. MemoryError occurs in calculating fingerprints using parallel. "
                 "Fallback to use a serial version."
             )
-            log_entry(logger, msg, level="info")
+            logger.info(msg)
 
             zeta = None
             dzetadr_forces = None
@@ -283,7 +279,7 @@ class Descriptor:
             https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         """
         msg = "Welford method to calculate mean and standard deviation."
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
 
         # number of features
         conf = configs[0]
@@ -305,13 +301,13 @@ class Descriptor:
 
             if i % 100 == 0:
                 msg = "Processing configuration: {}.".format(i)
-                log_entry(logger, msg, level="info")
+                logger.info(msg)
                 sys.stdout.flush()
 
         stdev = np.sqrt(M2 / n)  # not the unbiased
 
         msg = "Finish mean and standard deviation calculation using Welford method."
-        log_entry(logger, msg, level="info")
+        logger.info(msg)
 
         return mean, stdev
 

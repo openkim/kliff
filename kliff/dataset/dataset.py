@@ -1,15 +1,11 @@
-import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
-from kliff.log import log_entry
 from kliff.utils import to_path
-
-logger = logging.getLogger(__name__)
-
+from loguru import logger
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
@@ -371,9 +367,7 @@ class Dataset:
                 f"No dataset file with file format `{file_format}` found at {parent}."
             )
 
-        log_entry(
-            logger, f"{len(configs)} configurations read from {path}", level="info"
-        )
+        logger.info(f"{len(configs)} configurations read from {path}")
 
         return configs
 

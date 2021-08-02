@@ -1,13 +1,10 @@
-import logging
 import os
 import sys
 from collections.abc import Iterable
 
 import numpy as np
-from kliff.log import log_entry
 from kliff.utils import create_directory, split_string
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class EnergyForcesRMSE:
@@ -82,8 +79,7 @@ class EnergyForcesRMSE:
             specified by ``path``.
         """
 
-        msg = "Start analyzing energy and forces RMSE."
-        log_entry(logger, msg, level="info")
+        logger.info("Start analyzing energy and forces RMSE.")
 
         cas = self.calculator.get_compute_arguments()
 
@@ -97,8 +93,7 @@ class EnergyForcesRMSE:
 
         for i, ca in enumerate(cas):
             if i % 100 == 0:
-                msg = "Processing configuration {}.".format(i)
-                log_entry(logger, msg, level="info")
+                logger.info(f"Processing configuration {i}.")
 
             prefix = "analysis_energy_forces_RMSE-difference"
             enorm, fnorm = self._compute_single_config(
@@ -190,8 +185,7 @@ class EnergyForcesRMSE:
             print(split_string(msg, length=80, starter="#"), file=fout)
             print("\n", file=fout)
 
-        msg = "Finish analyzing energy and forces RMSE."
-        log_entry(logger, msg, level="info")
+        logger.info("Finish analyzing energy and forces RMSE.")
 
     def _compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 

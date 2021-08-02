@@ -1,10 +1,8 @@
 import copy
-import logging
 
 import numpy as np
 from kliff.utils import split_string
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class Fisher:
@@ -54,18 +52,14 @@ class Fisher:
             parameters.
         """
 
-        msg = "Start computing Fisher information matrix."
-        logger.info(msg)
-        print(msg)
+        logger.info("Start computing Fisher information matrix.")
 
         I_all = []
 
         cas = self.calculator.get_compute_arguments()
         for i, ca in enumerate(cas):
             if i % 100 == 0:
-                msg = "Processing configuration {}.".format(i)
-                logger.info(msg)
-                print(msg)
+                logger.info(f"Processing configuration {i}.")
 
             dfdp = self._compute_jacobian_one_config(ca)
             I_all.append(np.dot(dfdp.T, dfdp))
@@ -73,9 +67,7 @@ class Fisher:
         I_stdev = np.std(I_all, axis=0)
 
         self._write_result(I, I_stdev, verbose)
-        msg = "Finish computing Fisher information matrix."
-        logger.info(msg)
-        print(msg)
+        logger.info("Finish computing Fisher information matrix.")
 
         return I, I_stdev
 

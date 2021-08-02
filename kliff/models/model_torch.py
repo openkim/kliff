@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import numpy as np
@@ -6,8 +5,6 @@ import torch
 import torch.nn as nn
 from kliff.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
-
-logger = logging.getLogger(__name__)
 
 
 class ModelTorch(nn.Module):

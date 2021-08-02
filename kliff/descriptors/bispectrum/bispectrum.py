@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 from kliff.descriptors.bispectrum import bs  # C extension
 from kliff.descriptors.descriptor import (
@@ -8,8 +6,7 @@ from kliff.descriptors.descriptor import (
     generate_species_code,
 )
 from kliff.neighbor import NeighborList
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class Bispectrum(Descriptor):
@@ -122,20 +119,18 @@ class Bispectrum(Descriptor):
             )
             dzeta_dr = None
 
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug(
-                "\n" + "=" * 25 + "descriptor values (no normalization)" + "=" * 25
-            )
+        logger.debug(
+            "\n" + "=" * 25 + "descriptor values (no normalization)" + "=" * 25
+        )
 
-            logger.debug("\nconfiguration name: %s", conf.get_identifier())
+        logger.debug(f"\nconfiguration name: {conf.identifier}")
+        logger.debug("\natomid    descriptor values ...")
 
-            logger.debug("\natom id    descriptor values ...")
-
-            for i, line in enumerate(zeta):
-                s = "\n{}    ".format(i)
-                for j in line:
-                    s += "{:.15g} ".format(j)
-                logger.debug(s)
+        for i, line in enumerate(zeta):
+            s = f"\n{i}    "
+            for j in line:
+                s += f"{j:.15g} "
+            logger.debug(s)
 
         return zeta, dzeta_dr
 

@@ -1,4 +1,3 @@
-import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -11,8 +10,6 @@ from kliff.models.model_torch import ModelTorch
 from kliff.models.neural_network import NeuralNetwork
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
-
-logger = logging.getLogger(__name__)
 
 
 class CalculatorTorch:
