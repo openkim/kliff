@@ -133,7 +133,7 @@ configs = tset.get_configs()
 # by:
 
 calc = Calculator(model)
-calc.create(configs)
+_ = calc.create(configs)
 
 
 ##########################################################################################

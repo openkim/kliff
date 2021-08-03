@@ -275,7 +275,7 @@ class Model:
         Echo the model parameters.
 
         Args:
-            filename: Path to write the model parameter info (e.g. sys.stdout) if `None`,
+            filename: Path to write the model parameter info (e.g. sys.stdout). If `None`,
                 do not write.
 
         Returns:
@@ -299,7 +299,7 @@ class Model:
                 with open(filename, "w") as f:
                     f.write(s)
             else:
-                filename.write(s)
+                print(s, file=filename)
 
         return s
 

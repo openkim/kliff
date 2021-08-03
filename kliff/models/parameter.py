@@ -418,7 +418,7 @@ class OptimizingParameters(MSONable):
                 with open(filename, "w") as f:
                     f.write(s)
             else:
-                filename.write(s)
+                print(s, file=filename)
 
         return s
 

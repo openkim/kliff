@@ -87,14 +87,12 @@ def test_descriptor():
     conf.identifier = str(fname)
     configs = [conf, conf]
 
-    # reuse should be the last and `True` should be after `False` so as to test reuse for
-    # each case of normalize, fit_forces, and fit_stress
-    for normalize, fit_forces, fit_stress, serial, reuse in itertools.product(
-        [False, True], [False, True], [False, True], [False, True], [False, True]
+    for normalize, fit_forces, fit_stress, serial in itertools.product(
+        [False, True], [False, True], [False, True], [False, True]
     ):
         desc = ExampleDescriptor(normalize)
         desc.generate_fingerprints(
-            configs, fit_forces, fit_stress, reuse=reuse, use_welford_method=serial
+            configs, fit_forces, fit_stress, use_welford_method=serial
         )
         data = load_fingerprints("fingerprints.pkl")[0]
 
@@ -116,7 +114,7 @@ def test_descriptor():
     # check when normalize is True, if mean and stdev is provided by user, it has to be
     # correct.
     for normalize, fp_path, mean_std_path in itertools.product(
-        [False, True], [None, "fp.pkl"], [None, "ms.pkl"]
+        [False, True], ["fp.pkl"], [None, "ms.pkl"]
     ):
 
         delete_file("fingerprints.pkl")
@@ -131,8 +129,8 @@ def test_descriptor():
             try:
                 desc.generate_fingerprints(
                     configs,
-                    fingerprints_path=fp_path,
-                    fingerprints_mean_and_stdev_path=mean_std_path,
+                    fingerprints_filename=fp_path,
+                    fingerprints_mean_stdev_filename=mean_std_path,
                 )
             except DescriptorError:
                 pass
@@ -140,8 +138,8 @@ def test_descriptor():
         else:
             desc.generate_fingerprints(
                 configs,
-                fingerprints_path=fp_path,
-                fingerprints_mean_and_stdev_path=mean_std_path,
+                fingerprints_filename=fp_path,
+                fingerprints_mean_stdev_filename=mean_std_path,
             )
 
             if fp_path is None:

@@ -111,7 +111,7 @@ configs = tset.get_configs()
 
 # calculator
 calc = CalculatorTorch(model)
-calc.create(configs, reuse=False)
+_ = calc.create(configs, reuse=False)
 
 
 ##########################################################################################
