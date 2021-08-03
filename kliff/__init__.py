@@ -1,16 +1,11 @@
 __version__ = "0.2.2"
 
-import sys
 import warnings
 
-import loguru
-
+from kliff.log import set_logger
 from kliff.utils import torch_available
 
-# set loguru logger
-loguru.logger.remove()  # remove default logger, which log to stderr with level DEBUG
-loguru.logger.add(sys.stderr, level="INFO")
-loguru.logger.add("kliff.log", level="INFO")
+set_logger(level="INFO", stderr=True)
 
 if not torch_available():
     warnings.warn(
