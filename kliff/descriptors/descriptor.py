@@ -166,7 +166,8 @@ class Descriptor:
 
         # remove it, because we use append mode for the file below
         fname = to_path(fname)
-        fname.unlink(missing_ok=True)
+        if fname.exists():
+            fname.unlink()
 
         with open(fname, "ab") as f:
             for i, conf in enumerate(configs):
