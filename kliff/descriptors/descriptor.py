@@ -159,6 +159,10 @@ class Descriptor:
 
         create_directory(fname, is_directory=False)
 
+        # remove it, because we use append mode for the file below
+        fname = to_path(fname)
+        fname.unlink(missing_ok=True)
+
         with open(fname, "ab") as f:
             for i, conf in enumerate(configs):
                 if i % 100 == 0:
