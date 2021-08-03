@@ -101,7 +101,7 @@ setup(
     description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
     long_description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
     classifiers=[
-        "License :: OSI Approved :: Common Development and Distribution License 1.0 (CDDL-1.0)",
+        "License :: OSI Approved :: GNU LESSER GENERAL PUBLIC LICENSE (LGPL-2.1)",
         "Operating System :: OS Independent",
     ],
     zip_safe=False,
