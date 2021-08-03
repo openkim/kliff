@@ -1,5 +1,5 @@
-import os
 from distutils.sysconfig import get_config_vars
+from pathlib import Path
 
 from setuptools import Extension, find_packages, setup
 
@@ -72,9 +72,10 @@ neighlist = Extension(
 )
 
 
-def get_version(fname=os.path.join("kliff", "__init__.py")):
-    with open(fname) as fin:
-        for line in fin:
+def get_version():
+    fname = Path(__file__).parent.joinpath("kliff", "__init__.py")
+    with open(fname) as f:
+        for line in f:
             line = line.strip()
             if "__version__" in line:
                 v = line.split("=")[1]
@@ -85,6 +86,13 @@ def get_version(fname=os.path.join("kliff", "__init__.py")):
                     version = v.strip('" ')
                 break
     return version
+
+
+def get_readme():
+    fname = Path(__file__).parent.joinpath("README.md")
+    with open(fname, "r") as f:
+        readme = f.read()
+    return readme
 
 
 setup(
@@ -99,7 +107,8 @@ setup(
     author_email="wenxx151@gmail.com",
     url="https://github.com/mjwen/kliff",
     description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
-    long_description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
+    long_description=get_readme(),
+    long_description_content_type="text/markdown",
     classifiers=[
         "License :: OSI Approved :: GNU LESSER GENERAL PUBLIC LICENSE (LGPL-2.1)",
         "Operating System :: OS Independent",
