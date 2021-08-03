@@ -27,7 +27,7 @@ class NeuralNetwork(ModelTorch):
 
         self.layers = None
 
-        logger.info(f"`{self.__class__.__name__}` instantiated.")
+        logger.debug(f"`{self.__class__.__name__}` instantiated.")
 
     def add_layers(self, *layers):
         """

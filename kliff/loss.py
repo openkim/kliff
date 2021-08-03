@@ -257,7 +257,7 @@ class LossPhysicsMotivatedModel:
         )
         self.residual_data = residual_data
 
-        logger.info(f"`{self.__class__.__name__}` instantiated.")
+        logger.debug(f"`{self.__class__.__name__}` instantiated.")
 
     def minimize(self, method: str = "L-BFGS-B", **kwargs):
         """
@@ -655,7 +655,7 @@ class LossNeuralNetworkModel(object):
         self.optimizer = None
         self.optimizer_state_path = None
 
-        logger.info(f"`{self.__class__.__name__}` instantiated.")
+        logger.debug(f"`{self.__class__.__name__}` instantiated.")
 
     def minimize(
         self,

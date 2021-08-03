@@ -327,6 +327,6 @@ class NeighborListError(Exception):
         return self.msg
 
 
-def check_error(error, message=None):
+def check_error(error, msg=None):
     if error != 0 and error is not None:
-        raise NeighborListError('Calling "{}" failed.'.format(message))
+        raise NeighborListError(f"Calling `{msg}` failed.")

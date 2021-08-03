@@ -92,7 +92,7 @@ class SymmetryFunction(Descriptor):
         self._set_hyperparams()
         self.size = self.get_size()
 
-        logger.info(f"`{self.__class__.__name__}` descriptor initialized.")
+        logger.debug(f"`{self.__class__.__name__}` descriptor initialized.")
 
     def transform(self, conf, fit_forces=False, fit_stress=False):
         r"""Transform atomic coords to atomic environment descriptor values.
