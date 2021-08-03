@@ -110,7 +110,7 @@ setup(
     long_description=get_readme(),
     long_description_content_type="text/markdown",
     classifiers=[
-        "License :: OSI Approved :: GNU LESSER GENERAL PUBLIC LICENSE (LGPL-2.1)",
+        "License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)",
         "Operating System :: OS Independent",
     ],
     zip_safe=False,
