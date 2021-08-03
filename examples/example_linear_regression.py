@@ -26,7 +26,6 @@ dataset_path = download_dataset(dataset_name="Si_training_set")
 dataset_path = dataset_path.joinpath("varying_alat")
 tset = Dataset(dataset_path)
 configs = tset.get_configs()
-print("Number of configurations:", len(configs))
 
 # calculator
 calc = CalculatorTorch(model)

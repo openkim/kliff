@@ -28,27 +28,6 @@ More examples can be found at `<https://github.com/mjwen/kliff/tree/master/examp
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Lennard-Jones potential that is build in KLIFF (i.e. not models ar...">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_lennard_jones_thumb.png
-     :alt: Train a Lennard-Jones potential
-
-     :ref:`sphx_glr_auto_examples_example_lennard_jones.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
-   /auto_examples/example_lennard_jones
-
-.. raw:: html
-
     <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a linear regression model on the descriptors obtained using the symm...">
 
 .. only:: html
@@ -67,6 +46,27 @@ More examples can be found at `<https://github.com/mjwen/kliff/tree/master/examp
    :hidden:
 
    /auto_examples/example_linear_regression
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Lennard-Jones potential that is build in KLIFF (i.e. not models ar...">
+
+.. only:: html
+
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_lennard_jones_thumb.png
+     :alt: Train a Lennard-Jones potential
+
+     :ref:`sphx_glr_auto_examples_example_lennard_jones.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_lennard_jones
 
 .. raw:: html
 

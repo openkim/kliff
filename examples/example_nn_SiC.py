@@ -64,7 +64,7 @@ configs = tset.get_configs()
 
 # calculator
 calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
-calc.create(configs, reuse=False)
+_ = calc.create(configs, reuse=False)
 
 # loss
 loss = Loss(calc, residual_data={"forces_weight": 0.3})

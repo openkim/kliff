@@ -42,7 +42,7 @@ Compare this with :ref:`tut_kim_sw`.
 
  .. code-block:: none
 
-    4 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set_4_configs
+    2021-08-03 10:31:18.488 | INFO     | kliff.dataset.dataset:_read:370 - 4 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set_4_configs
     #================================================================================
     # Available parameters to optimize.
     # Model: LJ6-12
@@ -60,6 +60,7 @@ Compare this with :ref:`tut_kim_sw`.
     value: [5.0]
     size: 1
 
+
     #================================================================================
     # Model parameters that are optimized.
     #================================================================================
@@ -70,10 +71,11 @@ Compare this with :ref:`tut_kim_sw`.
     epsilon 1
       1.0000000000000000e+00 
 
-    Start minimization using method: L-BFGS-B.
-    Running in serial mode.
 
-    Finish minimization using method: L-BFGS-B.
+    2021-08-03 10:31:18.494 | INFO     | kliff.calculators.calculator:create:106 - Create calculator for 4 configurations.
+    2021-08-03 10:31:18.494 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
+    2021-08-03 10:31:18.494 | INFO     | kliff.loss:_scipy_optimize:389 - Running in serial mode.
+    2021-08-03 10:31:21.493 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
     #================================================================================
     # Model parameters that are optimized.
     #================================================================================
@@ -83,6 +85,7 @@ Compare this with :ref:`tut_kim_sw`.
 
     epsilon 1
       1.5614851569433212e+00 
+
 
 
 
@@ -128,7 +131,7 @@ Compare this with :ref:`tut_kim_sw`.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  4.353 seconds)
+   **Total running time of the script:** ( 0 minutes  5.014 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_lennard_jones.py:
