@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.error import report_import_error
+from kliff.log import get_log_level
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
 from kliff.neighbor import assemble_forces, assemble_stress
@@ -626,13 +627,14 @@ class KIMModel(Model):
         # refresh model
         self.kim_model.clear_then_refresh()
 
-        # TODO only do it when we know it is debug level
-        params = self.get_kim_model_params()
-        s = ""
-        for name, p in params.items():
-            s += f"\nname: {name}\n"
-            s += str(p.as_dict())
-        logger.debug(s)
+        if get_log_level() == "DEBUG":
+            params = self.get_kim_model_params()
+            s = ""
+            for name, p in params.items():
+                s += f"\nname: {name}\n"
+                s += str(p.as_dict())
+
+            logger.debug(s)
 
     def write_kim_model(self, path: Path = None):
         """
