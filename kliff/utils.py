@@ -1,4 +1,5 @@
 import os
+import pickle
 import random
 import tarfile
 from collections.abc import Sequence
@@ -119,7 +120,7 @@ def download_dataset(dataset_name: str) -> Path:
     return path
 
 
-def create_directory(path: Union[str, Path], is_directory=False):
+def create_directory(path: Union[str, Path], is_directory: bool = False):
     p = to_path(path)
     if is_directory:
         dirname = p
@@ -129,13 +130,40 @@ def create_directory(path: Union[str, Path], is_directory=False):
         os.makedirs(dirname)
 
 
-def yaml_dump(obj, filename):
+def yaml_dump(data, filename: Union[Path, str]):
+    """
+    Dump data to a yaml file.
+    """
     create_directory(filename)
     with open(to_path(filename), "w") as f:
-        yaml.dump(obj, f, default_flow_style=False)
+        yaml.dump(data, f, default_flow_style=False)
 
 
-def yaml_load(filename):
+def yaml_load(filename: Union[Path, str]):
+    """
+    Load data from a yaml file.
+    """
     with open(to_path(filename), "r") as f:
-        obj = yaml.safe_load(f)
-    return obj
+        data = yaml.safe_load(f)
+
+    return data
+
+
+def pickle_dump(data, filename: Union[Path, str]):
+    """
+    Dump data to a pickle file.
+    """
+
+    create_directory(filename)
+    with open(to_path(filename), "wb") as f:
+        pickle.dump(data, f)
+
+
+def pickle_load(filename: Union[Path, str]):
+    """
+    Load data from a pikel file.
+    """
+    with open(to_path(filename), "rb") as f:
+        data = pickle.load(f)
+
+    return data

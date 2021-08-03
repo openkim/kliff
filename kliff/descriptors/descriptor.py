@@ -1,13 +1,12 @@
-import os
 import pickle
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from kliff import parallel
 from kliff.dataset import Configuration
-from kliff.utils import create_directory, to_path
+from kliff.utils import create_directory, pickle_dump, to_path
 from loguru import logger
 
 
@@ -62,7 +61,6 @@ class Descriptor:
         self.size = None
         self.mean = None
         self.stdev = None
-        self._has_mean_stdev = False
 
     def generate_fingerprints(
         self,
@@ -70,9 +68,7 @@ class Descriptor:
         fit_forces: bool = False,
         fit_stress: bool = False,
         fingerprints_filename: Union[Path, str] = "fingerprints.pkl",
-        fingerprints_mean_stdev_filename: Optional[
-            Union[Path, str]
-        ] = "fingerprints_mean_and_stdev.pkl",
+        fingerprints_mean_stdev_filename: Optional[Union[Path, str]] = None,
         use_welford_method: bool = False,
         nprocs: int = 1,
     ):
@@ -97,9 +93,13 @@ class Descriptor:
                 in serial mode, otherwise `nprocs` processes will be forked via
                 multiprocessing to do the work.
         """
+        if self.mean is not None and self.stdev is not None:
+            has_mean_stdev = True
+        else:
+            has_mean_stdev = False
 
         # compute mean and stdev
-        if self.normalize and not self._has_mean_stdev:
+        if self.normalize and not has_mean_stdev:
             logger.info("Start computing mean and stdev of fingerprints.")
 
             if use_welford_method:
@@ -108,6 +108,7 @@ class Descriptor:
                 )
                 self.mean, self.stdev = self._welford_mean_and_stdev(configs)
                 zeta, dzetadr_forces, dzetadr_stress = None, None, None
+
             else:
                 zeta, dzetadr_forces, dzetadr_stress = self._calc_zeta_dzetadr(
                     configs, fit_forces, fit_stress, nprocs
@@ -118,26 +119,30 @@ class Descriptor:
 
             logger.info("Finish computing mean and stdev of fingerprints.")
 
-            # save to file
-            self.dump_mean_stdev(fingerprints_mean_stdev_filename)
+            # save to a pickle file
+            if fingerprints_mean_stdev_filename is None:
+                fingerprints_mean_stdev_filename = "fingerprints_mean_and_stdev.pkl"
+            state_dict = self.state_dict()
+            pickle_dump(state_dict, fingerprints_mean_stdev_filename)
+
             logger.info(
-                f"Fingerprints mean and stdev save to {fingerprints_mean_stdev_filename}."
+                "Fingerprints mean and stdev saved to "
+                f"`{fingerprints_mean_stdev_filename}`."
             )
 
         else:
             zeta, dzetadr_forces, dzetadr_stress = None, None, None
 
         # generate fingerprints
-        if fingerprints_filename is not None:
-            self._dump_fingerprints(
-                configs,
-                fingerprints_filename,
-                zeta,
-                dzetadr_forces,
-                dzetadr_stress,
-                fit_forces,
-                fit_stress,
-            )
+        self._dump_fingerprints(
+            configs,
+            fingerprints_filename,
+            zeta,
+            dzetadr_forces,
+            dzetadr_stress,
+            fit_forces,
+            fit_stress,
+        )
 
         return fingerprints_filename
 
@@ -342,47 +347,37 @@ class Descriptor:
         """Return the hyperparameters of descriptors."""
         return self.hyperparams
 
-    def dump_mean_stdev(self, path: Union[Path, str]):
+    def state_dict(self) -> Dict[str, Any]:
         """
-        Save mean and stdev info to a file.
-
-        Args:
-            path: path to to file.
+        Return the state dict of the descriptor.
         """
-        path = to_path(path)
-        create_directory(path, is_directory=False)
-
         data = {"mean": self.mean, "stdev": self.stdev}
-        with open(path, "wb") as f:
-            pickle.dump(data, f)
 
-    def load_mean_stdev(self, path: Union[Path, str]):
+        return data
+
+    def load_state_dict(self, data: Dict[str, Any]):
         """
-        Load mean and stdev info from a file.
+        Load state dict of a descriptor.
 
         Args:
-            path: path to to file.
+            data: state dict to load.
         """
         try:
-            with open(path, "rb") as f:
-                data = pickle.load(f)
-                mean = data["mean"]
-                stdev = data["stdev"]
+            mean = data["mean"]
+            stdev = data["stdev"]
         except Exception as e:
-            raise DescriptorError(
-                f"Cannot load mean and standard data from `{path}`. {str(e)}"
-            )
+            raise DescriptorError(f"Corrupted state dict for descriptor: {str(e)}")
 
-        if len(mean.shape) != 1 or mean.shape[0] != self.get_size():
-            raise DescriptorError(f"Corrupted mean data from `{path}`.")
+        # more checks on data integrity
+        if mean is not None and stdev is not None:
+            if len(mean.shape) != 1 or mean.shape[0] != self.get_size():
+                raise DescriptorError(f"Corrupted descriptor mean.")
 
-        if len(stdev.shape) != 1 or stdev.shape[0] != self.get_size():
-            raise DescriptorError("Corrupted standard deviation data from `{path}`.")
+            if len(stdev.shape) != 1 or stdev.shape[0] != self.get_size():
+                raise DescriptorError("Corrupted descriptor standard deviation.")
 
-        self.mean, self.stdev = mean, stdev
-        self._has_mean_stdev = True
-
-        return mean, stdev
+        self.mean = mean
+        self.stdev = stdev
 
 
 def load_fingerprints(path: Union[Path, str]):
@@ -406,8 +401,7 @@ def load_fingerprints(path: Union[Path, str]):
         except EOFError:
             pass
         except Exception as e:
-            msg = 'Cannot fingerprints from "{}". {}'.format(path, str(e))
-            raise DescriptorError(msg)
+            raise DescriptorError(f"Cannot load fingerprints from `{path}`. {str(e)}")
 
     return data
 
