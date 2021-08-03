@@ -1,4 +1,3 @@
-import logging
 import os
 from pathlib import Path
 from typing import List, Optional
@@ -7,8 +6,7 @@ import numpy as np
 import torch
 from kliff.descriptors.descriptor import Descriptor
 from kliff.models.model_torch import ModelTorch
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class NeuralNetwork(ModelTorch):
@@ -29,7 +27,7 @@ class NeuralNetwork(ModelTorch):
 
         self.layers = None
 
-        logger.info(f"`{self.__class__.__name__}` instantiated.")
+        logger.debug(f"`{self.__class__.__name__}` instantiated.")
 
     def add_layers(self, *layers):
         """
@@ -110,9 +108,7 @@ class NeuralNetwork(ModelTorch):
         self.descriptor.write_kim_params(path, desc_name)
         self._write_kim_dropout_binary(path, dropout_name, dropout_ensemble_size)
 
-        msg = f"KLIFF trained model write to {path}"
-        print(msg)
-        logger.info(msg)
+        logger.info(f"KLIFF trained model written to {path}.")
 
     def _write_kim_params(self, path, filename="NN.params"):
 
@@ -151,7 +147,6 @@ class NeuralNetwork(ModelTorch):
             fout.write("  # size of each layer (last must be 1)\n")
 
             # activation function
-            # TODO enable writing different activations for each layer
             activation = activations[0]
             fout.write("{}    # activation function\n".format(activation))
 

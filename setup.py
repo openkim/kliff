@@ -92,7 +92,7 @@ setup(
     version=get_version(),
     packages=find_packages(),
     setup_requires=["pybind11"],
-    install_requires=["requests", "pybind11", "scipy", "pyyaml", "monty"],
+    install_requires=["requests", "pybind11", "scipy", "pyyaml", "monty", "loguru"],
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     ext_modules=[sym_fn, bispectrum, neighlist],
     author="Mingjian Wen",

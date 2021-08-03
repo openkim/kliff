@@ -1,3 +1,6 @@
+0. install requirements
+   $ pip install -r rtd_requirements.txt
+
 1. Run
    $ generate_apidoc.py
    to generate `tmp_apidoc`. Compare with these in `source/apidoc`, and move
@@ -9,3 +12,5 @@
    or
    # not generating sphinx-gallery examples (much faster)
    $ make html-notutorial
+
+3. To view locally, open ./build/html/index.html

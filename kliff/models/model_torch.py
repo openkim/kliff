@@ -1,5 +1,3 @@
-import logging
-import os
 from pathlib import Path
 
 import numpy as np
@@ -7,8 +5,7 @@ import torch
 import torch.nn as nn
 from kliff.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class ModelTorch(nn.Module):
@@ -85,37 +82,41 @@ class ModelTorch(nn.Module):
         Args:
             filename: Path to store the model.
         """
+        state_dict = {
+            "model_state_dict": self.state_dict(),
+            "descriptor_state_dict": self.descriptor.state_dict(),
+        }
+
         filename = to_path(filename)
         create_directory(filename)
-        torch.save(self.state_dict(), str(filename))
 
-        # save descriptor mean and stdev
-        fname = filename.parent.joinpath("mean_and_stdev.pkl")
-        self.descriptor.dump_mean_stdev(fname)
+        torch.save(state_dict, str(filename))
 
     def load(self, filename: Path, mode: str = "train"):
         """
-        Load a model on disk into memory.
+        Load a save model.
 
         Args:
-            filename: Path where the model is stored.
+            filename: Path where the model is stored, e.g. kliff_model.pkl
             mode: Purpose of the loaded model. Should be either `train` or `eval`.
         """
         filename = to_path(filename)
-        self.load_state_dict(torch.load(str(filename)))
+        state_dict = torch.load(str(filename))
+
+        # load model state dict
+        self.load_state_dict(state_dict["model_state_dict"])
 
         if mode == "train":
             self.train()
         elif mode == "eval":
             self.eval()
         else:
-            raise ModelTorchError(
-                'Unrecognized mode "{}" in model.load().'.format(mode)
-            )
+            raise ModelTorchError(f"Unrecognized mode `{mode}`.")
 
-        # load descriptor mean and stdev
-        fname = filename.parent.joinpath("mean_and_stdev.pkl")
-        self.descriptor.load_mean_stdev(fname)
+        # load descriptor state dict
+        self.descriptor.load_state_dict(state_dict["descriptor_state_dict"])
+
+        logger.info(f"Model loaded from `{filename}`")
 
     def write_kim_model(self, path: Path = None):
         raise NotImplementedError("`write_kim_model` not implemented.")

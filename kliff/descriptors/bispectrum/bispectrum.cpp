@@ -408,7 +408,7 @@ void Bispectrum::compute_ui(int const jnum)
     rsq = x * x + y * y + z * z;
     r = std::sqrt(rsq);
 
-    // TODO this is not in agreement with the paper, maybe cahnge it
+    // TODO this is not in agreement with the paper, maybe change it
     theta0 = (r - rmin0) * rfac0 * MY_PI / (rcutij[j] - rmin0);
     // theta0 = (r - rmin0) * rscale0;
 
@@ -586,7 +586,7 @@ void Bispectrum::compute_duidrj(double const * rij_in,
   double const rsq = x * x + y * y + z * z;
   double const r = std::sqrt(rsq);
 
-  // TODO this is not in agreemnt with paper
+  // TODO this is not in agreement with paper
   double const rscale0 = rfac0 * MY_PI / (rcut_in - rmin0);
 
   double const theta0 = (r - rmin0) * rscale0;

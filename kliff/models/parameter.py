@@ -1,4 +1,3 @@
-import logging
 import sys
 import warnings
 from pathlib import Path
@@ -6,8 +5,6 @@ from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
 from monty.json import MSONable
-
-logger = logging.getLogger(__name__)
 
 
 class Parameter(MSONable):
@@ -174,7 +171,7 @@ class Parameter(MSONable):
 
 class OptimizingParameters(MSONable):
     """
-    A collection of paramters that will be optimized.
+    A collection of parameters that will be optimized.
 
     This can be all the parameters of a model or a subset of the parameters of a model.
     The behavior of individual component of a parameter can also be controlled. For

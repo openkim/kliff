@@ -1,11 +1,11 @@
-import warnings
-
-from kliff.log import set_up_logger
-from kliff.utils import torch_available
-
 __version__ = "0.2.2"
 
-set_up_logger()
+import warnings
+
+from kliff.log import set_logger
+from kliff.utils import torch_available
+
+set_logger(level="INFO", stderr=True)
 
 if not torch_available():
     warnings.warn(

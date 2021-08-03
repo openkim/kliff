@@ -3,8 +3,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from kliff.atomic_data import atomic_number, atomic_species
 from kliff.dataset.dataset import Configuration
-
-from . import nl
+from kliff.neighbor import nl  # C extension
 
 
 class NeighborList:
@@ -328,6 +327,6 @@ class NeighborListError(Exception):
         return self.msg
 
 
-def check_error(error, message=None):
+def check_error(error, msg=None):
     if error != 0 and error is not None:
-        raise NeighborListError('Calling "{}" failed.'.format(message))
+        raise NeighborListError(f"Calling `{msg}` failed.")

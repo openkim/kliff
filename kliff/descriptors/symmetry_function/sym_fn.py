@@ -1,20 +1,16 @@
-import logging
 import os
 from collections import OrderedDict
 
 import numpy as np
-
-from ...log import log_entry
-from ...neighbor import NeighborList
-from ..descriptor import (
+from kliff.descriptors.descriptor import (
     Descriptor,
     generate_full_cutoff,
     generate_species_code,
     generate_unique_cutoff_pairs,
 )
-from . import sf
-
-logger = logging.getLogger(__name__)
+from kliff.descriptors.symmetry_function import sf  # C extension
+from kliff.neighbor import NeighborList
+from loguru import logger
 
 
 class SymmetryFunction(Descriptor):
@@ -96,8 +92,7 @@ class SymmetryFunction(Descriptor):
         self._set_hyperparams()
         self.size = self.get_size()
 
-        msg = '"{}" descriptor initialized.'.format(self.__class__.__name__)
-        log_entry(logger, msg, level="info")
+        logger.debug(f"`{self.__class__.__name__}` descriptor initialized.")
 
     def transform(self, conf, fit_forces=False, fit_stress=False):
         r"""Transform atomic coords to atomic environment descriptor values.
@@ -198,21 +193,20 @@ class SymmetryFunction(Descriptor):
         else:
             dzetadr_stress_config = None
 
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            msg = (
-                "=" * 25
-                + "descriptor values (no normalization)"
-                + "=" * 25
-                + "\nconfiguration name: {}".format(conf.get_identifier())
-                + "\natom id    descriptor values ..."
-            )
-            log_entry(logger, msg, level="debug")
+        msg = (
+            "=" * 25
+            + "descriptor values (no normalization)"
+            + "=" * 25
+            + f"\nconfiguration name: {conf.identifier}"
+            + "\natom id    descriptor values ..."
+        )
+        logger.debug(msg)
 
-            for i, line in enumerate(zeta_config):
-                s = "\n{}    ".format(i)
-                for j in line:
-                    s += "{:.15g} ".format(j)
-                log_entry(logger, s, level="debug")
+        for i, line in enumerate(zeta_config):
+            s = f"\n{i}    "
+            for j in line:
+                s += f"{j:.15g} "
+            logger.debug(s)
 
         return zeta_config, dzetadr_forces_config, dzetadr_stress_config
 

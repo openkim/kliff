@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Sequence
 from typing import Any, Dict, List, Union
 
@@ -6,8 +5,7 @@ import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import Model
 from kliff.utils import length_equal
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class Calculator:
@@ -134,7 +132,6 @@ class Calculator:
             compute_arguments.compute(self.model.get_model_params())
         return compute_arguments.results
 
-    # TODO, possibly, and an argument `reference` to get reference values
     def get_energy(self, compute_arguments) -> float:
         """
         Get the energy of a configuration.
