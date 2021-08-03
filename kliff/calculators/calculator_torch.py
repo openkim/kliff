@@ -43,9 +43,7 @@ class CalculatorTorch:
         use_forces: bool = True,
         use_stress: bool = False,
         fingerprints_filename: Union[Path, str] = "fingerprints.pkl",
-        fingerprints_mean_stdev_filename: Optional[
-            Union[Path, str]
-        ] = "fingerprints_mean_and_stdev.pkl",
+        fingerprints_mean_stdev_filename: Optional[Union[Path, str]] = None,
         reuse: bool = False,
         use_welford_method: bool = False,
         nprocs: int = 1,
@@ -93,8 +91,11 @@ class CalculatorTorch:
             logger.info(f"Reuse fingerprints `{path}`")
 
             if self.model.descriptor.normalize:
-                path = to_path(fingerprints_mean_stdev_filename)
-                if not path.exists():
+                if fingerprints_mean_stdev_filename is None:
+                    path = None
+                else:
+                    path = to_path(fingerprints_mean_stdev_filename)
+                if (path is None) or (not path.exists()):
                     raise CalculatorTorchError(
                         f"You specified `reuse=True` to reuse the fingerprints. The mean "
                         f"and stdev file of the fingerprints `{path}` does not exists."
@@ -167,13 +168,13 @@ class CalculatorTorch:
 
                 if self.use_forces:
                     dzetadr_forces = sample["dzetadr_forces"]
-                    f = self.compute_forces(dedz, dzetadr_forces)
+                    f = self._compute_forces(dedz, dzetadr_forces)
                     forces_config.append(f)
 
                 if self.use_stress:
                     dzetadr_stress = sample["dzetadr_stress"]
                     volume = sample["dzetadr_volume"]
-                    s = self.compute_stress(dedz, dzetadr_stress, volume)
+                    s = self._compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
 
         self.results["energy"] = energy_config
@@ -185,16 +186,6 @@ class CalculatorTorch:
             "stress": stress_config,
         }
 
-    @staticmethod
-    def compute_forces(denergy_dzeta, dzetadr):
-        forces = -torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1]))
-        return forces
-
-    @staticmethod
-    def compute_stress(denergy_dzeta, dzetadr, volume):
-        forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
-        return forces
-
     def get_energy(self, batch):
         return self.results["energy"]
 
@@ -203,6 +194,16 @@ class CalculatorTorch:
 
     def get_stress(self, batch):
         return self.results["stress"]
+
+    @staticmethod
+    def _compute_forces(denergy_dzeta, dzetadr):
+        forces = -torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1]))
+        return forces
+
+    @staticmethod
+    def _compute_stress(denergy_dzeta, dzetadr, volume):
+        forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
+        return forces
 
 
 class CalculatorTorchSeparateSpecies(CalculatorTorch):
@@ -305,13 +306,13 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
 
                 if self.use_forces:
                     dzetadr_forces = sample["dzetadr_forces"]
-                    f = self.compute_forces(dedz, dzetadr_forces)
+                    f = self._compute_forces(dedz, dzetadr_forces)
                     forces_config.append(f)
 
                 if self.use_stress:
                     dzetadr_stress = sample["dzetadr_stress"]
                     volume = sample["dzetadr_volume"]
-                    s = self.compute_stress(dedz, dzetadr_stress, volume)
+                    s = self._compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
 
         self.results["energy"] = energy_config
