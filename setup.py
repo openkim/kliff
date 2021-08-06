@@ -114,7 +114,7 @@ setup(
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     author="Mingjian Wen",
     author_email="wenxx151@gmail.com",
-    url="https://github.com/mjwen/kliff",
+    url="https://github.com/openkim/kliff",
     description="KLIFF: KIM-based Learning-Integrated Fitting Framework",
     long_description=get_readme(),
     long_description_content_type="text/markdown",

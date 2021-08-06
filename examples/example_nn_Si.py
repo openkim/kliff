@@ -13,7 +13,7 @@ In this tutorial, we train a neural network (NN) potential for silicon.
 # We are going to fit the NN potential to a training set of energies and forces from
 # compressed and stretched diamond silicon structures (the same training set used in
 # :ref:`tut_kim_sw`).
-# Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
+# Download the training set :download:`Si_training_set.tar.gz # <https://raw.githubusercontent.com/openkim/kliff/master/examples/Si_training_set.tar.gz>`
 # (It will be automatically downloaded if it is not present.)
 # The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
 # information of this format.
