@@ -41,7 +41,7 @@ training set of energies and forces consisting of compressed and stretched diamo
 silicon structures, as well as configurations drawn from molecular dynamics trajectories
 at different temperatures.
 Download the training set :download:`Si_training_set.tar.gz
-<https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`.
+<https://raw.githubusercontent.com/openkim/kliff/master/examples/Si_training_set.tar.gz>`.
 (It will be automatically downloaded if not present.)
 The data is stored in # **extended xyz** format, and see :ref:`doc.dataset` for more
 information of this format.
@@ -261,7 +261,7 @@ test data). For the silicon training set, we can read and process the files by:
 
  .. code-block:: none
 
-    2021-08-03 14:11:20.673 | INFO     | kliff.dataset.dataset:_read:370 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
+    2021-08-11 22:43:14.005 | INFO     | kliff.dataset.dataset:_read:370 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
 
 
 
@@ -304,7 +304,7 @@ by:
 
  .. code-block:: none
 
-    2021-08-03 14:11:24.234 | INFO     | kliff.calculators.calculator:create:106 - Create calculator for 1000 configurations.
+    2021-08-11 22:43:17.665 | INFO     | kliff.calculators.calculator:create:106 - Create calculator for 1000 configurations.
 
 
 
@@ -350,9 +350,9 @@ a max number of 100 iterations.
 
  .. code-block:: none
 
-    2021-08-03 14:11:24.236 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2021-08-03 14:11:24.236 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
-    2021-08-03 14:12:53.825 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
+    2021-08-11 22:43:17.667 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
+    2021-08-11 22:43:17.667 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
+    2021-08-11 22:44:47.766 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
 
           fun: 0.6940780132873
      hess_inv: <3x3 LbfgsInvHessProduct with dtype=float64>
@@ -412,7 +412,7 @@ that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
       2.2014613053445915e+00 
 
 
-    2021-08-03 14:12:53.848 | INFO     | kliff.models.kim:write_kim_model:676 - KLIFF trained model write to `/Users/mjwen/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained`
+    2021-08-11 22:44:47.782 | INFO     | kliff.models.kim:write_kim_model:676 - KLIFF trained model write to `/Users/mjwen/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained`
 
 
 
@@ -441,7 +441,7 @@ parameters quite reasonably. The second line saves the fitted model to a file na
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  35.551 seconds)
+   **Total running time of the script:** ( 1 minutes  36.084 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_kim_SW_Si.py:

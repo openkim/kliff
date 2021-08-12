@@ -30,7 +30,7 @@ In this tutorial, we train a neural network (NN) potential for silicon.
 We are going to fit the NN potential to a training set of energies and forces from
 compressed and stretched diamond silicon structures (the same training set used in
 :ref:`tut_kim_sw`).
-Download the training set :download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/master/examples/Si_training_set.tar.gz>`
+Download the training set :download:`Si_training_set.tar.gz # <https://raw.githubusercontent.com/openkim/kliff/master/examples/Si_training_set.tar.gz>`
 (It will be automatically downloaded if it is not present.)
 The data is stored in **extended xyz** format, and see :ref:`doc.dataset` for more
 information of this format.
@@ -185,16 +185,16 @@ fingerprints generated from the descriptor if it is present.
 
  .. code-block:: none
 
-    2021-08-03 10:44:02.060 | INFO     | kliff.dataset.dataset:_read:370 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
-    2021-08-03 10:44:02.061 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
-    2021-08-03 10:44:37.249 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
-    2021-08-03 10:44:37.258 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
-    2021-08-03 10:44:37.259 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
-    2021-08-03 10:44:37.337 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:174 - Processing configuration: 0.
-    2021-08-03 10:44:38.223 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:174 - Processing configuration: 100.
-    2021-08-03 10:44:38.990 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:174 - Processing configuration: 200.
-    2021-08-03 10:44:39.890 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:174 - Processing configuration: 300.
-    2021-08-03 10:44:40.613 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:217 - Pickle 400 configurations finished.
+    2021-08-11 22:52:40.505 | INFO     | kliff.dataset.dataset:_read:370 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
+    2021-08-11 22:52:40.505 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
+    2021-08-11 22:53:13.620 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
+    2021-08-11 22:53:13.622 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
+    2021-08-11 22:53:13.622 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
+    2021-08-11 22:53:13.662 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 0.
+    2021-08-11 22:53:13.956 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 100.
+    2021-08-11 22:53:14.244 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 200.
+    2021-08-11 22:53:14.624 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 300.
+    2021-08-11 22:53:15.100 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:218 - Pickle 400 configurations finished.
 
 
 
@@ -233,7 +233,7 @@ drives the loss down in a reasonable time.
 
  .. code-block:: none
 
-    2021-08-03 10:44:40.834 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
+    2021-08-11 22:53:15.324 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
     Epoch = 0       loss = 7.3307514191e+01
     Epoch = 1       loss = 7.2090656281e+01
     Epoch = 2       loss = 7.1389846802e+01
@@ -245,7 +245,7 @@ drives the loss down in a reasonable time.
     Epoch = 8       loss = 6.7668614388e+01
     Epoch = 9       loss = 6.7058616638e+01
     Epoch = 10      loss = 6.6683934212e+01
-    2021-08-03 10:44:54.747 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
+    2021-08-11 22:53:27.929 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
 
 
 
@@ -277,7 +277,7 @@ codes such as LAMMPS via the KIM API.
 
  .. code-block:: none
 
-    2021-08-03 10:44:54.827 | INFO     | kliff.models.neural_network:write_kim_model:111 - KLIFF trained model written to /Users/mjwen/Applications/kliff/examples/NeuralNetwork_KLIFF__MO_000000111111_000.
+    2021-08-11 22:53:28.005 | INFO     | kliff.models.neural_network:write_kim_model:111 - KLIFF trained model written to /Users/mjwen/Applications/kliff/examples/NeuralNetwork_KLIFF__MO_000000111111_000.
 
 
 
@@ -293,7 +293,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  55.163 seconds)
+   **Total running time of the script:** ( 0 minutes  49.215 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_Si.py:

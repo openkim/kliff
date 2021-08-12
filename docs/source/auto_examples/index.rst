@@ -22,7 +22,7 @@ species.
 :ref:`tut_lj`: similar to :ref:`tut_kim_sw` (where a KIM model is used), here the
 Lennard-Jones model built in KLIFF is used.
 
-More examples can be found at `<https://github.com/mjwen/kliff/tree/master/examples>`_.
+More examples can be found at `<https://github.com/openkim/kliff/tree/master/examples>`_.
 
 
 
