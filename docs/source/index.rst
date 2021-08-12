@@ -45,7 +45,7 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
 
     faq
     apidoc/kliff
-    Fork KLIFF on GitHub <https://github.com/mjwen/kliff>
+    Fork KLIFF on GitHub <https://github.com/openkim/kliff>
 
 
 

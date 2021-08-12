@@ -30,7 +30,7 @@ Alternatively, you can install from source:
 
 .. code-block:: bash
 
-    $ git clone https://github.com/mjwen/kliff
+    $ git clone https://github.com/openkim/kliff
     $ pip install ./kliff
 
 

@@ -1,7 +1,7 @@
 # KIM-based Learning-Integrated Fitting Framework (KLIFF)
 
-[![Build Status](https://travis-ci.com/mjwen/kliff.svg?branch=master)](https://travis-ci.com/mjwen/kliff)
-[![Python package](https://github.com/mjwen/kliff/workflows/Python%20package/badge.svg)](https://github.com/mjwen/kliff/actions)
+[![Build Status](https://travis-ci.com/openkim/kliff.svg?branch=master)](https://travis-ci.com/openkim/kliff)
+[![Python package](https://github.com/openkim/kliff/workflows/Python%20package/badge.svg)](https://github.com/openkim/kliff/actions)
 [![Documentation Status](https://readthedocs.org/projects/kliff/badge/?version=latest)](https://kliff.readthedocs.io/en/latest/?badge=latest)
 [![Anaconda-Server Badge](https://img.shields.io/conda/vn/conda-forge/kliff.svg)](https://anaconda.org/conda-forge/kliff)
 [![PyPI](https://img.shields.io/pypi/v/kliff.svg)](https://pypi.python.org/pypi/kliff)
@@ -11,6 +11,7 @@
 KLIFF is an interatomic potential fitting package that can be used to fit
 physics-motivated (PM) potentials, as well as machine learning potentials such
 as the neural network (NN) models.
+
 
 ## Install
 
@@ -88,6 +89,7 @@ model.write_kim_model()
 Detailed explanation and more tutorial examples can be found in the
 [documentation](https://kliff.readthedocs.io/en/latest/tutorials.html).
 
+
 ## Why you want to use KLIFF (or not use it)
 
 - Interacting seamlessly with[ KIM](https://openkim.org), the fitted model can
@@ -98,6 +100,15 @@ Detailed explanation and more tutorial examples can be found in the
 - Parallel execution
 - [PyTorch](https://pytorch.org) backend for NN
 
-## Contact
 
-Mingjian Wen (wenxx151@gmail.com)
+## Cite
+
+```
+@Article{wen2021kliff,
+  title   = {{KLIFF}: A framework to develop analytic and machine learning interatomic potentials},
+  author  = {Mingjian Wen and Yaser Afshar and Ryan S. Elliott and Ellad B. Tadmor},
+  journal = {arXiv preprint arXiv:2108.03523},
+  url     = {https://arxiv.org/abs/2108.03523},
+  year    = {2021},
+}
+```
