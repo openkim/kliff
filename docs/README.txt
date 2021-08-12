@@ -1,5 +1,5 @@
 0. install requirements
-   $ pip install -r rtd_requirements.txt
+   $ pip install ../rtd_requirements-docs.txt
 
 1. Run
    $ generate_apidoc.py

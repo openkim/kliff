@@ -1,0 +1,6 @@
+pybind11
+numpy
+scipy
+pyyaml
+monty
+loguru
