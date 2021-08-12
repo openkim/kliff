@@ -60,7 +60,7 @@ Inspect dataset
 ===============
 KLIFF provides a command line tool to get a statistics of a dataset of files.
 For example, for the
-:download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/mjwen/kliff/pytorch/examples/Si_training_set.tar.gz>`
+:download:`Si_training_set.tar.gz <https://raw.githubusercontent.com/openkim/kliff/pytorch/examples/Si_training_set.tar.gz>`
 (the tarball can be extracted by: ``$ tar xzf Si_training_set.tar.gz``), running::
 
     $ kliff dataset --count Si_training_set
