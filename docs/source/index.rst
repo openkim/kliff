@@ -17,9 +17,6 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
 .. toctree::
     :maxdepth: 1
 
-    changelog
-
-
 .. toctree::
     :caption: The Basics
     :maxdepth: 2
@@ -43,9 +40,10 @@ simulation codes such as **LAMMPS**, **ASE**, **DL_POLY**, and **GULP** among ot
     :caption: Extra Information
     :maxdepth: 2
 
+    changelog
     faq
     apidoc/kliff
-    Fork KLIFF on GitHub <https://github.com/openkim/kliff>
+    GitHub Repository <https://github.com/openkim/kliff>
 
 
 
