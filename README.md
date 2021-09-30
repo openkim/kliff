@@ -105,7 +105,7 @@ Detailed explanation and more tutorial examples can be found in the
 
 ```
 @Article{wen2021kliff,
-  title   = {{KLIFF}: A framework to develop analytic and machine learning interatomic potentials},
+  title   = {{KLIFF}: A framework to develop physics-based and machine learning interatomic potentials},
   author  = {Mingjian Wen and Yaser Afshar and Ryan S. Elliott and Ellad B. Tadmor},
   journal = {arXiv preprint arXiv:2108.03523},
   url     = {https://arxiv.org/abs/2108.03523},
