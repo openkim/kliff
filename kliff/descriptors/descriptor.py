@@ -326,7 +326,11 @@ class Descriptor:
 
     def get_size(self):
         """Return the size of the descriptor vector."""
-        return self.size
+        if self.mean is not None:
+            size = len(self.mean)
+        else:
+            size = self.size
+        return size
 
     def get_mean(self):
         """Return a list of the mean of the fingerprints."""
@@ -352,7 +356,7 @@ class Descriptor:
         """
         Return the state dict of the descriptor.
         """
-        data = {"mean": self.mean, "stdev": self.stdev}
+        data = {"mean": self.mean, "stdev": self.stdev, "size": self.size}
 
         return data
 
@@ -366,19 +370,21 @@ class Descriptor:
         try:
             mean = data["mean"]
             stdev = data["stdev"]
+            size = data["size"]
         except Exception as e:
             raise DescriptorError(f"Corrupted state dict for descriptor: {str(e)}")
 
         # more checks on data integrity
-        if mean is not None and stdev is not None:
-            if len(mean.shape) != 1 or mean.shape[0] != self.get_size():
+        if mean is not None and stdev is not None and size is not None:
+            if len(mean.shape) != 1 or mean.shape[0] != size:
                 raise DescriptorError(f"Corrupted descriptor mean.")
 
-            if len(stdev.shape) != 1 or stdev.shape[0] != self.get_size():
+            if len(stdev.shape) != 1 or stdev.shape[0] != size:
                 raise DescriptorError("Corrupted descriptor standard deviation.")
 
         self.mean = mean
         self.stdev = stdev
+        self.size = size
 
 
 def load_fingerprints(path: Union[Path, str]):

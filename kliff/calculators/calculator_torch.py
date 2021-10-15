@@ -8,7 +8,7 @@ from kliff.dataset.dataset import Configuration
 from kliff.dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 from kliff.models.model_torch import ModelTorch
 from kliff.models.neural_network import NeuralNetwork
-from kliff.utils import to_path
+from kliff.utils import pickle_load, to_path
 from loguru import logger
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
@@ -82,24 +82,29 @@ class CalculatorTorch:
 
         # reuse existing file
         if reuse:
-            path = to_path(fingerprints_filename)
-            if not path.exists():
+            self.fingerprints_path = to_path(fingerprints_filename)
+            if not self.fingerprints_path.exists():
                 raise CalculatorTorchError(
                     f"You specified `reuse=True` to reuse the fingerprints stored in "
-                    f"`{path}` This file does not exists."
+                    f"`{self.fingerprints_path}` This file does not exists."
                 )
-            logger.info(f"Reuse fingerprints `{path}`")
+            logger.info(f"Reuse fingerprints `{self.fingerprints_path}`")
 
             if self.model.descriptor.normalize:
-                if fingerprints_mean_stdev_filename is None:
-                    path = None
-                else:
-                    path = to_path(fingerprints_mean_stdev_filename)
-                if (path is None) or (not path.exists()):
+                path = (
+                    None
+                    if fingerprints_mean_stdev_filename is None
+                    else to_path(fingerprints_mean_stdev_filename)
+                )
+
+                if path is None or not path.exists():
                     raise CalculatorTorchError(
                         f"You specified `reuse=True` to reuse the fingerprints. The mean "
                         f"and stdev file of the fingerprints `{path}` does not exists."
                     )
+
+                self.model.descriptor.load_state_dict(pickle_load(path))
+
                 logger.info(f"Reuse fingerprints mean and stdev `{path}`")
 
         # generate fingerprints and pickle it
@@ -134,19 +139,26 @@ class CalculatorTorch:
 
         grad = self.use_forces or self.use_stress
 
-        # collate batch input to NN
+        # TODO, the batching should be moved to dataloader
+        # get information from batch
         zeta_config = [sample["zeta"] for sample in batch]
-        if grad:
-            for zeta in zeta_config:
-                zeta.requires_grad_(True)
+        zeta_stacked = torch.cat(zeta_config, dim=0)
 
         # evaluate model
-        zeta_stacked = torch.cat(zeta_config, dim=0)
-        energy_atom = self.model(zeta_stacked)
+        if grad:
+            zeta_stacked.requires_grad_(True)
 
-        # energy
+        energy_atom = self.model(zeta_stacked)
+        if grad:
+            dedzeta = torch.autograd.grad(
+                energy_atom.sum(), zeta_stacked, create_graph=True
+            )[0]
+            zeta_stacked.requires_grad_(False)  # no need of grad any more
+
         natoms_config = [len(zeta) for zeta in zeta_config]
         energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
+        if grad:
+            dedzeta_config = torch.split(dedzeta, natoms_config)
 
         # forces and stress
         if not self.use_forces:
@@ -159,12 +171,7 @@ class CalculatorTorch:
             stress_config = []
         if grad:
             for i, sample in enumerate(batch):
-
-                # derivative of energy w.r.t. zeta
-                energy = energy_config[i]
-                zeta = zeta_config[i]
-                dedz = torch.autograd.grad(energy, zeta, create_graph=True)[0]
-                zeta.requires_grad_(False)  # no need of grad any more
+                dedz = dedzeta_config[i]
 
                 if self.use_forces:
                     dzetadr_forces = sample["dzetadr_forces"]
