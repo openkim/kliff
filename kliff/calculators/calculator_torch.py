@@ -82,13 +82,13 @@ class CalculatorTorch:
 
         # reuse existing file
         if reuse:
-            path = to_path(fingerprints_filename)
-            if not path.exists():
+            self.fingerprints_path = to_path(fingerprints_filename)
+            if not self.fingerprints_path.exists():
                 raise CalculatorTorchError(
                     f"You specified `reuse=True` to reuse the fingerprints stored in "
-                    f"`{path}` This file does not exists."
+                    f"`{self.fingerprints_path}` This file does not exists."
                 )
-            logger.info(f"Reuse fingerprints `{path}`")
+            logger.info(f"Reuse fingerprints `{self.fingerprints_path}`")
 
             if self.model.descriptor.normalize:
                 if fingerprints_mean_stdev_filename is None:
