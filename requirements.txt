@@ -1,5 +1,5 @@
 pybind11==2.8.1
-scipy==1.7.1
+scipy==1.7.2
 numpy==1.21.4
 pyyaml==5.4.1
 monty==2021.8.17
