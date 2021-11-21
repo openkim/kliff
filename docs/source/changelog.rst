@@ -5,6 +5,18 @@ Change Log
 ==========
 
 
+v0.3.1 (2021/11/20)
+===================
+
+- add gpu training for NN model; set the ``gpu`` parameter of a calculator (e.g.
+  ``CalculatorTorch(model, gpu=True)``) to use it
+- add pyproject.toml, requirements.txt, dependabot.yml to config repo
+- switch to ``furo`` doc theme
+- changed: compute grad of energy wrt desc in batch mode (NN calculator)
+- fix: set `fingerprints_filename` and load descriptor state dict when reuse fingerprints
+  (NN calculator)
+
+
 v0.3.0 (2021/08/03)
 ===================
 
