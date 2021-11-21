@@ -812,12 +812,14 @@ class LossNeuralNetworkModel(object):
 
     def _get_loss_single_config(self, sample, pred_energy, pred_forces, pred_stress):
 
+        device = self.calculator.model.device
+
         if self.calculator.use_energy:
             pred = pred_energy.reshape(-1)  # reshape scalar as 1D tensor
-            ref = sample["energy"].reshape(-1)
+            ref = sample["energy"].reshape(-1).to(device)
 
         if self.calculator.use_forces:
-            ref_forces = sample["forces"]
+            ref_forces = sample["forces"].to(device)
             if self.calculator.use_energy:
                 pred = torch.cat((pred, pred_forces.reshape(-1)))
                 ref = torch.cat((ref, ref_forces.reshape(-1)))
@@ -826,7 +828,7 @@ class LossNeuralNetworkModel(object):
                 ref = ref_forces.reshape(-1)
 
         if self.calculator.use_stress:
-            ref_stress = sample["stress"]
+            ref_stress = sample["stress"].to(device)
             if self.calculator.use_energy or self.calculator.use_stress:
                 pred = torch.cat((pred, pred_stress.reshape(-1)))
                 ref = torch.cat((ref, ref_stress.reshape(-1)))
