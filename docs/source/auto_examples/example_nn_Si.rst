@@ -128,7 +128,7 @@ We can then build the NN model on top of the descriptor.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 77-105
+.. GENERATED FROM PYTHON SOURCE LINES 77-107
 
 In the above code, we build a NN model with an input layer, two hidden layer, and an
 output layer. The ``descriptor`` carries the information of the input layer, so it is
@@ -158,8 +158,10 @@ only difference is that we need to use the
 :mod:`~kliff.calculators.CalculatorTorch()`, which is targeted for the NN model.
 Also, its ``create()`` method takes an argument ``reuse`` to inform whether to reuse the
 fingerprints generated from the descriptor if it is present.
+To train on gpu, set ``gpu=True`` in ``Calculator``.
 
-.. GENERATED FROM PYTHON SOURCE LINES 105-117
+
+.. GENERATED FROM PYTHON SOURCE LINES 107-119
 
 .. code-block:: default
 
@@ -171,7 +173,7 @@ fingerprints generated from the descriptor if it is present.
     configs = tset.get_configs()
 
     # calculator
-    calc = CalculatorTorch(model)
+    calc = CalculatorTorch(model, gpu=False)
     _ = calc.create(configs, reuse=False)
 
 
@@ -185,21 +187,22 @@ fingerprints generated from the descriptor if it is present.
 
  .. code-block:: none
 
-    2021-08-11 22:52:40.505 | INFO     | kliff.dataset.dataset:_read:370 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
-    2021-08-11 22:52:40.505 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
-    2021-08-11 22:53:13.620 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
-    2021-08-11 22:53:13.622 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
-    2021-08-11 22:53:13.622 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
-    2021-08-11 22:53:13.662 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 0.
-    2021-08-11 22:53:13.956 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 100.
-    2021-08-11 22:53:14.244 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 200.
-    2021-08-11 22:53:14.624 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 300.
-    2021-08-11 22:53:15.100 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:218 - Pickle 400 configurations finished.
+    2021-11-20 22:33:47.584 | INFO     | kliff.dataset.dataset:_read:370 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
+    2021-11-20 22:33:47.585 | INFO     | kliff.calculators.calculator_torch:_get_device:417 - Training on cpu
+    2021-11-20 22:33:47.586 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
+    2021-11-20 22:34:24.241 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
+    2021-11-20 22:34:24.244 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
+    2021-11-20 22:34:24.244 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
+    2021-11-20 22:34:24.908 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 0.
+    2021-11-20 22:34:25.779 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 100.
+    2021-11-20 22:34:26.898 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 200.
+    2021-11-20 22:34:28.475 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 300.
+    2021-11-20 22:34:29.533 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:218 - Pickle 400 configurations finished.
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 118-130
+.. GENERATED FROM PYTHON SOURCE LINES 120-132
 
 Loss function
 -------------
@@ -214,7 +217,7 @@ through the training set for ``10`` epochs. The learning rate ``lr`` used here i
 ``0.001``, and typically, one may need to play with this to find an acceptable one that
 drives the loss down in a reasonable time.
 
-.. GENERATED FROM PYTHON SOURCE LINES 130-135
+.. GENERATED FROM PYTHON SOURCE LINES 132-137
 
 .. code-block:: default
 
@@ -233,7 +236,7 @@ drives the loss down in a reasonable time.
 
  .. code-block:: none
 
-    2021-08-11 22:53:15.324 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
+    2021-11-20 22:34:29.791 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
     Epoch = 0       loss = 7.3307514191e+01
     Epoch = 1       loss = 7.2090656281e+01
     Epoch = 2       loss = 7.1389846802e+01
@@ -245,18 +248,18 @@ drives the loss down in a reasonable time.
     Epoch = 8       loss = 6.7668614388e+01
     Epoch = 9       loss = 6.7058616638e+01
     Epoch = 10      loss = 6.6683934212e+01
-    2021-08-11 22:53:27.929 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
+    2021-11-20 22:34:33.793 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 136-139
+.. GENERATED FROM PYTHON SOURCE LINES 138-141
 
 We can save the trained model to disk, and later can load it back if we want. We can
 also write the trained model to a KIM model such that it can be used in other simulation
 codes such as LAMMPS via the KIM API.
 
-.. GENERATED FROM PYTHON SOURCE LINES 139-146
+.. GENERATED FROM PYTHON SOURCE LINES 141-148
 
 .. code-block:: default
 
@@ -277,12 +280,12 @@ codes such as LAMMPS via the KIM API.
 
  .. code-block:: none
 
-    2021-08-11 22:53:28.005 | INFO     | kliff.models.neural_network:write_kim_model:111 - KLIFF trained model written to /Users/mjwen/Applications/kliff/examples/NeuralNetwork_KLIFF__MO_000000111111_000.
+    2021-11-20 22:34:33.901 | INFO     | kliff.models.neural_network:write_kim_model:111 - KLIFF trained model written to /Users/mjwen/Applications/kliff/examples/NeuralNetwork_KLIFF__MO_000000111111_000.
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 147-152
+.. GENERATED FROM PYTHON SOURCE LINES 149-154
 
 .. note::
    Now we have trained an NN for a single specie Si. If you have multiple species in
@@ -293,7 +296,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  49.215 seconds)
+   **Total running time of the script:** ( 0 minutes  48.952 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_Si.py:

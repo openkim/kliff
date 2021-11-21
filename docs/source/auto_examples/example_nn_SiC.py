@@ -63,7 +63,7 @@ tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator
-calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
+calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c}, gpu=False)
 _ = calc.create(configs, reuse=False)
 
 # loss
