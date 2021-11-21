@@ -86,7 +86,7 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
     configs = tset.get_configs()
 
     # calculator
-    calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
+    calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c}, gpu=False)
     _ = calc.create(configs, reuse=False)
 
     # loss
@@ -104,14 +104,6 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
  .. code-block:: none
 
-    2021-08-03 11:20:34.072 | INFO     | kliff.dataset.dataset:_read:370 - 10 configurations read from /Users/mjwen/Applications/kliff/examples/SiC_training_set
-    2021-08-03 11:20:34.072 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
-    2021-08-03 11:20:35.093 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
-    2021-08-03 11:20:35.097 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
-    2021-08-03 11:20:35.097 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
-    2021-08-03 11:20:35.125 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:174 - Processing configuration: 0.
-    2021-08-03 11:20:35.168 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:217 - Pickle 10 configurations finished.
-    2021-08-03 11:20:35.172 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
     Epoch = 0       loss = 5.7247632980e+01
     Epoch = 1       loss = 5.7215625763e+01
     Epoch = 2       loss = 5.7186323166e+01
@@ -123,7 +115,6 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
     Epoch = 8       loss = 5.7020624161e+01
     Epoch = 9       loss = 5.6992567062e+01
     Epoch = 10      loss = 5.6973577499e+01
-    2021-08-03 11:20:35.602 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
 
 
 
@@ -152,7 +143,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  3.271 seconds)
+   **Total running time of the script:** ( 0 minutes  3.036 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_SiC.py:

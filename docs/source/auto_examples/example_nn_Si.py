@@ -102,6 +102,8 @@ model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 # :mod:`~kliff.calculators.CalculatorTorch()`, which is targeted for the NN model.
 # Also, its ``create()`` method takes an argument ``reuse`` to inform whether to reuse the
 # fingerprints generated from the descriptor if it is present.
+# To train on gpu, set ``gpu=True`` in ``Calculator``.
+#
 
 # training set
 dataset_path = download_dataset(dataset_name="Si_training_set")
@@ -110,7 +112,7 @@ tset = Dataset(dataset_path)
 configs = tset.get_configs()
 
 # calculator
-calc = CalculatorTorch(model)
+calc = CalculatorTorch(model, gpu=False)
 _ = calc.create(configs, reuse=False)
 
 
