@@ -240,16 +240,24 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
 
     Args:
         models: {species:model} with species specifying the chemical symbol for the model.
+        gpu: whether to use gpu for training. If `int` (e.g. 0), will trained on this
+            gpu device. If `True` will always train on gpu `0`.
     """
 
-    def __init__(
-        self,
-        models: Dict[str, NeuralNetwork],
-    ):
+    def __init__(self, models: Dict[str, NeuralNetwork], gpu: Union[bool, int] = None):
         self.models = models
+
+        device = None
+        if isinstance(gpu, bool):
+            if gpu:
+                device = torch.device(0)
+        elif isinstance(gpu, int):
+            device = torch.dist(gpu)
 
         self.dtype = None
         for s, m in self.models.items():
+            m.to(device)
+
             if self.dtype is None:
                 self.dtype = m.descriptor.dtype
             else:
@@ -257,6 +265,7 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
                     raise CalculatorTorchError("inconsistent `dtype` from descriptors.")
 
         # TODO change this (we now temporarily set model to the last one)
+        # this is used by loss to get some info, e.g. descriptor
         self.model = m
 
         self.fingerprints_path = None
@@ -269,13 +278,11 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
 
     def compute(self, batch):
 
+        device = self.model.device
+
         grad = self.use_forces or self.use_stress
 
         # collate batch by species
-        zeta_config = [sample["zeta"] for sample in batch]
-        if grad:
-            for zeta in zeta_config:
-                zeta.requires_grad_(True)
 
         supported_species = self.models.keys()
         zeta_by_species = {s: [] for s in supported_species}
@@ -283,13 +290,13 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         zeta_config = []
 
         for i, sample in enumerate(batch):
-            zeta = sample["zeta"]
+            zeta = sample["zeta"].to(device)
             species = sample["configuration"].species
             zeta.requires_grad_(True)
             zeta_config.append(zeta)
 
             for s, z in zip(species, zeta):
-                # TODO move check to somewhere else to speed up computation
+                # TODO move check to dataset to speed up computation?
                 if s not in supported_species:
                     raise CalculatorTorchError(f"No model for species: {s}")
                 else:
@@ -333,13 +340,13 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
                 zeta.requires_grad_(False)  # no need of grad any more
 
                 if self.use_forces:
-                    dzetadr_forces = sample["dzetadr_forces"]
+                    dzetadr_forces = sample["dzetadr_forces"].to(device)
                     f = self._compute_forces(dedz, dzetadr_forces)
                     forces_config.append(f)
 
                 if self.use_stress:
                     dzetadr_stress = sample["dzetadr_stress"]
-                    volume = sample["dzetadr_volume"]
+                    volume = sample["dzetadr_volume"].to(device)
                     s = self._compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
 
