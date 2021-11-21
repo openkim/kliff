@@ -412,7 +412,7 @@ def _get_device(gpu):
             logger.info(f"Training on gpu")
     elif isinstance(gpu, int):
         device = torch.device(gpu)
-        logger.info(f"Training on gpu: {gpu}")
+        logger.info(f"Training on gpu {gpu}")
     if device is None:
         logger.info("Training on cpu")
 
