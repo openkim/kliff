@@ -27,13 +27,7 @@ class CalculatorTorch:
     implemented_property = ["energy", "forces", "stress"]
 
     def __init__(self, model: ModelTorch, gpu: Union[bool, int] = None):
-
-        device = None
-        if isinstance(gpu, bool):
-            if gpu:
-                device = torch.device(0)
-        elif isinstance(gpu, int):
-            device = torch.dist(gpu)
+        device = _get_device(gpu)
 
         self.model = model.to(device)
         self.dtype = self.model.descriptor.dtype
@@ -245,14 +239,9 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
     """
 
     def __init__(self, models: Dict[str, NeuralNetwork], gpu: Union[bool, int] = None):
-        self.models = models
+        device = _get_device(gpu)
 
-        device = None
-        if isinstance(gpu, bool):
-            if gpu:
-                device = torch.device(0)
-        elif isinstance(gpu, int):
-            device = torch.dist(gpu)
+        self.models = models
 
         self.dtype = None
         for s, m in self.models.items():
@@ -412,3 +401,19 @@ class CalculatorTorchError(Exception):
     def __init__(self, msg):
         super(CalculatorTorchError, self).__init__(msg)
         self.msg = msg
+
+
+def _get_device(gpu):
+
+    device = None
+    if isinstance(gpu, bool):
+        if gpu:
+            device = torch.device(0)
+            logger.info(f"Training on gpu")
+    elif isinstance(gpu, int):
+        device = torch.dist(gpu)
+        logger.info(f"Training on gpu: {gpu}")
+    if device is None:
+        logger.info("Training on cpu")
+
+    return device
