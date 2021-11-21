@@ -121,6 +121,10 @@ class ModelTorch(nn.Module):
     def write_kim_model(self, path: Path = None):
         raise NotImplementedError("`write_kim_model` not implemented.")
 
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
 
 class ModelTorchError(Exception):
     def __init__(self, msg):

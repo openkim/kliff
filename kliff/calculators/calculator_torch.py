@@ -20,13 +20,22 @@ class CalculatorTorch:
 
     Args:
         model: torch models, e.g. :class:`~kliff.neuralnetwork.NeuralNetwork`.
+        gpu: whether to use gpu for training. If `int` (e.g. 0), will trained on this
+            gpu device. If `True` will always train on gpu `0`.
     """
 
     implemented_property = ["energy", "forces", "stress"]
 
-    def __init__(self, model: ModelTorch):
+    def __init__(self, model: ModelTorch, gpu: Union[bool, int] = None):
 
-        self.model = model
+        device = None
+        if isinstance(gpu, bool):
+            if gpu:
+                device = torch.device(0)
+        elif isinstance(gpu, int):
+            device = torch.dist(gpu)
+
+        self.model = model.to(device)
         self.dtype = self.model.descriptor.dtype
         self.fingerprints_path = None
 
@@ -137,28 +146,29 @@ class CalculatorTorch:
 
     def compute(self, batch):
 
+        #
+        # shape N--number of atoms in a config; D--feature dim
+        # zeta: (N, D)
+        # dzetadr_force: (N, D, 3N)
+        # dzetadr_stress: (N, D, 6)
+        #
+        # batching dzetadr_force seems difficult, because two axes have different size
+        # this seems doable, combine N and 3N as one dim, and use einstein sum
+
+        device = self.model.device
+
         grad = self.use_forces or self.use_stress
 
         # TODO, the batching should be moved to dataloader
         # get information from batch
         zeta_config = [sample["zeta"] for sample in batch]
-        zeta_stacked = torch.cat(zeta_config, dim=0)
+        zeta_stacked = torch.cat(zeta_config, dim=0).to(device)
 
         # evaluate model
         if grad:
             zeta_stacked.requires_grad_(True)
 
         energy_atom = self.model(zeta_stacked)
-        if grad:
-            dedzeta = torch.autograd.grad(
-                energy_atom.sum(), zeta_stacked, create_graph=True
-            )[0]
-            zeta_stacked.requires_grad_(False)  # no need of grad any more
-
-        natoms_config = [len(zeta) for zeta in zeta_config]
-        energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
-        if grad:
-            dedzeta_config = torch.split(dedzeta, natoms_config)
 
         # forces and stress
         if not self.use_forces:
@@ -169,17 +179,28 @@ class CalculatorTorch:
             stress_config = None
         else:
             stress_config = []
+
+        natoms_config = [len(zeta) for zeta in zeta_config]
+        energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
+
         if grad:
+            dedzeta = torch.autograd.grad(
+                energy_atom.sum(), zeta_stacked, create_graph=True
+            )[0]
+            zeta_stacked.requires_grad_(False)  # no need of grad any more
+
+            dedzeta_config = torch.split(dedzeta, natoms_config)
+
             for i, sample in enumerate(batch):
                 dedz = dedzeta_config[i]
 
                 if self.use_forces:
-                    dzetadr_forces = sample["dzetadr_forces"]
+                    dzetadr_forces = sample["dzetadr_forces"].to(device)
                     f = self._compute_forces(dedz, dzetadr_forces)
                     forces_config.append(f)
 
                 if self.use_stress:
-                    dzetadr_stress = sample["dzetadr_stress"]
+                    dzetadr_stress = sample["dzetadr_stress"].to(device)
                     volume = sample["dzetadr_volume"]
                     s = self._compute_stress(dedz, dzetadr_stress, volume)
                     stress_config.append(s)
