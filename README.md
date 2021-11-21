@@ -69,13 +69,13 @@ model.add_layers(
 # Training set (dataset will be downloaded from:
 # https://github.com/openkim/kliff/blob/master/examples/Si_training_set.tar.gz)
 dataset_path = download_dataset(dataset_name="Si_training_set")
-dataset_path = dataset_path.join("varying_alat")
+dataset_path = dataset_path.joinpath("varying_alat")
 train_set = Dataset(dataset_path)
 configs = train_set.get_configs()
 
 # Set up calculator to compute energy and forces for atomic configurations in the
 # training set using the neural network model
-calc = CalculatorTorch(model)
+calc = CalculatorTorch(model, gpu=False)
 calc.create(configs)
 
 # Define a loss function and train the model by minimizing the loss
@@ -98,7 +98,7 @@ Detailed explanation and more tutorial examples can be found in the
 - High level API, fitting with a few lines of codes
 - Low level API for creating complex NN models
 - Parallel execution
-- [PyTorch](https://pytorch.org) backend for NN
+- [PyTorch](https://pytorch.org) backend for NN (include GPU training)
 
 
 ## Cite
@@ -107,8 +107,9 @@ Detailed explanation and more tutorial examples can be found in the
 @Article{wen2021kliff,
   title   = {{KLIFF}: A framework to develop physics-based and machine learning interatomic potentials},
   author  = {Mingjian Wen and Yaser Afshar and Ryan S. Elliott and Ellad B. Tadmor},
-  journal = {arXiv preprint arXiv:2108.03523},
-  url     = {https://arxiv.org/abs/2108.03523},
+  journal = {Computer Physics Communications},
+  pages  =  {108218},
   year    = {2021},
+  doi     = {10.1016/j.cpc.2021.108218},
 }
 ```
