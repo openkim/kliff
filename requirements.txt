@@ -2,5 +2,5 @@ pybind11==2.8.1
 scipy==1.7.3
 numpy==1.21.4
 pyyaml==6.0
-monty==2021.8.17
+monty==2021.12.1
 loguru==0.5.3
