@@ -108,7 +108,7 @@ Detailed explanation and more tutorial examples can be found in the
   title   = {{KLIFF}: A framework to develop physics-based and machine learning interatomic potentials},
   author  = {Mingjian Wen and Yaser Afshar and Ryan S. Elliott and Ellad B. Tadmor},
   journal = {Computer Physics Communications},
-  pages   =  {108218},
+  pages   = {108218},
   year    = {2021},
   doi     = {10.1016/j.cpc.2021.108218},
 }

@@ -181,15 +181,18 @@ class Model:
             parameters, which are called each minimization step after the optimizer
             updates the parameters. The function with be given a dictionary of
             :meth:`~kliff.model.parameter.Parameter` as argument, which can
-            then be manipulated to set relations between parameters.
+            then be manipulated to set relations between parameters. The function
+            should return dict with updated params Dict[str, Parameter]
 
             Example:
                 In the following example, we set the value of ``B[0]`` to ``2 * A[0]``::
 
-                    def params_relation(model_params):
+                    def params_relation(model_params: Dict[str, Parameter]):
                         A = model_params['A']
                         B = model_params['B']
                         B[0] = 2*A[0]
+
+                        return model_params
     """
 
     def __init__(
@@ -445,7 +448,7 @@ class Model:
         self.opt_params.update_opt_params(params)
 
         if self.params_relation_callback is not None:
-            self.params_relation_callback(self.model_params)
+            self.model_params = self.params_relation_callback(self.model_params)
 
     def get_opt_param_name_value_and_indices(
         self, index: int

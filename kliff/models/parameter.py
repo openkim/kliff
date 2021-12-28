@@ -592,12 +592,12 @@ class OptimizingParameters(MSONable):
                 idx = _Index(name, p_idx, c_idx)
 
                 # check whether already in self._index
-                already_in = False
+                already_in = None
                 for k, i in enumerate(self._index):
                     if idx == i:
                         already_in = k
                         break
-                if already_in is not False:
+                if already_in is not None:
                     warnings.warn(
                         f"Parameter `{name}` component `{c_idx}` already set. Reset it.",
                         category=Warning,
@@ -630,7 +630,7 @@ class OptimizingParameters(MSONable):
 
 class _Index:
     """
-    Mapping of a component of the optimizing parameter list to the model parameters dict.
+    Mapping of a component of the optimizing parameter list to the model parameter dict.
     """
 
     def __init__(self, name, parameter_index=None, component_index=None):

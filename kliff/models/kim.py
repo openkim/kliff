@@ -377,16 +377,18 @@ class KIMModel(Model):
             parameters, which are called each minimization step after the optimizer
             updates the parameters. The function with be given a dictionary of
             :meth:`~kliff.model.parameter.Parameter` as argument, which can
-            then be manipulated to set relations between parameters.
+            then be manipulated to set relations between parameters. The function
+            should return dict with updated params Dict[str, Parameter]
 
             Example:
+                In the following example, we set the value of ``B[0]`` to ``2 * A[0]``::
 
-            In the following example, we set the value of B[0] to 2 * A[0].
+                    def params_relation(model_params: Dict[str, Parameter]):
+                        A = model_params['A']
+                        B = model_params['B']
+                        B[0] = 2*A[0]
 
-            def params_relation(model_params):
-                A = model_params['A']
-                B = model_params['B']
-                B[0] = 2*A[0]
+                        return model_params
     """
 
     def __init__(
@@ -515,7 +517,7 @@ class KIMModel(Model):
                 else:  # should never reach here
                     KIMModelError(f"get unexpected parameter data type `{dtype}`")
 
-                params[name] = Parameter(value=values, index=i)
+            params[name] = Parameter(value=values, name=name, index=i)
 
         return params
 
@@ -607,22 +609,37 @@ class KIMModel(Model):
         """
         Update optimizing parameters (a sequence used by the optimizer) to the kim model.
         """
+
         # update from opt params to model params
-        # TODO, in super().update_model_params(), we have parameter relation set,
-        #   these parameters need to be updated here as well. However, in general
-        #   we do not know how parameters are modified in parameter_relation,
-        #   and it seems the only hope is to keep a copy of parameters and do some
-        #   comparison to check which are modified and then set them.
         super().update_model_params(params)
 
-        # update from model params to kim params
-        n = self.get_num_opt_params()
-        for i in range(n):
-            _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
-            try:
-                self.kim_model.set_parameter(p_idx, c_idx, value)
-            except RuntimeError:
-                raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
+        # only update optimizing params
+        if self.params_relation_callback is None:
+            # update from model params to kim params
+            n = self.get_num_opt_params()
+            for i in range(n):
+                _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
+                try:
+                    self.kim_model.set_parameter(p_idx, c_idx, value)
+                except RuntimeError:
+                    raise kimpy.KimPyError(
+                        "Calling `kim_model.set_parameter()` failed."
+                    )
+
+        # When params_relation_callback is set, a user can do whatever in it
+        # function, e.g. update params is not an optimizing parameter.
+        # In general, we do not know how parameters are modified in there,
+        # and therefore, we need to update all params in model_params to kim
+        else:
+            for name, params in self.model_params.items():
+                p_idx = params.index
+                for c_idx, value in enumerate(params.value):
+                    try:
+                        self.kim_model.set_parameter(p_idx, c_idx, value)
+                    except RuntimeError:
+                        raise kimpy.KimPyError(
+                            "Calling `kim_model.set_parameter()` failed."
+                        )
 
         # refresh model
         self.kim_model.clear_then_refresh()
