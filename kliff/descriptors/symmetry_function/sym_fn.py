@@ -469,9 +469,9 @@ def get_set51():
     for key, values in params.items():
         for val in values:
             if key == "g2":
-                val["eta"] /= bhor2ang ** 2
+                val["eta"] /= bhor2ang**2
             elif key == "g4":
-                val["eta"] /= bhor2ang ** 2
+                val["eta"] /= bhor2ang**2
 
     return params
 
@@ -526,9 +526,9 @@ def get_set30():
     for key, values in params.items():
         for val in values:
             if key == "g2":
-                val["eta"] /= bhor2ang ** 2
+                val["eta"] /= bhor2ang**2
             elif key == "g4":
-                val["eta"] /= bhor2ang ** 2
+                val["eta"] /= bhor2ang**2
 
     return params
 
