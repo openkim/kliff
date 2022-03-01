@@ -3,4 +3,4 @@ scipy==1.7.3
 numpy==1.21.4
 pyyaml==6.0
 monty==2022.1.19
-loguru==0.5.3
+loguru==0.6.0
