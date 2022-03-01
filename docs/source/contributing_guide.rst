@@ -4,16 +4,15 @@ Contributing guide
 Code style
 ----------
 
-- KLIFF uses black_ to format the code. It adopts the default style of black_
-  with only one exception: we use line length 90 instead of of the black_default (88).
+- KLIFF uses black_ to format the code. It adopts the default style of black_.
   To format the code, one can use:
 
   .. code-block:: bash
 
-    black --line-length 90 <filename>.py
+    black <filename>.py
 
   Supply ``--skip-string-normalization`` to ``black`` to avoid changing single
-  quote to double quote.
+  quote to double quote (not recommended).
 
 - The docstring of **KLIFF** follows the `numpy` style, which can be found at numpydoc_.
 
