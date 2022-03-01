@@ -9,7 +9,10 @@
 #include <vector>
 
 #define DIM 3
-#define TOL 1.0e-10
+
+// Should not simply use std::numeric_limits<double>::epsilon(), which is still
+// too small to be distinguishable
+#define TOL 10 * std::numeric_limits<double>::epsilon()
 
 
 void nbl_clean_content(NeighList * const nl)
@@ -88,8 +91,8 @@ int nbl_build(NeighList * const nl,
   for (int k = 0; k < DIM; k++)
   {
     min[k] = coordinates[k];
-    // epsilon to prevent max==min for 1D and 2D case
-    max[k] = coordinates[k] + std::numeric_limits<double>::epsilon();
+    // + TOL to prevent max==min for 1D and 2D case
+    max[k] = coordinates[k] + TOL;
   }
   for (int i = 0; i < numberOfParticles; i++)
   {
@@ -314,8 +317,8 @@ int nbl_create_paddings(int const numberOfParticles,
   // add some extra value to deal with edge case
   for (int i = 0; i < DIM; i++)
   {
-    min[i] -= 1e-10;
-    max[i] += 1e-10;
+    min[i] -= TOL;
+    max[i] += TOL;
   }
 
   // volume of cell
