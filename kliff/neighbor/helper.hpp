@@ -105,12 +105,15 @@ inline void coords_to_index(double const * x,
 {
   for (int i = 0; i < 3; i++)
   {
-    // set range to std::numeric_limits<double>::epsilon() to handle 1D
-    // and 2D cases where max[i] == min[i]
-    double range = max[i] - min[i] > 0 ? max[i] - min[i]
-                                       : std::numeric_limits<double>::epsilon();
+    //    // set range to std::numeric_limits<double>::epsilon() to handle 1D
+    //    // and 2D cases where max[i] == min[i]
+    //    double range = max[i] - min[i] > 0 ? max[i] - min[i]
+    //                                       :
+    //                                       std::numeric_limits<double>::epsilon();
+    //    index[i] = static_cast<int>((x[i] - min[i]) / range * size[i]);
 
-    index[i] = static_cast<int>((x[i] - min[i]) / range * size[i]);
+    // this assumes max[i] - min[i] is larger than zero
+    index[i] = static_cast<int>((x[i] - min[i]) / (max[i] - min[i]) * size[i]);
 
     // handle edge case when x[i] = max[i]
     index[i] = std::min(index[i], size[i] - 1);
