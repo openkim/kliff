@@ -1,9 +1,10 @@
-from typing import Callable, Dict, Optional
+from typing import Dict, Optional
 
 import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
+from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
 
 
@@ -110,9 +111,9 @@ class LennardJones(Model):
     """
 
     def __init__(
-        self, model_name="LJ6-12", params_relation_callback: Optional[Callable] = None
+        self, model_name="LJ6-12", params_transform: Optional[ParameterTransform] = None
     ):
-        super(LennardJones, self).__init__(model_name, params_relation_callback)
+        super(LennardJones, self).__init__(model_name, params_transform)
 
     def init_model_params(self):
         model_params = {

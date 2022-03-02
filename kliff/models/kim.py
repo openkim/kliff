@@ -8,6 +8,7 @@ from kliff.error import report_import_error
 from kliff.log import get_log_level
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
+from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import assemble_forces, assemble_stress
 from loguru import logger
 
@@ -373,35 +374,33 @@ class KIMModel(Model):
         model_name: name of a KIM model. Available models can be found at:
             https://openkim.org.
             For example `SW_StillingerWeber_1985_Si__MO_405512056662_006`.
-        params_relation_callback: A callback function to set the relations between
-            parameters, which are called each minimization step after the optimizer
-            updates the parameters. The function with be given a dictionary of
-            :meth:`~kliff.model.parameter.Parameter` as argument, which can
-            then be manipulated to set relations between parameters. The function
-            should return dict with updated params Dict[str, Parameter]
-
-            Example:
-                In the following example, we set the value of ``B[0]`` to ``2 * A[0]``::
-
-                    def params_relation(model_params: Dict[str, Parameter]):
-                        A = model_params['A']
-                        B = model_params['B']
-                        B[0] = 2*A[0]
-
-                        return model_params
+        params_transform: optional transformation of parameters. Let's call the
+            parameters initialized in `init_model_params()` as original parameter
+            space. Sometimes, it's easier to work in another parameter (e.g.
+            optimizers can perform better in the log space). Then we can use this
+            parameter transformation class to transform between the original
+            parameter space and the new easy-to-work space. Typically, a model only
+            knows how to work in its original space to compute, e.g. energy and
+            forces, so we need to inverse transform parameters back to original space
+            (after an optimizer update its value in the log space).
+            A `params_transform` instance should implement both a `transform` and an
+            `inverse_transform` method to accomplish the above tasks.
+            Note, all the parameters of this (the `Model`) class
+            (e.g. `self.model_params`, and `self.opt_params`) are in the transformed
+            easy-to-work space.
     """
 
     def __init__(
         self,
         model_name: str,
-        params_relation_callback: Optional[Callable] = None,
+        params_transform: Optional[ParameterTransform] = None,
     ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
 
         self.kim_model = self._create_kim_model(model_name)
 
-        super(KIMModel, self).__init__(model_name, params_relation_callback)
+        super(KIMModel, self).__init__(model_name, params_transform)
 
     def init_model_params(self) -> Dict[str, Parameter]:
         return self.get_kim_model_params()
@@ -614,7 +613,7 @@ class KIMModel(Model):
         super().update_model_params(params)
 
         # only update optimizing params
-        if self.params_relation_callback is None:
+        if self.params_transform is None:
             # update from model params to kim params
             n = self.get_num_opt_params()
             for i in range(n):
@@ -626,10 +625,12 @@ class KIMModel(Model):
                         "Calling `kim_model.set_parameter()` failed."
                     )
 
-        # When params_relation_callback is set, a user can do whatever in it
+        # When params_transform is set, a user can do whatever in it
         # function, e.g. update params is not an optimizing parameter.
         # In general, we do not know how parameters are modified in there,
         # and therefore, we need to update all params in model_params to kim
+        # Note, `params_transform.inverse_transform()` is called in
+        # super().update_model_params(params)
         else:
             for name, params in self.model_params.items():
                 p_idx = params.index

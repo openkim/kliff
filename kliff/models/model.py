@@ -1,10 +1,11 @@
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, TextIO, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.models.parameter import OptimizingParameters, Parameter
+from kliff.models.parameter_transform import ParameterTransform
 from kliff.utils import yaml_dump, yaml_load
 
 
@@ -176,34 +177,33 @@ class Model:
 
     Args:
         model_name: name of the model.
-
-        params_relation_callback: A callback function to set the relations between
-            parameters, which are called each minimization step after the optimizer
-            updates the parameters. The function with be given a dictionary of
-            :meth:`~kliff.model.parameter.Parameter` as argument, which can
-            then be manipulated to set relations between parameters. The function
-            should return dict with updated params Dict[str, Parameter]
-
-            Example:
-                In the following example, we set the value of ``B[0]`` to ``2 * A[0]``::
-
-                    def params_relation(model_params: Dict[str, Parameter]):
-                        A = model_params['A']
-                        B = model_params['B']
-                        B[0] = 2*A[0]
-
-                        return model_params
+        params_transform: optional transformation of parameters. Let's call the
+            parameters initialized in `init_model_params()` as original parameter
+            space. Sometimes, it's easier to work in another parameter (e.g.
+            optimizers can perform better in the log space). Then we can use this
+            parameter transformation class to transform between the original
+            parameter space and the new easy-to-work space. Typically, a model only
+            knows how to work in its original space to compute, e.g. energy and
+            forces, so we need to inverse transform parameters back to original space
+            (after an optimizer update its value in the log space).
+            A `params_transform` instance should implement both a `transform` and an
+            `inverse_transform` method to accomplish the above tasks.
+            Note, all the parameters of this (the `Model`) class
+            (e.g. `self.model_params`, and `self.opt_params`) are in the transformed
+            easy-to-work space.
     """
 
     def __init__(
         self,
         model_name: str = None,
-        params_relation_callback: Optional[Callable] = None,
+        params_transform: Optional[ParameterTransform] = None,
     ):
         self.model_name = model_name
-        self.params_relation_callback = params_relation_callback
+        self.params_transform = params_transform
 
         self.model_params = self.init_model_params()
+        if self.params_transform is not None:
+            self.model_params = self.params_transform(self.model_params)
         self.opt_params = OptimizingParameters(self.model_params)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
@@ -445,10 +445,12 @@ class Model:
         Args:
             params: updated parameter values from the optimizer.
         """
-        self.opt_params.update_opt_params(params)
+        self.model_params = self.opt_params.update_opt_params(params)
 
-        if self.params_relation_callback is not None:
-            self.model_params = self.params_relation_callback(self.model_params)
+        if self.params_transform is not None:
+            self.model_params = self.params_transform.inverse_transform(
+                self.model_params
+            )
 
     def get_opt_param_name_value_and_indices(
         self, index: int

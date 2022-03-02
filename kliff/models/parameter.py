@@ -463,7 +463,7 @@ class OptimizingParameters(MSONable):
 
         return np.asarray(params)
 
-    def update_opt_params(self, params: Sequence[float]):
+    def update_opt_params(self, params: Sequence[float]) -> Dict[str, Parameter]:
         """
         Update the optimizing parameter values from a sequence of float.
 
@@ -476,6 +476,8 @@ class OptimizingParameters(MSONable):
             name = self._index[k].name
             c_idx = self._index[k].c_idx
             self.model_params[name][c_idx] = val
+
+        return self.model_params
 
     def get_opt_param_name_value_and_indices(
         self, index: int

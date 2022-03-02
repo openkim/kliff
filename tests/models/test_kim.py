@@ -1,11 +1,10 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import pytest
 from kliff.dataset import Dataset
 from kliff.models.kim import KIMComputeArguments, KIMModel
-from kliff.models.parameter import Parameter
+from kliff.models.parameter_transform import LogParameterTransform
 
 ref_energies = [-277.409737571, -275.597759276, -276.528342759, -275.482988187]
 
@@ -137,25 +136,41 @@ def test_get_update_params():
     assert kim_params["A"][0] == A + 0.1
 
 
-def test_params_relation_callback():
-    def callback_fn(model_params: Dict[str, Parameter]):
-        model_params["sigma"][0] = 1.23
-        model_params["A"][0] = 1.23
-
-        return model_params
+def test_params_transform():
 
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-    model = KIMModel(modelname, params_relation_callback=callback_fn)
+    model = KIMModel(
+        modelname, params_transform=LogParameterTransform(param_names=["sigma", "A"])
+    )
+
+    # reference values in KIM model
+    sigma = 2.0951
+    A = 15.2848479197914
+    B = 0.6022245584
+
+    # Check forward transform.
+    # No log for B since it is not asked to transform
+    assert model.model_params["sigma"][0] == np.log(sigma)
+    assert model.model_params["A"][0] == np.log(A)
+    assert model.model_params["B"][0] == B
 
     # optimizing parameters
     # B will not be optimized, only providing initial guess
-    model.set_opt_params(sigma=[["default"]], B=[["default", "fix"]], A=[["default"]])
+    v1 = 2.0
+    v2 = 3.0
+    model.set_opt_params(sigma=[[v1]], B=[[B, "fix"]], A=[[v2]])
 
-    # only two params will be updated (simga and A)
-    x0 = [1.0, 1.0]
-    model.update_model_params(x0)
+    # v1 and v2 are supposed to be in log space
+    assert model.model_params["sigma"][0] == v1
+    assert model.model_params["A"][0] == v2
+    assert model.model_params["B"][0] == B
 
-    # check that kim params has been updated
-    updated_params = model.get_kim_model_params()
-    assert updated_params["sigma"].value[0] == 1.23
-    assert updated_params["A"].value[0] == 1.23
+    assert np.allclose(model.get_opt_params(), [v1, v2])
+
+    model.update_model_params([v1, v2])
+
+    # Check inverse transform
+    kim_params = model.get_kim_model_params()
+    assert kim_params["sigma"].value[0] == np.exp(v1)
+    assert kim_params["A"].value[0] == np.exp(v2)
+    assert kim_params["B"].value[0] == B
