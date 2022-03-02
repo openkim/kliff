@@ -4,6 +4,16 @@
 Change Log
 ==========
 
+v0.3.2 (2022/03/01)
+===================
+
+Added
+-----
+- Enable params_relation_callback() for KIM model
+
+Fixed
+-----
+- Fix neighbor list segfault due to numerical error for 1D and 2D cases
 
 v0.3.1 (2021/11/20)
 ===================
