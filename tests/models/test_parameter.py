@@ -19,7 +19,7 @@ def test_parameter():
         pass
 
     p = Parameter(np.asarray([2.2, 3.3]), index=0)
-    assert p.value == [2.2, 3.3]
+    assert np.allclose(p.value, [2.2, 3.3])
     assert p.fixed == [False, False]
     assert p.lower_bound == [None, None]
     assert p.upper_bound == [None, None]
@@ -29,7 +29,7 @@ def test_parameter():
     assert p[1] == 3.3
 
     p[0] = 4.4
-    assert p.value == [4.4, 3.3]
+    assert np.allclose(p.value, [4.4, 3.3])
     p.set_fixed(0, True)
     assert p.fixed == [True, False]
     p.set_lower_bound(0, 1.1)
@@ -50,7 +50,7 @@ def test_parameter():
     }
     assert p.as_dict() == d
     p1 = Parameter.from_dict(d)
-    assert p1.value == p.value
+    assert np.allclose(p1.value, p.value)
     assert p1.fixed == p.fixed
     assert p1.lower_bound == p.lower_bound
     assert p1.upper_bound == p.upper_bound

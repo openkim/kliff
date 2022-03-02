@@ -7,6 +7,12 @@ import numpy as np
 from monty.json import MSONable
 
 
+# TODO, it is not a good idea to use list of float to represent a parameter value and
+#  bound (mainly because of efficiency stuff when setting it). Currently we do this
+#  because KIM API has to set individual components of a parameter by index.
+#  But here, we can have more cases, e.g. parameter transformation between linear and
+#  log space. Making it default to np.array should be much better.
+#
 class Parameter(MSONable):
     """
     Potential parameter.
@@ -17,7 +23,7 @@ class Parameter(MSONable):
     This class is mainly by physically-motivated potentials.
 
     Args:
-        value: parameter value, which can have multiple components.
+        value: parameter values, should be a list of float or a 1D array.
         fixed: whether parameter component should be fixed (i.e. not used for fitting).
             Should have the same length of `value`. Default to not fixed for all
             components.
@@ -31,7 +37,7 @@ class Parameter(MSONable):
 
     def __init__(
         self,
-        value: Union[Sequence[float]],
+        value: Union[Sequence[float], np.ndarray],
         fixed: Optional[Sequence[bool]] = None,
         lower_bound: Optional[Sequence[float]] = None,
         upper_bound: Optional[Sequence[float]] = None,
@@ -39,7 +45,7 @@ class Parameter(MSONable):
         index: Optional[int] = None,
     ):
 
-        self._value = _check_shape(value, "parameter value")
+        self._value = np.asarray(_check_shape(value, "parameter value"))
         self._fixed = (
             [False] * len(self._value)
             if fixed is None
@@ -65,6 +71,12 @@ class Parameter(MSONable):
         """
         return self._value
 
+    @value.setter
+    def value(self, value: Union[List[float], np.ndarray]):
+        self._value = value
+
+    # TODO, this is confusing. Rename it set_value_by_index to avoid confusion with
+    #  the above one?
     def set_value(self, index: int, v: float):
         """
         Set the value of a component.
@@ -149,7 +161,7 @@ class Parameter(MSONable):
         return {
             "@module": self.__class__.__module__,
             "@class": self.__class__.__name__,
-            "value": self._value,
+            "value": np.asarray(self._value).tolist(),
             "fixed": self._fixed,
             "lower_bound": self._lower_bound,
             "upper_bound": self._upper_bound,
