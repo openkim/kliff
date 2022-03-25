@@ -61,7 +61,7 @@ bispectrum = Extension(
 )
 
 neighlist = Extension(
-    "kliff.neighbor.nl",
+    "kliff.neighbor.neighlist",
     sources=[
         "kliff/neighbor/neighbor_list.cpp",
         "kliff/neighbor/neighbor_list_bind.cpp",

@@ -5,22 +5,21 @@
 
 #include <vector>
 
-typedef struct
+struct NeighListOne
 {
-  int numberOfParticles;
-  double cutoff;
-  int * Nneighbors;
-  int * neighborList;
-  int * beginIndex;
-} NeighListOne;
+  int numberOfParticles = 0;
+  double cutoff = 0.0;
+  int * Nneighbors = nullptr;
+  int * neighborList = nullptr;
+  int * beginIndex = nullptr;
+};
 
 // neighbor list structure
-typedef struct
+struct NeighList
 {
-  int numberOfNeighborLists;
-  NeighListOne * lists;
-} NeighList;
-
+  int numberOfNeighborLists = 0;
+  NeighListOne * lists = nullptr;
+};
 
 void nbl_initialize(NeighList ** const nl);
 
@@ -53,5 +52,4 @@ int nbl_get_neigh(void const * const nl,
 
 void nbl_clean(NeighList ** const nl);
 
-
-#endif
+#endif  // NEIGHBOR_LIST_H_

@@ -1,9 +1,10 @@
 from typing import Dict, List, Tuple
 
+
 import numpy as np
 from kliff.atomic_data import atomic_number, atomic_species
 from kliff.dataset.dataset import Configuration
-from kliff.neighbor import nl  # C extension
+from kliff.neighbor import neighlist as nl  # C extension
 
 
 class NeighborList:
@@ -11,15 +12,15 @@ class NeighborList:
     Neighbor list class.
 
     This uses the same approach that `LAMMPS` and `KIM` adopt: The atoms in the
-    configuration (assuming a total of N atoms) are named contributing atoms, and padding
-    atoms are created to satisfy the boundary conditions. The contributing atoms are
-    numbered as 1, 2, ... N-1, and the padding atoms are numbered as N, N+1, N+2...
+    configuration (assuming a total of N atoms) are named contributing atoms, and
+    padding atoms are created to satisfy the boundary conditions. The contributing atoms
+    are numbered as 1, 2, ... N-1, and the padding atoms are numbered as N, N+1, N+2...
     Neighbors of atom can include both contributing atoms and padding atoms.
 
     Args:
         conf: atomic configuration.
-        infl_dist: Influence distance, within which atoms are interacting with each other.
-            In literatures, this is usually referred as ``cutoff``.
+        infl_dist: Influence distance, within which atoms are interacting with each
+            other. In literatures, this is usually referred as ``cutoff``.
         padding_need_neigh: Whether to generate neighbors for padding atoms.
 
     Attributes:
@@ -28,8 +29,8 @@ class NeighborList:
         species: list
             Species string of contributing and padding atoms.
         image: 1D array
-            Atom index, of which an atom is an image. The image of a contributing atom is
-            itself.
+            Atom index, of which an atom is an image. The image of a contributing atom
+            is itself.
         padding_coords: 2D array
             Coordinates of padding atoms.
         padding_species: list
@@ -39,8 +40,8 @@ class NeighborList:
 
     Note:
         To get the total force on a contributing atom, the forces on all padding atoms
-        that are images of the contributing atom should be added back to the contributing
-        atom.
+        that are images of the contributing atom should be added back to the
+        contributing atom.
     """
 
     def __init__(
@@ -61,7 +62,7 @@ class NeighborList:
         self.padding_image = None
 
         # neigh
-        self.neigh = nl.initialize()
+        self.neigh = nl.create()
         self.create_neigh()
 
     def create_neigh(self):
@@ -74,9 +75,13 @@ class NeighborList:
         species_code_cb = np.asarray(
             [atomic_number[s] for s in species_cb], dtype=np.intc
         )
-        out = nl.create_paddings(self.infl_dist, cell, PBC, coords_cb, species_code_cb)
-        coords_pd, species_code_pd, image_pd, error = out
-        check_error(error, "nl.create_padding")
+        try:
+            coords_pd, species_code_pd, image_pd = nl.create_paddings(
+                self.infl_dist, cell, PBC, coords_cb, species_code_cb
+            )
+        except RuntimeError:
+            raise NeighborListError("Calling `neighlist.create_paddings` failed.")
+
         species_pd = [atomic_species[i] for i in species_code_pd]
 
         self.padding_coords = np.asarray(coords_pd, dtype=np.double)
@@ -100,8 +105,10 @@ class NeighborList:
 
         # create neighbor list
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
-        error = nl.build(self.neigh, self.coords, self.infl_dist, cutoffs, need_neigh)
-        check_error(error, "nl.build")
+        try:
+            self.neigh.build(self.coords, self.infl_dist, cutoffs, need_neigh)
+        except RuntimeError:
+            raise NeighborListError("Calling `neighlist.build` failed.")
 
     def get_neigh(self, index: int) -> Tuple[List[int], np.array, List[str]]:
         """
@@ -119,10 +126,12 @@ class NeighborList:
 
         cutoffs = np.asarray([self.infl_dist], dtype=np.double)
         neigh_list_index = 0
-        num_neigh, neigh_indices, error = nl.get_neigh(
-            self.neigh, cutoffs, neigh_list_index, index
-        )
-        check_error(error, "nl.get_neigh")
+        try:
+            num_neigh, neigh_indices = self.neigh.get_neigh(
+                cutoffs, neigh_list_index, index
+            )
+        except RuntimeError:
+            raise NeighborListError("Calling `neighlist.get_neigh` failed.")
 
         neigh_coords = self.coords[neigh_indices]
         neigh_species = self.species[neigh_indices]
@@ -163,10 +172,14 @@ class NeighborList:
         numneigh = []
         neighlist = []
         for i in range(N):
-            num_neigh, neigh_indices, error = nl.get_neigh(
-                self.neigh, cutoffs, neigh_list_index, i
-            )
-            check_error(error, "nl.get_neigh")
+
+            try:
+                num_neigh, neigh_indices = self.neigh.get_neigh(
+                    cutoffs, neigh_list_index, i
+                )
+            except RuntimeError:
+                raise NeighborListError("Calling `neighlist.get_neigh` failed.")
+
             numneigh.append(num_neigh)
             neighlist.append(neigh_indices)
         neighlist = np.asarray(np.concatenate(neighlist), dtype=np.intc)
@@ -243,9 +256,6 @@ class NeighborList:
 
         """
         return self.padding_image.copy()
-
-    def __del__(self):
-        nl.clean(self.neigh)
 
 
 def assemble_forces(forces: np.array, n: int, padding_image: np.array) -> np.array:
@@ -325,8 +335,3 @@ class NeighborListError(Exception):
 
     def __expr__(self):
         return self.msg
-
-
-def check_error(error, msg=None):
-    if error != 0 and error is not None:
-        raise NeighborListError(f"Calling `{msg}` failed.")

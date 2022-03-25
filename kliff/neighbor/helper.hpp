@@ -4,23 +4,14 @@
 #define HELPER_HPP_
 
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
-#include <stdlib.h>
-#include <vector>
-
 
 #define SMALL 1.0e-10
 
-#define MY_ERROR(message)                                             \
-  {                                                                   \
-    std::cout << "* Error (Neighbor List): \"" << message             \
-              << "\" : " << __LINE__ << ":" << __FILE__ << std::endl; \
-    exit(1);                                                          \
-  }
-
 #define MY_WARNING(message)                                           \
   {                                                                   \
-    std::cout << "* Error (Neighbor List) : \"" << message            \
+    std::cerr << "* Error (Neighbor List) : \"" << message            \
               << "\" : " << __LINE__ << ":" << __FILE__ << std::endl; \
   }
 
@@ -66,10 +57,15 @@ inline double det2(double a11, double a12, double a21, double a22)
 // transpose of a 3 by 3 matrix
 inline void transpose(double const * mat, double * const trans)
 {
-  for (int i = 0; i < 3; i++)
-  {
-    for (int j = 0; j < 3; j++) { trans[3 * i + j] = mat[3 * j + i]; }
-  }
+  trans[0] = mat[0];
+  trans[1] = mat[3];
+  trans[2] = mat[6];
+  trans[3] = mat[1];
+  trans[4] = mat[4];
+  trans[5] = mat[7];
+  trans[6] = mat[2];
+  trans[7] = mat[5];
+  trans[8] = mat[8];
 }
 
 
@@ -86,7 +82,7 @@ inline int inverse(double const * mat, double * const inv)
   inv[7] = det2(mat[1], mat[0], mat[7], mat[6]);
   inv[8] = det2(mat[0], mat[1], mat[3], mat[4]);
 
-  double dd = det(mat);
+  double const dd = det(mat);
   if (std::abs(dd) < SMALL)
   {
     MY_WARNING("Cannot invert cell matrix. Determinant is 0.");
@@ -103,22 +99,12 @@ inline void coords_to_index(double const * x,
                             double const * min,
                             int * const index)
 {
-  for (int i = 0; i < 3; i++)
-  {
-    //    // set range to std::numeric_limits<double>::epsilon() to handle 1D
-    //    // and 2D cases where max[i] == min[i]
-    //    double range = max[i] - min[i] > 0 ? max[i] - min[i]
-    //                                       :
-    //                                       std::numeric_limits<double>::epsilon();
-    //    index[i] = static_cast<int>((x[i] - min[i]) / range * size[i]);
-
-    // this assumes max[i] - min[i] is larger than zero
-    index[i] = static_cast<int>((x[i] - min[i]) / (max[i] - min[i]) * size[i]);
-
-    // handle edge case when x[i] = max[i]
-    index[i] = std::min(index[i], size[i] - 1);
-  }
+  index[0] = static_cast<int>(((x[0] - min[0]) / (max[0] - min[0])) * size[0]);
+  index[0] = std::min(index[0], size[0] - 1);  // edge case when x[0] = max[0]
+  index[1] = static_cast<int>(((x[1] - min[1]) / (max[1] - min[1])) * size[1]);
+  index[1] = std::min(index[1], size[1] - 1);  // edge case when x[1] = max[1]
+  index[2] = static_cast<int>(((x[2] - min[2]) / (max[2] - min[2])) * size[2]);
+  index[2] = std::min(index[2], size[2] - 1);  // edge case when x[2] = max[2]
 }
 
-
-#endif
+#endif  // HELPER_HPP_
