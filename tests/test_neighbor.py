@@ -64,3 +64,40 @@ def test_neigh():
     numneigh, neighlist = neigh.get_numneigh_and_neighlist_1D(request_padding=False)
     np.array_equal(numneigh, all_numneigh)
     np.array_equal(neighlist, np.concatenate(all_indices))
+
+
+def test_1D():
+    """
+    Simple test of a dimer, nonperiodic.
+    """
+
+    cell = np.asarray([[200.0, 0.0, 0.0], [0.0, 200.0, 0.0], [0.0, 0.0, 200.0]])
+    coords = np.asarray([[0.0, 0.0, 0.0], [2.0, 0.0, 0.0]])
+    species = ["C", "O"]
+
+    for P in [True, False]:
+
+        atoms = Configuration(
+            cell=cell,
+            species=species,
+            coords=coords,
+            PBC=[P] * 3,
+        )
+
+        neigh = NeighborList(atoms, infl_dist=5.0)
+
+        # atom 0
+        idx = 0
+        nei_idx = 1
+        neighbors, neighbor_xyz, neighbor_species = neigh.get_neigh(idx)
+        assert np.allclose(neighbors, [nei_idx])
+        assert np.allclose(neighbor_xyz, [coords[nei_idx]])
+        assert neighbor_species == [species[nei_idx]]
+
+        # atom 1
+        idx = 1
+        nei_idx = 0
+        neighbors, neighbor_xyz, neighbor_species = neigh.get_neigh(idx)
+        assert np.allclose(neighbors, [nei_idx])
+        assert np.allclose(neighbor_xyz, [coords[nei_idx]])
+        assert neighbor_species == [species[nei_idx]]
