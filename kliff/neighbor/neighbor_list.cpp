@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-// WARNING: Do not use std::numeric_limits<double>::epsilon() (or even multiply it
-// by 10) as TOL. It is too small and can cause numerical error. Believe me.
+// WARNING: Do not use std::numeric_limits<double>::epsilon() (or even multiply
+// it by 10) as TOL. It is too small and can cause numerical error. Believe me.
 #define TOL 1.0e-10
 
 

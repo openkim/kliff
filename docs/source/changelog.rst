@@ -4,6 +4,14 @@
 Change Log
 ==========
 
+v0.3.3 (2022/03/25)
+
+Fixed
+-----
+- Fix neighlist (even after v0.3.2, the problem can still happen). Now neighlist is the
+  same as kimpy
+
+
 v0.3.2 (2022/03/01)
 ===================
 
@@ -14,6 +22,7 @@ Added
 Fixed
 -----
 - Fix neighbor list segfault due to numerical error for 1D and 2D cases
+
 
 v0.3.1 (2021/11/20)
 ===================
