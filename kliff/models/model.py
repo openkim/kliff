@@ -202,9 +202,7 @@ class Model:
         self.params_transform = params_transform
 
         self.model_params = self.init_model_params()
-        if self.params_transform is not None:
-            self.model_params = self.params_transform(self.model_params)
-        self.opt_params = OptimizingParameters(self.model_params)
+        self.opt_params = OptimizingParameters(self.model_params, self.params_transform)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
 
@@ -284,15 +282,21 @@ class Model:
         Returns:
             model parameters info in a string
         """
+        if self.params_transform is not None:
+            model_params = self.params_transform.inverse_transform(self.model_params)
+        else:
+            model_params = self.model_params
+
         s = "#" + "=" * 80 + "\n"
         s += "# Available parameters to optimize.\n"
+        s += "# The values are presented in the original parameterization.\n"
 
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
         s += "#" + "=" * 80 + "\n\n"
 
-        for name, p in self.model_params.items():
+        for name, p in model_params.items():
             s += f"name: {name}\n"
             s += f"value: {p.value}\n"
             s += f"size: {len(p)}\n\n"
@@ -446,11 +450,6 @@ class Model:
             params: updated parameter values from the optimizer.
         """
         self.model_params = self.opt_params.update_opt_params(params)
-
-        if self.params_transform is not None:
-            self.model_params = self.params_transform.inverse_transform(
-                self.model_params
-            )
 
     def get_opt_param_name_value_and_indices(
         self, index: int
