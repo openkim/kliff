@@ -148,22 +148,26 @@ def test_params_transform():
     A = 15.2848479197914
     B = 0.6022245584
 
-    # Check forward transform.
-    # No log for B since it is not asked to transform
-    assert model.model_params["sigma"][0] == np.log(sigma)
-    assert model.model_params["A"][0] == np.log(A)
+    # Check forward transform (all in original space)
+    assert model.model_params["sigma"][0] == sigma
+    assert model.model_params["A"][0] == A
     assert model.model_params["B"][0] == B
 
-    # optimizing parameters
+    # Transformed params in log space
+    # No log for B since it is not asked to transform
+    assert model.model_params_transformed["sigma"][0] == np.log(sigma)
+    assert model.model_params_transformed["A"][0] == np.log(A)
+    assert model.model_params_transformed["B"][0] == B
+
+    # optimizing parameters, provided in log space
     # B will not be optimized, only providing initial guess
     v1 = 2.0
     v2 = 3.0
     model.set_opt_params(sigma=[[v1]], B=[[B, "fix"]], A=[[v2]])
 
-    # v1 and v2 are supposed to be in log space
-    assert model.model_params["sigma"][0] == v1
-    assert model.model_params["A"][0] == v2
-    assert model.model_params["B"][0] == B
+    assert model.model_params_transformed["sigma"][0] == v1
+    assert model.model_params_transformed["A"][0] == v2
+    assert model.model_params_transformed["B"][0] == B
 
     assert np.allclose(model.get_opt_params(), [v1, v2])
 
