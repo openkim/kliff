@@ -388,7 +388,11 @@ class Model:
             1.0      INF  2.1
             2.0      FIX
         """
-        return self.opt_params.read(filename)
+        self.opt_params.read(filename)
+        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
+
+        # reset influence distance in case it depends on parameters and changes
+        self.init_influence_distance()
 
     def set_opt_params(self, **kwargs):
         """
@@ -406,6 +410,7 @@ class Model:
            instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
         """
         self.opt_params.set(**kwargs)
+        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
 
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
@@ -428,6 +433,7 @@ class Model:
             instance.set_one(name, settings)
         """
         self.opt_params.set_one(name, settings)
+        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
 
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
@@ -474,13 +480,9 @@ class Model:
             params: updated parameter values from the optimizer.
         """
         self.model_params_transformed = self.opt_params.update_opt_params(params)
-
-        if self.params_transform is not None:
-            # make a copy since params_transform can make changes in place
-            transformed = copy.deepcopy(self.model_params_transformed)
-            self.model_params = self.params_transform.inverse_transform(transformed)
-        else:
-            self.model_params = self.model_params_transformed
+        self.model_params = self._inverse_transform_params(
+            self.model_params_transformed
+        )
 
     def get_opt_param_name_value_and_indices(
         self, index: int
@@ -533,6 +535,17 @@ class Model:
         # Set model_params to opt_params.model_params since they should share the
         # underlying `Parameter` objects
         self.model_params = self.opt_params.model_params
+
+    def _inverse_transform_params(self, model_params_transformed: Dict[str, Parameter]):
+        """
+        Inverse transform the parameters.
+        """
+        if self.params_transform is not None:
+            # make a copy since params_transform can make changes in place
+            transformed = copy.deepcopy(model_params_transformed)
+            return self.params_transform.inverse_transform(transformed)
+        else:
+            return model_params_transformed
 
 
 class ModelError(Exception):
