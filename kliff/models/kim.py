@@ -626,7 +626,7 @@ class KIMModel(Model):
                     )
 
         # When params_transform is set, a user can do whatever in it
-        # function, e.g. update params is not an optimizing parameter.
+        # function, e.g. update a parameter that is not an optimizing parameter.
         # In general, we do not know how parameters are modified in there,
         # and therefore, we need to update all params in model_params to kim
         # Note, `params_transform.inverse_transform()` is called in

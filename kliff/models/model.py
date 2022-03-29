@@ -1,3 +1,4 @@
+import copy
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
@@ -202,9 +203,15 @@ class Model:
         self.params_transform = params_transform
 
         self.model_params = self.init_model_params()
+
         if self.params_transform is not None:
-            self.model_params = self.params_transform(self.model_params)
-        self.opt_params = OptimizingParameters(self.model_params)
+            # make a copy since params_transform can make changes in place
+            transformed = copy.deepcopy(self.model_params)
+            self.model_params_transformed = self.params_transform(transformed)
+        else:
+            self.model_params_transformed = self.model_params
+
+        self.opt_params = OptimizingParameters(self.model_params_transformed)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
 
@@ -245,7 +252,7 @@ class Model:
         raise NotImplementedError("`init_supported_species` not implemented.")
 
     def get_compute_argument_class(self):
-        # NOTE, change to the compute argument class as needed
+        # NOTE, change to compute argument class as needed
         # return ComputeArguments
         raise NotImplementedError("`get_compute_argument_class` not implemented.")
 
@@ -272,27 +279,48 @@ class Model:
         return self.model_params
 
     def echo_model_params(
-        self, filename: Union[Path, TextIO, None] = sys.stdout
+        self,
+        filename: Union[Path, TextIO, None] = sys.stdout,
+        params_space: str = "original",
     ) -> str:
         """
         Echo the model parameters.
 
         Args:
-            filename: Path to write the model parameter info (e.g. sys.stdout). If `None`,
-                do not write.
+            filename: Path to write the model parameter info (e.g. sys.stdout).
+                If `None`, do not write.
+            params_space: In which space to show the parameters, options are `original`
+                and `transformed`.
 
         Returns:
-            model parameters info in a string
+            model parameter info in a string
         """
+
+        if params_space == "original":
+            params = self.model_params
+        elif params_space == "transformed":
+            if self.params_transform is None:
+                raise RuntimeError(
+                    "Cannot obtain parameters in transformed space when "
+                    "`params_transform` of model is not set."
+                )
+            else:
+                params = self.model_params_transformed
+        else:
+            supported = ["original", "transformed"]
+            raise ValueError(
+                f"Expect `params_space` to be one of {supported}; got {params_space}"
+            )
+
         s = "#" + "=" * 80 + "\n"
         s += "# Available parameters to optimize.\n"
-
+        s += f"# Parameters in `{params_space}` space.\n"
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
         s += "#" + "=" * 80 + "\n\n"
 
-        for name, p in self.model_params.items():
+        for name, p in params.items():
             s += f"name: {name}\n"
             s += f"value: {p.value}\n"
             s += f"size: {len(p)}\n\n"
@@ -310,13 +338,13 @@ class Model:
         """
         Read optimizing parameters from a file.
 
-        Each parameter is a 1D array, and each component of the parameter array should be
-        listed in a new line. Each line can contains 1, 2, or 3 elements, described in
-        details below:
+        Each parameter is a 1D array, and each component of the parameter array should
+        be listed in a new line. Each line can contain 1, 2, or 3 elements, described
+        in details below:
 
         1st element: float or `DEFAULT`
-            Initial guess of the parameter component. If `DEFAULT` (case insensitive), the
-            value from the calculator is used as the initial guess.
+            Initial guess of the parameter component. If `DEFAULT` (case insensitive),
+            the value from the calculator is used as the initial guess.
 
         The 2nd and 3rd elements are optional.
 
@@ -360,7 +388,11 @@ class Model:
             1.0      INF  2.1
             2.0      FIX
         """
-        return self.opt_params.read(filename)
+        self.opt_params.read(filename)
+        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
+
+        # reset influence distance in case it depends on parameters and changes
+        self.init_influence_distance()
 
     def set_opt_params(self, **kwargs):
         """
@@ -378,6 +410,7 @@ class Model:
            instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
         """
         self.opt_params.set(**kwargs)
+        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
 
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
@@ -400,6 +433,7 @@ class Model:
             instance.set_one(name, settings)
         """
         self.opt_params.set_one(name, settings)
+        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
 
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
@@ -445,12 +479,10 @@ class Model:
         Args:
             params: updated parameter values from the optimizer.
         """
-        self.model_params = self.opt_params.update_opt_params(params)
-
-        if self.params_transform is not None:
-            self.model_params = self.params_transform.inverse_transform(
-                self.model_params
-            )
+        self.model_params_transformed = self.opt_params.update_opt_params(params)
+        self.model_params = self._inverse_transform_params(
+            self.model_params_transformed
+        )
 
     def get_opt_param_name_value_and_indices(
         self, index: int
@@ -503,6 +535,17 @@ class Model:
         # Set model_params to opt_params.model_params since they should share the
         # underlying `Parameter` objects
         self.model_params = self.opt_params.model_params
+
+    def _inverse_transform_params(self, model_params_transformed: Dict[str, Parameter]):
+        """
+        Inverse transform the parameters.
+        """
+        if self.params_transform is not None:
+            # make a copy since params_transform can make changes in place
+            transformed = copy.deepcopy(model_params_transformed)
+            return self.params_transform.inverse_transform(transformed)
+        else:
+            return model_params_transformed
 
 
 class ModelError(Exception):
