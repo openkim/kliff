@@ -281,7 +281,7 @@ class Model:
     def echo_model_params(
         self,
         filename: Union[Path, TextIO, None] = sys.stdout,
-        parameter_space: str = "original",
+        params_space: str = "original",
     ) -> str:
         """
         Echo the model parameters.
@@ -289,16 +289,16 @@ class Model:
         Args:
             filename: Path to write the model parameter info (e.g. sys.stdout).
                 If `None`, do not write.
-            parameter_space: In which space to show the parameter, options are
-                `original` and `transformed`.
+            params_space: In which space to show the parameters, options are `original`
+                and `transformed`.
 
         Returns:
             model parameter info in a string
         """
 
-        if parameter_space == "original":
+        if params_space == "original":
             params = self.model_params
-        elif parameter_space == "transformed":
+        elif params_space == "transformed":
             if self.params_transform is None:
                 raise RuntimeError(
                     "Cannot obtain parameters in transformed space when "
@@ -309,13 +309,12 @@ class Model:
         else:
             supported = ["original", "transformed"]
             raise ValueError(
-                f"Expect `parameter_space` to be one of {supported}; "
-                "got {parameter_space}"
+                f"Expect `params_space` to be one of {supported}; got {params_space}"
             )
 
         s = "#" + "=" * 80 + "\n"
         s += "# Available parameters to optimize.\n"
-        s += f"# Parameters in `{parameter_space}` space.\n"
+        s += f"# Parameters in `{params_space}` space.\n"
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
