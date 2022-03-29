@@ -198,13 +198,8 @@ class OptimizingParameters(MSONable):
             of these parameters will be modified to reflect whether it is optimized.
     """
 
-    def __init__(
-        self,
-        model_params: Dict[str, Parameter],
-        params_transform,
-    ):
+    def __init__(self, model_params: Dict[str, Parameter]):
         self.model_params = model_params
-        self.params_transform = params_transform
 
         # list of optimizing param names
         self._params = []
@@ -396,7 +391,6 @@ class OptimizingParameters(MSONable):
 
         s = "#" + "=" * 80 + "\n"
         s += "# Model parameters that are optimized.\n"
-        s += "# The values are presented in the original parameterization.\n"
         s += "#" + "=" * 80 + "\n\n"
 
         for name in self._params:
@@ -462,12 +456,8 @@ class OptimizingParameters(MSONable):
             opt_params: A 1D array of nested optimizing parameter values.
         """
         params = []
-        if self.params_transform is not None:
-            model_params = self.params_transform.transform(self.model_params)
-        else:
-            model_params = self.model_params
         for idx in self._index:
-            params.append(model_params[idx.name][idx.c_idx])
+            params.append(self.model_params[idx.name][idx.c_idx])
         if len(params) == 0:
             raise ParameterError("No parameters specified to optimize.")
 
@@ -486,10 +476,6 @@ class OptimizingParameters(MSONable):
             name = self._index[k].name
             c_idx = self._index[k].c_idx
             self.model_params[name][c_idx] = val
-        if self.params_transform is not None:
-            self.model_params = self.params_transform.inverse_transform(
-                self.model_params
-            )
 
         return self.model_params
 
@@ -503,14 +489,10 @@ class OptimizingParameters(MSONable):
         Args:
             index: slot index of the optimizing parameter
         """
-        if self.params_transform is not None:
-            model_params = self.params_transform(self.model_params)
-        else:
-            model_params = self.model_params
         name = self._index[index].name
         p_idx = self._index[index].p_idx
         c_idx = self._index[index].c_idx
-        value = model_params[name][c_idx]
+        value = self.model_params[name][c_idx]
 
         return name, value, p_idx, c_idx
 
