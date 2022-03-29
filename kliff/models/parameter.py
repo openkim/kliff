@@ -391,6 +391,10 @@ class OptimizingParameters(MSONable):
 
         s = "#" + "=" * 80 + "\n"
         s += "# Model parameters that are optimized.\n"
+        s += (
+            "# Note that the parameters are in the transformed space if \n"
+            "# `params_transform` is provided when instantiating the model.\n"
+        )
         s += "#" + "=" * 80 + "\n\n"
 
         for name in self._params:
