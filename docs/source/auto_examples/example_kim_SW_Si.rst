@@ -186,21 +186,21 @@ subset of them to reproduce the training set.
 
     #================================================================================
     # Model parameters that are optimized.
-    # Note that the parameters are in the transformed space if
+    # Note that the parameters are in the transformed space if 
     # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     A 1
-      5.0000000000000000e+00   1.0000000000000000e+00   2.0000000000000000e+01
+      5.0000000000000000e+00   1.0000000000000000e+00   2.0000000000000000e+01 
 
     B 1
-      6.0222455840000000e-01
+      6.0222455840000000e-01 
 
     sigma 1
-      2.0951000000000000e+00 fix
+      2.0951000000000000e+00 fix 
 
     gamma 1
-      1.5000000000000000e+00
+      1.5000000000000000e+00 
 
 
 
@@ -264,7 +264,7 @@ test data). For the silicon training set, we can read and process the files by:
 
  .. code-block:: none
 
-    2022-03-31 22:46:00.846 | INFO     | kliff.dataset.dataset:_read:371 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
+    2022-03-31 23:10:32.478 | INFO     | kliff.dataset.dataset:_read:371 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
 
 
 
@@ -307,7 +307,7 @@ by:
 
  .. code-block:: none
 
-    2022-03-31 22:46:04.476 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
+    2022-03-31 23:10:36.673 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
 
 
 
@@ -353,9 +353,9 @@ a max number of 100 iterations.
 
  .. code-block:: none
 
-    2022-03-31 22:46:04.477 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2022-03-31 22:46:04.478 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
-    2022-03-31 22:47:39.946 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
+    2022-03-31 23:10:36.675 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
+    2022-03-31 23:10:36.675 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
+    2022-03-31 23:12:11.739 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
 
           fun: 0.6940780133179182
      hess_inv: <3x3 LbfgsInvHessProduct with dtype=float64>
@@ -400,24 +400,24 @@ that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
 
     #================================================================================
     # Model parameters that are optimized.
-    # Note that the parameters are in the transformed space if
+    # Note that the parameters are in the transformed space if 
     # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     A 1
-      1.4938634447205009e+01   1.0000000000000000e+00   2.0000000000000000e+01
+      1.4938634447205009e+01   1.0000000000000000e+00   2.0000000000000000e+01 
 
     B 1
-      5.8740275142426945e-01
+      5.8740275142426945e-01 
 
     sigma 1
-      2.0951000000000000e+00 fix
+      2.0951000000000000e+00 fix 
 
     gamma 1
-      2.2014634864154190e+00
+      2.2014634864154190e+00 
 
 
-    2022-03-31 22:47:39.981 | INFO     | kliff.models.kim:write_kim_model:695 - KLIFF trained model write to `/Users/mjwen/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained`
+    2022-03-31 23:12:11.756 | INFO     | kliff.models.kim:write_kim_model:695 - KLIFF trained model write to `/Users/mjwen/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained`
 
 
 
@@ -446,7 +446,7 @@ parameters quite reasonably. The second line saves the fitted model to a file na
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  42.265 seconds)
+   **Total running time of the script:** ( 1 minutes  43.094 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_kim_SW_Si.py:

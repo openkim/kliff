@@ -20,8 +20,8 @@
 
 .. _tut_params_transform:
 
-Parameter transformation
-========================
+Parameter transformation for the Stillinger-Weber potential
+===========================================================
 
 Parameters in the empirical interatomic potential are often restricted by some physical
 constraints. As an example, in the Stillinger-Weber (SW) potential, the energy scaling
@@ -37,23 +37,7 @@ of the parameters.
 In this tutorial, we show how to apply such parameter transformation to the SW
 potential for silicon that is archived on OpenKIM_. Compare this to :ref:`tut_kim_sw`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 21-26
-
-.. code-block:: default
-
-
-
-    # Parameter transformation for the Stillinger-Weber potential
-
-
-
-
-
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 27-36
+.. GENERATED FROM PYTHON SOURCE LINES 26-35
 
 To start, let's first install the SW model::
 
@@ -65,7 +49,7 @@ To start, let's first install the SW model::
 
 This is
 
-.. GENERATED FROM PYTHON SOURCE LINES 36-46
+.. GENERATED FROM PYTHON SOURCE LINES 35-45
 
 .. code-block:: default
 
@@ -86,7 +70,7 @@ This is
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 47-55
+.. GENERATED FROM PYTHON SOURCE LINES 46-54
 
 Before creating a KIM model for the SW potential, we first instantiate the parameter
 transformation class that we want to use. ``kliff`` has a built-in log-transformation;
@@ -97,7 +81,7 @@ To make a direct comparison to :ref:`tut_kim_sw`, in this tutorial we will apply
 log-transformation to parameters ``A``, ``B``, ``sigma``, and ``gamma``, which
 correspond to energy and length scales.
 
-.. GENERATED FROM PYTHON SOURCE LINES 55-63
+.. GENERATED FROM PYTHON SOURCE LINES 54-62
 
 .. code-block:: default
 
@@ -167,7 +151,7 @@ correspond to energy and length scales.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 64-69
+.. GENERATED FROM PYTHON SOURCE LINES 63-68
 
 ``model.echo_model_params(params_space="original")`` above will print out parameter
 values in the original, untransformed space, i.e., the original parameterization of
@@ -175,7 +159,7 @@ the model. If we supply the argument ``params_space="transformed"``, then the pr
 parameter values are given in the transformed space, e.g., log space (below). The
 values of the other parameters are not changed.
 
-.. GENERATED FROM PYTHON SOURCE LINES 69-72
+.. GENERATED FROM PYTHON SOURCE LINES 68-71
 
 .. code-block:: default
 
@@ -240,13 +224,13 @@ values of the other parameters are not changed.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 73-76
+.. GENERATED FROM PYTHON SOURCE LINES 72-75
 
 Compare the output of ``params_space="transformed"`` and # ``params_space="original",
 you can see that the values of ``A``, ``B``, ``sigma``, and ``gamma`` are in the
 log space after the transformation.
 
-.. GENERATED FROM PYTHON SOURCE LINES 78-85
+.. GENERATED FROM PYTHON SOURCE LINES 77-84
 
 Next, we will set up the initial guess of the parameters to optimize. A value of
 ``"default"`` means the initial guess will be directly taken from the value already
@@ -256,7 +240,7 @@ in the model.
     The parameter values we initialize, as well as the lower and upper bounds,
     are in transformed space (i.e. log space here).
 
-.. GENERATED FROM PYTHON SOURCE LINES 85-94
+.. GENERATED FROM PYTHON SOURCE LINES 84-93
 
 .. code-block:: default
 
@@ -281,21 +265,21 @@ in the model.
 
     #================================================================================
     # Model parameters that are optimized.
-    # Note that the parameters are in the transformed space if
+    # Note that the parameters are in the transformed space if 
     # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     A 1
-      1.6094379124341003e+00   0.0000000000000000e+00   2.9957322735539909e+00
+      1.6094379124341003e+00   0.0000000000000000e+00   2.9957322735539909e+00 
 
     B 1
-     -5.0712488263019628e-01
+     -5.0712488263019628e-01 
 
     sigma 1
-      7.3960128493182953e-01 fix
+      7.3960128493182953e-01 fix 
 
     gamma 1
-      4.0546510810816438e-01
+      4.0546510810816438e-01 
 
 
 
@@ -303,7 +287,7 @@ in the model.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 95-101
+.. GENERATED FROM PYTHON SOURCE LINES 94-100
 
 We can show the parameters we've just set by ``model.echo_opt_params()``.
 
@@ -312,13 +296,13 @@ We can show the parameters we've just set by ``model.echo_opt_params()``.
    space. And it only shows all the parameters specified to optimize. To show all
    the parameters, do ``model.echo_model_params(params_space="transformed")``.
 
-.. GENERATED FROM PYTHON SOURCE LINES 103-106
+.. GENERATED FROM PYTHON SOURCE LINES 102-105
 
 Once we set the model and the parameter transformation scheme, then further
 calculations, e.g., training the model, will be performed using the transformed space
 and can be done in the same way as in :ref:`tut_kim_sw`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 106-124
+.. GENERATED FROM PYTHON SOURCE LINES 105-123
 
 .. code-block:: default
 
@@ -350,11 +334,11 @@ and can be done in the same way as in :ref:`tut_kim_sw`.
 
  .. code-block:: none
 
-    2022-03-31 22:44:19.531 | INFO     | kliff.dataset.dataset:_read:371 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
-    2022-03-31 22:44:23.136 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
-    2022-03-31 22:44:23.136 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2022-03-31 22:44:23.137 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
-    2022-03-31 22:45:20.419 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
+    2022-03-31 23:08:37.385 | INFO     | kliff.dataset.dataset:_read:371 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
+    2022-03-31 23:08:41.032 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
+    2022-03-31 23:08:41.033 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
+    2022-03-31 23:08:41.033 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
+    2022-03-31 23:09:45.934 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
     #================================================================================
     # Available parameters to optimize.
     # Parameters in `original` space.
@@ -403,7 +387,7 @@ and can be done in the same way as in :ref:`tut_kim_sw`.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 125-132
+.. GENERATED FROM PYTHON SOURCE LINES 124-131
 
 The optimized parameter values from this model training are very close, if not the
 same, as in :ref:`tut_kim_sw`. This is expected for the simple tutorial example
@@ -416,7 +400,7 @@ it much easier for the optimizer to navigate the parameter space.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  4.472 seconds)
+   **Total running time of the script:** ( 1 minutes  11.710 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_parameter_transform.py:

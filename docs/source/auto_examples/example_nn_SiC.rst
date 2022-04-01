@@ -158,7 +158,7 @@ We can save the trained model to disk, and later can load it back if we want.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.591 seconds)
+   **Total running time of the script:** ( 0 minutes  1.711 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_SiC.py:

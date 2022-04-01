@@ -120,7 +120,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
  .. figure:: /auto_examples/images/thumb/sphx_glr_example_parameter_transform_thumb.png
-     :alt: Parameter transformation
+     :alt: Parameter transformation for the Stillinger-Weber potential
 
      :ref:`sphx_glr_auto_examples_example_parameter_transform.py`
 
