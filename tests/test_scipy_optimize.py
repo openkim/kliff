@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss

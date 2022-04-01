@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+
 from kliff.models.parameter import OptimizingParameters, Parameter, ParameterError
 
 

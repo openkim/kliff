@@ -35,6 +35,7 @@ potential for silicon that is archived on OpenKIM_. Compare this to :ref:`tut_ki
 # This is
 
 import numpy as np
+
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss

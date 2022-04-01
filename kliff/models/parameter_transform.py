@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 import numpy as np
+
 from kliff.models.parameter import Parameter
 
 

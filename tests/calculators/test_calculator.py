@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.models import KIMModel

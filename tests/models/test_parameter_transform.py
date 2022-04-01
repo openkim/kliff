@@ -1,4 +1,5 @@
 import numpy as np
+
 from kliff.models.parameter import Parameter
 from kliff.models.parameter_transform import LogParameterTransform
 

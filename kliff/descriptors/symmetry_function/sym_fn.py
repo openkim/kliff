@@ -2,6 +2,8 @@ import os
 from collections import OrderedDict
 
 import numpy as np
+from loguru import logger
+
 from kliff.descriptors.descriptor import (
     Descriptor,
     generate_full_cutoff,
@@ -10,7 +12,6 @@ from kliff.descriptors.descriptor import (
 )
 from kliff.descriptors.symmetry_function import sf  # C extension
 from kliff.neighbor import NeighborList
-from loguru import logger
 
 
 class SymmetryFunction(Descriptor):

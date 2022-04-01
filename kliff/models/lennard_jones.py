@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 
 import numpy as np
+
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter

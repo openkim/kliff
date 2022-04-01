@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
+
 from kliff.dataset.dataset import Configuration
 from kliff.models.parameter import OptimizingParameters, Parameter
 from kliff.models.parameter_transform import ParameterTransform

@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+from loguru import logger
+
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.utils import to_path
-from loguru import logger
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}

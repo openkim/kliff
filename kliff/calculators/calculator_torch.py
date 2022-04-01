@@ -4,14 +4,15 @@ from typing import Dict, List, Optional, Union
 
 import torch
 import torch.distributed as dist
+from loguru import logger
+from torch.nn.parallel import DistributedDataParallel
+from torch.utils.data import DataLoader
+
 from kliff.dataset.dataset import Configuration
 from kliff.dataset.dataset_torch import FingerprintsDataset, fingerprints_collate_fn
 from kliff.models.model_torch import ModelTorch
 from kliff.models.neural_network import NeuralNetwork
 from kliff.utils import pickle_load, to_path
-from loguru import logger
-from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data import DataLoader
 
 
 class CalculatorTorch:

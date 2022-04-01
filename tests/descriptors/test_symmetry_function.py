@@ -7,6 +7,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
+
 from kliff.dataset import Configuration
 from kliff.descriptors import SymmetryFunction
 

@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import torch
-from kliff.descriptors.descriptor import load_fingerprints
 from torch.utils.data import Dataset
+
+from kliff.descriptors.descriptor import load_fingerprints
 
 
 class FingerprintsDataset(Dataset):

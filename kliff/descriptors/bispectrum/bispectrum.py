@@ -1,4 +1,6 @@
 import numpy as np
+from loguru import logger
+
 from kliff.descriptors.bispectrum import bs  # C extension
 from kliff.descriptors.descriptor import (
     Descriptor,
@@ -6,7 +8,6 @@ from kliff.descriptors.descriptor import (
     generate_species_code,
 )
 from kliff.neighbor import NeighborList
-from loguru import logger
 
 
 class Bispectrum(Descriptor):
