@@ -285,7 +285,6 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
             zeta_config.append(zeta)
 
             for s, z in zip(species, zeta):
-                # TODO move check to dataset to speed up computation?
                 if s not in supported_species:
                     raise CalculatorTorchError(f"No model for species: {s}")
                 else:

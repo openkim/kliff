@@ -1,23 +1,26 @@
 """
 .. _tut_params_transform:
-Parameter transformation for the Stillinger-Weber potential
-===========================================================
+
+Parameter transformation
+========================
 
 Parameters in the empirical interatomic potential are often restricted by some physical
 constraints. As an example, in the Stillinger-Weber (SW) potential, the energy scaling
-parameters (e.g., ``A`` and ``B``) and the length scaling parameters (e.g., ``sigma`` and
-``gamma``) are constrained to be positive. Due to these constraints, we might want to
-work with the log of the parameters, i.e., ``log(A)``, ``log(B)``, ``log(sigma)``, and
-``log(gamma)``.
+parameters (e.g., ``A`` and ``B``) and the length scaling parameters (e.g., ``sigma``
+and ``gamma``) are constrained to be positive.
 
-In this tutorial, we show how to apply parameter transformation to the SW potential for
-silicon that is archived on OpenKIM_.
+Due to these constraints, we might want to work with the log of the parameters,
+i.e., ``log(A)``, ``log(B)``, ``log(sigma)``, and ``log(gamma)`` when doing the
+optimization. After the optimization, we can transform them back to the original
+parameter space using an exponential function, which will guarantee the positiveness
+of the parameters.
 
-Compare this with :ref:`tut_kim_sw`.
-
-
-.. _OpenKIM: https://openkim.org
+In this tutorial, we show how to apply such parameter transformation to the SW
+potential for silicon that is archived on OpenKIM_. Compare this to :ref:`tut_kim_sw`.
 """
+
+
+# Parameter transformation for the Stillinger-Weber potential
 
 
 ##########################################################################################
@@ -29,43 +32,55 @@ Compare this with :ref:`tut_kim_sw`.
 #    This installs the model and its driver into the ``User Collection``. See
 #    :ref:`install_model` for more information about installing KIM models.
 #
+# This is
 
 import numpy as np
+from kliff.calculators import Calculator
+from kliff.dataset import Dataset
+from kliff.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
-from kliff.dataset import Dataset
 from kliff.utils import download_dataset
-from kliff.calculators import Calculator
-from kliff.loss import Loss
 
 ##########################################################################################
 # Before creating a KIM model for the SW potential, we first instantiate the parameter
-# transformation class that we want to use. ``kliff`` has a built-in log-transformation,
-# however extending it to other parameter transformation can be done by creating a
-# subclass from :class:`~kliff.models.parameter_transform.ParameterTransform` class.
+# transformation class that we want to use. ``kliff`` has a built-in log-transformation;
+# however, extending it to other parameter transformation can be done by creating a
+# subclass of :class:`~kliff.models.parameter_transform.ParameterTransform`.
 #
 # To make a direct comparison to :ref:`tut_kim_sw`, in this tutorial we will apply
 # log-transformation to parameters ``A``, ``B``, ``sigma``, and ``gamma``, which
-# correspond to energy and length scales. We then create a KIM model for this potential
-# and print out the ``model parameters``.
+# correspond to energy and length scales.
 
-logtransform = LogParameterTransform(param_names=["A", "B", "sigma", "gamma"])
+transform = LogParameterTransform(param_names=["A", "B", "sigma", "gamma"])
 model = KIMModel(
     model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006",
-    params_transform=logtransform,
+    params_transform=transform,
 )
 model.echo_model_params(params_space="original")
 
-# As a default, the method above will print out parameter values in the original,
-# untransformed space, i.e., using the original parameterization of the model. If we
-# supply the argument ``params_space="transformed"``, then the printed parameter values
-# are given in the transformed space, e.g., log space.
+##########################################################################################
+# ``model.echo_model_params(params_space="original")`` above will print out parameter
+# values in the original, untransformed space, i.e., the original parameterization of
+# the model. If we supply the argument ``params_space="transformed"``, then the printed
+# parameter values are given in the transformed space, e.g., log space (below). The
+# values of the other parameters are not changed.
+
+model.echo_model_params(params_space="transformed")
 
 ##########################################################################################
-# Next, we will set up parameters to optimize. Typically, these are set to the same
-# parameters we specify when creating the parameter transformation instance. Notice that
-# the parameter values we initialize, as well as the lower and upper bounds, are in
-# log space.
+# Compare the output of ``params_space="transformed"`` and # ``params_space="original",
+# you can see that the values of ``A``, ``B``, ``sigma``, and ``gamma`` are in the
+# log space after the transformation.
+
+##########################################################################################
+# Next, we will set up the initial guess of the parameters to optimize. A value of
+# ``"default"`` means the initial guess will be directly taken from the value already
+# in the model.
+#
+# .. note::
+#     The parameter values we initialize, as well as the lower and upper bounds,
+#     are in transformed space (i.e. log space here).
 
 model.set_opt_params(
     A=[[np.log(5.0), np.log(1.0), np.log(20)]],
@@ -75,9 +90,13 @@ model.set_opt_params(
 )
 model.echo_opt_params()
 
+##########################################################################################
+# We can show the parameters we've just set by ``model.echo_opt_params()``.
+#
 # .. note::
 #    ``model.echo_opt_params()`` always displays the parameter values in the transformed
-#    space.
+#    space. And it only shows all the parameters specified to optimize. To show all
+#    the parameters, do ``model.echo_model_params(params_space="transformed")``.
 
 ##########################################################################################
 # Once we set the model and the parameter transformation scheme, then further
@@ -98,7 +117,14 @@ steps = 100
 residual_data = {"energy_weight": 1.0, "forces_weight": 0.1}
 loss = Loss(calc, residual_data=residual_data, nprocs=2)
 loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
-model.echo_opt_params()
 
-# The optimized parameter values from this model training are the same (very close) as in
-# :ref:`tut_kim_sw`, as expected (note that the values displayed above are in log space).
+model.echo_model_params(params_space="original")
+
+##########################################################################################
+# The optimized parameter values from this model training are very close, if not the
+# same, as in :ref:`tut_kim_sw`. This is expected for the simple tutorial example
+# considered. But for more complex models, training in a transformed space can make
+# it much easier for the optimizer to navigate the parameter space.
+#
+#
+# .. _OpenKIM: https://openkim.org
