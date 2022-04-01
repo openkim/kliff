@@ -27,7 +27,7 @@ In this tutorial, we train a neural network (NN) potential for a system containi
 species: Si and C. This is very similar to the training for systems containing a single
 specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-74
+.. GENERATED FROM PYTHON SOURCE LINES 11-28
 
 .. code-block:: default
 
@@ -47,6 +47,23 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
         hyperparams="set51",
         normalize=True,
     )
+
+
+
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 29-31
+
+We will create two models, one for Si and the other for C. The purpose is to have
+a separate set of parameters for Si and C so that they can be differentiated.
+
+.. GENERATED FROM PYTHON SOURCE LINES 31-78
+
+.. code-block:: default
+
 
     N1 = 10
     N2 = 10
@@ -104,6 +121,15 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
  .. code-block:: none
 
+    2022-03-31 20:51:27.778 | INFO     | kliff.dataset.dataset:_read:370 - 10 configurations read from /Users/mjwen/Applications/kliff/examples/SiC_training_set
+    2022-03-31 20:51:27.778 | INFO     | kliff.calculators.calculator_torch:_get_device:416 - Training on cpu
+    2022-03-31 20:51:27.779 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
+    2022-03-31 20:51:28.808 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
+    2022-03-31 20:51:28.818 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
+    2022-03-31 20:51:28.819 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
+    2022-03-31 20:51:28.844 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 0.
+    2022-03-31 20:51:28.951 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:218 - Pickle 10 configurations finished.
+    2022-03-31 20:51:28.959 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
     Epoch = 0       loss = 5.7247632980e+01
     Epoch = 1       loss = 5.7215625763e+01
     Epoch = 2       loss = 5.7186323166e+01
@@ -115,17 +141,16 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
     Epoch = 8       loss = 5.7020624161e+01
     Epoch = 9       loss = 5.6992567062e+01
     Epoch = 10      loss = 5.6973577499e+01
+    2022-03-31 20:51:29.602 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 75-78
+.. GENERATED FROM PYTHON SOURCE LINES 79-80
 
-We can save the trained model to disk, and later can load it back if we want. We can
-also write the trained model to a KIM model such that it can be used in other simulation
-codes such as LAMMPS via the KIM API.
+We can save the trained model to disk, and later can load it back if we want.
 
-.. GENERATED FROM PYTHON SOURCE LINES 78-82
+.. GENERATED FROM PYTHON SOURCE LINES 80-84
 
 .. code-block:: default
 
@@ -143,7 +168,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  3.036 seconds)
+   **Total running time of the script:** ( 0 minutes  12.279 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_SiC.py:

@@ -35,7 +35,7 @@ model to a KIM model that is compatible with the kim-api_ by:
 
 .. code-block:: python
 
-    path = './kliff_trained_model'
+    path = "./kliff_trained_model"
     model.write_kim_model(path)
 
 Which writes to the current working directory a directory named

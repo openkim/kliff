@@ -100,4 +100,3 @@ predictions computed from the potential.
 The objective of the parameterization process is to find a set of parameters
 :math:`\bm\theta` of potential that reproduce the reference data as well as
 possible.
-

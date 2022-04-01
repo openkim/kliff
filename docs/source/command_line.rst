@@ -21,6 +21,3 @@ For all command line tools, you can do::
     $ kliff sub-command --help
 
 to get help (or ``-h`` for short).
-
-
-

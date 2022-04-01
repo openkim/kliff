@@ -25,7 +25,7 @@ For example,
 
     calc = ...  # create calculator
     loss = Loss(calc, ..., nprocs=2)
-    loss.minimize(method='L-BFGS-B')
+    loss.minimize(method="L-BFGS-B")
 
 .. seealso::
     See :ref:`tut_kim_sw` for a full example.
@@ -59,6 +59,7 @@ tutorial example :ref:`tut_kim_sw`, we can do::
 .. code-block:: python
 
     from mpi4py import MPI
+
     rank = MPI.COMM_WORLD.Get_rank()
     if rank == 0:
         model.echo_model_params()
@@ -69,4 +70,3 @@ tutorial example :ref:`tut_kim_sw`, we can do::
 
 Machine learning models
 =======================
-
