@@ -5,12 +5,10 @@
 
 Computation times
 =================
-**01:09.235** total execution time for **auto_examples** files:
+**01:42.265** total execution time for **auto_examples** files:
 
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_parameter_transform.py` (``example_parameter_transform.py``) | 01:09.235 | 0.0 MB |
-+---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                     | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                     | 01:42.265 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_lennard_jones.py` (``example_lennard_jones.py``)             | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
@@ -19,4 +17,6 @@ Computation times
 | :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)                             | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_nn_SiC.py` (``example_nn_SiC.py``)                           | 00:00.000 | 0.0 MB |
++---------------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_parameter_transform.py` (``example_parameter_transform.py``) | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
