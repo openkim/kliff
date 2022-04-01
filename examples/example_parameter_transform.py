@@ -1,8 +1,8 @@
 """
 .. _tut_params_transform:
 
-Parameter transformation
-========================
+Parameter transformation for the Stillinger-Weber potential
+===========================================================
 
 Parameters in the empirical interatomic potential are often restricted by some physical
 constraints. As an example, in the Stillinger-Weber (SW) potential, the energy scaling
@@ -20,7 +20,6 @@ potential for silicon that is archived on OpenKIM_. Compare this to :ref:`tut_ki
 """
 
 
-# Parameter transformation for the Stillinger-Weber potential
 
 
 ##########################################################################################
