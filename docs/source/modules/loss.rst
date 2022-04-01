@@ -35,10 +35,12 @@ the residual. ``residual_data`` is optional, and its default is:
 
 .. code-block:: python
 
-    residual_data = {'energy_weight': 1.0,
-                     'forces_weight': 1.0,
-                     'stress_weight': 1.0,
-                     'normalize_by_natoms': True}
+    residual_data = {
+        "energy_weight": 1.0,
+        "forces_weight": 1.0,
+        "stress_weight": 1.0,
+        "normalize_by_natoms": True,
+    }
 
 The meanings of these values are made clear in the below discussion.
 
@@ -64,11 +66,10 @@ The residual is computed using the ``residual_fn``, which should be of the form
 .. code-block:: python
 
     def residual_fn(identifier, natoms, weight, prediction, reference, data):
-        """ A function to compute the residual for a configuration.
-        """
+        """A function to compute the residual for a configuration."""
 
-         u =  #... compute u based on p (prediction) and q (reference)
-              # and it should be a vector
+        # ... compute u based on p (prediction) and q (reference)
+        # and it should be a vector
         return u
 
 In the above residual function,
@@ -101,9 +102,9 @@ that constructs the residual using energy and forces is defined as (in a nutshel
     def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
 
         # prepare weight based on user provided data
-        energy_weight = data['energy_weight']
-        forces_weight = data['forces_weight']
-        normalize = data['normalize_by_natoms']
+        energy_weight = data["energy_weight"]
+        forces_weight = data["forces_weight"]
+        normalize = data["normalize_by_natoms"]
         if normalize:
             energy_weight /= natoms
             forces_weight /= natoms
@@ -135,10 +136,17 @@ the below example, the `energy` is weighed 10 times as the
     calculator = ...  # create a calculator
 
     # provide my data
-    residual_data = {'energy_weight': 10.0,
-                     'forces_weight': 1.0,
-                     'normalize_by_natoms': True}
-    Loss(calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=residual_data)
+    residual_data = {
+        "energy_weight": 10.0,
+        "forces_weight": 1.0,
+        "normalize_by_natoms": True,
+    }
+    Loss(
+        calculator,
+        nprocs=1,
+        residual_fn=energy_forces_residual,
+        residual_data=residual_data,
+    )
 
 
 .. warning::
@@ -169,16 +177,16 @@ weigh more for the configurations with cracks.
     # define my own residual function
     def residual_fn(identifier, natoms, weight, prediction, reference, data):
 
-        energy_weight = 1./natoms
-        forces_weight = 1./natoms
+        energy_weight = 1.0 / natoms
+        forces_weight = 1.0 / natoms
 
-        if 'with_cracks' in identifer:
+        if "with_cracks" in identifer:
             energy_weight *= 10
             forces_weight *= 10
 
         # such that the loss is proportional to atoms but not natoms^2
-        energy_weight = energy_weight**0.5
-        forces_weight = forces_weight**0.5
+        energy_weight = energy_weight ** 0.5
+        forces_weight = forces_weight ** 0.5
 
         # obtain residual and properly normalize it
         residual = prediction - reference
