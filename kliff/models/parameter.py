@@ -358,7 +358,7 @@ class OptimizingParameters(MSONable):
             # probably setting cutoff?
             if "cut" in name:
                 # and not fix it?
-                if not (num_items == 2 and line[0].lower() == "fix"):
+                if not (num_items == 2 and line[1].lower() == "fix"):
                     warnings.warn(
                         f"Parameter `{name}` seems to be a cutoff distance. KLIFF does "
                         f"not support optimizing cutoff. Remove it from your "
