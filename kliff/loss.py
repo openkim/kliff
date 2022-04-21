@@ -54,12 +54,8 @@ def energy_forces_residual(
         reference: references data for the prediction, 1D array
         data: additional data for calculating the residual. Supported key value
             pairs are:
-            - energy_weight: float (default: None, which uses weight from the dataset)
-            - forces_weight: float (default: None, which uses weight from the dataset)
             - normalize_by_atoms: bool (default: True)
-            The energy weight is multiplied to the energy entry in the residual,
-            and the force weight is multiplied to the force entries. If
-            ``normalize_by_atoms`` is ``True``, the residual is divided by the number
+            If ``normalize_by_atoms`` is ``True``, the residual is divided by the number
             of atoms in the configuration.
 
     Returns:
@@ -87,16 +83,10 @@ def energy_forces_residual(
         Correspondingly, `reference` is the 3N concatenated reference forces.
     """
 
-    # Split up the weight data
-    if data["energy_weight"] is not None:
-        energy_weight = data["energy_weight"]
-    else:
-        energy_weight = weight["energy_weight"]
-
-    if data["forces_weight"] is not None:
-        forces_weight = data["forces_weight"]
-    else:
-        forces_weight = weight["forces_weight"]
+    # extract up the weight information
+    config_weight = weight.config_weight
+    energy_weight = weight.energy_weight
+    forces_weight = weight.forces_weight
 
     normalize = data["normalize_by_natoms"]
     if normalize:
@@ -104,49 +94,11 @@ def energy_forces_residual(
         forces_weight /= natoms
 
     # obtain residual and properly normalize it
-    residual = prediction - reference
+    residual = config_weight * (prediction - reference)
     residual[0] *= energy_weight
     residual[1:] *= forces_weight
 
     return residual
-
-
-def energy_residual(
-    identifier: str,
-    natoms: int,
-    weight: float,
-    prediction: np.array,
-    reference: np.array,
-    data: Dict[str, Any],
-):
-    """
-    Residual function only uses energy.
-    Same as :meth:`energy_forces_residual`, but set forces weight to 0.
-    See the documentation there for the meaning of hte arguments.
-    """
-    data.update({"forces_weight": 0})
-    return energy_forces_residual(
-        identifier, natoms, weight, prediction, reference, data
-    )
-
-
-def forces_residual(
-    identifier: str,
-    natoms: int,
-    weight: float,
-    prediction: np.array,
-    reference: np.array,
-    data: Dict[str, Any],
-):
-    """
-    Residual function only uses forces.
-    Same as :meth:`energy_forces_residual`, but set energy weight to 0.
-    See the documentation there for the meaning of hte arguments.
-    """
-    data.update({"energy_weight": 0})
-    return energy_forces_residual(
-        identifier, natoms, weight, prediction, reference, data
-    )
 
 
 class Loss:
@@ -168,9 +120,6 @@ class Loss:
         residual_data: data passed to ``residual_fn``; can be used to fine tune the
             residual function. Default to
             {
-                "energy_weight": None,
-                "forces_weight": None,
-                "stress_weight": None,
                 "normalize_by_natoms": True,
             }
             See the documentation of :meth:`energy_forces_residual` for more.
@@ -208,9 +157,6 @@ class LossPhysicsMotivatedModel:
         residual_data: data passed to ``residual_fn``; can be used to fine tune the
             residual function. Default to
             {
-                "energy_weight": None,
-                "forces_weight": None,
-                "stress_weight": None,
                 "normalize_by_natoms": True,
             }
             See the documentation of :meth:`energy_forces_residual` for more.
@@ -245,14 +191,11 @@ class LossPhysicsMotivatedModel:
     ):
 
         default_residual_data = {
-            "energy_weight": None,
-            "forces_weight": None,
-            "stress_weight": None,
             "normalize_by_natoms": True,
         }
 
         residual_data = _check_residual_data(residual_data, default_residual_data)
-        _check_compute_flag(calculator, residual_data)
+        # _check_compute_flag(calculator, residual_data)
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -607,9 +550,6 @@ class LossNeuralNetworkModel(object):
         residual_data: data passed to ``residual_fn``; can be used to fine tune the
             residual function. Default to
             {
-                "energy_weight": None,
-                "forces_weight": None,
-                "stress_weight": None,
                 "normalize_by_natoms": True,
             }
             See the documentation of :meth:`energy_forces_residual` for more.
@@ -640,14 +580,11 @@ class LossNeuralNetworkModel(object):
             report_import_error("pytorch")
 
         default_residual_data = {
-            "energy_weight": None,
-            "forces_weight": None,
-            "stress_weight": None,
             "normalize_by_natoms": True,
         }
 
         residual_data = _check_residual_data(residual_data, default_residual_data)
-        _check_compute_flag(calculator, residual_data)
+        # _check_compute_flag(calculator, residual_data)
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -892,29 +829,21 @@ def _check_compute_flag(calculator, residual_data):
     Check whether compute flag correctly set when the corresponding weight in residual
     data is 0.
     """
-    msg1 = 'Use "{0}_weight" = "{1}" instead of the values stored in the dataset'
-    msg2 = (
+    ew = residual_data["energy_weight"]
+    fw = residual_data["forces_weight"]
+    sw = residual_data["stress_weight"]
+    msg = (
         '"{0}_weight" set to "{1}". Seems you do not want to use {0} in the fitting. '
         'You can set "use_{0}" in "calculator.create()" to "False" to speed up the '
         "fitting."
     )
-    ew = residual_data["energy_weight"]
-    if ew is not None:
-        logger.warning(msg1.format("energy", ew))
-        if calculator.use_energy and ew < 1e-12:
-            logger.warning(msg2.format("energy", ew))
 
-    fw = residual_data["forces_weight"]
-    if fw is not None:
-        logger.warning(msg1.format("forces", fw))
-        if calculator.use_forces and fw < 1e-12:
-            logger.warning(msg2.format("forces", fw))
-
-    sw = residual_data["stress_weight"]
-    if sw is not None:
-        logger.warning(msg1.format("stress", sw))
-        if calculator.use_stress and sw < 1e-12:
-            logger.warning(msg2.format("stress", sw))
+    if calculator.use_energy and ew < 1e-12:
+        logger.warning(msg.format("energy", ew))
+    if calculator.use_forces and fw < 1e-12:
+        logger.warning(msg.format("forces", fw))
+    if calculator.use_stress and sw < 1e-12:
+        logger.warning(msg.format("stress", sw))
 
 
 class LossError(Exception):
