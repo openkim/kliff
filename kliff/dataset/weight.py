@@ -2,22 +2,27 @@ from typing import Any, Dict, Optional
 import copy
 
 import numpy as np
+from loguru import logger
 
 
 class Weight:
-    """
-    Base class for weight.
+    """Base class for weight.
 
     This class mimics the behavior  provided by the ``residual_data`` argument from the
     previous version.
     Subclass can implement
         - compute_weight
 
-    Args:
-        config_weight: the weight for the entire configuration
-        energy_weight: the weight for the energy
-        forces_weight: the weight for the forces
-        stress_weight: the weight for the stress
+    Parameters
+    ----------
+    config_weight: float (optional)
+        The weight for the entire configuration
+    energy_weight: float (optional)
+        The weight for the energy
+    forces_weight: float (optional)
+        The weight for the forces
+    stress_weight: float (optional)
+        The weight for the stress
     """
 
     def __init__(
@@ -27,14 +32,13 @@ class Weight:
         forces_weight: float = 1.0,
         stress_weight: float = 1.0,
     ):
-        self._config_weight = config_weight  # weight for the entire configuration
+        self._config_weight = config_weight
         self._energy_weight = energy_weight
         self._forces_weight = forces_weight
         self._stress_weight = stress_weight
 
-    @staticmethod
-    def compute_weight(config):
-        pass
+    def compute_weight(self, config):
+        self._check_compute_flag(config)
 
     @property
     def config_weight(self):
@@ -52,36 +56,70 @@ class Weight:
     def stress_weight(self):
         return self._stress_weight
 
+    def _check_compute_flag(self, config):
+        """
+        Check whether compute flag correctly set when the corresponding weight in
+        residual data is 0.
+        """
+        ew = self.energy_weight
+        fw = self.forces_weight
+        sw = self.stress_weight
+        msg = (
+            '"{0}_weight" are near zero. Seems you do not want to use {0} in the '
+            'fitting. You can set "use_{0}" in "calculator.create()" to "False" to speed'
+            "up the fitting."
+        )
 
-default_weight_params = {
-    "energy_weight_params": [1.0, 0.0],
-    "forces_weight_params": [1.0, 0.0],
-    "stress_weight_params": [1.0, 0.0],
-}
+        # If the weight are really small, but not zero, then warn the user. Zero weight
+        # usually means that the property is used.
+        if config._energy is not None and np.all(ew < 1e-12):
+            logger.warning(msg.format("energy", ew))
+        if config._forces is not None and np.all(fw < 1e-12):
+            logger.warning(msg.format("forces", fw))
+        if config._stress is not None and np.all(sw < 1e-12):
+            logger.warning(msg.format("stress", sw))
 
 
-class NonuniformWeight(Weight):
-    r"""
-    Non-uniform weight that is computed from the data. The calculation follows Lenosky et
-    al. (1997), with some modification in notation,
+class MagnitudeInverseWeight(Weight):
+    r"""Non-uniform weight that is computed from the data. The calculation follows
+    Lenosky et al. (1997), with some modification in notation,
 
     ..math:
        \frac{1}{w_m^2} = c_1^2 + c_2^2 \Vert f_m \Vert ^2.
 
-    Args:
-        config_weight: the weight for the entire configuration
-        weight_params: a dictionary containing parameters c1 and c2 for calculating the
-            weight of each property. The supported key value pairs are:
-            - energy_weight_params: float or array-like (default: [1.0, 0.0])
-            - forces_weight_params: float or array-like (default: [1.0, 0.0])
-            - stress_weight_params: float or array-like (default: [1.0, 0.0])
-            If a float is given, this number will be used to set c1, while c2 is set to
-            zero. If an array-like with 2 elements is given, it should contain c1 as the
-            first element and c2 as the second element.
+    Parameters
+    ----------
+    config_weight: float (optional)
+        The weight for the entire configuration
+    weight_params: dict (optional)
+        A dictionary containing parameters c1 and c2 for calculating the
+        weight of each property. The supported key value pairs are:
+        - energy_weight_params: float or array-like (default: [1.0, 0.0])
+        - forces_weight_params: float or array-like (default: [1.0, 0.0])
+        - stress_weight_params: float or array-like (default: [1.0, 0.0])
+        If a float is given, this number will be used to set c1, while c2 is set to
+        zero. If an array-like with 2 elements is given, it should contain c1 as the
+        first element and c2 as the second element.
+
+    References
+    ----------
+    .. [Lenosky1997] T. J. Lenosky et al., “Highly optimized tight-binding model of
+       silicon,” Phys. Rev. B, vol. 55, no. 3, pp. 15281544, Jan. 1997, doi:
+       10.1103/PhysRevB.55.1528.
+
     """
 
+    # Default parameters
+    default_weight_params = {
+        "energy_weight_params": [1.0, 0.0],
+        "forces_weight_params": [1.0, 0.0],
+        "stress_weight_params": [1.0, 0.0],
+    }
+
     def __init__(
-        self, config_weight: float = 1.0, weight_params: Optional[Dict[str, Any]] = None
+        self,
+        config_weight: float = 1.0,
+        weight_params: Optional[Dict[str, Any]] = None,
     ):
         self._config_weight = config_weight
         # Initiate the weight values. They will be changed latter.
@@ -90,7 +128,7 @@ class NonuniformWeight(Weight):
         self._stress_weight = 0.0
 
         self._weight_params = self._check_weight_params(
-            weight_params, default_weight_params
+            weight_params, self.default_weight_params
         )
 
     def compute_weight(self, config):
@@ -106,7 +144,7 @@ class NonuniformWeight(Weight):
             # Use the absolute value of the energy
             energy_norm = np.abs(energy)
             self._energy_weight = self._compute_weight_one_property(
-                energy_norm, self._weight_params["energy_weight_params"]
+                energy_norm, self._weight_params["energy_weight_params"], "energy"
             )
         # Forces
         if forces is not None:
@@ -114,7 +152,7 @@ class NonuniformWeight(Weight):
             forces_norm = np.linalg.norm(forces, axis=1)
             self._forces_weight = np.repeat(
                 self._compute_weight_one_property(
-                    forces_norm, self._weight_params["forces_weight_params"]
+                    forces_norm, self._weight_params["forces_weight_params"], "forces"
                 ),
                 3,
             )
@@ -125,17 +163,24 @@ class NonuniformWeight(Weight):
             shear_stress_norm = np.linalg.norm(stress[3:])
             stress_norm = np.sqrt(normal_stress_norm ** 2 + 2 * shear_stress_norm ** 2)
             self._stress_weight = self._compute_weight_one_property(
-                stress_norm, self._weight_params["stress_weight_params"]
+                stress_norm, self._weight_params["stress_weight_params"], "stress"
             )
 
+        self._check_compute_flag(config)
+
     @staticmethod
-    def _compute_weight_one_property(data_norm, property_weight_params):
+    def _compute_weight_one_property(data_norm, property_weight_params, property_type):
         """
         Compute the weight based for one property.
         """
         c1, c2 = property_weight_params
-        sigma2 = c1 ** 2 + (c2 * data_norm) ** 2
-        weight = 1 / np.sqrt(sigma2)
+        sigma = np.linalg.norm([c1, (c2 * data_norm)])
+        weight = 1 / sigma
+        if np.any(sigma < 1e-12):
+            logger.warning(
+                f"Found near zero inverse {property_type} weight. Be aware that some "
+                f"{property_type} data might be overweight."
+            )
         return weight
 
     @staticmethod
@@ -152,12 +197,16 @@ class NonuniformWeight(Weight):
                         f"of {', '.join(default.keys())}; got {key}. "
                     )
                 else:
-                    if (
-                        np.ndim(value) == 0
-                    ):  # If there is only a number given, use it to set c1
+                    if np.ndim(value) == 0:
+                        # If there is only a number given, use it to set c1
                         default[key][0] = value
-                    else:  # To set c1 and c2, a list with 2 elements need to be passed in
+                    elif np.ndim(value) == 1 and len(value) == 2:
+                        # To set c1 and c2, a list with 2 elements need to be passed in
                         default[key] = value
+                    else:
+                        raise WeightError(
+                            "Expect a float or a list of floats with format [c1, c2]"
+                        )
         return default
 
 

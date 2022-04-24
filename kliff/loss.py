@@ -195,7 +195,6 @@ class LossPhysicsMotivatedModel:
         }
 
         residual_data = _check_residual_data(residual_data, default_residual_data)
-        # _check_compute_flag(calculator, residual_data)
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -584,7 +583,6 @@ class LossNeuralNetworkModel(object):
         }
 
         residual_data = _check_residual_data(residual_data, default_residual_data)
-        # _check_compute_flag(calculator, residual_data)
 
         self.calculator = calculator
         self.nprocs = nprocs
@@ -822,28 +820,6 @@ def _check_residual_data(data: Dict[str, Any], default: Dict[str, Any]):
                 default[key] = value
 
     return default
-
-
-def _check_compute_flag(calculator, residual_data):
-    """
-    Check whether compute flag correctly set when the corresponding weight in residual
-    data is 0.
-    """
-    ew = residual_data["energy_weight"]
-    fw = residual_data["forces_weight"]
-    sw = residual_data["stress_weight"]
-    msg = (
-        '"{0}_weight" set to "{1}". Seems you do not want to use {0} in the fitting. '
-        'You can set "use_{0}" in "calculator.create()" to "False" to speed up the '
-        "fitting."
-    )
-
-    if calculator.use_energy and ew < 1e-12:
-        logger.warning(msg.format("energy", ew))
-    if calculator.use_forces and fw < 1e-12:
-        logger.warning(msg.format("forces", fw))
-    if calculator.use_stress and sw < 1e-12:
-        logger.warning(msg.format("stress", sw))
 
 
 class LossError(Exception):

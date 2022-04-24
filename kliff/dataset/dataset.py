@@ -199,34 +199,6 @@ class Configuration:
         """
         return self._weight
 
-    @property
-    def config_weight(self):
-        """
-        Get the weight of the configuration of the loss function.
-        """
-        return self._weight.config_weight
-
-    @property
-    def energy_weight(self):
-        """
-        Get the weight of the energy of the loss function.
-        """
-        return self._weight.energy_weight
-
-    @property
-    def forces_weight(self):
-        """
-        Get the weight of the forces of the loss function.
-        """
-        return self._weight.forces_weight
-
-    @property
-    def stress_weight(self):
-        """
-        Get the weight of the stress of the loss function.
-        """
-        return self._weight.stress_weight
-
     @weight.setter
     def weight(self, weight: float):
         """
