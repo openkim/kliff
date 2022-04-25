@@ -28,10 +28,9 @@ To create a data, do:
 
 .. code-block:: python
 
-    from kliff.dataset import DataSet
+    from kliff.dataset import Dataset
     path = 'path_to_my_dataset_files'
-    dset = Dataset()
-    dset.read(path, format='extxyz')
+    dset = Dataset(path, format='extxyz')
 
 where ``path`` is a file storing a configuration or a directory containing multiple
 files. If given a directory, all the files in this directory and its subdirectories
@@ -52,8 +51,8 @@ and a list of configurations constituting the dataset can be obtained by:
     configs = dset.get_configs()
 
 .. seealso::
-    See :class:`kliff.dataset.DataSet` for a complete list of the member functions
-    of the `DataSet` class.
+    See :class:`kliff.dataset.Dataset` for a complete list of the member functions
+    of the `Dataset` class.
 
 
 Inspect dataset
@@ -155,3 +154,164 @@ values. The forces ``fx fy fz`` can be skipped if you do not want to use them.
 .. _basic XYZ format: https://en.wikipedia.org/wiki/XYZ_file_format
 .. _OVITO: http://ovito.org
 
+
+
+.. _doc.dataset.weight:
+
+Weight
+======
+
+As mentioned in :ref:`theory`, the reference :math:`\bm q` can be any material
+properties, which can carry different physical units. The weight in the loss function
+can be used to put quantities with different units on a common scale. The weights also
+give us access to set which properties or configurations are more important, for example,
+in developing a potential for a certain application
+(see :ref:`doc.dataset.weight.define_your_weight_class`).
+
+KLIFF uses weight class to compute and store the weight information for each
+configuration. The basic structure of the class is shown below.
+
+.. code-block:: python
+
+    class Weight():
+	"""A class to deal with weights for each configuration."""
+
+	def __init__(self):
+	    #... Do necessary steps to initialize the class
+
+        def compute_weight(self, config):
+	    #... Compute the weights for the given configutation
+
+	@property
+	def some_weight(self):
+	    #... Add properties to retrieve the weight values
+
+
+Default weight class
+---------------------
+
+KLIFF has several built-in weight classes. As a default, KLIFF uses :class:`kliff.dataset.weight.Weight`,
+which put a single weight for each property.
+
+.. code-block:: python
+
+    from kliff.dataset import Dataset
+    from kliff.dataset.weight import  Weight
+
+    path = 'path_to_my_dataset_files'
+    weight = Weight()
+    dset = Dataset(path, weight=weight, format='extxyz')
+
+    # Retrieve the weights
+    config_weight = configs[0].config_weight
+    energy_weight = configs[0].energy_weight
+    forces_weight = configs[0].forces_weight
+    stress_weight = configs[0].stress_weight
+
+``config_weight`` is the weight for the configuration and ``energy_weight``,
+``forces_weight``, and ``stress_weigth`` are the weights for energy, forces, and stress,
+respectively. The default value for each weight is 1.0.
+
+One can also specify different values for these weights. For example, one might want to
+weigh the energy 10 times as the forces. It can be done by specifying the weight values
+while instantiating :class:`kliff.dataset.weight.Weight`.
+
+.. code-block:: python
+
+    weight = Weight(
+        config_weight=1.0, energy_weight=10.0, forces_weight=1.0, stress_weight=1.0
+    )
+
+.. note::
+    Another use case is if one wants to, for example, exclude the energy in the loss
+    function, which can be done by setting ``energy_weight=0.0``.
+
+
+Magniture-inverse weight
+------------------------
+
+KLIFF also provides another weight class that computes the weight based on the magnitude
+of the data, applying different weight on each data point. The weight calculation is
+motivated by formulation suggested by Lenosky et al. [lenosky1997]_,
+
+.. math::
+
+    \frac{1}{w_i}^2 = c_1^2 + c_2^2 \| \bm p_i \|^2
+
+:math:`c_1` and :math:`c_2` are parameters to compute the weight. They can be thought as
+a padding and a fractional scaling terms. When :math:`\bm p_i` corresponds to energy,
+the norm is the absolute value of the energy. When :math:`\bm p_i` correspond to forces,
+the norm is a vector norm of the force vector acting on the corresponding atom. This also
+mean that each force component acting on the same atom will have the same weight. If
+:math:`\bm p_i` correspond to stress, then the norm is a Frobenius norm of the stress
+tensor, giving the same weight for each component in the stress tensor.
+
+To use this weight, we instantiate :class:`~kliff.dataset.weight.MagnitudeInverseWeight`
+weight class:
+
+.. code-block:: python
+
+    from kliff.dataset.weight import MagnitudeInverseWeight
+    weight = MagnitudeInverseWeight(
+        config_weight=1.0,
+	weight_params={
+            "energy_weight_params": [c1e, c2e],
+            "forces_weight_params": [c1f, c2f],
+            "stress_weight_params": [c1s, c2s],
+	}
+    )
+
+``config_weight`` specifies the weight for the entire configuration.
+
+``weight_params`` is a dictionary containing :math:`c_1` and :math:`c_2` for energy,
+forces, and stress. The default value is:
+
+.. code-block:: python
+
+    weight_params = {
+	"energy_weight_params": [1.0, 0.0],
+	"forces_weight_params": [1.0, 0.0],
+	"stress_weight_params": [1.0, 0.0],
+    }
+
+Additionally, for each key, we can pass in a ``float``,  which set the value of
+:math:`c_1` with :math:`c_2=0.0`.
+
+.. [lenosky1997]
+   Lenosky, T.J., Kress, J.D., Kwon, I., Voter, A.F., Edwards, B., Richards, D.F., Yang,
+   S., Adams, J.B., 1997. Highly optimized tight-binding model of silicon. Phys. Rev. B
+   55, 15281544. https://doi.org/10.1103/PhysRevB.55.1528
+
+
+.. _doc.dataset.weight.define_your_weight_class:
+
+Define your weight class
+------------------------
+
+We can also define a custom weight class to use in KLIFF. As an example, suppose we are
+developing a potential that will be used to investigate fracture properties. The training
+sets includes both configurations with and without cracks. For this application, we might
+want to put larger weights for the configurations with cracks. Below is an example of
+weight class that achieve this goal.
+
+.. code-block:: python
+
+    from kliff.dataset.weight import Weight
+
+    class WeightForCracks(Weight):
+        """An example weight class that put larger weight on the configurations with
+	cracks. This class inherit from ``kliff.dataset.weight.Weight``. We just need to
+	modify ``compute_weight`` method to put larger weight for the configurations with
+	cracks. Other modifications might need to be done for different weight class.
+	"""
+
+	def __init__(self, energy_weight, forces_weight):
+            super().__init__(energy_weight=energy_weight, forces_weight=forces_weight)
+
+	def compute_weight(self, config):
+	    identifier = config.identifer
+	    if 'with_cracks' in identifier:
+		self._config_weight = 10.0
+
+With this weight class, we can use the built-in ``residual_fn`` to achieve the same
+result as the implementation in :ref:`doc.loss.use_your_own_residual_function`.
