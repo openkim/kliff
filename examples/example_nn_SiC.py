@@ -13,6 +13,7 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 from kliff import nn
 from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.dataset import Dataset
+from kliff.dataset.weight import Weight
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
@@ -59,7 +60,8 @@ model_c.set_save_metadata(prefix="./kliff_saved_model_c", start=5, frequency=2)
 
 # training set
 dataset_path = download_dataset(dataset_name="SiC_training_set")
-tset = Dataset(dataset_path)
+weight = Weight(forces_weight=0.3)
+tset = Dataset(dataset_path, weight)
 configs = tset.get_configs()
 
 # calculator
@@ -67,7 +69,7 @@ calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c}, gpu=False)
 _ = calc.create(configs, reuse=False)
 
 # loss
-loss = Loss(calc, residual_data={"forces_weight": 0.3})
+loss = Loss(calc)
 result = loss.minimize(method="Adam", num_epochs=10, batch_size=4, lr=0.001)
 
 
