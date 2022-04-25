@@ -7,6 +7,7 @@ from loguru import logger
 
 from kliff import parallel
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
 
 try:
@@ -34,7 +35,7 @@ except ImportError:
 def energy_forces_residual(
     identifier: str,
     natoms: int,
-    weight: float,
+    weight: Weight,
     prediction: np.array,
     reference: np.array,
     data: Dict[str, Any],
@@ -42,14 +43,22 @@ def energy_forces_residual(
     """
     A residual function using both energy and forces.
 
-    The residual is computed as ``weight * (prediction - reference)``.
+    The residual is computed as
+
+    .. code-block::
+
+       weight.config_weight * wi * (prediction - reference)
+
+    where ``wi`` can be ``weight.energy_weight`` or ``weight.forces_weight``, depending
+    on the property.
 
     Args:
         identifier: (unique) identifier of the configuration for which to compute the
             residual. This is useful when you want to weigh some configuration
             differently.
         natoms: number of atoms in the configuration
-        weight: weight in the loss function for the configuration
+        weight: an instance that computes the weight of the configuration in the loss
+            function.
         prediction: prediction computed by calculator, 1D array
         reference: references data for the prediction, 1D array
         data: additional data for calculating the residual. Supported key value

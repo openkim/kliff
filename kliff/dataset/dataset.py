@@ -18,6 +18,7 @@ class Configuration:
     Class of atomic configuration.
     This is used to store the information of an atomic configuration, e.g. supercell,
     species, coords, energy, and forces.
+
     Args:
         cell: A 3x3 matrix of the lattice vectors. The first, second, and third rows are
             :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
@@ -32,7 +33,8 @@ class Configuration:
         stress: A list with 6 components in Voigt notation, i.e. it returns
             :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
             \sigma_{xy}]`. See: https://en.wikipedia.org/wiki/Voigt_notation
-        weight: weight of the configuration in the loss function.
+        weight: an instance that computes the weight of the configuration in the loss
+            function.
         identifier: a (unique) identifier of the configuration
     """
 
@@ -72,6 +74,7 @@ class Configuration:
     ):
         """
         Read configuration from file.
+
         Args:
             filename: Path to the file that stores the configuration.
             file_format: Format of the file that stores the configuration (e.g. `xyz`).
@@ -111,6 +114,7 @@ class Configuration:
     def to_file(self, filename: Path, file_format: str = "xyz"):
         """
         Write the configuration to file.
+
         Args:
             filename: Path to the file that stores the configuration.
             file_format: Format of the file that stores the configuration (e.g. `xyz`).
@@ -252,9 +256,11 @@ class Configuration:
     ) -> Dict[str, int]:
         """
         Count the number of atoms by species.
+
         Args:
             symbols: species to count the occurrence. If `None`, all species present
                 in the configuration are used.
+
         Returns:
             {specie, count}: with `key` the species string, and `value` the number of
                 atoms with each species.
@@ -298,11 +304,14 @@ class Configuration:
 class Dataset:
     """
     A dataset of multiple configurations (:class:`~kliff.dataset.Configuration`).
+
     Args:
         path: Path of a file storing a configuration or filename to a directory containing
             multiple files. If given a directory, all the files in this directory and its
             subdirectories with the extension corresponding to the specified file_format
             will be read.
+        weight: an instance that computes the weight of the configuration in the loss
+            function.
         file_format: Format of the file that stores the configuration, e.g. `xyz`.
     """
 
@@ -320,17 +329,20 @@ class Dataset:
         else:
             self.configs = []
 
-    def add_configs(self, path: Path):
+    def add_configs(self, path: Path, weight: Optional[Weight] = None):
         """
         Read configurations from filename and added them to the existing set of
         configurations.
         This is a convenience function to read configurations from different directory
         on disk.
+
         Args:
             path: Path the directory (or filename) storing the configurations.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
         """
 
-        configs = self._read(path, self.file_format)
+        configs = self._read(path, weight, self.file_format)
         self.configs.extend(configs)
 
     def get_configs(self) -> List[Configuration]:
