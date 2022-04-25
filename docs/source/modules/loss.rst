@@ -6,7 +6,7 @@ Loss
 
 As discussed in :ref:`theory`, we solve a minimization problem to fit the potential.
 For physics-motivated potentials, the geodesic Levenberg-Marquardt (``geodesicLM``)
-minimization method (TODO, add link to Mark's stuff) can be used, which has been
+minimization method [transtrum2012geodesicLM]_ can be used, which has been
 shown to perform well for potentials in [wen2016potfit]_. KLIFF also interacts
 with SciPy_ to utilize the zoo of optimization methods there.
 For machine learning potentials, KLIFF wraps the optimization methods in PyTorch_.
@@ -35,12 +35,9 @@ the residual. ``residual_data`` is optional, and its default is:
 
 .. code-block:: python
 
-    residual_data = {'energy_weight': 1.0,
-                     'forces_weight': 1.0,
-                     'stress_weight': 1.0,
-                     'normalize_by_natoms': True}
+    residual_data = {'normalize_by_natoms': True}
 
-The meanings of these values are made clear in the below discussion.
+The meaning of this value is made clear in the below discussion.
 
 
 ``residual_fn`` is a function used to compute the residual.
@@ -49,7 +46,7 @@ of the norm of the residual of each individual configuration, i.e.
 
 .. math::
     \mathcal{L(\bm\theta)} = \frac{1}{2} \sum_{i=1}^{N_p}
-    w_i \|\bm u_i\|^2
+    \|w_i \bm u_i\|^2
 
 with the residual
 
@@ -78,7 +75,8 @@ In the above residual function,
   there, ``identifier`` is default to the path to the file that storing the
   configuration, e.g. ``Si_training_set/NVT_runs/T300_step100.xyz``.
 - ``natoms`` is an ``int`` denoting the number of atoms in the configuration.
-- ``weight`` is a ``float`` specifying the weight for the configuration.
+- ``weight`` is a :class:`~kliff.dataset.weight.Weight` instance that generates the
+  weights from the configuration (see :ref:`doc.dataset.weight`).
 - ``prediction`` is a vector of the prediction :math:`\bm p` computed from the
   potential.
 - ``reference`` is a vector of the corresponding reference data :math:`\bm q`.
@@ -92,40 +90,41 @@ discussed below.
 
 Built-in residual function
 ==========================
-KLIFF provides a number of residual functions readily to be plugged into ``Loss``
-and let the wheel spin. For example, the :func:`~kliff.loss.energy_forces_residual`
-that constructs the residual using energy and forces is defined as (in a nutshell):
+KLIFF provides a residual function that compares the energy and forces, and is readily to
+be plugged into ``Loss`` and let the wheel spin. The function :func:`~kliff.loss.energy_forces_residual`
+is defined as (in a nutshell):
 
 .. code-block:: python
 
     def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
 
-        # prepare weight based on user provided data
-        energy_weight = data['energy_weight']
-        forces_weight = data['forces_weight']
-        normalize = data['normalize_by_natoms']
-        if normalize:
-            energy_weight /= natoms
-            forces_weight /= natoms
+	# extract the weight information
+	config_weight = weight.config_weight
+	energy_weight = weight.energy_weight
+	forces_weight = weight.forces_weight
 
-        # obtain residual and properly normalize it
-        residual = weight * (prediction - reference)
-        residual[0] *= energy_weight
-        residual[1:] *= forces_weight
+	normalize = data["normalize_by_natoms"]
+	if normalize:
+	    energy_weight /= natoms
+	    forces_weight /= natoms
 
-        return residual
+	# obtain residual and properly normalize it
+	residual = config_weight * (prediction - reference)
+	residual[0] *= energy_weight
+	residual[1:] *= forces_weight
 
-
-This residual function can weigh ``energy`` and ``forces`` differently, and enables the
-normalization of the residual based on the number of atoms.  Normalization by the number
-of atoms makes each individual configuration in the training set contributes equally to
-the loss function; otherwise, configurations with more atoms can dominate the loss, which
-(most of the times) is not what we prefer.
+	return residual
 
 
-One can provide a ``residual_data`` instead of using the default one to tune the loss. In
-the below example, the `energy` is weighed 10 times as the
-`forces`.
+This residual function retrieves the weights for energy and forces f``weight``
+instance and enables the normalization of the residual based on the number of atoms.
+Normalization by the number of atoms makes each individual configuration in the training
+set contributes equally to the loss function; otherwise, configurations with more atoms
+can dominate the loss, which (most of the times) is not what we prefer.
+
+
+One can provide a ``residual_data`` instead of using the default one to tune the loss,
+for example, if one wants to ignore the normalization by the number of atoms.
 
 .. code-block:: python
 
@@ -135,9 +134,7 @@ the below example, the `energy` is weighed 10 times as the
     calculator = ...  # create a calculator
 
     # provide my data
-    residual_data = {'energy_weight': 10.0,
-                     'forces_weight': 1.0,
-                     'normalize_by_natoms': True}
+    residual_data = {'normalize_by_natoms': False}
     Loss(calculator, nprocs=1, residual_fn=energy_forces_residual, residual_data=residual_data)
 
 
@@ -146,14 +143,13 @@ the below example, the `energy` is weighed 10 times as the
     recommend the users to explicitly provide them to reminder themselves what
     they are doing as done above.
 
-.. seealso::
-    See :mod:`kliff.loss` for other built-in residual functions.
 
+.. _doc.loss.use_your_own_residual_function:
 
 Use your own residual function
 ==============================
 
-The built-in residual functions treat each configuration in the training set, and
+The built-in residual function treats each configuration in the training set, and
 each atom in a configuration equally important. Sometimes, this may not be what
 you want. In these cases, you can define and use your own ``residual_fn``.
 
@@ -169,19 +165,22 @@ weigh more for the configurations with cracks.
     # define my own residual function
     def residual_fn(identifier, natoms, weight, prediction, reference, data):
 
-        energy_weight = 1./natoms
-        forces_weight = 1./natoms
+	# extract the weight information
+	config_weight = weight.config_weight
+        energy_weight = weight.energy_weight
+        forces_weight = weight.forces_weight
 
+	# larger weight for configuration with cracks
         if 'with_cracks' in identifer:
-            energy_weight *= 10
-            forces_weight *= 10
+            config_weight *= 10
 
-        # such that the loss is proportional to atoms but not natoms^2
-        energy_weight = energy_weight**0.5
-        forces_weight = forces_weight**0.5
+	normalize = data["normalize_by_natoms"]
+	if normalize:
+	    energy_weight /= natoms
+            forces_weight /= natoms
 
         # obtain residual and properly normalize it
-        residual = prediction - reference
+        residual = config_weight * (prediction - reference)
         residual[0] *= energy_weight
         residual[1:] *= forces_weight
 
@@ -189,7 +188,12 @@ weigh more for the configurations with cracks.
 
 
     calculator = ...  # create a calculator
-    Loss(calculator, nprocs=1, residual_fn=residual_fn)
+    loss = Loss(
+        calculator,
+	nprocs=1,
+	residual_fn=residual_fn,
+	residual_data={"normalize_by_natoms": True}
+    )
 
 
 The above code takes advantage of ``identifier`` to distinguish configurations with
@@ -201,9 +205,16 @@ and manipulate the corresponding components of ``residual``.
 
 
 .. note::
-    If you are using your own ``residual_fn``, its ``data`` argument can be completed
-    ignored since it can be directly provided in your own ``residual_fn``.
+    If you are using your own ``residual_fn``, its ``data`` argument can be completely
+    ignored since it can be directly provided in your own ``residual_fn``.   
 
+.. seealso::
+    See :ref:`doc.dataset.weight.define_your_weight_class` for an alternative
+    implementation of this example.
+
+.. note::
+    Handling the weight is preferably done using the weight class (see :ref:`doc.dataset.weight`)
+    instead of in the residual function.
 
 
 .. _PyTorch: https://pytorch.org
@@ -215,3 +226,6 @@ and manipulate the corresponding components of ``residual``.
    Tadmor, E.B., 2016. A KIM-compliant potfit for fitting sloppy interatomic
    potentials: application to the EDIP model for silicon. Modelling and Simulation in
    Materials Science and Engineering, 25(1), p.014001.
+.. [transtrum2012geodesicLM] 
+   Transtrum, M.K., Sethna, J.P., 2012. Improvements to the Levenberg-Marquardt
+   algorithm for nonlinear least-squares minimization. arXiv:1201.5885 [physics].
