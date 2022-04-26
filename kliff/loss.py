@@ -119,6 +119,8 @@ def energy_residual(
     """
     A residual function using just the energy.
 
+    See the documentation of :meth:`energy_forces_residual` for the meaning of the
+    arguments.
     """
 
     # extract up the weight information
@@ -145,6 +147,8 @@ def forces_residual(
     """
     A residual function using just the forces.
 
+    See the documentation of :meth:`energy_forces_residual` for the meaning of the
+    arguments.
     """
 
     # extract up the weight information

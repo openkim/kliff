@@ -90,28 +90,26 @@ discussed below.
 
 Built-in residual function
 ==========================
-KLIFF provides a residual function that compares the energy and forces, and is readily to
-be plugged into ``Loss`` and let the wheel spin. The function :func:`~kliff.loss.energy_forces_residual`
-is defined as (in a nutshell):
+KLIFF provides a number of residual functions readily to be plugged into ``Loss``
+and let the wheel spin. For example, the :func:`~kliff.loss.energy_forces_residual`
+that constructs the residual using energy and forces is defined as (in a nutshell):
 
 .. code-block:: python
 
     def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
 
-	# extract the weight information
+	# extract up the weight information
 	config_weight = weight.config_weight
 	energy_weight = weight.energy_weight
 	forces_weight = weight.forces_weight
-
-	normalize = data["normalize_by_natoms"]
-	if normalize:
-	    energy_weight /= natoms
-	    forces_weight /= natoms
 
 	# obtain residual and properly normalize it
 	residual = config_weight * (prediction - reference)
 	residual[0] *= energy_weight
 	residual[1:] *= forces_weight
+
+	if data["normalize_by_natoms"]:
+	    residual /= natoms
 
 	return residual
 
@@ -142,6 +140,9 @@ for example, if one wants to ignore the normalization by the number of atoms.
     Even though ``residual_fn`` and ``residual_data`` is optional, we strongly
     recommend the users to explicitly provide them to reminder themselves what
     they are doing as done above.
+
+.. seealso::
+    See :mod:`kliff.loss` for other built-in residual functions.
 
 
 .. _doc.loss.use_your_own_residual_function:
