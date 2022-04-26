@@ -97,15 +97,65 @@ def energy_forces_residual(
     energy_weight = weight.energy_weight
     forces_weight = weight.forces_weight
 
-    normalize = data["normalize_by_natoms"]
-    if normalize:
-        energy_weight /= natoms
-        forces_weight /= natoms
-
     # obtain residual and properly normalize it
     residual = config_weight * (prediction - reference)
     residual[0] *= energy_weight
     residual[1:] *= forces_weight
+
+    if data["normalize_by_natoms"]:
+        residual /= natoms
+
+    return residual
+
+
+def energy_residual(
+    identifier: str,
+    natoms: int,
+    weight: Weight,
+    prediction: np.array,
+    reference: np.array,
+    data: Dict[str, Any],
+):
+    """
+    A residual function using just the energy.
+
+    """
+
+    # extract up the weight information
+    config_weight = weight.config_weight
+    energy_weight = weight.energy_weight
+
+    # obtain residual and properly normalize it
+    residual = config_weight * energy_weight * (prediction - reference)
+
+    if data["normalize_by_natoms"]:
+        residual /= natoms
+
+    return residual
+
+
+def forces_residual(
+    identifier: str,
+    natoms: int,
+    weight: Weight,
+    prediction: np.array,
+    reference: np.array,
+    data: Dict[str, Any],
+):
+    """
+    A residual function using just the forces.
+
+    """
+
+    # extract up the weight information
+    config_weight = weight.config_weight
+    forces_weight = weight.forces_weight
+
+    # obtain residual and properly normalize it
+    residual = config_weight * forces_weight * (prediction - reference)
+
+    if data["normalize_by_natoms"]:
+        residual /= natoms
 
     return residual
 
@@ -208,9 +258,14 @@ class LossPhysicsMotivatedModel:
         self.calculator = calculator
         self.nprocs = nprocs
 
-        self.residual_fn = (
-            energy_forces_residual if residual_fn is None else residual_fn
-        )
+        if residual_fn is None:
+            if calculator.use_energy and calculator.use_forces:
+                residual_fn = energy_forces_residual
+            elif calculator.use_energy:
+                residual_fn = energy_residual
+            elif calculator.use_forces:
+                residual_fn = forces_residual
+        self.residual_fn = residual_fn
         self.residual_data = residual_data
 
         logger.debug(f"`{self.__class__.__name__}` instantiated.")
