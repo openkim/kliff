@@ -3,9 +3,10 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+from loguru import logger
+
 from kliff.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
-from loguru import logger
 
 
 class ModelTorch(nn.Module):

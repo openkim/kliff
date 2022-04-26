@@ -3,8 +3,9 @@ import sys
 from collections.abc import Iterable
 
 import numpy as np
-from kliff.utils import create_directory, split_string
 from loguru import logger
+
+from kliff.utils import create_directory, split_string
 
 
 class EnergyForcesRMSE:

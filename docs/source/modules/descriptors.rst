@@ -9,5 +9,3 @@ Symmetry functions
 
 Bispectrum
 ==========
-
-

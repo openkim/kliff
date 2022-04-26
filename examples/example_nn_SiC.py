@@ -26,6 +26,10 @@ descriptor = SymmetryFunction(
     normalize=True,
 )
 
+##########################################################################################
+# We will create two models, one for Si and the other for C. The purpose is to have
+# a separate set of parameters for Si and C so that they can be differentiated.
+
 N1 = 10
 N2 = 10
 model_si = NeuralNetwork(descriptor)
@@ -74,9 +78,7 @@ result = loss.minimize(method="Adam", num_epochs=10, batch_size=4, lr=0.001)
 
 
 ##########################################################################################
-# We can save the trained model to disk, and later can load it back if we want. We can
-# also write the trained model to a KIM model such that it can be used in other simulation
-# codes such as LAMMPS via the KIM API.
+# We can save the trained model to disk, and later can load it back if we want.
 
 model_si.save("final_model_si.pkl")
 model_c.save("final_model_c.pkl")

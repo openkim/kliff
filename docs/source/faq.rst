@@ -35,4 +35,3 @@ I am using ``mpirun`` (``mpiexec``), but why the output shows it is `Running in 
 If you are running something like ``mpiexec -np 2 python example_kim_SW_Si.py`` and see
 each minimization step executed twice, you may forget to install ``mpi4py``.
 See :ref:`run_in_parallel` for more one how to run in parallel.
-

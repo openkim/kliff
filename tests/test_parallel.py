@@ -1,4 +1,5 @@
 import numpy as np
+
 from kliff.parallel import parmap1, parmap2
 
 

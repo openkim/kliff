@@ -27,7 +27,7 @@ In this tutorial, we train a neural network (NN) potential for a system containi
 species: Si and C. This is very similar to the training for systems containing a single
 specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-74
+.. GENERATED FROM PYTHON SOURCE LINES 11-28
 
 .. code-block:: default
 
@@ -47,6 +47,23 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
         hyperparams="set51",
         normalize=True,
     )
+
+
+
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 29-31
+
+We will create two models, one for Si and the other for C. The purpose is to have
+a separate set of parameters for Si and C so that they can be differentiated.
+
+.. GENERATED FROM PYTHON SOURCE LINES 31-78
+
+.. code-block:: default
+
 
     N1 = 10
     N2 = 10
@@ -119,13 +136,11 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 75-78
+.. GENERATED FROM PYTHON SOURCE LINES 79-80
 
-We can save the trained model to disk, and later can load it back if we want. We can
-also write the trained model to a KIM model such that it can be used in other simulation
-codes such as LAMMPS via the KIM API.
+We can save the trained model to disk, and later can load it back if we want.
 
-.. GENERATED FROM PYTHON SOURCE LINES 78-82
+.. GENERATED FROM PYTHON SOURCE LINES 80-84
 
 .. code-block:: default
 
@@ -143,7 +158,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  3.036 seconds)
+   **Total running time of the script:** ( 0 minutes  1.711 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_SiC.py:

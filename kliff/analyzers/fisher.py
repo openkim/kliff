@@ -1,8 +1,9 @@
 import copy
 
 import numpy as np
-from kliff.utils import split_string
 from loguru import logger
+
+from kliff.utils import split_string
 
 
 class Fisher:

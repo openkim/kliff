@@ -100,23 +100,24 @@ parameters that can be optimized (we call this ``model parameters``).
 
     #================================================================================
     # Available parameters to optimize.
+    # Parameters in `original` space.
     # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
     #================================================================================
 
     name: A
-    value: [15.2848479197914]
+    value: [15.28484792]
     size: 1
 
     name: B
-    value: [0.6022245584]
+    value: [0.60222456]
     size: 1
 
     name: p
-    value: [4.0]
+    value: [4.]
     size: 1
 
     name: q
-    value: [0.0]
+    value: [0.]
     size: 1
 
     name: sigma
@@ -136,12 +137,12 @@ parameters that can be optimized (we call this ``model parameters``).
     size: 1
 
     name: costheta0
-    value: [-0.3333333333333333]
+    value: [-0.33333333]
     size: 1
 
 
 
-    '#================================================================================\n# Available parameters to optimize.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [15.2848479197914]\nsize: 1\n\nname: B\nvalue: [0.6022245584]\nsize: 1\n\nname: p\nvalue: [4.0]\nsize: 1\n\nname: q\nvalue: [0.0]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.51412]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.3333333333333333]\nsize: 1\n\n'
+    '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [15.28484792]\nsize: 1\n\nname: B\nvalue: [0.60222456]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.51412]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
 
 
 
@@ -185,6 +186,8 @@ subset of them to reproduce the training set.
 
     #================================================================================
     # Model parameters that are optimized.
+    # Note that the parameters are in the transformed space if 
+    # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     A 1
@@ -201,7 +204,7 @@ subset of them to reproduce the training set.
 
 
 
-    '#================================================================================\n# Model parameters that are optimized.\n#================================================================================\n\nA 1\n  5.0000000000000000e+00   1.0000000000000000e+00   2.0000000000000000e+01 \n\nB 1\n  6.0222455840000000e-01 \n\nsigma 1\n  2.0951000000000000e+00 fix \n\ngamma 1\n  1.5000000000000000e+00 \n\n'
+    '#================================================================================\n# Model parameters that are optimized.\n# Note that the parameters are in the transformed space if \n# `params_transform` is provided when instantiating the model.\n#================================================================================\n\nA 1\n  5.0000000000000000e+00   1.0000000000000000e+00   2.0000000000000000e+01 \n\nB 1\n  6.0222455840000000e-01 \n\nsigma 1\n  2.0951000000000000e+00 fix \n\ngamma 1\n  1.5000000000000000e+00 \n\n'
 
 
 
@@ -261,7 +264,7 @@ test data). For the silicon training set, we can read and process the files by:
 
  .. code-block:: none
 
-    2021-08-11 22:43:14.005 | INFO     | kliff.dataset.dataset:_read:370 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
+    2022-03-31 23:10:32.478 | INFO     | kliff.dataset.dataset:_read:371 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
 
 
 
@@ -304,7 +307,7 @@ by:
 
  .. code-block:: none
 
-    2021-08-11 22:43:17.665 | INFO     | kliff.calculators.calculator:create:106 - Create calculator for 1000 configurations.
+    2022-03-31 23:10:36.673 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
 
 
 
@@ -350,20 +353,20 @@ a max number of 100 iterations.
 
  .. code-block:: none
 
-    2021-08-11 22:43:17.667 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2021-08-11 22:43:17.667 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
-    2021-08-11 22:44:47.766 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
+    2022-03-31 23:10:36.675 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
+    2022-03-31 23:10:36.675 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
+    2022-03-31 23:12:11.739 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
 
-          fun: 0.6940780132873
+          fun: 0.6940780133179182
      hess_inv: <3x3 LbfgsInvHessProduct with dtype=float64>
-          jac: array([-5.55111466e-08, -4.20774524e-06,  1.46549440e-06])
-      message: 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
-         nfev: 184
-          nit: 37
-         njev: 46
+          jac: array([ 4.68514078e-06, -1.84019465e-04,  3.29847263e-05])
+      message: 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH'
+         nfev: 172
+          nit: 35
+         njev: 43
        status: 0
       success: True
-            x: array([14.93863445,  0.58740272,  2.20146131])
+            x: array([14.93863445,  0.58740275,  2.20146349])
 
 
 
@@ -397,22 +400,24 @@ that can be used with LAMMPS_, GULP_, ASE_, etc. via the kim-api_.
 
     #================================================================================
     # Model parameters that are optimized.
+    # Note that the parameters are in the transformed space if 
+    # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     A 1
-      1.4938634451128264e+01   1.0000000000000000e+00   2.0000000000000000e+01 
+      1.4938634447205009e+01   1.0000000000000000e+00   2.0000000000000000e+01 
 
     B 1
-      5.8740272220341194e-01 
+      5.8740275142426945e-01 
 
     sigma 1
       2.0951000000000000e+00 fix 
 
     gamma 1
-      2.2014613053445915e+00 
+      2.2014634864154190e+00 
 
 
-    2021-08-11 22:44:47.782 | INFO     | kliff.models.kim:write_kim_model:676 - KLIFF trained model write to `/Users/mjwen/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained`
+    2022-03-31 23:12:11.756 | INFO     | kliff.models.kim:write_kim_model:695 - KLIFF trained model write to `/Users/mjwen/Applications/kliff/examples/SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained`
 
 
 
@@ -441,7 +446,7 @@ parameters quite reasonably. The second line saves the fitted model to a file na
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  36.084 seconds)
+   **Total running time of the script:** ( 1 minutes  43.094 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_kim_SW_Si.py:

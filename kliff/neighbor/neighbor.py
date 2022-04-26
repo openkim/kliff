@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
 
-
 import numpy as np
+
 from kliff.atomic_data import atomic_number, atomic_species
 from kliff.dataset.dataset import Configuration
 from kliff.neighbor import neighlist as nl  # C extension

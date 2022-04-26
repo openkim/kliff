@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
+
 from kliff.error import InputError, KeyNotFoundError
 
 

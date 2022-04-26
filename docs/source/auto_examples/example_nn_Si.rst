@@ -181,24 +181,6 @@ To train on gpu, set ``gpu=True`` in ``Calculator``.
 
 
 
-.. rst-class:: sphx-glr-script-out
-
- Out:
-
- .. code-block:: none
-
-    2021-11-20 22:33:47.584 | INFO     | kliff.dataset.dataset:_read:370 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
-    2021-11-20 22:33:47.585 | INFO     | kliff.calculators.calculator_torch:_get_device:417 - Training on cpu
-    2021-11-20 22:33:47.586 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:103 - Start computing mean and stdev of fingerprints.
-    2021-11-20 22:34:24.241 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:120 - Finish computing mean and stdev of fingerprints.
-    2021-11-20 22:34:24.244 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:128 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
-    2021-11-20 22:34:24.244 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:163 - Pickling fingerprints to `fingerprints.pkl`
-    2021-11-20 22:34:24.908 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 0.
-    2021-11-20 22:34:25.779 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 100.
-    2021-11-20 22:34:26.898 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 200.
-    2021-11-20 22:34:28.475 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:175 - Processing configuration: 300.
-    2021-11-20 22:34:29.533 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:218 - Pickle 400 configurations finished.
-
 
 
 
@@ -236,19 +218,17 @@ drives the loss down in a reasonable time.
 
  .. code-block:: none
 
-    2021-11-20 22:34:29.791 | INFO     | kliff.loss:minimize:708 - Start minimization using optimization method: Adam.
     Epoch = 0       loss = 7.3307514191e+01
-    Epoch = 1       loss = 7.2090656281e+01
+    Epoch = 1       loss = 7.2090658188e+01
     Epoch = 2       loss = 7.1389846802e+01
     Epoch = 3       loss = 7.0744289398e+01
     Epoch = 4       loss = 7.0117309570e+01
     Epoch = 5       loss = 6.9499519348e+01
-    Epoch = 6       loss = 6.8886824608e+01
+    Epoch = 6       loss = 6.8886822701e+01
     Epoch = 7       loss = 6.8277158737e+01
-    Epoch = 8       loss = 6.7668614388e+01
+    Epoch = 8       loss = 6.7668616295e+01
     Epoch = 9       loss = 6.7058616638e+01
-    Epoch = 10      loss = 6.6683934212e+01
-    2021-11-20 22:34:33.793 | INFO     | kliff.loss:minimize:763 - Finish minimization using optimization method: Adam.
+    Epoch = 10      loss = 6.6683933258e+01
 
 
 
@@ -274,14 +254,6 @@ codes such as LAMMPS via the KIM API.
 
 
 
-.. rst-class:: sphx-glr-script-out
-
- Out:
-
- .. code-block:: none
-
-    2021-11-20 22:34:33.901 | INFO     | kliff.models.neural_network:write_kim_model:111 - KLIFF trained model written to /Users/mjwen/Applications/kliff/examples/NeuralNetwork_KLIFF__MO_000000111111_000.
-
 
 
 
@@ -296,7 +268,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  48.952 seconds)
+   **Total running time of the script:** ( 0 minutes  47.281 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_Si.py:

@@ -2,10 +2,11 @@ from collections.abc import Sequence
 from typing import Any, Dict, List, Union
 
 import numpy as np
+from loguru import logger
+
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import Model
 from kliff.utils import length_equal
-from loguru import logger
 
 
 class Calculator:

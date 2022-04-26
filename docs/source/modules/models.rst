@@ -9,5 +9,3 @@ KIM models
 
 Neural network models
 =====================
-
-
