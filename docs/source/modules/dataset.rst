@@ -227,7 +227,7 @@ while instantiating :class:`kliff.dataset.weight.Weight`.
     function, which can be done by setting ``energy_weight=0.0``.
 
 
-Magniture-inverse weight
+Magnitude-inverse weight
 ------------------------
 
 KLIFF also provides another weight class that computes the weight based on the magnitude
