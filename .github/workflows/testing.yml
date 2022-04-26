@@ -1,4 +1,4 @@
-name: Python package
+name: Testing
 
 on: [push, pull_request]
 
@@ -8,7 +8,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
       - name: Set up Python 3.9
         uses: actions/setup-python@v3
         with:
@@ -21,10 +20,11 @@ jobs:
         run: pre-commit run --show-diff-on-failure
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        os: [ubuntu-latest]
+        python-version: [3,7, 3.8, 3.9]
 
     steps:
       - uses: actions/checkout@v2
