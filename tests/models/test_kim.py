@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from kliff.dataset import Dataset
 from kliff.models.kim import KIMComputeArguments, KIMModel
 from kliff.models.parameter_transform import LogParameterTransform

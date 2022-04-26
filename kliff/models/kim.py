@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
+from loguru import logger
+
 from kliff.dataset.dataset import Configuration
 from kliff.error import report_import_error
 from kliff.log import get_log_level
@@ -10,7 +12,6 @@ from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
 from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import assemble_forces, assemble_stress
-from loguru import logger
 
 try:
     import kimpy

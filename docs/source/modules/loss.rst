@@ -61,11 +61,10 @@ The residual is computed using the ``residual_fn``, which should be of the form
 .. code-block:: python
 
     def residual_fn(identifier, natoms, weight, prediction, reference, data):
-        """ A function to compute the residual for a configuration.
-        """
+        """A function to compute the residual for a configuration."""
 
-         u =  #... compute u based on p (prediction) and q (reference)
-              # and it should be a vector
+        # ... compute u based on p (prediction) and q (reference)
+        # and it should be a vector
         return u
 
 In the above residual function,

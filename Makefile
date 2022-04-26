@@ -13,4 +13,3 @@ clean_all:
 	*.egg-info/ */*.so */*/*.so  */*/*/*.so \
    */__pycache__/ */*/__pycache__/ */*/*/__pycache__/ \
    kliff.log  */kliff.log  */*/kliff.log  */*/*/kliff.log
-

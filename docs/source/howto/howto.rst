@@ -13,5 +13,3 @@ Some (incomplete) examples demonstrating how to use KLIFF.
     install_kim_model
     new_model
     parallelize
-
-

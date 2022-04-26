@@ -4,9 +4,10 @@ from typing import List, Optional
 
 import numpy as np
 import torch
+from loguru import logger
+
 from kliff.descriptors.descriptor import Descriptor
 from kliff.models.model_torch import ModelTorch
-from loguru import logger
 
 
 class NeuralNetwork(ModelTorch):

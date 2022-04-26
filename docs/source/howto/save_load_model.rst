@@ -16,7 +16,7 @@ model by:
 
 .. code-block:: python
 
-    path = './kliff_model.pkl'
+    path = "./kliff_model.pkl"
     model.save(path)
 
 which creates a pickled file named ``kliff_model.pkl`` in the current working
@@ -34,10 +34,9 @@ potential discussed in :ref:`tut_kim_sw`, it can be loaded by:
 
 .. code-block:: python
 
-     model = KIMModel(model_name='Three_Body_Stillinger_Weber_Si__MO_405512056662_004')
-     path = './kliff_model.pkl'
+     model = KIMModel(model_name="Three_Body_Stillinger_Weber_Si__MO_405512056662_004")
+     path = "./kliff_model.pkl"
      model.load(path)
 
 If you want to retrain the loaded model, you can attach it to a calculator and then
 proceed as what discussed in :ref:`tut_kim_sw` and :ref:`tut_nn`.
-

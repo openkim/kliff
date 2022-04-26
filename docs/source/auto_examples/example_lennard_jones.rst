@@ -42,27 +42,30 @@ Compare this with :ref:`tut_kim_sw`.
 
  .. code-block:: none
 
-    2021-08-03 10:31:18.488 | INFO     | kliff.dataset.dataset:_read:370 - 4 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set_4_configs
+    2022-03-31 23:07:55.100 | INFO     | kliff.dataset.dataset:_read:371 - 4 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set_4_configs
     #================================================================================
     # Available parameters to optimize.
+    # Parameters in `original` space.
     # Model: LJ6-12
     #================================================================================
 
     name: epsilon
-    value: [1.0]
+    value: [1.]
     size: 1
 
     name: sigma
-    value: [2.0]
+    value: [2.]
     size: 1
 
     name: cutoff
-    value: [5.0]
+    value: [5.]
     size: 1
 
 
     #================================================================================
     # Model parameters that are optimized.
+    # Note that the parameters are in the transformed space if 
+    # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     sigma 1
@@ -72,19 +75,21 @@ Compare this with :ref:`tut_kim_sw`.
       1.0000000000000000e+00 
 
 
-    2021-08-03 10:31:18.494 | INFO     | kliff.calculators.calculator:create:106 - Create calculator for 4 configurations.
-    2021-08-03 10:31:18.494 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2021-08-03 10:31:18.494 | INFO     | kliff.loss:_scipy_optimize:389 - Running in serial mode.
-    2021-08-03 10:31:21.493 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
+    2022-03-31 23:07:55.106 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 4 configurations.
+    2022-03-31 23:07:55.107 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
+    2022-03-31 23:07:55.107 | INFO     | kliff.loss:_scipy_optimize:389 - Running in serial mode.
+    2022-03-31 23:07:58.288 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
     #================================================================================
     # Model parameters that are optimized.
+    # Note that the parameters are in the transformed space if 
+    # `params_transform` is provided when instantiating the model.
     #================================================================================
 
     sigma 1
-      2.0629054250507624e+00 
+      2.0629043239028659e+00 
 
     epsilon 1
-      1.5614851569433212e+00 
+      1.5614870430532530e+00 
 
 
 
@@ -131,7 +136,7 @@ Compare this with :ref:`tut_kim_sw`.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  5.014 seconds)
+   **Total running time of the script:** ( 0 minutes  6.086 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_lennard_jones.py:

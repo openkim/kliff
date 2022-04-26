@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from loguru import logger
+
 from kliff import parallel
 from kliff.dataset import Configuration
 from kliff.utils import create_directory, pickle_dump, to_path
-from loguru import logger
 
 
 class Descriptor:

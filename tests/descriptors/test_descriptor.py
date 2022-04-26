@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import numpy as np
+
 from kliff.dataset import Configuration
 from kliff.descriptors.descriptor import Descriptor, DescriptorError, load_fingerprints
 

@@ -13,6 +13,9 @@ To learn how to use KLIFF, begin with the tutorials.
 :ref:`tut_kim_sw`: a good entry point to see the basics of training a physics-motivated
 potential.
 
+:ref:`tut_params_transform`: it is similar to :ref:`tut_kim_sw`, except that some
+parameters are transformed to the log space for optimization.
+
 :ref:`tut_nn`: walks through the steps to train a machine-learning neural network
 potential.
 
@@ -109,6 +112,27 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
    :hidden:
 
    /auto_examples/example_nn_Si
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Parameters in the empirical interatomic potential are often restricted by some physical constra...">
+
+.. only:: html
+
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_parameter_transform_thumb.png
+     :alt: Parameter transformation for the Stillinger-Weber potential
+
+     :ref:`sphx_glr_auto_examples_example_parameter_transform.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_parameter_transform
 
 .. raw:: html
 

@@ -7,6 +7,9 @@ To learn how to use KLIFF, begin with the tutorials.
 :ref:`tut_kim_sw`: a good entry point to see the basics of training a physics-motivated
 potential.
 
+:ref:`tut_params_transform`: it is similar to :ref:`tut_kim_sw`, except that some
+parameters are transformed to the log space for optimization.
+
 :ref:`tut_nn`: walks through the steps to train a machine-learning neural network
 potential.
 

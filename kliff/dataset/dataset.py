@@ -4,10 +4,10 @@ from typing import Dict, List, Optional, Union
 import copy
 
 import numpy as np
+from loguru import logger
 from kliff.dataset.weight import Weight
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.utils import to_path
-from loguru import logger
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
@@ -204,7 +204,7 @@ class Configuration:
         return self._weight
 
     @weight.setter
-    def weight(self, weight: float):
+    def weight(self, weight: Weight):
         """
         Set the weight of the configuration if the loss function.
         """

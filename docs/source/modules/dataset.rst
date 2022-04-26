@@ -32,6 +32,7 @@ To create a data, do:
     path = 'path_to_my_dataset_files'
     dset = Dataset(path, format='extxyz')
 
+
 where ``path`` is a file storing a configuration or a directory containing multiple
 files. If given a directory, all the files in this directory and its subdirectories
 with the extension corresponding to the specified format will be read. For
@@ -155,7 +156,6 @@ values. The forces ``fx fy fz`` can be skipped if you do not want to use them.
 .. _OVITO: http://ovito.org
 
 
-
 .. _doc.dataset.weight:
 
 Weight
@@ -227,7 +227,7 @@ while instantiating :class:`kliff.dataset.weight.Weight`.
     function, which can be done by setting ``energy_weight=0.0``.
 
 
-Magniture-inverse weight
+Magnitude-inverse weight
 ------------------------
 
 KLIFF also provides another weight class that computes the weight based on the magnitude

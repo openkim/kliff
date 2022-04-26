@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from kliff.dataset import Configuration
 from kliff.models.lennard_jones import LennardJones, LJComputeArguments
 
