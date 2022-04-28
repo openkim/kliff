@@ -1,4 +1,4 @@
-# Steps to release a new version
+# Release a new version
 
 - Change the version by modifying `major`, `minor` and `patch` in `./update_version.py`
   and then `$ python update_version.py`

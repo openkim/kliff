@@ -79,7 +79,7 @@ calc = CalculatorTorch(model, gpu=False)
 calc.create(configs)
 
 # Define a loss function and train the model by minimizing the loss
-loss = Loss(calc, residual_data={"forces_weight": 0.3})
+loss = Loss(calc)
 result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 # Write trained model as a KIM model to be used in other codes such as LAMMPS ans ASE
