@@ -17,6 +17,14 @@
   - remove `.git/hooks/pre-commit` so that it will not correct the generated
     doc files, otherwise ReadTheDoc will try to regenerate it and then fail
   - after commit it, then `$ pre-commit install` to get pre-commit back
+  - Note, check the generated tutorial notebooks -- sometimes sphinx-galley will
+    not correctly capture the stdout and embed it in the file. In this case,
+    delete hte .md5 file and return `make html`. (Also, do it one be one.)
+    For example,
+    ```shell
+    $ rm source/auto_examples/example_kim_SW_Si.py.md5
+    $ make html
+    ```
 
 - Commit and merge it to the `docs` branch. [ReadTheDocs](https://readthedocs.org)
   is set up to watch this branch and will automatically generate the docs.)

@@ -105,6 +105,49 @@ correspond to energy and length scales.
 
  .. code-block:: none
 
+    #================================================================================
+    # Available parameters to optimize.
+    # Parameters in `original` space.
+    # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
+    #================================================================================
+
+    name: A
+    value: [15.28484792]
+    size: 1
+
+    name: B
+    value: [0.60222456]
+    size: 1
+
+    name: p
+    value: [4.]
+    size: 1
+
+    name: q
+    value: [0.]
+    size: 1
+
+    name: sigma
+    value: [2.0951]
+    size: 1
+
+    name: gamma
+    value: [2.51412]
+    size: 1
+
+    name: cutoff
+    value: [3.77118]
+    size: 1
+
+    name: lambda
+    value: [45.5322]
+    size: 1
+
+    name: costheta0
+    value: [-0.33333333]
+    size: 1
+
+
 
     '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [15.28484792]\nsize: 1\n\nname: B\nvalue: [0.60222456]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.51412]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
 
@@ -136,6 +179,49 @@ values of the other parameters are not changed.
  Out:
 
  .. code-block:: none
+
+    #================================================================================
+    # Available parameters to optimize.
+    # Parameters in `original` space.
+    # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
+    #================================================================================
+
+    name: A
+    value: [15.28484792]
+    size: 1
+
+    name: B
+    value: [0.60222456]
+    size: 1
+
+    name: p
+    value: [4.]
+    size: 1
+
+    name: q
+    value: [0.]
+    size: 1
+
+    name: sigma
+    value: [2.0951]
+    size: 1
+
+    name: gamma
+    value: [2.51412]
+    size: 1
+
+    name: cutoff
+    value: [3.77118]
+    size: 1
+
+    name: lambda
+    value: [45.5322]
+    size: 1
+
+    name: costheta0
+    value: [-0.33333333]
+    size: 1
+
 
 
     '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [15.28484792]\nsize: 1\n\nname: B\nvalue: [0.60222456]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.51412]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
@@ -181,6 +267,25 @@ the model.
  Out:
 
  .. code-block:: none
+
+    #================================================================================
+    # Model parameters that are optimized.
+    # Note that the parameters are in the transformed space if 
+    # `params_transform` is provided when instantiating the model.
+    #================================================================================
+
+    A 1
+      1.6094379124341003e+00   0.0000000000000000e+00   2.9957322735539909e+00 
+
+    B 1
+     -5.0712488263019628e-01 
+
+    sigma 1
+      7.3960128493182953e-01 fix 
+
+    gamma 1
+      4.0546510810816438e-01 
+
 
 
     '#================================================================================\n# Model parameters that are optimized.\n# Note that the parameters are in the transformed space if \n# `params_transform` is provided when instantiating the model.\n#================================================================================\n\nA 1\n  1.6094379124341003e+00   0.0000000000000000e+00   2.9957322735539909e+00 \n\nB 1\n -5.0712488263019628e-01 \n\nsigma 1\n  7.3960128493182953e-01 fix \n\ngamma 1\n  4.0546510810816438e-01 \n\n'
@@ -235,6 +340,54 @@ and can be done in the same way as in :ref:`tut_kim_sw`.
 
  .. code-block:: none
 
+    2022-04-28 11:08:19.996 | INFO     | kliff.dataset.dataset:_read:397 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
+    2022-04-28 11:08:23.706 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
+    2022-04-28 11:08:23.707 | INFO     | kliff.loss:minimize:290 - Start minimization using method: L-BFGS-B.
+    2022-04-28 11:08:23.707 | INFO     | kliff.loss:_scipy_optimize:406 - Running in multiprocessing mode with 2 processes.
+    2022-04-28 11:09:37.865 | INFO     | kliff.loss:minimize:292 - Finish minimization using method: L-BFGS-B.
+    #================================================================================
+    # Available parameters to optimize.
+    # Parameters in `original` space.
+    # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
+    #================================================================================
+
+    name: A
+    value: [14.93863379]
+    size: 1
+
+    name: B
+    value: [0.58740269]
+    size: 1
+
+    name: p
+    value: [4.]
+    size: 1
+
+    name: q
+    value: [0.]
+    size: 1
+
+    name: sigma
+    value: [2.0951]
+    size: 1
+
+    name: gamma
+    value: [2.2014612]
+    size: 1
+
+    name: cutoff
+    value: [3.77118]
+    size: 1
+
+    name: lambda
+    value: [45.5322]
+    size: 1
+
+    name: costheta0
+    value: [-0.33333333]
+    size: 1
+
+
 
     '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [14.93863379]\nsize: 1\n\nname: B\nvalue: [0.58740269]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.2014612]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
 
@@ -253,7 +406,7 @@ much easier for the optimizer to navigate the parameter space.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  14.239 seconds)
+   **Total running time of the script:** ( 1 minutes  20.550 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_parameter_transform.py:

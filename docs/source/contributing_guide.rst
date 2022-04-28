@@ -14,7 +14,7 @@ Code style
   Supply ``--skip-string-normalization`` to ``black`` to avoid changing single
   quote to double quote (not recommended).
 
-- The docstring of **KLIFF** follows the `numpy` style, which can be found at numpydoc_.
+- The docstring of **KLIFF** follows the `Google` style, which can be found at googledoc_.
 
 
 Docs
@@ -71,6 +71,6 @@ the `.rst` files in `tmp` to `kliff/docs/apidoc`.
     The `kliff/docs/apidoc/kliff.rst` is referenced in `index.rst`, serving as the entry
     for all docs.
 
-.. _numpydoc: https://numpydoc.readthedocs.io/en/latest/format.html
+.. _googledoc: https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
 .. _black: https://black.readthedocs.io/en/stable/
 .. _sphinx-gallery: https://sphinx-gallery.github.io
