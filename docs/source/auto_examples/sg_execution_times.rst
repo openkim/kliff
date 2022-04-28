@@ -5,18 +5,18 @@
 
 Computation times
 =================
-**01:43.094** total execution time for **auto_examples** files:
+**04:42.631** total execution time for **auto_examples** files:
 
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                     | 01:43.094 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                     | 02:05.502 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_lennard_jones.py` (``example_lennard_jones.py``)             | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_parameter_transform.py` (``example_parameter_transform.py``) | 01:14.239 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_linear_regression.py` (``example_linear_regression.py``)     | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)                             | 00:47.669 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_nn_Si.py` (``example_nn_Si.py``)                             | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_linear_regression.py` (``example_linear_regression.py``)     | 00:26.918 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_nn_SiC.py` (``example_nn_SiC.py``)                           | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_lennard_jones.py` (``example_lennard_jones.py``)             | 00:06.187 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_parameter_transform.py` (``example_parameter_transform.py``) | 00:00.000 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_nn_SiC.py` (``example_nn_SiC.py``)                           | 00:02.116 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+

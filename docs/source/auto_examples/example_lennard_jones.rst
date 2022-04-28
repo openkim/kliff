@@ -36,69 +36,8 @@ Compare this with :ref:`tut_kim_sw`.
 
 
 
-.. rst-class:: sphx-glr-script-out
-
- Out:
-
- .. code-block:: none
-
-    2022-03-31 23:07:55.100 | INFO     | kliff.dataset.dataset:_read:371 - 4 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set_4_configs
-    #================================================================================
-    # Available parameters to optimize.
-    # Parameters in `original` space.
-    # Model: LJ6-12
-    #================================================================================
-
-    name: epsilon
-    value: [1.]
-    size: 1
-
-    name: sigma
-    value: [2.]
-    size: 1
-
-    name: cutoff
-    value: [5.]
-    size: 1
 
 
-    #================================================================================
-    # Model parameters that are optimized.
-    # Note that the parameters are in the transformed space if 
-    # `params_transform` is provided when instantiating the model.
-    #================================================================================
-
-    sigma 1
-      2.0000000000000000e+00 
-
-    epsilon 1
-      1.0000000000000000e+00 
-
-
-    2022-03-31 23:07:55.106 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 4 configurations.
-    2022-03-31 23:07:55.107 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2022-03-31 23:07:55.107 | INFO     | kliff.loss:_scipy_optimize:389 - Running in serial mode.
-    2022-03-31 23:07:58.288 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
-    #================================================================================
-    # Model parameters that are optimized.
-    # Note that the parameters are in the transformed space if 
-    # `params_transform` is provided when instantiating the model.
-    #================================================================================
-
-    sigma 1
-      2.0629043239028659e+00 
-
-    epsilon 1
-      1.5614870430532530e+00 
-
-
-
-
-
-
-
-
-|
 
 .. code-block:: default
 
@@ -136,7 +75,7 @@ Compare this with :ref:`tut_kim_sw`.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  6.086 seconds)
+   **Total running time of the script:** ( 0 minutes  6.187 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_lennard_jones.py:

@@ -65,17 +65,17 @@ symmetry functions.
 
  .. code-block:: none
 
-    2022-03-31 23:02:47.029 | INFO     | kliff.dataset.dataset:_read:371 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
-    2022-03-31 23:02:47.030 | INFO     | kliff.calculators.calculator_torch:_get_device:417 - Training on cpu
-    2022-03-31 23:02:47.032 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:104 - Start computing mean and stdev of fingerprints.
-    2022-03-31 23:03:07.080 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:121 - Finish computing mean and stdev of fingerprints.
-    2022-03-31 23:03:07.088 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:129 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
-    2022-03-31 23:03:07.089 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:164 - Pickling fingerprints to `fingerprints.pkl`
-    2022-03-31 23:03:07.094 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 0.
-    2022-03-31 23:03:07.585 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 100.
-    2022-03-31 23:03:08.004 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 200.
-    2022-03-31 23:03:08.384 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 300.
-    2022-03-31 23:03:08.665 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:219 - Pickle 400 configurations finished.
+    2022-04-28 10:33:14.541 | INFO     | kliff.dataset.dataset:_read:397 - 400 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set/varying_alat
+    2022-04-28 10:33:14.541 | INFO     | kliff.calculators.calculator_torch:_get_device:417 - Training on cpu
+    2022-04-28 10:33:14.542 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:104 - Start computing mean and stdev of fingerprints.
+    2022-04-28 10:33:37.085 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:121 - Finish computing mean and stdev of fingerprints.
+    2022-04-28 10:33:37.092 | INFO     | kliff.descriptors.descriptor:generate_fingerprints:129 - Fingerprints mean and stdev saved to `fingerprints_mean_and_stdev.pkl`.
+    2022-04-28 10:33:37.092 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:164 - Pickling fingerprints to `fingerprints.pkl`
+    2022-04-28 10:33:37.095 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 0.
+    2022-04-28 10:33:37.424 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 100.
+    2022-04-28 10:33:38.046 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 200.
+    2022-04-28 10:33:38.510 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:176 - Processing configuration: 300.
+    2022-04-28 10:33:38.884 | INFO     | kliff.descriptors.descriptor:_dump_fingerprints:219 - Pickle 400 configurations finished.
 
 
 
@@ -109,7 +109,7 @@ function of its calculator.
 
  .. code-block:: none
 
-    2022-03-31 23:03:09.269 | INFO     | kliff.models.linear_regression:fit:39 - fit model "LinearRegression" finished.
+    2022-04-28 10:33:39.460 | INFO     | kliff.models.linear_regression:fit:39 - fit model "LinearRegression" finished.
     fit model "LinearRegression" finished.
 
 
@@ -118,7 +118,7 @@ function of its calculator.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  25.707 seconds)
+   **Total running time of the script:** ( 0 minutes  26.918 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_linear_regression.py:

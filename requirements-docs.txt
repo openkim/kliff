@@ -2,5 +2,4 @@ sphinx
 furo
 sphinx-gallery
 sphinx-autodoc-typehints
-pybind11
 matplotlib

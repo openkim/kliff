@@ -4,6 +4,27 @@
 Change Log
 ==========
 
+v0.4.0 (2022/04/27)
+
+Added
+-----
+- Add ParameterTransform class to transform parameters into a different space (e.g. log
+  space) @yonatank93
+- Add Weight class to set weight for energy/forces/stress. This is not backward
+  compatible, which changes the signature of the residual function. Previously, in a
+  residual function, the weights are passed in via the `data` argument, but now, its
+  passed in via an instance of the Weight class. @yonatank93
+
+Fixed
+-----
+- Fix checking cutoff entry @adityakavalur
+- Fix energy_residual_fn and forces_residual_fn to weigh different component
+
+Updated
+-------
+- Change to use precommit GH action to check code format
+
+
 v0.3.3 (2022/03/25)
 ===================
 

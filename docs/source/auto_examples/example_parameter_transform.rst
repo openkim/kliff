@@ -25,19 +25,18 @@ Parameter transformation for the Stillinger-Weber potential
 
 Parameters in the empirical interatomic potential are often restricted by some physical
 constraints. As an example, in the Stillinger-Weber (SW) potential, the energy scaling
-parameters (e.g., ``A`` and ``B``) and the length scaling parameters (e.g., ``sigma``
-and ``gamma``) are constrained to be positive.
+parameters (e.g., ``A`` and ``B``) and the length scaling parameters (e.g., ``sigma`` and
+``gamma``) are constrained to be positive.
 
-Due to these constraints, we might want to work with the log of the parameters,
-i.e., ``log(A)``, ``log(B)``, ``log(sigma)``, and ``log(gamma)`` when doing the
-optimization. After the optimization, we can transform them back to the original
-parameter space using an exponential function, which will guarantee the positiveness
-of the parameters.
+Due to these constraints, we might want to work with the log of the parameters, i.e.,
+``log(A)``, ``log(B)``, ``log(sigma)``, and ``log(gamma)`` when doing the optimization.
+After the optimization, we can transform them back to the original parameter space using
+an exponential function, which will guarantee the positiveness of the parameters.
 
-In this tutorial, we show how to apply such parameter transformation to the SW
-potential for silicon that is archived on OpenKIM_. Compare this to :ref:`tut_kim_sw`.
+In this tutorial, we show how to apply parameter transformation to the SW potential for
+silicon that is archived on OpenKIM_. Compare this with :ref:`tut_kim_sw`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 26-35
+.. GENERATED FROM PYTHON SOURCE LINES 23-32
 
 To start, let's first install the SW model::
 
@@ -49,7 +48,7 @@ To start, let's first install the SW model::
 
 This is
 
-.. GENERATED FROM PYTHON SOURCE LINES 35-45
+.. GENERATED FROM PYTHON SOURCE LINES 32-43
 
 .. code-block:: default
 
@@ -58,6 +57,7 @@ This is
 
     from kliff.calculators import Calculator
     from kliff.dataset import Dataset
+    from kliff.dataset.weight import Weight
     from kliff.loss import Loss
     from kliff.models import KIMModel
     from kliff.models.parameter_transform import LogParameterTransform
@@ -70,7 +70,7 @@ This is
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 46-54
+.. GENERATED FROM PYTHON SOURCE LINES 44-53
 
 Before creating a KIM model for the SW potential, we first instantiate the parameter
 transformation class that we want to use. ``kliff`` has a built-in log-transformation;
@@ -81,7 +81,8 @@ To make a direct comparison to :ref:`tut_kim_sw`, in this tutorial we will apply
 log-transformation to parameters ``A``, ``B``, ``sigma``, and ``gamma``, which
 correspond to energy and length scales.
 
-.. GENERATED FROM PYTHON SOURCE LINES 54-62
+
+.. GENERATED FROM PYTHON SOURCE LINES 53-62
 
 .. code-block:: default
 
@@ -97,61 +98,19 @@ correspond to energy and length scales.
 
 
 
+
 .. rst-class:: sphx-glr-script-out
 
  Out:
 
  .. code-block:: none
 
-    #================================================================================
-    # Available parameters to optimize.
-    # Parameters in `original` space.
-    # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
-    #================================================================================
-
-    name: A
-    value: [15.28484792]
-    size: 1
-
-    name: B
-    value: [0.60222456]
-    size: 1
-
-    name: p
-    value: [4.]
-    size: 1
-
-    name: q
-    value: [0.]
-    size: 1
-
-    name: sigma
-    value: [2.0951]
-    size: 1
-
-    name: gamma
-    value: [2.51412]
-    size: 1
-
-    name: cutoff
-    value: [3.77118]
-    size: 1
-
-    name: lambda
-    value: [45.5322]
-    size: 1
-
-    name: costheta0
-    value: [-0.33333333]
-    size: 1
-
-
 
     '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [15.28484792]\nsize: 1\n\nname: B\nvalue: [0.60222456]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.51412]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 63-68
+.. GENERATED FROM PYTHON SOURCE LINES 63-69
 
 ``model.echo_model_params(params_space="original")`` above will print out parameter
 values in the original, untransformed space, i.e., the original parameterization of
@@ -159,12 +118,14 @@ the model. If we supply the argument ``params_space="transformed"``, then the pr
 parameter values are given in the transformed space, e.g., log space (below). The
 values of the other parameters are not changed.
 
-.. GENERATED FROM PYTHON SOURCE LINES 68-71
+
+.. GENERATED FROM PYTHON SOURCE LINES 69-73
 
 .. code-block:: default
 
 
-    model.echo_model_params(params_space="transformed")
+    model.echo_model_params(params_space="original")
+
 
 
 
@@ -176,73 +137,31 @@ values of the other parameters are not changed.
 
  .. code-block:: none
 
-    #================================================================================
-    # Available parameters to optimize.
-    # Parameters in `transformed` space.
-    # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
-    #================================================================================
 
-    name: A
-    value: [2.72686201]
-    size: 1
-
-    name: B
-    value: [-0.50712488]
-    size: 1
-
-    name: p
-    value: [4.]
-    size: 1
-
-    name: q
-    value: [0.]
-    size: 1
-
-    name: sigma
-    value: [0.73960128]
-    size: 1
-
-    name: gamma
-    value: [0.92192284]
-    size: 1
-
-    name: cutoff
-    value: [3.77118]
-    size: 1
-
-    name: lambda
-    value: [45.5322]
-    size: 1
-
-    name: costheta0
-    value: [-0.33333333]
-    size: 1
+    '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [15.28484792]\nsize: 1\n\nname: B\nvalue: [0.60222456]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.51412]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
 
 
 
-    '#================================================================================\n# Available parameters to optimize.\n# Parameters in `transformed` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [2.72686201]\nsize: 1\n\nname: B\nvalue: [-0.50712488]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [0.73960128]\nsize: 1\n\nname: gamma\nvalue: [0.92192284]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
+.. GENERATED FROM PYTHON SOURCE LINES 74-77
 
+Compare the output of ``params_space="transformed"`` and ``params_space="original"``,
+you can see that the values of ``A``, ``B``, ``sigma``, and ``gamma`` are in the log
+space after the transformation.
 
-
-.. GENERATED FROM PYTHON SOURCE LINES 72-75
-
-Compare the output of ``params_space="transformed"`` and # ``params_space="original",
-you can see that the values of ``A``, ``B``, ``sigma``, and ``gamma`` are in the
-log space after the transformation.
-
-.. GENERATED FROM PYTHON SOURCE LINES 77-84
+.. GENERATED FROM PYTHON SOURCE LINES 79-86
 
 Next, we will set up the initial guess of the parameters to optimize. A value of
-``"default"`` means the initial guess will be directly taken from the value already
-in the model.
+``"default"`` means the initial guess will be directly taken from the value already in
+the model.
 
 .. note::
-    The parameter values we initialize, as well as the lower and upper bounds,
-    are in transformed space (i.e. log space here).
+   The parameter values we initialize, as well as the lower and upper bounds, are in
+   transformed space (i.e. log space here).
 
-.. GENERATED FROM PYTHON SOURCE LINES 84-93
+.. GENERATED FROM PYTHON SOURCE LINES 86-96
 
 .. code-block:: default
+
 
 
     model.set_opt_params(
@@ -263,53 +182,35 @@ in the model.
 
  .. code-block:: none
 
-    #================================================================================
-    # Model parameters that are optimized.
-    # Note that the parameters are in the transformed space if 
-    # `params_transform` is provided when instantiating the model.
-    #================================================================================
-
-    A 1
-      1.6094379124341003e+00   0.0000000000000000e+00   2.9957322735539909e+00 
-
-    B 1
-     -5.0712488263019628e-01 
-
-    sigma 1
-      7.3960128493182953e-01 fix 
-
-    gamma 1
-      4.0546510810816438e-01 
-
-
 
     '#================================================================================\n# Model parameters that are optimized.\n# Note that the parameters are in the transformed space if \n# `params_transform` is provided when instantiating the model.\n#================================================================================\n\nA 1\n  1.6094379124341003e+00   0.0000000000000000e+00   2.9957322735539909e+00 \n\nB 1\n -5.0712488263019628e-01 \n\nsigma 1\n  7.3960128493182953e-01 fix \n\ngamma 1\n  4.0546510810816438e-01 \n\n'
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 94-100
+.. GENERATED FROM PYTHON SOURCE LINES 97-103
 
-We can show the parameters we've just set by ``model.echo_opt_params()``.
+We can show the parameters we’ve just set by ``model.echo_opt_params()``.
 
 .. note::
    ``model.echo_opt_params()`` always displays the parameter values in the transformed
    space. And it only shows all the parameters specified to optimize. To show all
    the parameters, do ``model.echo_model_params(params_space="transformed")``.
 
-.. GENERATED FROM PYTHON SOURCE LINES 102-105
+.. GENERATED FROM PYTHON SOURCE LINES 105-108
 
 Once we set the model and the parameter transformation scheme, then further
 calculations, e.g., training the model, will be performed using the transformed space
 and can be done in the same way as in :ref:`tut_kim_sw`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 105-123
+.. GENERATED FROM PYTHON SOURCE LINES 108-127
 
 .. code-block:: default
 
 
     # Training set
     dataset_path = download_dataset(dataset_name="Si_training_set")
-    tset = Dataset(dataset_path)
+    weight = Weight(energy_weight=1.0, forces_weight=0.1)
+    tset = Dataset(dataset_path, weight)
     configs = tset.get_configs()
 
     # Calculator
@@ -318,11 +219,11 @@ and can be done in the same way as in :ref:`tut_kim_sw`.
 
     # Loss function and model training
     steps = 100
-    residual_data = {"energy_weight": 1.0, "forces_weight": 0.1}
-    loss = Loss(calc, residual_data=residual_data, nprocs=2)
+    loss = Loss(calc, nprocs=2)
     loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 
     model.echo_model_params(params_space="original")
+
 
 
 
@@ -334,73 +235,25 @@ and can be done in the same way as in :ref:`tut_kim_sw`.
 
  .. code-block:: none
 
-    2022-03-31 23:08:37.385 | INFO     | kliff.dataset.dataset:_read:371 - 1000 configurations read from /Users/mjwen/Applications/kliff/examples/Si_training_set
-    2022-03-31 23:08:41.032 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 1000 configurations.
-    2022-03-31 23:08:41.033 | INFO     | kliff.loss:minimize:275 - Start minimization using method: L-BFGS-B.
-    2022-03-31 23:08:41.033 | INFO     | kliff.loss:_scipy_optimize:391 - Running in multiprocessing mode with 2 processes.
-    2022-03-31 23:09:45.934 | INFO     | kliff.loss:minimize:277 - Finish minimization using method: {method}.
-    #================================================================================
-    # Available parameters to optimize.
-    # Parameters in `original` space.
-    # Model: SW_StillingerWeber_1985_Si__MO_405512056662_006
-    #================================================================================
 
-    name: A
-    value: [14.93863372]
-    size: 1
-
-    name: B
-    value: [0.58740268]
-    size: 1
-
-    name: p
-    value: [4.]
-    size: 1
-
-    name: q
-    value: [0.]
-    size: 1
-
-    name: sigma
-    value: [2.0951]
-    size: 1
-
-    name: gamma
-    value: [2.20146115]
-    size: 1
-
-    name: cutoff
-    value: [3.77118]
-    size: 1
-
-    name: lambda
-    value: [45.5322]
-    size: 1
-
-    name: costheta0
-    value: [-0.33333333]
-    size: 1
+    '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [14.93863379]\nsize: 1\n\nname: B\nvalue: [0.58740269]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.2014612]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
 
 
 
-    '#================================================================================\n# Available parameters to optimize.\n# Parameters in `original` space.\n# Model: SW_StillingerWeber_1985_Si__MO_405512056662_006\n#================================================================================\n\nname: A\nvalue: [14.93863372]\nsize: 1\n\nname: B\nvalue: [0.58740268]\nsize: 1\n\nname: p\nvalue: [4.]\nsize: 1\n\nname: q\nvalue: [0.]\nsize: 1\n\nname: sigma\nvalue: [2.0951]\nsize: 1\n\nname: gamma\nvalue: [2.20146115]\nsize: 1\n\nname: cutoff\nvalue: [3.77118]\nsize: 1\n\nname: lambda\nvalue: [45.5322]\nsize: 1\n\nname: costheta0\nvalue: [-0.33333333]\nsize: 1\n\n'
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 124-131
+.. GENERATED FROM PYTHON SOURCE LINES 128-135
 
 The optimized parameter values from this model training are very close, if not the
 same, as in :ref:`tut_kim_sw`. This is expected for the simple tutorial example
-considered. But for more complex models, training in a transformed space can make
-it much easier for the optimizer to navigate the parameter space.
-
+considered. But for more complex models, training in a transformed space can make it
+much easier for the optimizer to navigate the parameter space.
 
 .. _OpenKIM: https://openkim.org
 
 
+
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  11.710 seconds)
+   **Total running time of the script:** ( 1 minutes  14.239 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_parameter_transform.py:

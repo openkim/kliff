@@ -42,7 +42,7 @@ information of this format.
 
 Let's first import the modules that will be used in this example.
 
-.. GENERATED FROM PYTHON SOURCE LINES 27-36
+.. GENERATED FROM PYTHON SOURCE LINES 27-37
 
 .. code-block:: default
 
@@ -50,6 +50,7 @@ Let's first import the modules that will be used in this example.
     from kliff import nn
     from kliff.calculators import CalculatorTorch
     from kliff.dataset import Dataset
+    from kliff.dataset.weight import Weight
     from kliff.descriptors import SymmetryFunction
     from kliff.loss import Loss
     from kliff.models import NeuralNetwork
@@ -62,7 +63,7 @@ Let's first import the modules that will be used in this example.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 37-43
+.. GENERATED FROM PYTHON SOURCE LINES 38-44
 
 Model
 -----
@@ -71,7 +72,7 @@ For a NN model, we need to specify the descriptor that transforms atomic environ
 information to the fingerprints, which the NN model uses as the input. Here, we use the
 symmetry functions proposed by Behler and coworkers.
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-49
+.. GENERATED FROM PYTHON SOURCE LINES 44-50
 
 .. code-block:: default
 
@@ -88,7 +89,7 @@ symmetry functions proposed by Behler and coworkers.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 50-59
+.. GENERATED FROM PYTHON SOURCE LINES 51-60
 
 The ``cut_name`` and ``cut_dists`` tell the descriptor what type of cutoff function to
 use and what the cutoff distances are. ``hyperparams`` specifies the set of
@@ -100,7 +101,7 @@ optimize NN model.
 
 We can then build the NN model on top of the descriptor.
 
-.. GENERATED FROM PYTHON SOURCE LINES 59-76
+.. GENERATED FROM PYTHON SOURCE LINES 60-77
 
 .. code-block:: default
 
@@ -128,7 +129,7 @@ We can then build the NN model on top of the descriptor.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 77-107
+.. GENERATED FROM PYTHON SOURCE LINES 78-108
 
 In the above code, we build a NN model with an input layer, two hidden layer, and an
 output layer. The ``descriptor`` carries the information of the input layer, so it is
@@ -161,7 +162,7 @@ fingerprints generated from the descriptor if it is present.
 To train on gpu, set ``gpu=True`` in ``Calculator``.
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 107-119
+.. GENERATED FROM PYTHON SOURCE LINES 108-121
 
 .. code-block:: default
 
@@ -169,7 +170,8 @@ To train on gpu, set ``gpu=True`` in ``Calculator``.
     # training set
     dataset_path = download_dataset(dataset_name="Si_training_set")
     dataset_path = dataset_path.joinpath("varying_alat")
-    tset = Dataset(dataset_path)
+    weight = Weight(forces_weight=0.3)
+    tset = Dataset(dataset_path, weight)
     configs = tset.get_configs()
 
     # calculator
@@ -184,7 +186,7 @@ To train on gpu, set ``gpu=True`` in ``Calculator``.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 120-132
+.. GENERATED FROM PYTHON SOURCE LINES 122-134
 
 Loss function
 -------------
@@ -199,12 +201,12 @@ through the training set for ``10`` epochs. The learning rate ``lr`` used here i
 ``0.001``, and typically, one may need to play with this to find an acceptable one that
 drives the loss down in a reasonable time.
 
-.. GENERATED FROM PYTHON SOURCE LINES 132-137
+.. GENERATED FROM PYTHON SOURCE LINES 134-139
 
 .. code-block:: default
 
 
-    loss = Loss(calc, residual_data={"forces_weight": 0.3})
+    loss = Loss(calc)
     result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 
@@ -219,27 +221,27 @@ drives the loss down in a reasonable time.
  .. code-block:: none
 
     Epoch = 0       loss = 7.3307514191e+01
-    Epoch = 1       loss = 7.2090658188e+01
+    Epoch = 1       loss = 7.2090656281e+01
     Epoch = 2       loss = 7.1389846802e+01
     Epoch = 3       loss = 7.0744289398e+01
     Epoch = 4       loss = 7.0117309570e+01
     Epoch = 5       loss = 6.9499519348e+01
-    Epoch = 6       loss = 6.8886822701e+01
+    Epoch = 6       loss = 6.8886824608e+01
     Epoch = 7       loss = 6.8277158737e+01
-    Epoch = 8       loss = 6.7668616295e+01
+    Epoch = 8       loss = 6.7668614388e+01
     Epoch = 9       loss = 6.7058616638e+01
-    Epoch = 10      loss = 6.6683933258e+01
+    Epoch = 10      loss = 6.6683934212e+01
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 138-141
+.. GENERATED FROM PYTHON SOURCE LINES 140-143
 
 We can save the trained model to disk, and later can load it back if we want. We can
 also write the trained model to a KIM model such that it can be used in other simulation
 codes such as LAMMPS via the KIM API.
 
-.. GENERATED FROM PYTHON SOURCE LINES 141-148
+.. GENERATED FROM PYTHON SOURCE LINES 143-150
 
 .. code-block:: default
 
@@ -257,7 +259,7 @@ codes such as LAMMPS via the KIM API.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 149-154
+.. GENERATED FROM PYTHON SOURCE LINES 151-156
 
 .. note::
    Now we have trained an NN for a single specie Si. If you have multiple species in
@@ -268,7 +270,7 @@ codes such as LAMMPS via the KIM API.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  47.281 seconds)
+   **Total running time of the script:** ( 0 minutes  47.669 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_Si.py:

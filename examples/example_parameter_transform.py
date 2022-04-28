@@ -16,7 +16,7 @@ an exponential function, which will guarantee the positiveness of the parameters
 
 In this tutorial, we show how to apply parameter transformation to the SW potential for
 silicon that is archived on OpenKIM_. Compare this with :ref:`tut_kim_sw`.
-
+"""
 
 
 ##########################################################################################
@@ -129,7 +129,6 @@ model.echo_model_params(params_space="original")
 # same, as in :ref:`tut_kim_sw`. This is expected for the simple tutorial example
 # considered. But for more complex models, training in a transformed space can make it
 # much easier for the optimizer to navigate the parameter space.
-# 
+#
 # .. _OpenKIM: https://openkim.org
-# 
-
+#

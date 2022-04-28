@@ -27,7 +27,7 @@ In this tutorial, we train a neural network (NN) potential for a system containi
 species: Si and C. This is very similar to the training for systems containing a single
 specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-28
+.. GENERATED FROM PYTHON SOURCE LINES 11-29
 
 .. code-block:: default
 
@@ -36,6 +36,7 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
     from kliff import nn
     from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
     from kliff.dataset import Dataset
+    from kliff.dataset.weight import Weight
     from kliff.descriptors import SymmetryFunction
     from kliff.loss import Loss
     from kliff.models import NeuralNetwork
@@ -55,12 +56,12 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 29-31
+.. GENERATED FROM PYTHON SOURCE LINES 30-32
 
 We will create two models, one for Si and the other for C. The purpose is to have
 a separate set of parameters for Si and C so that they can be differentiated.
 
-.. GENERATED FROM PYTHON SOURCE LINES 31-78
+.. GENERATED FROM PYTHON SOURCE LINES 32-80
 
 .. code-block:: default
 
@@ -99,7 +100,8 @@ a separate set of parameters for Si and C so that they can be differentiated.
 
     # training set
     dataset_path = download_dataset(dataset_name="SiC_training_set")
-    tset = Dataset(dataset_path)
+    weight = Weight(forces_weight=0.3)
+    tset = Dataset(dataset_path, weight)
     configs = tset.get_configs()
 
     # calculator
@@ -107,7 +109,7 @@ a separate set of parameters for Si and C so that they can be differentiated.
     _ = calc.create(configs, reuse=False)
 
     # loss
-    loss = Loss(calc, residual_data={"forces_weight": 0.3})
+    loss = Loss(calc)
     result = loss.minimize(method="Adam", num_epochs=10, batch_size=4, lr=0.001)
 
 
@@ -136,11 +138,11 @@ a separate set of parameters for Si and C so that they can be differentiated.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 79-80
+.. GENERATED FROM PYTHON SOURCE LINES 81-82
 
 We can save the trained model to disk, and later can load it back if we want.
 
-.. GENERATED FROM PYTHON SOURCE LINES 80-84
+.. GENERATED FROM PYTHON SOURCE LINES 82-86
 
 .. code-block:: default
 
@@ -158,7 +160,7 @@ We can save the trained model to disk, and later can load it back if we want.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.711 seconds)
+   **Total running time of the script:** ( 0 minutes  2.116 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_nn_SiC.py:

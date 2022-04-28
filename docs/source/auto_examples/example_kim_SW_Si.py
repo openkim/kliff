@@ -37,6 +37,7 @@ on OpenKIM_.
 
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
+from kliff.dataset.weight import Weight
 from kliff.loss import Loss
 from kliff.models import KIMModel
 from kliff.utils import download_dataset
@@ -107,10 +108,14 @@ model.echo_opt_params()
 # ------------
 #
 # KLIFF has a :class:`~kliff.dataset.Dataset` to deal with the training data (and possibly
-# test data). For the silicon training set, we can read and process the files by:
+# test data). Additionally, we define the ``energy_weight`` and ``forces_weight``
+# corresponding to each configuration using :class:`~kliff.dataset.weight.Weight`. In
+# this example, we set ``energy_weight`` to ``1.0`` and ``forces_weight`` to ``0.1``.
+# For the silicon training set, we can read and process the files by:
 
 dataset_path = download_dataset(dataset_name="Si_training_set")
-tset = Dataset(dataset_path)
+weight = Weight(energy_weight=1.0, forces_weight=0.1)
+tset = Dataset(dataset_path, weight)
 configs = tset.get_configs()
 
 
@@ -149,15 +154,12 @@ _ = calc.create(configs)
 # possible. KLIFF provides a large number of minimization algorithms by interacting with
 # SciPy_. For physics-motivated potentials, any algorithm listed on
 # `scipy.optimize.minimize`_ and `scipy.optimize.least_squares`_ can be used. In the
-# following code snippet, we create a loss of energy and forces, where the residual
-# function uses an ``energy_weight`` of ``1.0`` and a ``forces_weight`` of ``0.1``, and
-# ``2`` processors will be used to calculate the loss. The ``L-BFGS-B`` minimization
-# algorithm is applied to minimize the loss, and the minimization is allowed to run for
-# a max number of 100 iterations.
+# following code snippet, we create a loss of energy and forces and use ``2`` processors
+# to calculate the loss. The ``L-BFGS-B`` minimization algorithm is applied to minimize
+# the loss, and the minimization is allowed to run for a max number of 100 iterations.
 
 steps = 100
-residual_data = {"energy_weight": 1.0, "forces_weight": 0.1}
-loss = Loss(calc, residual_data=residual_data, nprocs=2)
+loss = Loss(calc, nprocs=2)
 loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
 
 

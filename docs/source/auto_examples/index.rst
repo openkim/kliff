@@ -94,27 +94,6 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon.">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
-     :alt: Train a neural network potential
-
-     :ref:`sphx_glr_auto_examples_example_nn_Si.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
-   /auto_examples/example_nn_Si
-
-.. raw:: html
-
     <div class="sphx-glr-thumbcontainer" tooltip="Parameters in the empirical interatomic potential are often restricted by some physical constra...">
 
 .. only:: html
@@ -133,6 +112,27 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
    :hidden:
 
    /auto_examples/example_parameter_transform
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon.">
+
+.. only:: html
+
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
+     :alt: Train a neural network potential
+
+     :ref:`sphx_glr_auto_examples_example_nn_Si.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_nn_Si
 
 .. raw:: html
 
