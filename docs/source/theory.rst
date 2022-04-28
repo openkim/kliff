@@ -27,7 +27,7 @@ experiments and/or first-principles computations. Mathematically, we hope to min
 
 .. math::
     \mathcal{L(\bm\theta)} = \frac{1}{2} \sum_{i=1}^{N_p}
-    w_i \|\bm p_i(\mathcal{V}(\bm R_i; \bm\theta)) - \bm q_i \| ^2
+    \|w_i (\bm p_i(\mathcal{V}(\bm R_i; \bm\theta)) - \bm q_i) \| ^2
 
 with respect to :math:`\bm\theta`, where :math:`\{\bm q_1,\dots, \bm q_{N_p}\}` is
 a training set of :math:`N_p` reference data, :math:`\bm p_i` is the corresponding

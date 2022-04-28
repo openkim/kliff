@@ -10,7 +10,7 @@ from kliff.models import KIMModel
 
 def residual_fn(identifier, natoms, weight, prediction, reference, data):
     assert len(prediction) == 3 * natoms + 1
-    return weight * (prediction - reference)
+    return weight.config_weight * (prediction - reference)
 
 
 def init():

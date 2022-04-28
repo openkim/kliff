@@ -28,6 +28,7 @@ In this tutorial, we train a neural network (NN) potential for silicon.
 from kliff import nn
 from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
+from kliff.dataset.weight import Weight
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
@@ -108,7 +109,8 @@ model.set_save_metadata(prefix="./kliff_saved_model", start=5, frequency=2)
 # training set
 dataset_path = download_dataset(dataset_name="Si_training_set")
 dataset_path = dataset_path.joinpath("varying_alat")
-tset = Dataset(dataset_path)
+weight = Weight(forces_weight=0.3)
+tset = Dataset(dataset_path, weight)
 configs = tset.get_configs()
 
 # calculator
@@ -130,7 +132,7 @@ _ = calc.create(configs, reuse=False)
 # ``0.001``, and typically, one may need to play with this to find an acceptable one that
 # drives the loss down in a reasonable time.
 
-loss = Loss(calc, residual_data={"forces_weight": 0.3})
+loss = Loss(calc)
 result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 

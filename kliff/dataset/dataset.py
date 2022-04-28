@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+import copy
 
 import numpy as np
 from loguru import logger
-
+from kliff.dataset.weight import Weight
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.utils import to_path
 
@@ -15,7 +16,6 @@ SUPPORTED_FORMAT = {"xyz": ".xyz"}
 class Configuration:
     r"""
     Class of atomic configuration.
-
     This is used to store the information of an atomic configuration, e.g. supercell,
     species, coords, energy, and forces.
 
@@ -33,9 +33,9 @@ class Configuration:
         stress: A list with 6 components in Voigt notation, i.e. it returns
             :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
             \sigma_{xy}]`. See: https://en.wikipedia.org/wiki/Voigt_notation
-        weight: weight of the configuration in the loss function.
+        weight: an instance that computes the weight of the configuration in the loss
+            function.
         identifier: a (unique) identifier of the configuration
-
     """
 
     def __init__(
@@ -47,7 +47,7 @@ class Configuration:
         energy: float = None,
         forces: Optional[np.ndarray] = None,
         stress: Optional[List[float]] = None,
-        weight: float = 1.0,
+        weight: Optional[Weight] = None,
         identifier: Optional[Union[str, Path]] = None,
     ):
         self._cell = cell
@@ -57,13 +57,21 @@ class Configuration:
         self._energy = energy
         self._forces = forces
         self._stress = stress
-        self._weight = weight
+
+        self._weight = Weight() if weight is None else weight
+        self._weight.compute_weight(self)  # Compute the weight
+
         self._identifier = identifier
         self._path = None
 
     # TODO enable config weight read in from file
     @classmethod
-    def from_file(cls, filename: Path, file_format: str = "xyz"):
+    def from_file(
+        cls,
+        filename: Path,
+        weight: Optional[Weight] = None,
+        file_format: str = "xyz",
+    ):
         """
         Read configuration from file.
 
@@ -89,7 +97,15 @@ class Configuration:
         stress = [float(i) for i in stress] if stress is not None else None
 
         self = cls(
-            cell, species, coords, PBC, energy, forces, stress, identifier=str(filename)
+            cell,
+            species,
+            coords,
+            PBC,
+            energy,
+            forces,
+            stress,
+            weight,
+            identifier=str(filename),
         )
         self._path = to_path(filename)
 
@@ -172,11 +188,9 @@ class Configuration:
     def stress(self) -> List[float]:
         r"""
         Stress of the configuration.
-
         The stress is given in Voigt notation i.e
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
         \sigma_{xy}]`.
-
         """
         if self._stress is None:
             raise ConfigurationError("Configuration does not contain stress.")
@@ -185,16 +199,17 @@ class Configuration:
     @property
     def weight(self):
         """
-        Get the weight of the configuration if the loss function.
+        Get the weight class of the loss function.
         """
         return self._weight
 
     @weight.setter
-    def weight(self, weight: float):
+    def weight(self, weight: Weight):
         """
         Set the weight of the configuration if the loss function.
         """
         self._weight = weight
+        self._weight.compute_weight(self)
 
     @property
     def identifier(self) -> str:
@@ -295,31 +310,39 @@ class Dataset:
             multiple files. If given a directory, all the files in this directory and its
             subdirectories with the extension corresponding to the specified file_format
             will be read.
+        weight: an instance that computes the weight of the configuration in the loss
+            function.
         file_format: Format of the file that stores the configuration, e.g. `xyz`.
     """
 
-    def __init__(self, path: Optional[Path] = None, file_format="xyz"):
+    def __init__(
+        self,
+        path: Optional[Path] = None,
+        weight: Optional[Weight] = None,
+        file_format="xyz",
+    ):
         self.file_format = file_format
 
         if path is not None:
-            self.configs = self._read(path, file_format)
+            self.configs = self._read(path, weight, file_format)
 
         else:
             self.configs = []
 
-    def add_configs(self, path: Path):
+    def add_configs(self, path: Path, weight: Optional[Weight] = None):
         """
         Read configurations from filename and added them to the existing set of
         configurations.
-
         This is a convenience function to read configurations from different directory
         on disk.
 
         Args:
             path: Path the directory (or filename) storing the configurations.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
         """
 
-        configs = self._read(path, self.file_format)
+        configs = self._read(path, weight, self.file_format)
         self.configs.extend(configs)
 
     def get_configs(self) -> List[Configuration]:
@@ -335,7 +358,7 @@ class Dataset:
         return len(self.configs)
 
     @staticmethod
-    def _read(path: Path, file_format: str = "xyz"):
+    def _read(path: Path, weight: Optional[Weight] = None, file_format: str = "xyz"):
         """
         Read atomic configurations from path.
         """
@@ -361,7 +384,10 @@ class Dataset:
             parent = path.parent
             all_files = [path]
 
-        configs = [Configuration.from_file(f, file_format) for f in all_files]
+        configs = [
+            Configuration.from_file(f, copy.copy(weight), file_format)
+            for f in all_files
+        ]
 
         if len(configs) <= 0:
             raise DatasetError(
