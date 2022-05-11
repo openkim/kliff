@@ -101,15 +101,16 @@ Detailed explanation and more tutorial examples can be found in the
 - [PyTorch](https://pytorch.org) backend for NN (include GPU training)
 
 
-## Cite
+## Cite KLIFF
 
 ```
-@Article{wen2021kliff,
+@Article{wen2022kliff,
   title   = {{KLIFF}: A framework to develop physics-based and machine learning interatomic potentials},
   author  = {Mingjian Wen and Yaser Afshar and Ryan S. Elliott and Ellad B. Tadmor},
   journal = {Computer Physics Communications},
+  volume  = {272},
   pages   = {108218},
-  year    = {2021},
+  year    = {2022},
   doi     = {10.1016/j.cpc.2021.108218},
 }
 ```
