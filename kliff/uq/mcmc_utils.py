@@ -1,7 +1,14 @@
 from typing import Optional
 
 import numpy as np
-import emcee
+from kliff.error import report_import_error
+
+try:
+    import emcee
+
+    emcee_avail = True
+except ImportError:
+    emcee_avail = False
 
 
 # Estimate the burn-in time
@@ -85,7 +92,10 @@ def autocorr(chain: np.ndarray, *args, **kwargs):
     float or array:
         Estimate of the autocorrelation length for each parameter.
     """
-    return emcee.autocorr.integrated_time(chain, *args, **kwargs)
+    if emcee_avail:
+        return emcee.autocorr.integrated_time(chain, *args, **kwargs)
+    else:
+        report_import_error("emcee")
 
 
 # Assess convergence
