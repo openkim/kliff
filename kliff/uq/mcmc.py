@@ -295,7 +295,9 @@ class EmceeSampler:
         )
 
     def run_mcmc(self, *args, **kwargs):
-        """Run the MCMC simulation. For the arguments, see ``ptemcee.Sampler.sample``."""
+        """Run the MCMC simulation. For the arguments, see
+        ``emcee.EnsembleSampler.sample``.
+        """
         self.sampler.run_mcmc(*args, **kwargs)
 
     @property
