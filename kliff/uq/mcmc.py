@@ -70,8 +70,7 @@ class MCMC:
     """MCMC sampler class for Bayesian uncertainty quantification.
 
     This is a wrapper over :class:`PtemceeSampler` and
-    :class:`EmceeSampler`. Currently, there are only these 2 samplers
-    implemented.
+    :class:`EmceeSampler`. Currently, only these  2 samplers implemented.
 
     Parameters
     ----------
@@ -136,7 +135,7 @@ class MCMC:
 
 
 class PtemceeSampler:
-    """Sampler class for PTMCMC.
+    """Sampler class for PTMCMC via ``ptemcee`` Python package.
 
     Parameters
     ----------
@@ -150,8 +149,8 @@ class PtemceeSampler:
         Number of temperatures to simulate. It defaults to 10.
     Tmax_ratio: Optional[float]
         The ratio between the highest temperature to use and the natural temperature.
-        Higher value means that the maximum temperature is higher than :math:`T_0`. It
-        defaults to 1.0.
+        Higher value means that the maximum temperature is higher than :math:`T_0`
+        [Frederiksen2004]_. It defaults to 1.0.
     Tladder: Optional[List]
         A list containing the temperature values to use. The values nedd to be
         monotonically increasing or decreasing. It defaults to ``None``, which will be
@@ -244,7 +243,7 @@ class PtemceeSampler:
 
 
 class EmceeSampler:
-    """Sampler class for affine invariant MCMC.
+    """Sampler class for affine invariant MCMC via ``emcee`` Python package.
 
     Parameters
     ----------
@@ -254,6 +253,9 @@ class EmceeSampler:
         Number of walkers to simulate. The minimum number of walkers
         is twice the number of parameters. It defaults to this minimum
         value.
+    T: Optional[float]
+        Sampling temperatures, used to inflate the likelihood function in the MCMC
+        sampling. It defaults to the natural temperature :math:`T_0` [Frederiksen2004]_.
     logprior_fn : Optional[Callable]
         A function that evaluate logarithm of the prior
         distribution. The prior doesn't need to be normalized. It
@@ -264,12 +266,28 @@ class EmceeSampler:
         uniform prior can be specified here.
     **kwargs : Optional[dict]
         Additional keyword arguments for ``emcee.EnsembleSampler``.
+
+    Notes
+    -----
+    As a convention, KLIFF inflates the likelihood by some sampling temperature, i.e.,
+    :math:`L(\\theta) \propto \exp(-C(\\theta) / T)`. As a default, the sampling
+    temperature is set to the natural temperature. To use the untempered likelihood
+    (:math:`T=1`), user should specify the argument `T=1`.
+
+
+    References
+    ----------
+    .. [Frederiksen2004] S. L. Frederiksen, K. W. Jacobsen, K. S. Brown, and J. P.
+       Sethna, “Bayesian Ensemble Approach to Error Estimation of Interatomic
+       Potentials,” Phys. Rev. Lett., vol. 93, no. 16, p. 165501, Oct. 2004,
+       doi: 10.1103/PhysRevLett.93.165501.
     """
 
     def __init__(
         self,
         loss: Loss,
         nwalkers: Optional[int] = None,
+        T: Optional[float] = None,
         logprior_fn: Optional[Callable] = None,
         logprior_args: Optional[tuple] = None,
         **kwargs,
@@ -281,7 +299,10 @@ class EmceeSampler:
         nwalkers = 2 * ndim if nwalkers is None else nwalkers
 
         # Probability
-        self.T0 = get_T0(self.loss)
+        if T is None:
+            self.T = get_T0(self.loss)
+        else:
+            self.T = T
         logl_fn = self._loglikelihood_wrapper
         logp_fn = self._logprior_wrapper(logprior_fn, logprior_args)
 
@@ -309,7 +330,7 @@ class EmceeSampler:
         """A wrapper to the log-likelihood function, so that the only argument is the
         parameter values.
         """
-        return _get_loglikelihood(x, self.loss, self.T0)
+        return _get_loglikelihood(x, self.loss, self.T)
 
     def _logprior_wrapper(self, logprior_fn, logprior_args):
         """A wapper to the log-prior function, so that the only argument is the parameter
