@@ -68,10 +68,9 @@ def mser(
     dstar = dmin + (dtemp + 1) * dstep * window
 
     if full_output:
-        to_return = {"dstar": dstar, "SE2": SE2_list}
+        return {"dstar": dstar, "SE2": SE2_list}
     else:
-        to_return = dstar
-    return to_return
+        return dstar
 
 
 # Estimate autocorrelation length
