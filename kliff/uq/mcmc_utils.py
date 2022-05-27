@@ -14,27 +14,22 @@ except ImportError:
 # Estimate the burn-in time
 def mser(
     chain: np.ndarray,
-    window: Optional[int] = 1,
-    dmin: Optional[int] = 0,
+    dmin: Optional[int] = 1,
     dstep: Optional[int] = 10,
     dmax: Optional[int] = -1,
     full_output: Optional[bool] = False,
 ) -> int:
-    """Estimate the equilibration time using marginal standard error rule
-    (MSER). This is done by calculating the standard error (square) of chain_d,
-    where chain_d contains the last n-d element of the chain, for progresively
-    larger d values, starting from dmin, incremented by dstep. The SE values
-    are stored in a list. Then we search the minimum element in the list and
-    return the index of that element. To speed up the process, window width can
-    be specified. The chain will be redefined to be the mean of the elements in
-    every window.
+    """Estimate the equilibration time using marginal standard error rule (MSER). This is
+    done by calculating the standard error (square) of ``chain_d``, where ``chain_d``
+    contains the last :math:`n-d` element of the chain (n is the total number of
+    iterations for each chain), for progresively larger d values, starting from ``dmin``
+    upto ``dmax``, incremented by ``dstep``. The SE values are stored in a list. Then we
+    search the minimum element in the list and return the index of that element.
 
     Parameters
     ----------
     chain: 1D np.ndarray
         Array containing the time series.
-    window: int
-        Width of the window in the time series.
     dmin: int
         Index where to start the search in the time series.
     dstep: int
@@ -46,26 +41,19 @@ def mser(
 
     Returns
     -------
-    dstar: int
-        Estimate of the equilibration time using MSER.
-
-    Notes
-    -----
-    The argument window needs to be accounted when setting ``dmin``, ``dstep``
-    and ``dmax``.
+    dstar: int or dict
+        Estimate of the equilibration time using MSER. If ``full_output=True``, then a
+        dictionary containing the estimated equilibration time and the list of squared
+        standard errors will be returned.
     """
-    # Apply the argument window
-    chain_reduced, dmax = _apply_window(chain, window, dmin, dmax)
-
     # Compute the SE square
     SE2_list = [
-        _standard_error_squared(chain_reduced[dd:])
-        for dd in np.arange(dmin, dmax, dstep)
+        _standard_error_squared(chain[dd:]) for dd in range(len(chain))[dmin:dmax:dstep]
     ]
 
     # Get the estimate of the equilibration time, wrt the original time series
-    dtemp = np.argmin(SE2_list)
-    dstar = dmin + (dtemp + 1) * dstep * window
+    dest = np.argmin(SE2_list)
+    dstar = dmin + (dest + 1) * dstep
 
     if full_output:
         return {"dstar": dstar, "SE2": SE2_list}
@@ -79,7 +67,7 @@ def autocorr(chain: np.ndarray, *args, **kwargs):
 
     Parameters
     ----------
-    chain: np.ndarray (nsteps, nwalkers, ndim,)
+    chain: np.ndarray (nwalkers, nsteps, ndim,)
         Chains from the MCMC simulation. The shape of the chains needs to be
         (nsteps, nwalkers, ndim). Note that the burn-in time needs to be discarded prior
         to this calculation
@@ -92,6 +80,7 @@ def autocorr(chain: np.ndarray, *args, **kwargs):
         Estimate of the autocorrelation length for each parameter.
     """
     if emcee_avail:
+        chain = np.swapaxes(chain, 0, 1)
         return emcee.autocorr.integrated_time(chain, *args, **kwargs)
     else:
         report_import_error("emcee")
@@ -139,32 +128,6 @@ def rhat(chain, time_axis: int = 1, return_WB: bool = False):
         toreturn = r
 
     return toreturn
-
-
-def _apply_window(chain, window, dmin, dmax):
-    """Apply the argument ``window``. If ``window`` > 1, then the chain will be averaged
-    after ``window`` steps, thus giving a shorter chain. This function will also deal
-    with the argument ``dmax``, setting it to the proper value.
-    """
-    chain = chain[dmin:]
-    npoints = len(chain)
-    leftover = npoints % window
-    endpoints = None
-
-    if leftover:
-        endpoints = chain[-leftover:]
-        chain = chain[:-leftover]
-
-    # Reshape chains and take average for every window
-    chain_reduced = chain.reshape((-1, window))
-    chain_reduced = np.mean(chain_reduced, axis=1)
-    if leftover:
-        chain_reduced = np.append(chain_reduced, np.mean(endpoints))
-    dmax = np.min([dmax, len(chain_reduced)])
-    if dmax == -1:
-        dmax = len(chain_reduced)
-
-    return chain_reduced, dmax
 
 
 def _standard_error_squared(chain: np.ndarray) -> float:
