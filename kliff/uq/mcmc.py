@@ -1,5 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional
-import copy
+from typing import Callable, List, Optional
 
 import numpy as np
 
@@ -103,9 +102,9 @@ class MCMC:
         loss: Loss,
         nwalkers: Optional[int] = None,
         logprior_fn: Optional[Callable] = None,
-        logprior_args: Optional[tuple] = (),
+        logprior_args: Optional[tuple] = None,
         use_ptsampler: Optional[bool] = True,
-        **kwargs
+        **kwargs,
     ):
 
         if use_ptsampler:
@@ -122,7 +121,7 @@ class MCMC:
                     Tladder,
                     logprior_fn,
                     logprior_args,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 report_import_error("ptemcee")
@@ -177,8 +176,8 @@ class PtemceeSampler:
         Tmax_ratio: Optional[float] = 1.0,
         Tladder: Optional[List] = None,
         logprior_fn: Optional[Callable] = None,
-        logprior_args: Optional[tuple] = (),
-        **kwargs
+        logprior_args: Optional[tuple] = None,
+        **kwargs,
     ):
 
         self.loss = loss
@@ -195,7 +194,7 @@ class PtemceeSampler:
 
         if logprior_fn is None:
             logprior_fn = logprior_uniform
-            if not logprior_args:
+            if logprior_args is None:
                 logprior_args = (_get_parameter_bounds(loss),)
 
         # Sampling temperatures
@@ -210,7 +209,7 @@ class PtemceeSampler:
             logprior_fn,
             logpargs=logprior_args,
             betas=betas,
-            **kwargs
+            **kwargs,
         )
 
     def run_mcmc(self, *args, **kwargs):
@@ -272,8 +271,8 @@ class EmceeSampler:
         loss: Loss,
         nwalkers: Optional[int] = None,
         logprior_fn: Optional[Callable] = None,
-        logprior_args: Optional[tuple] = (),
-        **kwargs
+        logprior_args: Optional[tuple] = None,
+        **kwargs,
     ):
         self.loss = loss
 
@@ -315,7 +314,7 @@ class EmceeSampler:
         values.
         """
         if logprior_fn is None:
-            if not logprior_args:
+            if logprior_args is None:
                 logprior_args = (_get_parameter_bounds(self.loss),)
             logprior_fn = logprior_uniform
 
