@@ -53,7 +53,7 @@ def mser(
 
     # Get the estimate of the equilibration time, wrt the original time series
     dest = np.argmin(SE2_list)
-    dstar = dmin + (dest + 1) * dstep
+    dstar = int(np.min([dmin + (dest + 1) * dstep, len(chain)]))
 
     if full_output:
         return {"dstar": dstar, "SE2": SE2_list}
