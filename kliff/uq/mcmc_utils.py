@@ -46,14 +46,16 @@ def mser(
         dictionary containing the estimated equilibration time and the list of squared
         standard errors will be returned.
     """
+    length = len(chain)  # Chain length
+
     # Compute the SE square
     SE2_list = [
-        _standard_error_squared(chain[dd:]) for dd in range(len(chain))[dmin:dmax:dstep]
+        _standard_error_squared(chain[dd:]) for dd in range(length)[dmin:dmax:dstep]
     ]
 
     # Get the estimate of the equilibration time, wrt the original time series
     dest = np.argmin(SE2_list)
-    dstar = int(np.min([dmin + (dest + 1) * dstep, len(chain)]))
+    dstar = min([dmin + (dest + 1) * dstep, length])
 
     if full_output:
         return {"dstar": dstar, "SE2": SE2_list}
