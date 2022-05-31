@@ -126,8 +126,9 @@ class MCMC:
                 report_import_error("ptemcee")
         else:
             if emcee_avail:
+                T = kwargs.pop("T")
                 return EmceeSampler(
-                    loss, nwalkers, logprior_fn, logprior_args, **kwargs
+                    loss, nwalkers, T, logprior_fn, logprior_args, **kwargs
                 )
 
             else:
@@ -304,7 +305,7 @@ class EmceeSampler:
         else:
             self.T = T
         logl_fn = self._loglikelihood_wrapper
-        logp_fn = self._logprior_wrapper(logprior_fn, logprior_args)
+        logp_fn = self._logprior_wrapper(logprior_fn, *logprior_args)
 
         global logprobability_fn
 
@@ -332,7 +333,7 @@ class EmceeSampler:
         """
         return _get_loglikelihood(x, self.loss, self.T)
 
-    def _logprior_wrapper(self, logprior_fn, logprior_args):
+    def _logprior_wrapper(self, logprior_fn, *logprior_args):
         """A wapper to the log-prior function, so that the only argument is the parameter
         values.
         """
