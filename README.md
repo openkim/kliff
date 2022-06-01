@@ -82,7 +82,7 @@ calc.create(configs)
 loss = Loss(calc)
 result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
-# Write trained model as a KIM model to be used in other codes such as LAMMPS ans ASE
+# Write trained model as a KIM model to be used in other codes such as LAMMPS and ASE
 model.write_kim_model()
 ```
 
