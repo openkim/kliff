@@ -27,6 +27,7 @@ consisting of 4 compressed and stretched configurations of diamond silicon struc
 
 
 import numpy as np
+from corner import corner
 
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
@@ -39,7 +40,7 @@ from kliff.utils import download_dataset
 from kliff.uq import MCMC, mser, autocorr, rhat
 
 
-#########################################################################################
+##########################################################################################
 # Before running MCMC, we need to define a loss function and train the model. More detail
 # information about this step can be found in :ref:`tut_kim_sw` and
 # :ref:`tut_params_transform`.
@@ -59,6 +60,7 @@ opt_params = {
     "A": [["default", -8.0, 8.0]],
     "lambda": [["default", -8.0, 8.0]],
 }
+
 model.set_opt_params(**opt_params)
 model.echo_opt_params()
 
@@ -88,16 +90,11 @@ loss.minimize(method="L-BFGS-B", options={"disp": True})
 model.echo_opt_params()
 
 
-#########################################################################################
+##########################################################################################
 # To perform MCMC simulation, we use :class:`~kliff.uq.MCMC`.This class interfaces with
 # ptemcee_ Python package to run PTMCMC, which utilizes the affine invariance property
 # of MCMC sampling. We simulate MCMC sampling at several different temperatures to
 # explore the effect of the scale of bias and overall error bars.
-
-
-# It is a good practice to specify the random seed to generate a reproducible simulation.
-seed = 1717
-np.random.seed(seed)
 
 # Define some variables that correspond to the dimensionality of the problem
 ntemps = 4  # Number of temperatures to simulate
@@ -108,26 +105,70 @@ nwalkers = 2 * ndim  # Number of parallel walkers to simulate
 ##########################################################################################
 # We start by instantiating :class:`~kliff.uq.MCMC`. This requires :class:`~kliff.loss.Loss`
 # instance to construct the likelihood function. Additionally, we can specify the prior
-# (or log-prior to be more precise), with the default be a uniform prior that is bounded
-# over a finite range that we specify, or otherwise it will retrieve the bounds from the
-# model (see :meth:`~kliff.models.KIMModel.set_opt_params`).
+# (or log-prior to be more precise) via the ``logprior_fn`` argument, with the default
+# option be a uniform prior that is bounded over a finite range that we specify via the
+# ``logprior_args`` argument.
 #
-# To specify the temperatures to use, we can can use the arguments ``ntemps`` and
-# ``Tmax_ratio`` to specify how many temperatures to simulate and the ratio of the highest
-# temperature to the natural temperature :math:`T_0`, respectively. Alternatively, we can
-# also give a list of the temperatures to use via ``Tladder`` argument.
+# .. note::
+#    When user uses the default uniform prior but doesn't specify the bounds, then the
+#    sampler will retrieve the bounds from the model
+#    (see :meth:`~kliff.models.KIMModel.set_opt_params`). Note that an error will be
+#    raised when the uniform prior extends to infinity in any parameter direction.
+#
+# To specify the sampling temperatures to use, we can use the arguments ``ntemps`` and
+# ``Tmax_ratio`` to set how many temperatures to simulate and the ratio of the highest
+# temperature to the natural temperature :math:`T_0`, respectively. The default values of
+# ``ntemps`` and ``Tmax_ratio`` are 10 and 1.0, respectively. Then, an internal function
+# will create a list of logarithmically spaced points from :math:`T = 1.0` to
+# :math:`T = T_{\text{max\_ratio}} \times T_0`. Alternatively, we can also give a list of
+# the temperatures via ``Tladder`` argument, which will overwrites ``ntemps`` and
+# ``Tmax_ratio``.
 #
 # .. note::
 #    It has been shown that including temperatures higher than :math:`T_0` helps the
-#    convergence of walkers sampled at :math:`T_0`
+#    convergence of walkers sampled at :math:`T_0`.
 
 
-# Create sampler
-sampler = MCMC(loss, ntemps=4, threads=4, random=np.random.RandomState(seed))
+# Set the boundaries of the uniform prior
+bounds = np.tile([-8.0, 8.0], (ndim, 1))
+
+# It is a good practice to specify the random seed to use in the calculation to generate
+# a reproducible simulation.
+seed = 1717
+np.random.seed(seed)
+
+# Create a sampler
+sampler = MCMC(
+    loss,
+    ntemps=ntemps,
+    logprior_args=(bounds,),
+    threads=nwalkers,
+    random=np.random.RandomState(seed),
+)
+
+
+##########################################################################################
+# .. note::
+#    As a default, the algorithm will set the number of walkers for each sampling
+#    temperature to be twice the number of parameters, but we can also specify it via
+#    the ``nwalkers`` argument.
+#
+# .. note::
+#    The argument ``threads`` specifies the number of parallel processes to use in the
+#    MCMC simulation. Optimally, this should be the same as the number of walkers.
+#
+# To run the MCMC sampling, we use :meth:`~kliff.uq.MCMC.run_mcmc`. This function requires
+# us to provide initial states :math:`p_0` for each temperature and walker. We also need
+# to specify the number of steps or iterations to take.
+#
+# .. note::
+#    The initial states :math:`p_0` need to be an array with shape ``(K, L, N,)``, where
+#    ``K``, ``L``, and ``N`` are the number of temperatures, walkers, and parameters,
+#    respectively.
+
 
 # Initial starting point. This should be provided by the user.
-bounds = calc.get_opt_params_bounds()
-p0 = np.empty((4, 4, 2))
+p0 = np.empty((ntemps, nwalkers, ndim))
 for ii, bound in enumerate(bounds):
     p0[:, :, ii] = np.random.uniform(*bound, (4, 4))
 
@@ -138,19 +179,13 @@ sampler.run_mcmc(p0, 10000)
 chain = sampler.chain
 
 
-#########################################################################################
-# .. note::
-#    The initial states need to be an array with shape ``(K, L, N,)``, where ``K`` is the
-#    number of temperatures, ``L`` is the number of walkers, and ``N`` is the number of
-#    parameters. As a default, ``M`` is set to be twice of ``N``, but we can also specify
-#    it via the ``nwalkers`` argument when instantiating :class:`~kliff.uq.MCMC`.
-#
+##########################################################################################
 # The resulting chains still need to be processed. First, we need to discard the first few
 # iterations in the beginning of each chain as a burn-in time. This is similar to the
 # equilibration time in a molecular dynamic simulation before we can start the
-# measurement.
-# KLIFF provides a function to estimate the burn-in time, based on the Marginal Standard
-# Error Rule (MSER). This can be accessed via :func:`~kliff.uq.mcmc_utils.mser`.
+# measurement. KLIFF provides a function to estimate the burn-in time, based on the
+# Marginal Standard Error Rule (MSER). This can be accessed via
+# :func:`~kliff.uq.mcmc_utils.mser`.
 
 
 # Estimate equilibration time using MSER for each temperature, walker, and dimension.
@@ -198,8 +233,9 @@ print(f"Estimated autocorrelation length: {thin}")
 # Finally, after obtaining the independent samples, we need to assess whether the
 # resulting samples have converged to a stationary distribution, and thus a good
 # representation of the actual posterior. This is done by computing the potential scale
-# reduction factor (PSRF). The PSRF declines to 1 as the number of iterations goes to
-# infinity. A common threshold is about 1.1, but higher threshold has also been used.
+# reduction factor (PSRF), denoted by :math:`\hat{R}^p`. The value of :math:`\hat{R}^p`
+# declines to 1 as the number of iterations goes to infinity. A common threshold is about
+# 1.1, but higher threshold has also been used.
 
 
 # Assess the convergence for each temperature
@@ -218,6 +254,19 @@ print(f"$\hat{{r}}^p$ values: {rhat_array}")
 #    :func:`~kliff.uq.mcmc_utils.rhat` only computes the PSRF for one temperature, so that
 #    the calculation needs to be carried on for each temperature separately.
 #
+# Notice that in this case, :math:`\hat{R}^p < 1.1` for all temperatures. When this
+# criteria is not satisfied, then the sampling process should be continued. Note that
+# some sampling temperatures might converge at slower rates compared to the others.
+#
+# After obtaining the independent samples from the MCMC sampling, the uncertainty of the
+# parameters can be obtained by observing the distribution of the samples. As an example,
+# we will use corner_ Python package to present the MCMC result at sampling
+# temperature 1.0 as a corner plot.
+
+# Plot samples at T=1.0
+corner(samples[0].reshape((-1, ndim)), labels=[r"$\log(A)$", r"$\log(\lambda)$"])
+
+##########################################################################################
 # .. note::
 #    As an alternative, KLIFF also provides a wrapper to emcee_.This can be accessed by
 #    setting ``use_ptsampler=False`` when instantiating :class:`~kliff.uq.MCMC`. For
@@ -227,3 +276,4 @@ print(f"$\hat{{r}}^p$ values: {rhat_array}")
 # .. _ptemcee: https://github.com/willvousden/ptemcee
 # .. _emcee: https://emcee.readthedocs.io
 # .. _emcee.autocorr.integrated_time: https://emcee.readthedocs.io/en/stable/user/autocorr/#emcee.autocorr.integrated_time
+# .. _corner: https://corner.readthedocs.io
