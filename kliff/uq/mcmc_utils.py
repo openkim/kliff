@@ -91,7 +91,7 @@ def autocorr(chain: np.ndarray, *args, **kwargs):
 # Assess convergence
 def rhat(chain, time_axis: int = 1, return_WB: bool = False):
     """Compute the value of :math:`\\hat{r}` proposed by Brooks and Gelman
-    (1998). If the samples come from PTMCMC simulation, then the chain needs
+    [BrooksGelman1998]_. If the samples come from PTMCMC simulation, then the chain needs
     to be from one of the temperature only.
 
     Parameters
@@ -114,6 +114,13 @@ def rhat(chain, time_axis: int = 1, return_WB: bool = False):
         The value of rhat.
     W, B: 2d ndarray
         Matrices of covariance within and between the chains.
+
+    References
+    ----------
+    .. [BrooksGelman1998]
+       Brooks, S.P., Gelman, A., 1998. General Methods for Monitoring Convergence of
+       Iterative Simulations. Journal of Computational and Graphical Statistics 7,
+       434455. https://doi.org/10.1080/10618600.1998.10474787
     """
     if time_axis == 1:
         # Reshape the chain so that the time axis is in axis 1

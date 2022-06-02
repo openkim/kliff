@@ -141,7 +141,7 @@ class PtemceeSampler:
     Parameters
     ----------
     loss : Loss
-        Loss function class from :class:`~kliff.loss.Loss`.
+        Loss function instance from :class:`~kliff.loss.Loss`.
     nwalkers : Optional[int]
         Number of walkers to simulate. The minimum number of walkers
         is twice the number of parameters. It defaults to this minimum
@@ -166,6 +166,17 @@ class PtemceeSampler:
         uniform prior can be specified here.
     **kwargs : Optional[dict]
         Additional keyword arguments for ``ptemcee.Sampler``.
+
+    Attributes
+    ----------
+    loss: Loss
+        Loss function instance from :class:`~kliff.loss.Loss`
+    T0: float
+        Values of the natural temperature, :math:`T_0` [Frederiksen2004]_.
+    Tladded: np.ndarray
+        An array containing the values of the sampling temperatures.
+    sampler: ptemcee.Sampler
+        Sampler instance from ``ptemcee.Sampler``
     """
 
     def __init__(
@@ -249,7 +260,7 @@ class EmceeSampler:
     Parameters
     ----------
     loss : Loss
-        Loss function class from :class:`~kliff.loss.Loss`.
+        Loss function instance from :class:`~kliff.loss.Loss`.
     nwalkers : Optional[int]
         Number of walkers to simulate. The minimum number of walkers
         is twice the number of parameters. It defaults to this minimum
@@ -268,12 +279,21 @@ class EmceeSampler:
     **kwargs : Optional[dict]
         Additional keyword arguments for ``emcee.EnsembleSampler``.
 
+    Attributes
+    ----------
+    loss: Loss
+        Loss function instance from :class:`~kliff.loss.Loss`
+    T: float
+        Values of the sampling temperature.
+    sampler: emcee.EnsembleSampler
+        Sampler instance from ``emcee.EnsembleSampler``
+
     Notes
     -----
     As a convention, KLIFF inflates the likelihood by some sampling temperature, i.e.,
     :math:`L(\\theta) \propto \exp(-C(\\theta) / T)`. As a default, the sampling
     temperature is set to the natural temperature. To use the untempered likelihood
-    (:math:`T=1`), user should specify the argument `T=1`.
+    (:math:`T=1`), user should specify the argument ``T=1``.
 
 
     References
