@@ -173,7 +173,7 @@ for ii, bound in enumerate(bounds):
     p0[:, :, ii] = np.random.uniform(*bound, (4, 4))
 
 # Run MCMC
-sampler.run_mcmc(p0, 10000)
+sampler.run_mcmc(p0, 5000)
 
 # Retrieve the chain
 chain = sampler.chain
@@ -214,9 +214,11 @@ print(f"Estimated burn-in time: {burnin}")
 
 
 # Estimate the autocorrelation length for each temperature
+chain_no_burnin = chain[:, :, burnin:]
+
 acorr_array = np.empty((ntemps, nwalkers, ndim))
 for tidx in range(ntemps):
-    acorr_array[tidx] = autocorr(chain[tidx], c=1, quiet=True)
+    acorr_array[tidx] = autocorr(chain_no_burnin[tidx], c=1, quiet=True)
 
 thin = int(np.ceil(np.max(acorr_array)))
 print(f"Estimated autocorrelation length: {thin}")
@@ -239,7 +241,7 @@ print(f"Estimated autocorrelation length: {thin}")
 
 
 # Assess the convergence for each temperature
-samples = chain[:, :, burnin::thin]
+samples = chain_no_burnin[:, :, ::thin]
 
 threshold = 1.1  # Threshold for rhat
 rhat_array = np.empty(ntemps)
