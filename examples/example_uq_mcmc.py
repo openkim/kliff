@@ -174,6 +174,7 @@ for ii, bound in enumerate(bounds):
 
 # Run MCMC
 sampler.run_mcmc(p0, 5000)
+sampler.sampler.pool.close()
 
 # Retrieve the chain
 chain = sampler.chain
