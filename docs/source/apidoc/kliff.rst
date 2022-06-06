@@ -16,4 +16,5 @@ Package Reference
     kliff.neighbor
     kliff.nn
     kliff.parallel
+    kliff.uq
     kliff.utils
