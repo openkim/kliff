@@ -154,6 +154,27 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
    :hidden:
 
    /auto_examples/example_nn_SiC
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to perform uncertainty quantification (UQ) using parallel t...">
+
+.. only:: html
+
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_uq_mcmc_thumb.png
+     :alt: MCMC sampling
+
+     :ref:`sphx_glr_auto_examples_example_uq_mcmc.py`
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example_uq_mcmc
 .. raw:: html
 
     <div class="sphx-glr-clear"></div>

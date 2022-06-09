@@ -30,3 +30,4 @@ In this section, we introduce some of the most frequently used modules. See
     descriptors
     calculators
     loss
+    uq
