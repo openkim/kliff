@@ -4,15 +4,12 @@ Contributing guide
 Code style
 ----------
 
-- KLIFF uses black_ to format the code. It adopts the default style of black_.
-  To format the code, one can use:
+- KLIFF uses isort_ and black_ to format the code. To format the code, install
+  ``pre-commit`` and then do:
 
   .. code-block:: bash
 
-    black <filename>.py
-
-  Supply ``--skip-string-normalization`` to ``black`` to avoid changing single
-  quote to double quote (not recommended).
+    pre-commit run pre-commit run --all-files --show-diff-on-failure
 
 - The docstring of **KLIFF** follows the `Google` style, which can be found at googledoc_.
 
