@@ -17,7 +17,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pre-commit
       - name: Lint
-        run: pre-commit run --show-diff-on-failure
+        run: pre-commit run --show-diff-on-failure --all-files
 
   test:
     runs-on: ${{ matrix.os }}
