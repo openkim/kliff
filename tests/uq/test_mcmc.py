@@ -7,7 +7,7 @@ from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
-from kliff.uq import get_T0, MCMC, PtemceeSampler, EmceeSampler
+from kliff.uq import MCMC, EmceeSampler, PtemceeSampler, get_T0
 
 # model
 modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"

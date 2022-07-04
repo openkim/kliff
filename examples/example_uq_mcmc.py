@@ -35,10 +35,8 @@ from kliff.dataset.weight import MagnitudeInverseWeight
 from kliff.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
+from kliff.uq import MCMC, autocorr, mser, rhat
 from kliff.utils import download_dataset
-
-from kliff.uq import MCMC, mser, autocorr, rhat
-
 
 ##########################################################################################
 # Before running MCMC, we need to define a loss function and train the model. More detail

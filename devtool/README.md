@@ -14,9 +14,6 @@
 - Update docs at `kliff/docs/source` as necessary
 
 - Generate docs by running `$ make html` in the `kliff/docs` directory
-  - remove `.git/hooks/pre-commit` so that it will not correct the generated
-    doc files, otherwise ReadTheDoc will try to regenerate it and then fail
-  - after commit it, then `$ pre-commit install` to get pre-commit back
   - Note, check the generated tutorial notebooks -- sometimes sphinx-galley will
     not correctly capture the stdout and embed it in the file. In this case,
     delete hte .md5 file and return `make html`. (Also, do it one be one.)

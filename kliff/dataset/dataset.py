@@ -1,12 +1,13 @@
+import copy
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
-import copy
 
 import numpy as np
 from loguru import logger
-from kliff.dataset.weight import Weight
+
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
+from kliff.dataset.weight import Weight
 from kliff.utils import to_path
 
 # map from file_format to file extension

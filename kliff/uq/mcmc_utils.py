@@ -1,6 +1,7 @@
 from typing import Optional
 
 import numpy as np
+
 from kliff.error import report_import_error
 
 try:

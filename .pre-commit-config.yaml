@@ -1,3 +1,4 @@
+exclude: ^docs/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.2.0
@@ -17,11 +18,13 @@ repos:
         args:
           - --profile=black
           - --filter-files
+        exclude: ^docs/
 
   - repo: https://github.com/psf/black
     rev: 22.3.0
     hooks:
       - id: black
+        exclude: ^docs/
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.12.1

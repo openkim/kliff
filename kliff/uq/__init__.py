@@ -1,5 +1,5 @@
-from .mcmc import MCMC, PtemceeSampler, EmceeSampler, get_T0
-from .mcmc_utils import mser, autocorr, rhat
+from .mcmc import MCMC, EmceeSampler, PtemceeSampler, get_T0
+from .mcmc_utils import autocorr, mser, rhat
 
 __all__ = [
     "MCMC",

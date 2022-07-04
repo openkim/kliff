@@ -1,5 +1,5 @@
-from typing import Any, Dict, Optional
 import copy
+from typing import Any, Dict, Optional
 
 import numpy as np
 from loguru import logger
@@ -161,7 +161,7 @@ class MagnitudeInverseWeight(Weight):
             # Use the Frobenius norm of the stress tensor
             normal_stress_norm = np.linalg.norm(stress[:3])
             shear_stress_norm = np.linalg.norm(stress[3:])
-            stress_norm = np.sqrt(normal_stress_norm ** 2 + 2 * shear_stress_norm ** 2)
+            stress_norm = np.sqrt(normal_stress_norm**2 + 2 * shear_stress_norm**2)
             self._stress_weight = self._compute_weight_one_property(
                 stress_norm, self._weight_params["stress_weight_params"], "stress"
             )

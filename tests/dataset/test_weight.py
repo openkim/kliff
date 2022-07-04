@@ -2,8 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from kliff.dataset.weight import Weight, MagnitudeInverseWeight
 from kliff.dataset import Dataset
+from kliff.dataset.weight import MagnitudeInverseWeight, Weight
 
 np.random.seed(2022)
 
@@ -85,5 +85,5 @@ def _compute_magnitude_inverse_weight(c1, c2, norm):
     """Compute the inverse magnitude weight, given the weight parameters and the
     magnitude of property of interest.
     """
-    sigma = np.sqrt(c1 ** 2 + (c2 * norm) ** 2)
+    sigma = np.sqrt(c1**2 + (c2 * norm) ** 2)
     return 1 / sigma

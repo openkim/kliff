@@ -2,8 +2,8 @@ from typing import Callable, List, Optional
 
 import numpy as np
 
-from kliff.loss import Loss
 from kliff.error import report_import_error
+from kliff.loss import Loss
 
 try:
     import emcee
