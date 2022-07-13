@@ -191,6 +191,10 @@ class PtemceeSampler:
         **kwargs,
     ):
 
+        if "pool" in kwargs:
+            raise TypeError(
+                "Please declare the pool after instantiating ``kliff.uq.MCMC``"
+            )
         self.loss = loss
 
         # Dimensionality
@@ -222,6 +226,15 @@ class PtemceeSampler:
             betas=betas,
             **kwargs,
         )
+
+    @property
+    def pool(self):
+        return self.sampler.pool
+
+    @pool.setter
+    def pool(self, pool):
+        """Set the pool."""
+        self.sampler.pool = pool
 
     def run_mcmc(self, *args, **kwargs):
         """Run the MCMC simulation. For the arguments, see ``ptemcee.Sampler.sample``."""
@@ -313,6 +326,10 @@ class EmceeSampler:
         logprior_args: Optional[tuple] = None,
         **kwargs,
     ):
+        if "pool" in kwargs:
+            raise TypeError(
+                "Please declare the pool after instantiating ``kliff.uq.MCMC``"
+            )
         self.loss = loss
 
         # Dimensionality
@@ -335,6 +352,15 @@ class EmceeSampler:
         self.sampler = emcee.EnsembleSampler(
             nwalkers, ndim, logprobability_fn, **kwargs
         )
+
+    @property
+    def pool(self):
+        return self.sampler.pool
+
+    @pool.setter
+    def pool(self, pool):
+        """Set the pool."""
+        self.sampler.pool = pool
 
     def run_mcmc(self, *args, **kwargs):
         """Run the MCMC simulation. For the arguments, see
