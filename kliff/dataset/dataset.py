@@ -59,11 +59,11 @@ class Configuration:
         self._forces = forces
         self._stress = stress
 
-        self._weight = Weight() if weight is None else weight
-        self._weight.compute_weight(self)  # Compute the weight
-
         self._identifier = identifier
         self._path = None
+
+        self._weight = Weight() if weight is None else weight
+        self._weight.compute_weight(self)  # Compute the weight
 
     # TODO enable config weight read in from file
     @classmethod
