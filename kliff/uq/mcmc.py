@@ -106,6 +106,11 @@ class MCMC:
         **kwargs,
     ):
 
+        if "pool" in kwargs:
+            raise TypeError(
+                "Please declare the pool after instantiating ``kliff.uq.MCMC``"
+            )
+
         if use_ptsampler:
             if ptemcee_avail:
                 ntemps = kwargs.pop("ntemps") if "ntemps" in kwargs else 10
@@ -194,11 +199,6 @@ else:
             logprior_args: Optional[tuple] = None,
             **kwargs,
         ):
-
-            if "pool" in kwargs:
-                raise TypeError(
-                    "Please declare the pool after instantiating ``kliff.uq.MCMC``"
-                )
             self.loss = loss
 
             # Dimensionality
@@ -316,10 +316,6 @@ else:
             logprior_args: Optional[tuple] = None,
             **kwargs,
         ):
-            if "pool" in kwargs:
-                raise TypeError(
-                    "Please declare the pool after instantiating ``kliff.uq.MCMC``"
-                )
             self.loss = loss
 
             # Dimensionality
