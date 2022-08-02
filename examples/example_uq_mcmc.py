@@ -27,6 +27,7 @@ consisting of 4 compressed and stretched configurations of diamond silicon struc
 
 
 import numpy as np
+from multiprocessing import Pool
 from corner import corner
 
 from kliff.calculators import Calculator
@@ -122,6 +123,10 @@ nwalkers = 2 * ndim  # Number of parallel walkers to simulate
 # the temperatures via ``Tladder`` argument, which will overwrites ``ntemps`` and
 # ``Tmax_ratio``.
 #
+# The sampling processes can be parallelized by specifying the pool. Note that the pool
+# needs to be declared after instantiating :class:`~kliff.uq.MCMC`, since the posterior
+# function is defined during this process.
+#
 # .. note::
 #    It has been shown that including temperatures higher than :math:`T_0` helps the
 #    convergence of walkers sampled at :math:`T_0`.
@@ -140,9 +145,10 @@ sampler = MCMC(
     loss,
     ntemps=ntemps,
     logprior_args=(bounds,),
-    threads=nwalkers,
     random=np.random.RandomState(seed),
 )
+# Declare a pool to use parallelization
+sampler.pool = Pool(nwalkers)
 
 
 ##########################################################################################
@@ -172,7 +178,7 @@ for ii, bound in enumerate(bounds):
 
 # Run MCMC
 sampler.run_mcmc(p0, 5000)
-sampler.sampler.pool.close()
+sampler.pool.close()
 
 # Retrieve the chain
 chain = sampler.chain
