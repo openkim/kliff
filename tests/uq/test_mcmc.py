@@ -34,7 +34,7 @@ model = KIMModel(modelname)
 model.set_opt_params(A=[["default"]])
 
 # training set
-path = Path(__file__).parents[1].joinpath("configs_extxyz/Si_4")
+path = Path(__file__).absolute().parents[1].joinpath("configs_extxyz/Si_4")
 data = Dataset(path)
 configs = data.get_configs()
 
@@ -50,7 +50,7 @@ loss.minimize(method="lm")
 ndim = calc.get_num_opt_params()
 nwalkers = 2 * np.random.randint(1, 3)
 ntemps = np.random.randint(2, 4)
-nsteps = np.random.randint(1, 5)
+nsteps = np.random.randint(5, 10)
 
 # samplers
 prior_bounds = np.tile([0, 10], (ndim, 1))
