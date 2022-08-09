@@ -140,9 +140,7 @@ class MCMC:
                 report_import_error("emcee")
 
 
-if not ptemcee_avail:
-    report_import_error("ptemcee")
-else:
+if ptemcee_avail:
 
     class PtemceeSampler(ptemcee.Sampler):
         """Sampler class for PTMCMC via ``ptemcee`` Python package.
@@ -253,9 +251,7 @@ else:
             return Tladder
 
 
-if not ptemcee_avail:
-    report_import_error("emcee")
-else:
+if emcee_avail:
 
     class EmceeSampler(emcee.EnsembleSampler):
         """Sampler class for affine invariant MCMC via ``emcee`` Python package.
