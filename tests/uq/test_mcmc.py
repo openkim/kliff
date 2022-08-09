@@ -1,8 +1,8 @@
+from multiprocessing import Pool
 from pathlib import Path
-import pytest
 
 import numpy as np
-from multiprocessing import Pool
+import pytest
 
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset

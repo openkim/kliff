@@ -26,8 +26,9 @@ consisting of 4 compressed and stretched configurations of diamond silicon struc
 #    :ref:`install_model` for more information about installing KIM models.
 
 
-import numpy as np
 from multiprocessing import Pool
+
+import numpy as np
 from corner import corner
 
 from kliff.calculators import Calculator
