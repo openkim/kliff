@@ -65,7 +65,7 @@ if ptemcee_avail:
     )
 if emcee_avail:
     sampler = MCMC(
-        loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), use_ptsampler=False
+        loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), sampler="emcee"
     )
 
 
@@ -129,14 +129,17 @@ def test_pool_exception():
     """Test if an exception is raised when declaring the pool prior to instantiating
     ``kliff.uq.MCMC``.
     """
-    with pytest.raises(TypeError):
-        _ = MCMC(
-            loss,
-            ntemps=ntemps,
-            nwalkers=nwalkers,
-            logprior_args=(prior_bounds,),
-            pool=Pool(1),
-        )
+    if ptemcee_avail:
+        with pytest.raises(TypeError):
+            _ = MCMC(
+                loss,
+                ntemps=ntemps,
+                nwalkers=nwalkers,
+                logprior_args=(prior_bounds,),
+                pool=Pool(1),
+            )
+    else:
+        print("Skip the test; ptemcee is not found")
 
 
 if __name__ == "__main__":

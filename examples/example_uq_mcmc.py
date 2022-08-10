@@ -124,13 +124,13 @@ nwalkers = 2 * ndim  # Number of parallel walkers to simulate
 # the temperatures via ``Tladder`` argument, which will overwrites ``ntemps`` and
 # ``Tmax_ratio``.
 #
-# The sampling processes can be parallelized by specifying the pool. Note that the pool
-# needs to be declared after instantiating :class:`~kliff.uq.MCMC`, since the posterior
-# function is defined during this process.
-#
 # .. note::
 #    It has been shown that including temperatures higher than :math:`T_0` helps the
 #    convergence of walkers sampled at :math:`T_0`.
+#
+# The sampling processes can be parallelized by specifying the pool. Note that the pool
+# needs to be declared after instantiating :class:`~kliff.uq.MCMC`, since the posterior
+# function is defined during this process.
 
 
 # Set the boundaries of the uniform prior
@@ -157,10 +157,6 @@ sampler.pool = Pool(nwalkers)
 #    As a default, the algorithm will set the number of walkers for each sampling
 #    temperature to be twice the number of parameters, but we can also specify it via
 #    the ``nwalkers`` argument.
-#
-# .. note::
-#    The argument ``threads`` specifies the number of parallel processes to use in the
-#    MCMC simulation. Optimally, this should be the same as the number of walkers.
 #
 # To run the MCMC sampling, we use :meth:`~kliff.uq.MCMC.run_mcmc`. This function requires
 # us to provide initial states :math:`p_0` for each temperature and walker. We also need
@@ -276,9 +272,9 @@ corner(samples[0].reshape((-1, ndim)), labels=[r"$\log(A)$", r"$\log(\lambda)$"]
 
 ##########################################################################################
 # .. note::
-#    As an alternative, KLIFF also provides a wrapper to emcee_.This can be accessed by
-#    setting ``use_ptsampler=False`` when instantiating :class:`~kliff.uq.MCMC`. For
-#    further documentation, see :class:`~kliff.uq.EmceeSampler`.
+#    As an alternative, KLIFF also provides a wrapper to emcee_. This can be accessed by
+#    setting ``sampler="emcee"`` when instantiating :class:`~kliff.uq.MCMC`. For further
+#    documentation, see :class:`~kliff.uq.EmceeSampler`.
 #
 # .. _OpenKIM: https://openkim.org
 # .. _ptemcee: https://github.com/willvousden/ptemcee

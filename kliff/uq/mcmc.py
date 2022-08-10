@@ -1,3 +1,4 @@
+import warnings
 from typing import Callable, List, Optional
 
 import numpy as np
@@ -88,13 +89,16 @@ class MCMC:
         Additional positional arguments of the ``logprior_fn``. If the
         default ``logprior_fn`` is used, then the boundaries of the
         uniform prior can be specified here.
-    use_ptsampler : Optional[bool]
-        A flag to use parallel tempered sampler. It defaults to
-        ``True``.
+    sampler : Optional[str] or sampler instance
+        An argument that specifies the MCMC sampler to use. The value can be one of the
+        strings ``"ptemcee"`` (the default value) or ``"emcee"``, or a sampler class
+        instance. If ``"ptemcee"`` or ``"emcee"`` is given, a respective internal sampler
+        class will be uses.
     **kwargs : Optional[dict]
-        Additional keyword arguments for the sampler. See ``ptemcee.Sampler`` if
-        ``use_ptsampler`` is true, otherwise see ``emcee.EnsembleSampler``.
+        Additional keyword arguments for ``ptemcee.Sampler`` or ``emcee.EnsembleSampler``.
     """
+
+    builtin_samplers = ["ptemcee", "emcee"]
 
     def __new__(
         self,
@@ -102,17 +106,19 @@ class MCMC:
         nwalkers: Optional[int] = None,
         logprior_fn: Optional[Callable] = None,
         logprior_args: Optional[tuple] = None,
-        use_ptsampler: Optional[bool] = True,
+        sampler: Optional[str] = "ptemcee",
         **kwargs,
     ):
 
-        if "pool" in kwargs:
-            raise TypeError(
-                "Please declare the pool after instantiating ``kliff.uq.MCMC``"
-            )
-
-        if use_ptsampler:
+        if sampler == "ptemcee":
             if ptemcee_avail:
+                # Force pool to be declared after MCMC is instantiated
+                if "pool" in kwargs:
+                    raise TypeError(
+                        "Please declare the pool after instantiating ``kliff.uq.MCMC``"
+                    )
+
+                # Pre-process keyword arguments
                 ntemps = kwargs.pop("ntemps") if "ntemps" in kwargs else 10
                 Tmax_ratio = kwargs.pop("Tmax_ratio") if "Tmax_ratio" in kwargs else 1.0
                 Tladder = kwargs.pop("Tladder") if "Tladder" in kwargs else None
@@ -129,15 +135,30 @@ class MCMC:
                 )
             else:
                 report_import_error("ptemcee")
-        else:
+        elif sampler == "emcee":
             if emcee_avail:
+                # Force pool to be declared after MCMC is instantiated
+                if "pool" in kwargs:
+                    raise TypeError(
+                        "Please declare the pool after instantiating ``kliff.uq.MCMC``"
+                    )
+
+                # Pre-process keyword arguments
                 T = kwargs.pop("T") if "T" in kwargs else None
+
                 return EmceeSampler(
                     loss, nwalkers, T, logprior_fn, logprior_args, **kwargs
                 )
-
             else:
                 report_import_error("emcee")
+        elif isinstance(sampler, str) and sampler not in builtin_samplers:
+            raise ValueError(
+                "Unknown sampler. Please input 'ptemcee', 'emcee' or "
+                "some sampler class instance"
+            )
+        else:
+            warnings.warn("The other arguments are ignored")
+            return sampler
 
 
 if ptemcee_avail:

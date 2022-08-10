@@ -86,7 +86,7 @@ For the MCMC sampling, KLIFF adopts parallel-tempered MCMC (PTMCMC) methods, via
 ptemcee_ Python package, as a way to perform MCMC sampling with several different
 temperatures. Additionally, multiple parallel walkers are deployed for each sampling
 temperature. PTMCMC has been widely used to improve the mixing rate of the sampling.
-Additionally, by sampling at several different temperatures, we can assess the effect of
+Furthermore, by sampling at several different temperatures, we can assess the effect of
 the size of the bias to any conclusion drawn from the samples.
 
 We start the UQ process by instantiating :class:`~kliff.uq.MCMC`,
@@ -100,7 +100,8 @@ We start the UQ process by instantiating :class:`~kliff.uq.MCMC`,
        loss, nwalkers, logprior_fn, logprior_args, ntemps, Tmax_ratio, Tladder, **kwargs
    )
 
-The available arguments are:
+As a default, :class:`~kliff.uq.MCMC` inherits from ptemcee.Sampler_. The arguments to
+instantiate the sampler are:
 
 * ``loss``, which is a :class:`~kliff.loss.Loss` instance. This is a required argument
   that is used to construct the untempered likelihood function (:math:`T=1`) and to
@@ -124,12 +125,9 @@ The available arguments are:
   :math:`T_{\text{max}}`, inclusive.
 * ``Tladder`` allows user to specify a list of temperatures to use. This argument will
   overwrites ``ntemps`` and ``Tmax_ratio``.
-* Other keyword arguments to be passed into ``ptemcee.Sampler`` needs to be specified in
+* Other keyword arguments to be passed into ptemcee.Sampler_ needs to be specified in
   ``kwargs``.
 
-.. note::
-   For PTMCMC run, :class:`~kliff.uq.MCMC` creates a ``ptemcee.Sampler`` instance, which
-   can be accesses directly through :attr:`~kliff.uq.PtemceeSampler.sampler`.
 
 .. How to run sampling
 After the sampler is created, the MCMC run is done by calling
@@ -140,7 +138,7 @@ After the sampler is created, the MCMC run is done by calling
    p0 = ...  # Define the initial position of each walker
    sampler.run_mcmc(p0, iterations, *args, **kwargs)
 
-This function is the same as ptemcee.Sampler.run_mcmc_. The required arguments are:
+The required arguments are:
 
 * ``p0``, which is a :math:`K \times L \times N` array containing the position of each
   walker for each temperature in parameter space, where :math:`K`, :math:`L`, and
@@ -150,17 +148,16 @@ This function is the same as ptemcee.Sampler.run_mcmc_. The required arguments a
   up the MCMC run into smaller batches, with the note that the initial positions of the
   current run needs to be set to the last positions of the previous run.
 
-The resulting chain can be retrieved from :attr:`~kliff.uq.PtemceeSampler.chain` as a
+.. seealso::
+   For other possible arguments, see also ptemcee.Sampler.run_mcmc_.
+
+The resulting chain can be retrieved from via ``sampler.chain`` as a
 :math:`K \times L \times M \times N` array, where :math:`M` is the total number of
 iteratiions.
 
-.. note::
-   The result that can be accessed directly from :class:`~kliff.uq.MCMC` is the chain.
-   Other properties, such as ``logposterior``, ``loglikelihood``, etc., can still be
-   retrieved from :attr:`~kliff.uq.PtemceeSampler.sampler`.
-
 .. _ptemcee: https://github.com/willvousden/ptemcee/tree/1.0.0
-.. _ptemcee.Sampler.run_mcmc: https://github.com/willvousden/ptemcee/blob/1.0.0/ptemcee/sampler.py#L272-L279
+.. _ptemcee.Sampler: https://github.com/willvousden/ptemcee/blob/1.0.0/ptemcee/sampler.py#L143-L199
+.. _ptemcee.Sampler.run_mcmc: https://github.com/willvousden/ptemcee/blob/1.0.0/ptemcee/sampler.py#L272-L323
 
 
 MCMC analysis

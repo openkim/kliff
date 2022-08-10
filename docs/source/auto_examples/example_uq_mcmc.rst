@@ -43,14 +43,15 @@ To start, let's first install the SW model::
    This installs the model and its driver into the ``User Collection``. See
    :ref:`install_model` for more information about installing KIM models.
 
-.. GENERATED FROM PYTHON SOURCE LINES 27-42
+.. GENERATED FROM PYTHON SOURCE LINES 27-43
 
 .. code-block:: default
 
 
 
-    import numpy as np
     from multiprocessing import Pool
+
+    import numpy as np
     from corner import corner
 
     from kliff.calculators import Calculator
@@ -69,13 +70,13 @@ To start, let's first install the SW model::
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-46
+.. GENERATED FROM PYTHON SOURCE LINES 44-47
 
 Before running MCMC, we need to define a loss function and train the model. More detail
 information about this step can be found in :ref:`tut_kim_sw` and
 :ref:`tut_params_transform`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 46-92
+.. GENERATED FROM PYTHON SOURCE LINES 47-93
 
 .. code-block:: default
 
@@ -150,11 +151,11 @@ information about this step can be found in :ref:`tut_kim_sw` and
 
     /home/yonatank/.local/lib/python3.8/site-packages/numpy/linalg/linalg.py:2500: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
       x = asarray(x)
-    2022-08-02 09:24:25.907 | INFO     | kliff.dataset.dataset:_read:398 - 4 configurations read from /home/yonatank/modules/kliff/examples/Si_training_set_4_configs
-    2022-08-02 09:24:25.910 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 4 configurations.
-    2022-08-02 09:24:25.911 | INFO     | kliff.loss:minimize:290 - Start minimization using method: L-BFGS-B.
-    2022-08-02 09:24:25.918 | INFO     | kliff.loss:_scipy_optimize:404 - Running in serial mode.
-    2022-08-02 09:24:26.122 | INFO     | kliff.loss:minimize:292 - Finish minimization using method: L-BFGS-B.
+    2022-08-10 17:00:23.489 | INFO     | kliff.dataset.dataset:_read:398 - 4 configurations read from /home/yonatank/modules/kliff/examples/Si_training_set_4_configs
+    2022-08-10 17:00:23.493 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 4 configurations.
+    2022-08-10 17:00:23.494 | INFO     | kliff.loss:minimize:290 - Start minimization using method: L-BFGS-B.
+    2022-08-10 17:00:23.496 | INFO     | kliff.loss:_scipy_optimize:404 - Running in serial mode.
+    2022-08-10 17:00:23.675 | INFO     | kliff.loss:minimize:292 - Finish minimization using method: L-BFGS-B.
     #================================================================================
     # Model parameters that are optimized.
     # Note that the parameters are in the transformed space if 
@@ -173,14 +174,14 @@ information about this step can be found in :ref:`tut_kim_sw` and
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 93-97
+.. GENERATED FROM PYTHON SOURCE LINES 94-98
 
 To perform MCMC simulation, we use :class:`~kliff.uq.MCMC`.This class interfaces with
 ptemcee_ Python package to run PTMCMC, which utilizes the affine invariance property
 of MCMC sampling. We simulate MCMC sampling at several different temperatures to
 explore the effect of the scale of bias and overall error bars.
 
-.. GENERATED FROM PYTHON SOURCE LINES 97-104
+.. GENERATED FROM PYTHON SOURCE LINES 98-105
 
 .. code-block:: default
 
@@ -198,7 +199,7 @@ explore the effect of the scale of bias and overall error bars.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 105-133
+.. GENERATED FROM PYTHON SOURCE LINES 106-134
 
 We start by instantiating :class:`~kliff.uq.MCMC`. This requires :class:`~kliff.loss.Loss`
 instance to construct the likelihood function. Additionally, we can specify the prior
@@ -221,15 +222,15 @@ will create a list of logarithmically spaced points from :math:`T = 1.0` to
 the temperatures via ``Tladder`` argument, which will overwrites ``ntemps`` and
 ``Tmax_ratio``.
 
-The sampling processes can be parallelized by specifying the pool. Note that the pool
-needs to be declared after instantiating :class:`~kliff.uq.MCMC`, since the posterior
-function is defined during this process.
-
 .. note::
    It has been shown that including temperatures higher than :math:`T_0` helps the
    convergence of walkers sampled at :math:`T_0`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 133-154
+The sampling processes can be parallelized by specifying the pool. Note that the pool
+needs to be declared after instantiating :class:`~kliff.uq.MCMC`, since the posterior
+function is defined during this process.
+
+.. GENERATED FROM PYTHON SOURCE LINES 134-155
 
 .. code-block:: default
 
@@ -261,16 +262,12 @@ function is defined during this process.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 155-172
+.. GENERATED FROM PYTHON SOURCE LINES 156-169
 
 .. note::
    As a default, the algorithm will set the number of walkers for each sampling
    temperature to be twice the number of parameters, but we can also specify it via
    the ``nwalkers`` argument.
-
-.. note::
-   The argument ``threads`` specifies the number of parallel processes to use in the
-   MCMC simulation. Optimally, this should be the same as the number of walkers.
 
 To run the MCMC sampling, we use :meth:`~kliff.uq.MCMC.run_mcmc`. This function requires
 us to provide initial states :math:`p_0` for each temperature and walker. We also need
@@ -281,7 +278,7 @@ to specify the number of steps or iterations to take.
    ``K``, ``L``, and ``N`` are the number of temperatures, walkers, and parameters,
    respectively.
 
-.. GENERATED FROM PYTHON SOURCE LINES 172-187
+.. GENERATED FROM PYTHON SOURCE LINES 169-184
 
 .. code-block:: default
 
@@ -307,7 +304,7 @@ to specify the number of steps or iterations to take.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 188-194
+.. GENERATED FROM PYTHON SOURCE LINES 185-191
 
 The resulting chains still need to be processed. First, we need to discard the first few
 iterations in the beginning of each chain as a burn-in time. This is similar to the
@@ -316,7 +313,7 @@ measurement. KLIFF provides a function to estimate the burn-in time, based on th
 Marginal Standard Error Rule (MSER). This can be accessed via
 :func:`~kliff.uq.mcmc_utils.mser`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 194-209
+.. GENERATED FROM PYTHON SOURCE LINES 191-206
 
 .. code-block:: default
 
@@ -350,7 +347,7 @@ Marginal Standard Error Rule (MSER). This can be accessed via
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 210-219
+.. GENERATED FROM PYTHON SOURCE LINES 207-216
 
 .. note::
    :func:`~kliff.uq.mcmc_utils.mser` only compute the estimation of the burn-in time for
@@ -362,7 +359,7 @@ every :math:`\tau`-th iteration from the remaining chain, where :math:`\tau` is 
 autocorrelation length, to ensure uncorrelated samples.
 This calculation can be done using :func:`~kliff.uq.mcmc_utils.autocorr`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 219-232
+.. GENERATED FROM PYTHON SOURCE LINES 216-229
 
 .. code-block:: default
 
@@ -394,7 +391,7 @@ This calculation can be done using :func:`~kliff.uq.mcmc_utils.autocorr`.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 233-246
+.. GENERATED FROM PYTHON SOURCE LINES 230-243
 
 .. note::
    :func:`~kliff.uq.mcmc_utils.acorr` is a wrapper for emcee.autocorr.integrated_time_,
@@ -410,7 +407,7 @@ reduction factor (PSRF), denoted by :math:`\hat{R}^p`. The value of :math:`\hat{
 declines to 1 as the number of iterations goes to infinity. A common threshold is about
 1.1, but higher threshold has also been used.
 
-.. GENERATED FROM PYTHON SOURCE LINES 246-259
+.. GENERATED FROM PYTHON SOURCE LINES 243-256
 
 .. code-block:: default
 
@@ -442,7 +439,7 @@ declines to 1 as the number of iterations goes to infinity. A common threshold i
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 260-272
+.. GENERATED FROM PYTHON SOURCE LINES 257-269
 
 .. note::
    :func:`~kliff.uq.mcmc_utils.rhat` only computes the PSRF for one temperature, so that
@@ -457,7 +454,7 @@ parameters can be obtained by observing the distribution of the samples. As an e
 we will use corner_ Python package to present the MCMC result at sampling
 temperature 1.0 as a corner plot.
 
-.. GENERATED FROM PYTHON SOURCE LINES 272-276
+.. GENERATED FROM PYTHON SOURCE LINES 269-273
 
 .. code-block:: default
 
@@ -485,12 +482,12 @@ temperature 1.0 as a corner plot.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 277-287
+.. GENERATED FROM PYTHON SOURCE LINES 274-284
 
 .. note::
-   As an alternative, KLIFF also provides a wrapper to emcee_.This can be accessed by
-   setting ``use_ptsampler=False`` when instantiating :class:`~kliff.uq.MCMC`. For
-   further documentation, see :class:`~kliff.uq.EmceeSampler`.
+   As an alternative, KLIFF also provides a wrapper to emcee_. This can be accessed by
+   setting ``sampler="emcee"`` when instantiating :class:`~kliff.uq.MCMC`. For further
+   documentation, see :class:`~kliff.uq.EmceeSampler`.
 
 .. _OpenKIM: https://openkim.org
 .. _ptemcee: https://github.com/willvousden/ptemcee
@@ -501,7 +498,7 @@ temperature 1.0 as a corner plot.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 3 minutes  32.471 seconds)
+   **Total running time of the script:** ( 3 minutes  14.012 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_uq_mcmc.py:
