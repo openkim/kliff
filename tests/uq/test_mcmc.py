@@ -142,6 +142,20 @@ def test_pool_exception():
         print("Skip the test; ptemcee is not found")
 
 
+def test_sampler_exception():
+    """Test if an exception is raised when specifying sampler string other than the
+    built-in ones.
+    """
+    with pytest.raises(ValueError):
+        _ = MCMC(
+            loss,
+            ntemps=ntemps,
+            nwalkers=nwalkers,
+            logprior_args=(prior_bounds,),
+            sampler="dummy",
+        )
+
+
 if __name__ == "__main__":
     test_T0()
     test_MCMC_wrapper()

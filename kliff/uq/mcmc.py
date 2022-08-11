@@ -151,7 +151,7 @@ class MCMC:
                 )
             else:
                 report_import_error("emcee")
-        elif isinstance(sampler, str) and sampler not in builtin_samplers:
+        elif isinstance(sampler, str) and sampler not in self.builtin_samplers:
             raise ValueError(
                 "Unknown sampler. Please input 'ptemcee', 'emcee' or "
                 "some sampler class instance"
