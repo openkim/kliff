@@ -130,7 +130,7 @@ def test_pool_exception():
     ``kliff.uq.MCMC``.
     """
     if ptemcee_avail:
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             _ = MCMC(
                 loss,
                 ntemps=ntemps,

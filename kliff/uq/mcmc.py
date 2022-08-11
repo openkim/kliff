@@ -114,7 +114,7 @@ class MCMC:
             if ptemcee_avail:
                 # Force pool to be declared after MCMC is instantiated
                 if "pool" in kwargs:
-                    raise TypeError(
+                    raise ValueError(
                         "Please declare the pool after instantiating ``kliff.uq.MCMC``"
                     )
 
@@ -139,7 +139,7 @@ class MCMC:
             if emcee_avail:
                 # Force pool to be declared after MCMC is instantiated
                 if "pool" in kwargs:
-                    raise TypeError(
+                    raise ValueError(
                         "Please declare the pool after instantiating ``kliff.uq.MCMC``"
                     )
 
