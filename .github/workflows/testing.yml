@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python 3.9
-        uses: actions/setup-python@v4.1.0
+        uses: actions/setup-python@v4.2.0
         with:
           python-version: 3.9
       - name: Install dependencies
@@ -54,7 +54,7 @@ jobs:
           kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.1.0
+        uses: actions/setup-python@v4.2.0
         with:
           python-version: ${{ matrix.python-version }}
 
