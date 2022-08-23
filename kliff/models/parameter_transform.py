@@ -44,7 +44,7 @@ class LogParameterTransform(ParameterTransform):
             p = model_params[name]
             p_val = np.asarray(p.value)
 
-            assert np.asarray(p_val).min() > 0, (
+            assert np.asarray(p_val).min() >= 0, (
                 f"Cannot log transform parameter `{name}`, got negative values: "
                 f"{p_val}"
             )
