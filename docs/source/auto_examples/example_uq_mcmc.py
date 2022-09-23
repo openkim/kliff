@@ -26,6 +26,8 @@ consisting of 4 compressed and stretched configurations of diamond silicon struc
 #    :ref:`install_model` for more information about installing KIM models.
 
 
+from multiprocessing import Pool
+
 import numpy as np
 from corner import corner
 
@@ -35,10 +37,8 @@ from kliff.dataset.weight import MagnitudeInverseWeight
 from kliff.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
+from kliff.uq import MCMC, autocorr, mser, rhat
 from kliff.utils import download_dataset
-
-from kliff.uq import MCMC, mser, autocorr, rhat
-
 
 ##########################################################################################
 # Before running MCMC, we need to define a loss function and train the model. More detail
@@ -127,6 +127,10 @@ nwalkers = 2 * ndim  # Number of parallel walkers to simulate
 # .. note::
 #    It has been shown that including temperatures higher than :math:`T_0` helps the
 #    convergence of walkers sampled at :math:`T_0`.
+#
+# The sampling processes can be parallelized by specifying the pool. Note that the pool
+# needs to be declared after instantiating :class:`~kliff.uq.MCMC`, since the posterior
+# function is defined during this process.
 
 
 # Set the boundaries of the uniform prior
@@ -142,9 +146,10 @@ sampler = MCMC(
     loss,
     ntemps=ntemps,
     logprior_args=(bounds,),
-    threads=nwalkers,
     random=np.random.RandomState(seed),
 )
+# Declare a pool to use parallelization
+sampler.pool = Pool(nwalkers)
 
 
 ##########################################################################################
@@ -152,10 +157,6 @@ sampler = MCMC(
 #    As a default, the algorithm will set the number of walkers for each sampling
 #    temperature to be twice the number of parameters, but we can also specify it via
 #    the ``nwalkers`` argument.
-#
-# .. note::
-#    The argument ``threads`` specifies the number of parallel processes to use in the
-#    MCMC simulation. Optimally, this should be the same as the number of walkers.
 #
 # To run the MCMC sampling, we use :meth:`~kliff.uq.MCMC.run_mcmc`. This function requires
 # us to provide initial states :math:`p_0` for each temperature and walker. We also need
@@ -174,7 +175,7 @@ for ii, bound in enumerate(bounds):
 
 # Run MCMC
 sampler.run_mcmc(p0, 5000)
-sampler.sampler.pool.close()
+sampler.pool.close()
 
 # Retrieve the chain
 chain = sampler.chain
@@ -271,9 +272,9 @@ corner(samples[0].reshape((-1, ndim)), labels=[r"$\log(A)$", r"$\log(\lambda)$"]
 
 ##########################################################################################
 # .. note::
-#    As an alternative, KLIFF also provides a wrapper to emcee_.This can be accessed by
-#    setting ``use_ptsampler=False`` when instantiating :class:`~kliff.uq.MCMC`. For
-#    further documentation, see :class:`~kliff.uq.EmceeSampler`.
+#    As an alternative, KLIFF also provides a wrapper to emcee_. This can be accessed by
+#    setting ``sampler="emcee"`` when instantiating :class:`~kliff.uq.MCMC`. For further
+#    documentation, see :class:`~kliff.uq.EmceeSampler`.
 #
 # .. _OpenKIM: https://openkim.org
 # .. _ptemcee: https://github.com/willvousden/ptemcee

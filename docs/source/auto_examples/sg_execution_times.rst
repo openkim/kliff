@@ -5,10 +5,10 @@
 
 Computation times
 =================
-**03:21.177** total execution time for **auto_examples** files:
+**03:14.012** total execution time for **auto_examples** files:
 
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_uq_mcmc.py` (``example_uq_mcmc.py``)                         | 03:21.177 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_uq_mcmc.py` (``example_uq_mcmc.py``)                         | 03:14.012 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                     | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+

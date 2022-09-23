@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
@@ -7,7 +8,25 @@ from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
-from kliff.uq import MCMC, EmceeSampler, PtemceeSampler, get_T0
+from kliff.uq import MCMC, get_T0
+
+try:
+    from kliff.uq.mcmc import PtemceeSampler
+
+    ptemcee_avail = True
+except ImportError:
+    ptemcee_avail = False
+
+try:
+    from kliff.uq.mcmc import EmceeSampler
+
+    emcee_avail = True
+except ImportError:
+    emcee_avail = False
+
+
+seed = 1717
+np.random.seed(seed)
 
 # model
 modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
@@ -15,7 +34,7 @@ model = KIMModel(modelname)
 model.set_opt_params(A=[["default"]])
 
 # training set
-path = Path(__file__).parents[1].joinpath("configs_extxyz/Si_4")
+path = Path(__file__).absolute().parents[1].joinpath("configs_extxyz/Si_4")
 data = Dataset(path)
 configs = data.get_configs()
 
@@ -31,25 +50,23 @@ loss.minimize(method="lm")
 ndim = calc.get_num_opt_params()
 nwalkers = 2 * np.random.randint(1, 3)
 ntemps = np.random.randint(2, 4)
-nsteps = np.random.randint(1, 5)
+nsteps = np.random.randint(5, 10)
 
 # samplers
 prior_bounds = np.tile([0, 10], (ndim, 1))
-ptemcee_avail = True
-emcee_avail = True
-try:
-    ptsampler = MCMC(
-        loss, ntemps=ntemps, nwalkers=nwalkers, logprior_args=(prior_bounds,)
-    )
-except ImportError:
-    ptemcee_avail = False
 
-try:
-    sampler = MCMC(
-        loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), use_ptsampler=False
+if ptemcee_avail:
+    ptsampler = MCMC(
+        loss,
+        ntemps=ntemps,
+        nwalkers=nwalkers,
+        logprior_args=(prior_bounds,),
+        random=np.random.RandomState(seed),
     )
-except ImportError:
-    emcee_avail = False
+if emcee_avail:
+    sampler = MCMC(
+        loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), sampler="emcee"
+    )
 
 
 def test_T0():
@@ -92,6 +109,8 @@ def test_dimensionality():
             nsteps,
             ndim,
         ), "Dimensionality from the ptemcee wrapper is not right"
+    else:
+        print("Skip testing ptemcee; ptemcee is not found")
 
     # Test for emcee wrapper
     if emcee_avail:
@@ -102,9 +121,43 @@ def test_dimensionality():
             nsteps,
             ndim,
         ), "Dimensionality from the emcee wrapper is not right"
+    else:
+        print("Skip testing emcee; emcee is not found")
+
+
+def test_pool_exception():
+    """Test if an exception is raised when declaring the pool prior to instantiating
+    ``kliff.uq.MCMC``.
+    """
+    if ptemcee_avail:
+        with pytest.raises(ValueError):
+            _ = MCMC(
+                loss,
+                ntemps=ntemps,
+                nwalkers=nwalkers,
+                logprior_args=(prior_bounds,),
+                pool=Pool(1),
+            )
+    else:
+        print("Skip the test; ptemcee is not found")
+
+
+def test_sampler_exception():
+    """Test if an exception is raised when specifying sampler string other than the
+    built-in ones.
+    """
+    with pytest.raises(ValueError):
+        _ = MCMC(
+            loss,
+            ntemps=ntemps,
+            nwalkers=nwalkers,
+            logprior_args=(prior_bounds,),
+            sampler="dummy",
+        )
 
 
 if __name__ == "__main__":
     test_T0()
     test_MCMC_wrapper()
     test_dimensionality()
+    test_pool_exception()

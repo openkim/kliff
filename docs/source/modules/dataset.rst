@@ -309,7 +309,7 @@ weight class that achieve this goal.
             super().__init__(energy_weight=energy_weight, forces_weight=forces_weight)
 
 	def compute_weight(self, config):
-	    identifier = config.identifer
+	    identifier = config.identifier
 	    if 'with_cracks' in identifier:
 		self._config_weight = 10.0
 
