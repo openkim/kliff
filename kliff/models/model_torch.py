@@ -39,9 +39,9 @@ class ModelTorch(nn.Module):
         else:
             raise ModelTorchError(f"Not support dtype {dtype}.")
 
-        self._save_prefix = None
-        self._save_start = None
-        self._save_frequency = None
+        self._save_prefix = Path.cwd() / "kliff_saved_model"
+        self._save_start = 1
+        self._save_frequency = 10
 
     def forward(self, x: Any):
         """
@@ -131,7 +131,7 @@ class ModelTorch(nn.Module):
             start: Epoch number at which begins to save the model.
             frequency: Save the model every `frequency` epochs.
         """
-        self._save_prefix = str(prefix)
+        self._save_prefix = to_path(prefix)
         self._save_start = int(start)
         self._save_frequency = int(frequency)
 
