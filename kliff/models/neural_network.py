@@ -18,8 +18,8 @@ class NeuralNetwork(ModelTorch):
 
     Args:
         descriptor:
-            A descriptor that transforms atomic environment information to the fingerprints,
-            which are used as the input for the neural network.
+            A descriptor that transforms atomic environment information to the
+            fingerprints, which are used as the input for the neural network.
         seed: Global seed for random numbers.
     """
 
@@ -67,7 +67,16 @@ class NeuralNetwork(ModelTorch):
         self.type(self.dtype)
 
     def forward(self, x):
-        for j, layer in enumerate(self.layers):
+        """
+        Forward pass through the neural network.
+
+        Args:
+            x: input descriptor to the neural network.
+
+        Returns:
+            The output of the neural network.
+        """
+        for layer in self.layers:
             x = layer(x)
         return x
 

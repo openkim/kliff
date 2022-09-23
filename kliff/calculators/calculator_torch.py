@@ -1,11 +1,8 @@
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import torch
-import torch.distributed as dist
 from loguru import logger
-from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
 
 from kliff.dataset.dataset import Configuration
@@ -29,8 +26,8 @@ class CalculatorTorch:
 
     def __init__(self, model: ModelTorch, gpu: Union[bool, int] = None):
         device = _get_device(gpu)
+        self._model = model.to(device)
 
-        self.model = model.to(device)
         self.dtype = self.model.descriptor.dtype
         self.fingerprints_path = None
 
@@ -103,8 +100,9 @@ class CalculatorTorch:
 
                 if path is None or not path.exists():
                     raise CalculatorTorchError(
-                        f"You specified `reuse=True` to reuse the fingerprints. The mean "
-                        f"and stdev file of the fingerprints `{path}` does not exists."
+                        f"You specified `reuse=True` to reuse the fingerprints. The "
+                        f"mean and stdev file of the fingerprints `{path}` does not "
+                        "exists."
                     )
 
                 self.model.descriptor.load_state_dict(pickle_load(path))
@@ -209,6 +207,33 @@ class CalculatorTorch:
             "stress": stress_config,
         }
 
+    @property
+    def model(self):
+        """Get the underlying torch model"""
+        return self._model
+
+    def save_model(self, epoch: int, force_save: bool = False):
+        """
+        Save the model to disk.
+
+        When to save a model is dependent on `epoch` and a model's metadata for save.
+
+        Args:
+            epoch: current optimization epoch.
+            force_save: save the model, ignoring `epoch` and save metadata.
+        """
+        # save metadata
+        save_prefix = self.model.save_prefix
+        save_start = self.model.save_start
+        save_frequency = self.model.save_frequency
+
+        path = to_path(save_prefix).joinpath(f"model_epoch{epoch}.pkl")
+        if force_save:
+            self.model.save(path)
+        else:
+            if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
+                self.model.save(path)
+
     def get_energy(self, batch):
         return self.results["energy"]
 
@@ -234,7 +259,8 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
     A calculator supporting models of difference species.
 
     Args:
-        models: {species:model} with species specifying the chemical symbol for the model.
+        models: {species: model} with species specifying the chemical symbol for the
+            model.
         gpu: whether to use gpu for training. If `int` (e.g. 0), will trained on this
             gpu device. If `True` will always train on gpu `0`.
     """
@@ -254,9 +280,7 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
                 if self.dtype != m.descriptor.dtype:
                     raise CalculatorTorchError("inconsistent `dtype` from descriptors.")
 
-        # TODO change this (we now temporarily set model to the last one)
-        # this is used by loss to get some info, e.g. descriptor
-        self.model = m
+        self._model = _ModelWrapper(models)
 
         self.fingerprints_path = None
 
@@ -348,53 +372,109 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
             "stress": stress_config,
         }
 
+    @property
+    def model(self):
+        return self._model
 
-class CalculatorTorchDDP(CalculatorTorch):
-    def __init__(self, model, rank, world_size):
-        super(self).__init__(model)
-        self.set_up(rank, world_size)
+    def save_model(self, epoch: int, force_save: bool = False):
+        """
+        Save the models to disk.
 
-    def set_up(self, rank, world_size):
-        os.environ["MASTER_ADDR"] = "localhost"
-        os.environ["MASTER_PORT"] = "12355"
-        dist.init_process_group("gloo", rank=rank, world_size=world_size)
+        When to save a model is dependent on `epoch` and a model's metadata for save.
 
-    def clean_up(self):
-        dist.destroy_process_group()
+        Args:
+            epoch: current optimization epoch.
+            force_save: save the model, ignoring `epoch` and save metadata.
+        """
+        # save metadata
+        for name, model in self.models.items():
+            save_prefix = model.save_prefix
+            save_start = model.save_start
+            save_frequency = model.save_frequency
 
-    def compute(self, batch):
-        grad = self.use_forces
+            path = to_path(save_prefix).joinpath(f"model_{name}_epoch{epoch}.pkl")
+            if force_save:
+                model.save(path)
+            else:
+                if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
+                    model.save(path)
 
-        # collate batch input to NN
-        zeta_config = self._collate(batch, "zeta")
-        if grad:
-            for zeta in zeta_config:
-                zeta.requires_grad_(True)
-        zeta_stacked = torch.cat(zeta_config, dim=0)
 
-        # evaluate model
-        model = DistributedDataParallel(self.model)
-        energy_atom = model(zeta_stacked)
+class _ModelWrapper(torch.nn.Module):
+    """
+    A wrapper over multiple torch models.
 
-        # energy
-        natoms_config = [len(zeta) for zeta in zeta_config]
-        energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
+    Only add necessary properties:
+      - `LossNeuralNetworkModel` uses `calculator.model.parameters()` and
+      - `calculator.model.device`, and the model wrapper only need to provide them.
+      - descriptor: needed by model create
+    """
 
-        # forces
-        if grad:
-            dzetadr_config = self._collate(batch, "dzetadr")
-            forces_config = self.compute_forces_config(
-                energy_config, zeta_config, dzetadr_config
-            )
-            for zeta in zeta_config:
-                zeta.requires_grad_(False)
-        else:
-            forces_config = None
+    def __init__(self, models: Dict[str, torch.nn.Module]):
+        super().__init__()
+        self._models = torch.nn.ModuleDict(models)
 
-        return {"energy": energy_config, "forces": forces_config}
+        first_model = list(models.values())[0]
 
-    def __del__(self):
-        self.clean_up()
+        # Assuming all models using the same descriptor as in the example_NN_SiC.py
+        # example, then it's OK to set it to the descriptor of the first model.
+        self._descriptor = first_model.descriptor
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
+    @property
+    def descriptor(self):
+        return self._descriptor
+
+
+# class CalculatorTorchDDP(CalculatorTorch):
+#     def __init__(self, model, rank, world_size):
+#         super(self).__init__(model)
+#         self.set_up(rank, world_size)
+#
+#     def set_up(self, rank, world_size):
+#         os.environ["MASTER_ADDR"] = "localhost"
+#         os.environ["MASTER_PORT"] = "12355"
+#         dist.init_process_group("gloo", rank=rank, world_size=world_size)
+#
+#     def clean_up(self):
+#         dist.destroy_process_group()
+#
+#     def compute(self, batch):
+#         grad = self.use_forces
+#
+#         # collate batch input to NN
+#         zeta_config = self._collate(batch, "zeta")
+#         if grad:
+#             for zeta in zeta_config:
+#                 zeta.requires_grad_(True)
+#         zeta_stacked = torch.cat(zeta_config, dim=0)
+#
+#         # evaluate model
+#         model = DistributedDataParallel(self.model)
+#         energy_atom = model(zeta_stacked)
+#
+#         # energy
+#         natoms_config = [len(zeta) for zeta in zeta_config]
+#         energy_config = [e.sum() for e in torch.split(energy_atom, natoms_config)]
+#
+#         # forces
+#         if grad:
+#             dzetadr_config = self._collate(batch, "dzetadr")
+#             forces_config = self.compute_forces_config(
+#                 energy_config, zeta_config, dzetadr_config
+#             )
+#             for zeta in zeta_config:
+#                 zeta.requires_grad_(False)
+#         else:
+#             forces_config = None
+#
+#         return {"energy": energy_config, "forces": forces_config}
+#
+#     def __del__(self):
+#         self.clean_up()
 
 
 class CalculatorTorchError(Exception):
