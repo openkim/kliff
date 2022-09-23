@@ -681,7 +681,7 @@ class LossNeuralNetworkModel(object):
                 [`Adadelta`, `Adagrad`, `Adam`, `SparseAdam`, `Adamax`, `ASGD`, `LBFGS`,
                 `RMSprop`, `Rprop`, `SGD`]
                 See also: https://pytorch.org/docs/stable/optim.html
-            batch_size: Number of configurations used in in each minimization step.
+            batch_size: Number of configurations used in each minimization step.
             num_epochs: Number of epochs to carry out the minimization.
             start_epoch: The starting epoch number. This is typically 0, but if
                 continuing a training, it is useful to set this to the last epoch number
@@ -691,29 +691,12 @@ class LossNeuralNetworkModel(object):
         if method not in self.torch_minimize_methods:
             raise LossError("Minimization method `{method}` not supported.")
 
-        self.method = method
+        # TODO, better not use then as
         self.batch_size = batch_size
         self.num_epochs = num_epochs
         self.start_epoch = start_epoch
 
-        # model save metadata
-        save_prefix = self.calculator.model.save_prefix
-        save_start = self.calculator.model.save_start
-        save_frequency = self.calculator.model.save_frequency
-
-        if save_prefix is None or save_start is None or save_frequency is None:
-            logger.info(
-                "Model saving meta data not set by user. Now set it to "
-                '"prefix=./kliff_saved_model", "start=1", and "frequency=10".'
-            )
-            save_prefix = os.path.join(os.getcwd(), "kliff_saved_model")
-            save_start = 1
-            save_frequency = 10
-            self.calculator.model.set_save_metadata(
-                save_prefix, save_start, save_frequency
-            )
-
-        logger.info(f"Start minimization using optimization method: {self.method}.")
+        logger.info(f"Start minimization using optimization method: {method}.")
 
         # optimizing
         try:
@@ -757,18 +740,15 @@ class LossNeuralNetworkModel(object):
                     epoch_loss += float(loss)
 
                 print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
-                if epoch >= save_start and (epoch - save_start) % save_frequency == 0:
-                    path = os.path.join(save_prefix, "model_epoch{}.pkl".format(epoch))
-                    self.calculator.model.save(path)
+                self.calculator.save_model(epoch)
 
         # print loss from final parameter and save last epoch
         epoch += 1
         epoch_loss = self._get_loss_epoch(loader)
         print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
-        path = os.path.join(save_prefix, "model_epoch{}.pkl".format(epoch))
-        self.calculator.model.save(path)
+        self.calculator.save_model(epoch, force_save=True)
 
-        logger.info(f"Finish minimization using optimization method: {self.method}.")
+        logger.info(f"Finish minimization using optimization method: {method}.")
 
     def _get_loss_epoch(self, loader):
         epoch_loss = 0
