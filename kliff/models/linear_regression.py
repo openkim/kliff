@@ -8,7 +8,7 @@ from kliff.models.model_torch import ModelTorch
 
 
 class LinearRegression(ModelTorch):
-    r"""Linear regression model."""
+    """Linear regression model."""
 
     def __init__(self, descriptor, seed=35):
         super(LinearRegression, self).__init__(descriptor, seed)
@@ -16,41 +16,47 @@ class LinearRegression(ModelTorch):
         desc_size = self.descriptor.get_size()
         self.layer = nn.Linear(desc_size, 1)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
+        """
+        Args:
+            x: Descriptors of shape (N, M), where `N` is the number of descriptors and
+              `M` is the descriptor size.
+        """
         return self.layer(x)
 
     def fit(self, path):
-        """
-        Fit the model using analytic solution.
-        """
+        """Fit the model using analytic solution."""
         fp = FingerprintsDataset(path)
 
         loader = DataLoader(
             dataset=fp, batch_size=1, collate_fn=fingerprints_collate_fn
         )
 
-        X, y = self.prepare_data(loader)
+        X, y = self._prepare_data(loader)
         A = torch.inverse(torch.mm(X.t(), X))
         beta = torch.mv(torch.mm(A, X.t()), y)
 
-        self.set_params(beta)
+        self._set_params(beta)
 
-        msg = 'fit model "{}" finished.'.format(self.__class__.__name__)
+        msg = f'Finished fitting model "{self.__class__.__name__}"'
         logger.info(msg)
         print(msg)
 
-    def set_params(self, beta):
-        r"""Set linear weight and bias.
+    def _set_params(self, beta):
+        """
+        Set linear weight and bias.
 
         Parameters
         ----------
         beta: Tensor
             First component is bias and the remaining components is weight.
         """
-        self.layer.weight = torch.nn.Parameter(beta[1:])
+        # Note, self.layer.weight is a 2D tensor of shape (1, ndesc)
+        # y = xW^T + b
+        self.layer.weight = torch.nn.Parameter(beta[1:].reshape(1, -1))
         self.layer.bias = torch.nn.Parameter(beta[0:1])
 
-    def prepare_data(self, loader, use_energy=True, use_forces=False):
+    def _prepare_data(self, loader, use_energy=True, use_forces=False):
         X = []
         y = []
         for batch in loader:
@@ -60,8 +66,8 @@ class LinearRegression(ModelTorch):
                 intercept = torch.ones(zeta.size()[0], 1)
                 zeta = torch.cat((intercept, zeta), dim=1)
 
-                # sum to get energy of the configuration; we can do this because the model
-                # is linear
+                # sum to get energy of the configuration; we can do this because the
+                # model is linear
                 zeta = torch.sum(zeta, 0, keepdim=True)  # 2D tensor
                 e = torch.tensor([sample["energy"]])  # 1D tensor
 
