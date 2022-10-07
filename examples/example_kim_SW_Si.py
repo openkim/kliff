@@ -15,12 +15,9 @@ on OpenKIM_.
 # If you haven't already, follow :ref:`installation` to install ``kim-api`` and
 # ``kimpy``, and ``openkim-models``.
 #
-# Then do
-# .. code::
-#    kim-api-collections-management list
-#
-# and make sure ``SW_StillingerWeber_1985_Si__MO_405512056662_006`` is listed in one
-# of the collections.
+# Then do ``$ kim-api-collections-management list``, and make sure
+# ``SW_StillingerWeber_1985_Si__MO_405512056662_006`` is listed in one of the
+# collections.
 #
 # .. note::
 #    If you see ``SW_StillingerWeber_1985_Si__MO_405512056662_005`` (note the last
