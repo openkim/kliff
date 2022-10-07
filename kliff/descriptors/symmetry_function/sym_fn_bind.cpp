@@ -83,10 +83,7 @@ PYBIND11_MODULE(sf, m)
             py::tuple t(2);
             t[0] = zeta_py;
             if (grad) { t[1] = grad_zeta_py; }
-            else
-            {
-              t[1] = n;
-            }
+            else { t[1] = n; }
             return t;
           },
           py::arg("i"),

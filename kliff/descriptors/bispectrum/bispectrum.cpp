@@ -1666,19 +1666,13 @@ void Bispectrum::init_rootpqarray()
 inline void Bispectrum::jtostr(char * str_out, int const j)
 {
   if (j % 2 == 0) { sprintf(str_out, "%d", j / 2); }
-  else
-  {
-    sprintf(str_out, "%d/2", j);
-  }
+  else { sprintf(str_out, "%d/2", j); }
 }
 
 inline void Bispectrum::mtostr(char * str_out, int const j, int const m)
 {
   if (j % 2 == 0) { sprintf(str_out, "%d", m - j / 2); }
-  else
-  {
-    sprintf(str_out, "%d/2", 2 * m - j);
-  }
+  else { sprintf(str_out, "%d/2", 2 * m - j); }
 }
 
 void Bispectrum::print_clebsch_gordan(FILE * file)

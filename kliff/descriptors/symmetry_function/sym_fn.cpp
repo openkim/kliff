@@ -179,10 +179,7 @@ int Descriptor::read_parameter_file(FILE * const filePointer)
       iIndex = index;
       ++index;
     }
-    else
-    {
-      iIndex = speciesMap[s1];
-    }
+    else { iIndex = speciesMap[s1]; }
 
     std::string s2(spec2);
     std::map<std::string, int>::const_iterator jIter = speciesMap.find(s2);
@@ -193,10 +190,7 @@ int Descriptor::read_parameter_file(FILE * const filePointer)
       jIndex = index;
       ++index;
     }
-    else
-    {
-      jIndex = speciesMap[s2];
-    }
+    else { jIndex = speciesMap[s2]; }
 
     // store cutoff values
     rcut_2D_(iIndex, jIndex) = rcut_2D_(jIndex, iIndex) = cutoff;
@@ -386,10 +380,7 @@ int Descriptor::read_parameter_file(FILE * const filePointer)
     // store info into descriptor class
     set_feature_mean_and_std(normalize, size, means.data(), stds.data());
   }
-  else
-  {
-    normalize_ = false;
-  }
+  else { normalize_ = false; }
 
   // everything is OK
   return false;

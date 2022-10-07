@@ -4,6 +4,25 @@
 Change Log
 ==========
 
+v0.4.1 (2022/10/06)
+===================
+
+Added
+-----
+- Uncertainty quantification via MCMC (@yonatank93). New tutorial and explanation of
+  the functionality provided in the doc.
+- Issue and PR template
+
+Fixed
+-----
+- Linear regression model parameter shape
+- NN multispecies calculator to use parameters of all models
+
+Updated
+-------
+- Documentation on installing KLIFF and dependences
+
+
 v0.4.0 (2022/04/27)
 ===================
 
