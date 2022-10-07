@@ -13,14 +13,19 @@ on OpenKIM_.
 # Before getting started to train the SW model, let's first make sure it is installed.
 #
 # If you haven't already, follow :ref:`installation` to install ``kim-api`` and
-# ``kimpy``.
+# ``kimpy``, and ``openkim-models``.
 #
 # Then do
 # .. code::
 #    kim-api-collections-management list
 #
-# and make sure ``SW_StillingerWeber_1985_Si__MO_405512056662_005`` is listed in one
+# and make sure ``SW_StillingerWeber_1985_Si__MO_405512056662_006`` is listed in one
 # of the collections.
+#
+# .. note::
+#    If you see ``SW_StillingerWeber_1985_Si__MO_405512056662_005`` (note the last
+#    three digits), you need to change ``model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")``
+#    to the corresponding model name in your installation.
 #
 #
 # We are going to create potentials for diamond silicon, and fit the potentials to a
@@ -54,7 +59,7 @@ from kliff.utils import download_dataset
 # We first create a KIM model for the SW potential, and print out all the available
 # parameters that can be optimized (we call this ``model parameters``).
 
-model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_005")
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
 model.echo_model_params()
 
 
@@ -69,7 +74,7 @@ model.echo_model_params()
 # .. note::
 #    The available parameters information can also by obtained using the **kliff**
 #    :ref:`cmdlntool`:
-#    ``$ kliff model --echo-params SW_StillingerWeber_1985_Si__MO_405512056662_005``
+#    ``$ kliff model --echo-params SW_StillingerWeber_1985_Si__MO_405512056662_006``
 #
 # Now that we know what parameters are available for fitting, we can optimize all or a
 # subset of them to reproduce the training set.
@@ -185,7 +190,7 @@ model.write_kim_model()
 # parameters before carrying out the minimization shows that we recover the original
 # parameters quite reasonably. The second line saves the fitted model to a file named
 # ``kliff_model.pkl`` on the disk, and the third line writes out a KIM potential named
-# ``SW_StillingerWeber_1985_Si__MO_405512056662_005_kliff_trained``.
+# ``SW_StillingerWeber_1985_Si__MO_405512056662_006_kliff_trained``.
 #
 # .. seealso::
 #    For information about how to load a saved model, see :ref:`doc.modules`.
