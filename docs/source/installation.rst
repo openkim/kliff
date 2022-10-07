@@ -34,25 +34,21 @@ Alternatively, you can install from source:
     $ pip install ./kliff
 
 
-Optional
-========
+Other dependencies
+==================
+
+KIM Models
+----------
 
 KLIFF is built on top of KIM to fit physics-motivated potentials archived on OpenKIM_.
-To get KLIFF work with OpenKIM_ potential models, two other packages --- kim-api_ and
-kimpy_ --- are needed.
+To get KLIFF work with OpenKIM_ models, kim-api_ and
+kimpy_, and openkim-models_ are needed.
 
-
-kim-api
--------
-
-kim-api_ can be installed via conda:
+The easiest way to install them is via conda:
 
 .. code-block:: bash
 
-    $ conda install -c conda-forge kim-api
-
-Other installation methods are provided at kim-api_; refer to the instructions there
-for more information.
+    $ conda install -c conda-forge kim-api kimpy openkim-models
 
 .. note::
     After installation, you can do ``$ kim-api-collections-management list``.
@@ -62,18 +58,9 @@ for more information.
     using Bash): ``$ source path/to/the/kim/library/bin/kim-api-activate``. See
     the kim-api_ documentation for more information.
 
-
-kimpy
------
-.. code-block:: bash
-
-    $ conda-install -c conda-forge kimpy
-
-or
-
-.. code-block:: bash
-
-    $ pip install kimpy
+.. Warning::
+    The conda approach should work for most systems, but not all (e.g. Mac with Apple
+    Chip). Refer to https://openkim.org/doc/usage/obtaining-models for other installing instructions (e.g. from source).
 
 
 PyTorch
@@ -89,4 +76,5 @@ Please follow the instructions given on the official PyTorch_ website to install
 .. _PyTorch: https://pytorch.org
 .. _OpenKIM: https://openkim.org
 .. _kim-api: https://openkim.org/kim-api
+.. _openkim-models: https://openkim.org/doc/usage/obtaining-models
 .. _kimpy: https://github.com/openkim/kimpy
