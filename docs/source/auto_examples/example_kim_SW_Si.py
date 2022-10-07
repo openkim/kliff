@@ -10,13 +10,20 @@ on OpenKIM_.
 
 
 ##########################################################################################
-# Before getting started to train the SW model, let's first install the SW model::
+# Before getting started to train the SW model, let's first make sure it is installed.
 #
-#    $ kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
+# If you haven't already, follow :ref:`installation` to install ``kim-api`` and
+# ``kimpy``, and ``openkim-models``.
 #
-# .. seealso::
-#    This installs the model and its driver into the ``User Collection``. See
-#    :ref:`install_model` for more information about installing KIM models.
+# Then do ``$ kim-api-collections-management list``, and make sure
+# ``SW_StillingerWeber_1985_Si__MO_405512056662_006`` is listed in one of the
+# collections.
+#
+# .. note::
+#    If you see ``SW_StillingerWeber_1985_Si__MO_405512056662_005`` (note the last
+#    three digits), you need to change ``model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")``
+#    to the corresponding model name in your installation.
+#
 #
 # We are going to create potentials for diamond silicon, and fit the potentials to a
 # training set of energies and forces consisting of compressed and stretched diamond

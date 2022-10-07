@@ -1,9 +1,5 @@
 :orphan:
 
-
-
-.. _sphx_glr_auto_examples:
-
 =========
 Tutorials
 =========
@@ -31,14 +27,127 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 
 .. raw:: html
 
+    <div class="sphx-glr-thumbnails">
+
+
+.. raw:: html
+
     <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a linear regression model on the descriptors obtained using the symm...">
 
 .. only:: html
 
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_linear_regression_thumb.png
-     :alt: Train a linear regression potential
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_linear_regression_thumb.png
+    :alt: Train a linear regression potential
 
-     :ref:`sphx_glr_auto_examples_example_linear_regression.py`
+  :ref:`sphx_glr_auto_examples_example_linear_regression.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Train a linear regression potential</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Lennard-Jones potential that is build in KLIFF (i.e. not models ar...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_lennard_jones_thumb.png
+    :alt: Train a Lennard-Jones potential
+
+  :ref:`sphx_glr_auto_examples_example_lennard_jones.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Train a Lennard-Jones potential</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Stillinger-Weber (SW) potential for silicon that is archived on Op...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_kim_SW_Si_thumb.png
+    :alt: Train a Stillinger-Weber potential
+
+  :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Train a Stillinger-Weber potential</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Parameters in the empirical interatomic potential are often restricted by some physical constra...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_parameter_transform_thumb.png
+    :alt: Parameter transformation for the Stillinger-Weber potential
+
+  :ref:`sphx_glr_auto_examples_example_parameter_transform.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Parameter transformation for the Stillinger-Weber potential</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
+    :alt: Train a neural network potential
+
+  :ref:`sphx_glr_auto_examples_example_nn_Si.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Train a neural network potential</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for a system containing two species:...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_nn_SiC_thumb.png
+    :alt: Train a neural network potential for SiC
+
+  :ref:`sphx_glr_auto_examples_example_nn_SiC.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Train a neural network potential for SiC</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to perform uncertainty quantification (UQ) using parallel t...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_uq_mcmc_thumb.png
+    :alt: MCMC sampling
+
+  :ref:`sphx_glr_auto_examples_example_uq_mcmc.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">MCMC sampling</div>
+    </div>
+
 
 .. raw:: html
 
@@ -49,153 +158,25 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
    :hidden:
 
    /auto_examples/example_linear_regression
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Lennard-Jones potential that is build in KLIFF (i.e. not models ar...">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_lennard_jones_thumb.png
-     :alt: Train a Lennard-Jones potential
-
-     :ref:`sphx_glr_auto_examples_example_lennard_jones.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
    /auto_examples/example_lennard_jones
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a Stillinger-Weber (SW) potential for silicon that is archived on Op...">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_kim_SW_Si_thumb.png
-     :alt: Train a Stillinger-Weber potential
-
-     :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
    /auto_examples/example_kim_SW_Si
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="Parameters in the empirical interatomic potential are often restricted by some physical constra...">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_parameter_transform_thumb.png
-     :alt: Parameter transformation for the Stillinger-Weber potential
-
-     :ref:`sphx_glr_auto_examples_example_parameter_transform.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
    /auto_examples/example_parameter_transform
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for silicon.">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
-     :alt: Train a neural network potential
-
-     :ref:`sphx_glr_auto_examples_example_nn_Si.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
    /auto_examples/example_nn_Si
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for a system containing two species:...">
-
-.. only:: html
-
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_nn_SiC_thumb.png
-     :alt: Train a neural network potential for SiC
-
-     :ref:`sphx_glr_auto_examples_example_nn_SiC.py`
-
-.. raw:: html
-
-    </div>
-
-
-.. toctree::
-   :hidden:
-
    /auto_examples/example_nn_SiC
+   /auto_examples/example_uq_mcmc
 
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to perform uncertainty quantification (UQ) using parallel t...">
 
 .. only:: html
 
- .. figure:: /auto_examples/images/thumb/sphx_glr_example_uq_mcmc_thumb.png
-     :alt: MCMC sampling
+  .. container:: sphx-glr-footer sphx-glr-footer-gallery
 
-     :ref:`sphx_glr_auto_examples_example_uq_mcmc.py`
+    .. container:: sphx-glr-download sphx-glr-download-python
 
-.. raw:: html
+      :download:`Download all examples in Python source code: auto_examples_python.zip </auto_examples/auto_examples_python.zip>`
 
-    </div>
+    .. container:: sphx-glr-download sphx-glr-download-jupyter
 
-
-.. toctree::
-   :hidden:
-
-   /auto_examples/example_uq_mcmc
-.. raw:: html
-
-    <div class="sphx-glr-clear"></div>
-
-
-
-.. only :: html
-
- .. container:: sphx-glr-footer
-    :class: sphx-glr-footer-gallery
-
-
-  .. container:: sphx-glr-download sphx-glr-download-python
-
-    :download:`Download all examples in Python source code: auto_examples_python.zip </auto_examples/auto_examples_python.zip>`
-
-
-
-  .. container:: sphx-glr-download sphx-glr-download-jupyter
-
-    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip </auto_examples/auto_examples_jupyter.zip>`
+      :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip </auto_examples/auto_examples_jupyter.zip>`
 
 
 .. only:: html
