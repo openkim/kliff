@@ -108,7 +108,7 @@ setup(
         "loguru",
     ],
     extras_require={
-        "test": ["pytest"],
+        "test": ["pytest", "kimpy", "kim-api", "openkim-models"],
     },
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     author="Mingjian Wen",
