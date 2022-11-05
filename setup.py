@@ -102,7 +102,6 @@ setup(
     ext_modules=[sym_fn, bispectrum, neighlist],
     install_requires=[
         "requests",
-        "pybind11",
         "scipy",
         "pyyaml",
         "monty",
