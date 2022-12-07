@@ -76,7 +76,7 @@ inline int inverse(double const * mat, double * const inv)
   inv[1] = det2(mat[2], mat[1], mat[8], mat[7]);
   inv[2] = det2(mat[1], mat[2], mat[4], mat[5]);
   inv[3] = det2(mat[5], mat[3], mat[8], mat[6]);
-  inv[4] = det2(mat[0], mat[3], mat[6], mat[8]);
+  inv[4] = det2(mat[0], mat[2], mat[6], mat[8]);
   inv[5] = det2(mat[2], mat[0], mat[5], mat[3]);
   inv[6] = det2(mat[3], mat[4], mat[6], mat[7]);
   inv[7] = det2(mat[1], mat[0], mat[7], mat[6]);

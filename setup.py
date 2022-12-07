@@ -102,14 +102,13 @@ setup(
     ext_modules=[sym_fn, bispectrum, neighlist],
     install_requires=[
         "requests",
-        "pybind11",
         "scipy",
         "pyyaml",
         "monty",
         "loguru",
     ],
     extras_require={
-        "test": ["pytest"],
+        "test": ["pytest", "kimpy"],
     },
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     author="Mingjian Wen",
