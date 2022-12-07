@@ -100,7 +100,7 @@ setup(
     version=get_version(),
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist],
-    install_requires=["scipy", "pyyaml", "monty", "loguru"],
+    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     extras_require={
         "test": ["pytest", "kimpy", "ptemcee", "emcee"],
     },
