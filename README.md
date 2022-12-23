@@ -13,7 +13,7 @@ physics-motivated (PM) potentials, as well as machine learning potentials such
 as the neural network (NN) models.
 
 
-## Install
+## Installation
 
 ### Using conda
 ```sh
@@ -101,7 +101,7 @@ Detailed explanation and more tutorial examples can be found in the
 - [PyTorch](https://pytorch.org) backend for NN (include GPU training)
 
 
-## Cite KLIFF
+## Citing KLIFF
 
 ```
 @Article{wen2022kliff,
