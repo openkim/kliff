@@ -7,6 +7,7 @@ from loguru import logger
 
 from kliff import parallel
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.calculators.calculator_torch import CalculatorTorch
 from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
 
@@ -195,12 +196,13 @@ class Loss:
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
     ):
-        if isinstance(calculator, Calculator):
-            return LossPhysicsMotivatedModel(
+
+        if isinstance(calculator, CalculatorTorch):
+            return LossNeuralNetworkModel(
                 calculator, nprocs, residual_fn, residual_data
             )
         else:
-            return LossNeuralNetworkModel(
+            return LossPhysicsMotivatedModel(
                 calculator, nprocs, residual_fn, residual_data
             )
 
@@ -262,15 +264,35 @@ class LossPhysicsMotivatedModel:
         self.calculator = calculator
         self.nprocs = nprocs
 
-        if residual_fn is None:
-            if calculator.use_energy and calculator.use_forces:
-                residual_fn = energy_forces_residual
-            elif calculator.use_energy:
-                residual_fn = energy_residual
-            elif calculator.use_forces:
-                residual_fn = forces_residual
-        self.residual_fn = residual_fn
         self.residual_data = residual_data
+
+        if residual_fn is None:
+            if isinstance(self.calculator, _WrapperCalculator):
+                self.calc_list = self.calculator.get_calculator_list()
+                self.residual_fn = []
+                for calculator in self.calc_list:
+                    if calculator.use_energy and calculator.use_forces:
+                        residual_fn = energy_forces_residual
+                    elif calculator.use_energy:
+                        residual_fn = energy_residual
+                    elif calculator.use_forces:
+                        residual_fn = forces_residual
+                    else:
+                        raise RuntimeError("Calculator does not use energy or forces.")
+                    self.residual_fn.append(residual_fn)
+            else:
+                if calculator.use_energy and calculator.use_forces:
+                    residual_fn = energy_forces_residual
+                elif calculator.use_energy:
+                    residual_fn = energy_residual
+                elif calculator.use_forces:
+                    residual_fn = forces_residual
+                else:
+                    raise RuntimeError("Calculator does not use energy or forces.")
+                self.residual_fn = residual_fn
+        else:
+            # TODO this will not work for _WrapperCalculator
+            self.residual_fn = residual_fn
 
         logger.debug(f"`{self.__class__.__name__}` instantiated.")
 
@@ -333,12 +355,17 @@ class LossPhysicsMotivatedModel:
                     )
 
             # adjust bounds
-            if self.calculator.has_opt_params_bounds():
-                if method in ["L-BFGS-B", "TNC", "SLSQP"]:
-                    bounds = self.calculator.get_opt_params_bounds()
-                    kwargs["bounds"] = bounds
-                else:
-                    raise LossError(f"Method `{method}` cannot handle bounds.")
+            if isinstance(self.calculator, _WrapperCalculator):
+                calculators = self.calculator.calculators
+            else:
+                calculators = [self.calculator]
+            for calc in calculators:
+                if calc.has_opt_params_bounds():
+                    if method in ["L-BFGS-B", "TNC", "SLSQP"]:
+                        bounds = self.calculator.get_opt_params_bounds()
+                        kwargs["bounds"] = bounds
+                    else:
+                        raise LossError(f"Method `{method}` cannot handle bounds.")
         else:
             raise LossError(f"Minimization method `{method}` not supported.")
 
@@ -451,13 +478,11 @@ class LossPhysicsMotivatedModel:
 
         # TODO the if else could be combined
         if isinstance(self.calculator, _WrapperCalculator):
-            calc_list = self.calculator.get_calculator_list()
-            X = zip(cas, calc_list)
+            X = zip(cas, self.calc_list, self.residual_fn)
             if self.nprocs > 1:
                 residuals = parallel.parmap2(
                     self._get_residual_single_config,
                     X,
-                    self.residual_fn,
                     self.residual_data,
                     nprocs=self.nprocs,
                     tuple_X=True,
@@ -465,9 +490,9 @@ class LossPhysicsMotivatedModel:
                 residual = np.concatenate(residuals)
             else:
                 residual = []
-                for ca, calc in X:
+                for ca, calculator, residual_fn in X:
                     current_residual = self._get_residual_single_config(
-                        ca, calc, self.residual_fn, self.residual_data
+                        ca, calculator, residual_fn, self.residual_data
                     )
                     residual = np.concatenate((residual, current_residual))
 
@@ -689,7 +714,7 @@ class LossNeuralNetworkModel(object):
             kwargs: Extra keyword arguments that can be used by the PyTorch optimizer.
         """
         if method not in self.torch_minimize_methods:
-            raise LossError("Minimization method `{method}` not supported.")
+            raise LossError(f"Minimization method `{method}` not supported.")
 
         # TODO, better not use then as
         self.batch_size = batch_size

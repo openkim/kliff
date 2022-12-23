@@ -100,15 +100,9 @@ setup(
     version=get_version(),
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist],
-    install_requires=[
-        "requests",
-        "scipy",
-        "pyyaml",
-        "monty",
-        "loguru",
-    ],
+    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     extras_require={
-        "test": ["pytest", "kimpy"],
+        "test": ["pytest", "kimpy", "ptemcee", "emcee"],
     },
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     author="Mingjian Wen",
