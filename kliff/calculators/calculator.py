@@ -302,8 +302,12 @@ class _WrapperCalculator(object):
 
         calculators: instance of Calculator
         """
-        self.calculators = calculators
+        self._calculators = calculators
         self._start_end = self._set_start_end()
+
+    @property
+    def calculators(self):
+        return self._calculators
 
     def _set_start_end(self):
         """
@@ -312,7 +316,7 @@ class _WrapperCalculator(object):
         """
         start_end = []
         i = 0
-        for calc in self.calculators:
+        for calc in self._calculators:
             n = calc.get_num_opt_params()
             start = i
             end = i + n
@@ -322,26 +326,26 @@ class _WrapperCalculator(object):
 
     def get_compute_arguments(self):
         all_cas = []
-        for calc in self.calculators:
+        for calc in self._calculators:
             cas = calc.get_compute_arguments()
             all_cas.extend(cas)
         return all_cas
 
     def get_num_opt_params(self):
-        return sum([calc.get_num_opt_params() for calc in self.calculators])
+        return sum([calc.get_num_opt_params() for calc in self._calculators])
 
     def get_opt_params(self):
-        return np.concatenate([calc.get_opt_params() for calc in self.calculators])
+        return np.concatenate([calc.get_opt_params() for calc in self._calculators])
 
     def get_opt_params_bounds(self):
         bounds = []
-        for calc in self.calculators:
+        for calc in self._calculators:
             b = calc.get_opt_params_bounds()
             bounds.extend(b)
         return bounds
 
     def update_model_params(self, opt_params):
-        for i, calc in enumerate(self.calculators):
+        for i, calc in enumerate(self._calculators):
             start, end = self._start_end[i]
             p = opt_params[start:end]
             calc.update_model_params(p)
@@ -355,7 +359,7 @@ class _WrapperCalculator(object):
         In such, we can easily associate the compute arguments with the calculator.
         """
         calc_list = []
-        for calc in self.calculators:
+        for calc in self._calculators:
             N = len(calc.get_compute_arguments())
             calc_list.extend([calc] * N)
         return calc_list
