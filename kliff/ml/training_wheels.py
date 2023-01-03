@@ -1,8 +1,8 @@
 import numpy as np
 import torch
-from kliff_torch.neighbor import KIMTorchGraphGenerator, KIMTorchGraph
+from .graphs import KIMTorchGraphGenerator, KIMTorchGraph
 from torch_scatter import scatter
-from kliff_torch.libdescriptor import Descriptor
+from .libdescriptor import Descriptor
 import os
 
 # TODO: Figure out way to incorporate original descriptor class

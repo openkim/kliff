@@ -1,16 +1,11 @@
-import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
-# import scipy.optimize
+import scipy.optimize
 from loguru import logger
 
-# from kliff_torch import parallel
-# from kliff_torch.calculators.calculator import Calculator, _WrapperCalculator
-from kliff_torch.error import report_import_error
-from kliff_torch.models.parameter import OptimizingParameters
-# from .loss import Loss
-from kliff_torch.dataset import Dataset
+from kliff.models.parameter import OptimizingParameters
+from kliff.dataset import Dataset
 
 import torch
 from torch.nn import Parameter, Module
@@ -210,7 +205,8 @@ class OptimizerTorch:
             model_eval = model(configuration)
             for property_ in properties:
                 loss += weights[property_] * self.loss_agg_func(model_eval[property_],
-                                                            torch.as_tensor(configuration.__getattribute__(property_)))
+                                                                torch.as_tensor(
+                                                                    configuration.__getattribute__(property_)))
         return loss
 
     def minimize(self, kwargs=None):

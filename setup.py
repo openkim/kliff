@@ -38,10 +38,10 @@ def get_extra_compile_args():
 
 # KLIFF-Torch extensions ------------------------------------------
 graph_ext = Extension(
-        'kliff.ml.generate_graph.tg',
+        'kliff.ml.graphs.tg',
         sources = [
-            'kliff/ml/generate_graph/graph_generator_python_bindings.cpp',
-            'kliff/ml/generate_graph/neighbor_list.cpp'
+            'kliff/ml/graphs/graph_generator_python_bindings.cpp',
+            'kliff/ml/graphs/neighbor_list.cpp'
             ],
         include_dirs=get_includes(),
         extra_compile_args=get_extra_compile_args()

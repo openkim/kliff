@@ -1,13 +1,13 @@
 import torch
-from kliff_torch.neighbor.generate_graph import tg
-from kliff_torch.dataset import Configuration
+import kliff.ml.graphs.tg as tg
+from kliff.dataset import Configuration
 from torch_geometric.data import Data
 
 
 class KIMTorchGraph(Data):
     def __init__(self):
         super(KIMTorchGraph, self).__init__()
-        self.num_nodes = None # Simplify sizes and frees up pos key word, coords is cleaner
+        self.num_nodes = None  # Simplify sizes and frees up pos key word, coords is cleaner
         self.energy = None
         self.forces = None
         self.n_layers = None
@@ -42,7 +42,7 @@ class KIMTorchGraphGenerator:
         self._tg = tg
         self.as_torch_geometric_data = as_torch_geometric_data
 
-    def generate_graph(self, configuration:Configuration):
+    def generate_graph(self, configuration: Configuration):
         graph = tg.get_complete_graph(
             self.n_layers,
             self.cutoff,
@@ -83,7 +83,7 @@ class KIMTorchGraphGenerator:
         graph = self.generate_graph(config_list[0])
         return graph
 
-    def save_kim_model(self, path:str, model:str):
+    def save_kim_model(self, path: str, model: str):
         with open(f"{path}/kim_model.param", "w") as f:
             n_elements = len(self.species)
             f.write(f"# Number of species\n")

@@ -2,9 +2,9 @@ import os
 from collections import OrderedDict
 from typing import List, Dict
 
-import kliff_torch.libdescriptor.libdescriptor as lds
-from kliff_torch.neighbor import NeighborList
-from kliff_torch.dataset import Configuration
+import kliff.ml.libdescriptor.libdescriptor as lds
+from kliff.neighbor import NeighborList
+from kliff.dataset import Configuration
 import numpy as np
 
 
@@ -257,7 +257,7 @@ class Descriptor:
                     fout.write("{} \n".format(i))
                 fout.write("\n")
 
-    def save_kim_model(self, path:str, model:str):
+    def save_kim_model(self, path: str, model: str):
         with open(f"{path}/kim_model.param", "w") as f:
             n_elements = len(self.species)
             f.write(f"# Number of elements\n")
