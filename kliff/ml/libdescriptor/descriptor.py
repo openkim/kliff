@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import kliff.ml.libdescriptor.libdescriptor as lds
 from kliff.neighbor import NeighborList
@@ -30,7 +30,7 @@ class Descriptor:
         for key in _instance.__dict__.keys():
             print(f"{key}")
 
-    def __init__(self, cutoff: float, species: List[str], descriptor: str, hyperparameters: Dict,
+    def __init__(self, cutoff: float, species: List[str], descriptor: str, hyperparameters: Union[Dict, str],
                  cutoff_function: str = "cos", nl_ctx: NeighborList = None):
         self.cutoff = cutoff
         self.species = species
