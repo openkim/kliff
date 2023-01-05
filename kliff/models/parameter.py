@@ -318,7 +318,7 @@ class OptimizingParameters(MSONable):
 
             self.set_one(name, settings)
 
-    def set_one(self, name: str, settings: List[List[Any]]):
+    def set_one(self, name: str, settings: List[List[Any]], suppress_warnings=False):
         """
         Set one parameter that will be optimized.
 
@@ -329,11 +329,13 @@ class OptimizingParameters(MSONable):
             name: name of a fitting parameter
             settings: initial value, flag to fix a parameter, lower and upper bounds of a
                 parameter.
+            suppress_warnings: To supress warnings
 
         Example:
             name = 'param_A'
             settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
             instance.set_one(name, settings)
+
         """
         size = len(self.model_params[name])
         if len(settings) != size:
@@ -368,7 +370,7 @@ class OptimizingParameters(MSONable):
                         f"distance."
                     )
 
-        self._set_index(name)
+        self._set_index(name, suppress_warnings=suppress_warnings)
 
         if name not in self._params:
             self._params.append(name)
@@ -579,7 +581,7 @@ class OptimizingParameters(MSONable):
                     f"{e}.\nData at line {j+1} of parameter `{name}` corrupted."
                 )
 
-    def _set_index(self, name: str):
+    def _set_index(self, name: str, suppress_warnings=False):
         """
         Include parameter component that will be optimized (i.e. `fixed` is False) in
         the optimizing parameter index list.
@@ -613,11 +615,13 @@ class OptimizingParameters(MSONable):
                     if idx == i:
                         already_in = k
                         break
-                if already_in is not None:
+                if already_in is not None and not suppress_warnings:
                     warnings.warn(
                         f"Parameter `{name}` component `{c_idx}` already set. Reset it.",
                         category=Warning,
                     )
+                    self._index[already_in] = idx
+                if already_in is not None and suppress_warnings:
                     self._index[already_in] = idx
                 else:
                     self._index.append(idx)
