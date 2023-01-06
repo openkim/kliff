@@ -64,11 +64,11 @@ libdescriptor = Extension(
 
 
 sym_fn = Extension(
-    "kliff.descriptors.symmetry_function.sf",
+    "kliff.legacy.descriptors.symmetry_function.sf",
     sources=[
-        "kliff/descriptors/symmetry_function/sym_fn_bind.cpp",
-        "kliff/descriptors/symmetry_function/sym_fn.cpp",
-        "kliff/descriptors/symmetry_function/helper.cpp",
+        "kliff/legacy/descriptors/symmetry_function/sym_fn_bind.cpp",
+        "kliff/legacy/descriptors/symmetry_function/sym_fn.cpp",
+        "kliff/legacy/descriptors/symmetry_function/helper.cpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
@@ -76,11 +76,11 @@ sym_fn = Extension(
 )
 
 bispectrum = Extension(
-    "kliff.descriptors.bispectrum.bs",
+    "kliff.legacy.descriptors.bispectrum.bs",
     sources=[
-        "kliff/descriptors/bispectrum/bispectrum_bind.cpp",
-        "kliff/descriptors/bispectrum/bispectrum.cpp",
-        "kliff/descriptors/bispectrum/helper.cpp",
+        "kliff/legacy/descriptors/bispectrum/bispectrum_bind.cpp",
+        "kliff/legacy/descriptors/bispectrum/bispectrum.cpp",
+        "kliff/legacy/descriptors/bispectrum/helper.cpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
