@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from kliff.descriptors.descriptor import Descriptor
+from kliff.legacy.descriptors.descriptor import Descriptor
 from kliff.models.model_torch import ModelTorch
 
 

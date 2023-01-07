@@ -274,7 +274,7 @@ class Descriptor:
             f.write(f"{model}\n\n")
 
             f.write("# Returns Forces\n")
-            f.write("False\n")
+            f.write("False\n\n")
 
             f.write("# Number of inputs\n")
             f.write("1\n\n")

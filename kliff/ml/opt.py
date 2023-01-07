@@ -4,7 +4,7 @@ import numpy as np
 from scipy import optimize as opt
 from loguru import logger
 
-import kliff.models
+from kliff.models import KIMModel
 from kliff.models.parameter import OptimizingParameters
 from kliff.dataset import Dataset
 
@@ -34,7 +34,7 @@ class OptimizerScipy:
 
     def __init__(
             self,
-            model_fn: kliff.models.KIMModel,
+            model_fn: KIMModel,
             parameters: Union[List[Parameter], List[OptimizingParameters]],
             dataset: Dataset,
             weights: Dict = {"energy": 1.0, "forces": 1.0, "stress": 1.0},
