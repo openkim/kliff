@@ -324,11 +324,14 @@ class _WrapperCalculator(object):
             i += n
         return start_end
 
-    def get_compute_arguments(self):
+    def get_compute_arguments(self, flat=True):
         all_cas = []
         for calc in self._calculators:
             cas = calc.get_compute_arguments()
-            all_cas.extend(cas)
+            if flat:
+                all_cas.extend(cas)
+            else:
+                all_cas.append(cas)
         return all_cas
 
     def get_num_opt_params(self):
