@@ -367,6 +367,17 @@ class _WrapperCalculator(object):
             calc_list.extend([calc] * N)
         return calc_list
 
+    def has_opt_params_bounds(self):
+        """
+        Return a bool to indicate whether there are parameters whose bounds are
+        provided.
+        """
+        calc_list = self.get_calculator_list()
+        has_opt_params_bounds_per_calc = [
+            calc.model.has_opt_params_bounds() for calc in calc_list
+        ]
+        return all(has_opt_params_bounds_per_calc)
+
 
 class CalculatorError(Exception):
     def __init__(self, msg):
