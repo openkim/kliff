@@ -10,14 +10,33 @@ from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.loss import LossPhysicsMotivatedModel
 
 
-def default_bootstrap_generator(nsamples, orig_compute_arguments):
-    """Let's try to make the format of the bootstrap configurations as a dictionary:
-    bootstrap_configs = {
-        0: [[compute_arguments_calc0], [compute_arguments_calc1]],
-        1: [[compute_arguments_calc0], [compute_arguments_calc1]]
-    }
+def default_bootstrap_generator_empirical(nsamples, orig_compute_arguments):
     """
-    ncalcs = len(orig_compute_arguments)
+    Default class to generate bootstrap compute arguments.
+
+    Parameters
+    ----------
+    nsamples: int
+        Number of the bootstrap compute arguments requested.
+
+    orig_compute_arguments: list
+        The original list of compute arguments. The bootstrap compute arguments will be
+        generated from this list. The format of this input is given below:
+        orig_compute_arguments = [
+            [calc1_cas1, calc1_cas2, ...],
+            [calc2_cas1, calc2_cas2, ...],
+            ...
+        ]
+
+    Returns
+    -------
+    dict
+        A set of bootstra compute arguments, written in a dictionary format:
+        bootstrap_configs = {
+            0: [[compute_arguments_calc0], [compute_arguments_calc1]],
+            1: [[compute_arguments_calc0], [compute_arguments_calc1]]
+        }
+    """
     ncas = [len(cas) for cas in orig_compute_arguments]
     bootstrap_compute_arguments = {}
     for ii in range(nsamples):
@@ -25,16 +44,14 @@ def default_bootstrap_generator(nsamples, orig_compute_arguments):
         bootstrap_cas_single_sample = []
         for jj, cas in enumerate(orig_compute_arguments):
             # Get sets of bootstrap configurations for each calculator
-            bootstrap_cas_single_calc = np.random.choice(
-                cas, size=ncas[jj], replace=True
-            )
+            bootstrap_cas_single_calc = np.random.choice(cas, size=ncas[jj], replace=True)
             bootstrap_cas_single_sample.append(bootstrap_cas_single_calc)
         # Update the bootstrap compute arguments dictionary
         bootstrap_compute_arguments.update({ii: bootstrap_cas_single_sample})
     return bootstrap_compute_arguments
 
 
-class Bootstrap:
+class BootstrapEmpiricalModel:
     def __init__(self, loss):
         self.loss = loss
         self.calc = loss.calculator
@@ -66,7 +83,7 @@ class Bootstrap:
     ):
         # Function to generate bootstrap configurations
         if bootstrap_generator_fn is None:
-            bootstrap_generator_fn = default_bootstrap_generator
+            bootstrap_generator_fn = default_bootstrap_generator_empirical
             kwargs = {"orig_compute_arguments": self.orig_compute_arguments}
 
         # Generate a new bootstrap configurations
@@ -137,11 +154,6 @@ class Bootstrap:
             json.dump(bootstrap_compute_arguments_identifiers, f, indent=4)
 
     def run(self, min_kwargs={}):
-        if not isinstance(self.loss, LossPhysicsMotivatedModel):
-            raise BootstrapError(
-                "Currently only physics-motivated loss function is supported"
-            )
-
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
             raise BootstrapError("Please generate a bootstrap compute arguments first")
@@ -185,6 +197,157 @@ class Bootstrap:
         for cas in compute_arguments:
             # Iterate over compute arguments corresponding to each calculator
             identifiers.append([ca.conf.identifier for ca in cas])
+        return identifiers
+
+
+def default_bootstrap_generator_neuralnetwork(nsamples, orig_fingerprints):
+    """Let's try to make the format of the bootstrap configurations as a dictionary:
+    bootstrap_configs = {
+        0: [[compute_arguments_calc0], [compute_arguments_calc1]],
+        1: [[compute_arguments_calc0], [compute_arguments_calc1]]
+    }
+    """
+    bootstrap_fingerprints = {}
+    nfingerprints = len(orig_fingerprints)
+    for ii in range(nsamples):
+        # Get 1 sample of bootstrap fingerprints
+        bootstrap_fingerprints_single_sample = np.random.choice(
+            orig_fingerprints, size=nfingerprints, replace=True
+        )
+        bootstrap_fingerprints.update({ii: bootstrap_fingerprints_single_sample})
+    return bootstrap_fingerprints
+
+
+class BootstrapNeuralNetworkModel:
+    def __init__(self, loss, orig_state_filename="orig_model.pkl"):
+        self.loss = loss
+        self.calc = self.loss.calculator
+        self.model = self.calc.model
+        # Cache the original parameter values
+        self.orig_params = copy.copy(self.calc.get_opt_params())
+        # Cache the original fingerprints
+        self.orig_fingerprints = self.calc.get_fingerprints_dataset()
+        self._orig_fingerprints_identifiers = self.convert_fingerprints_to_identifiers(
+            self.orig_fingerprints
+        )
+        # Initiate the bootstrap configurations property
+        self.bootstrap_fingerprints = {}
+        self.samples = np.empty((0, self.calc.get_num_opt_params()))
+        self._nsamples_prepared = 0
+
+        # Save the original state of the model before running bootstrap
+        self.orig_state_filename = orig_state_filename
+        self.model.save(orig_state_filename)
+
+    @property
+    def _nsamples_done(self):
+        return len(self.samples)
+
+    def generate_bootstrap_fingerprints(
+        self, nsamples, bootstrap_generator_fn=None, **kwargs
+    ):
+        # Function to generate bootstrap configurations
+        if bootstrap_generator_fn is None:
+            bootstrap_generator_fn = default_bootstrap_generator_neuralnetwork
+            kwargs = {"orig_fingerprints": self.orig_fingerprints}
+
+        # Generate a new bootstrap configurations
+        new_bootstrap_fingerprints = bootstrap_generator_fn(nsamples, **kwargs)
+        # Update the old list with this new list
+        self.bootstrap_fingerprints = self._update_bootstrap_fingerprints(
+            new_bootstrap_fingerprints
+        )
+        self._nsamples_prepared += nsamples
+
+    def _update_bootstrap_fingerprints(self, new_bootstrap_fingerprints):
+        bootstrap_fingerprints = copy.copy(self.bootstrap_fingerprints)
+        for ii, vals in new_bootstrap_fingerprints.items():
+            iteration = ii + self._nsamples_prepared
+            bootstrap_fingerprints.update({iteration: vals})
+
+        return bootstrap_fingerprints
+
+    def save_bootstrap_fingerprints(self, filename):
+        """Export the generated bootstrap fingerprints as a json file."""
+        # We cannot directly export the bootstrap fingerprints. Instead, we will
+        # first convert it and list the identifiers and export the identifiers.
+        # Convert to identifiers
+        bootstrap_fingerprints_identifiers = {}
+        for ii in self.bootstrap_fingerprints:
+            bootstrap_fingerprints_identifiers.update(
+                {
+                    ii: self.convert_fingerprints_to_identifiers(
+                        self.bootstrap_fingerprints[ii]
+                    )
+                }
+            )
+
+        with open(filename, "w") as f:
+            json.dump(bootstrap_fingerprints_identifiers, f, indent=4)
+
+    def load_bootstrap_fingerprints(self, filename):
+        """Load the bootstrap fingerprints from a json file."""
+        # Load the json file
+        with open(filename, "r") as f:
+            new_bootstrap_fingerprints_identifiers = json.load(f)
+
+        # The information stored in the json file are the identifiers. We need to
+        # convert it back to fingerprints.
+        keys = [int(key) for key in new_bootstrap_fingerprints_identifiers.keys()]
+        new_bootstrap_fingerprints = {}
+        # Iterate over sample
+        for ii in keys:
+            # List of identifier for step ii
+            identifiers_ii = new_bootstrap_fingerprints_identifiers[str(ii)]
+            reference = self._orig_fingerprints_identifiers
+            fp_ii = [self.orig_fingerprints[reference.index(ss)] for ss in identifiers_ii]
+            # Update the new bootstrap fingerprints dictionary
+            new_bootstrap_fingerprints.update({ii: fp_ii})
+
+        # Update the old list with this new list
+        self.bootstrap_fingerprints = self._update_bootstrap_fingerprints(
+            new_bootstrap_fingerprints
+        )
+        self._nsamples_prepared += len(new_bootstrap_fingerprints)
+        return new_bootstrap_fingerprints_identifiers
+
+    def run(self, min_kwargs={}):
+        if self._nsamples_prepared == 0:
+            # Bootstrap fingerprints have not been generated
+            raise BootstrapError("Please generate a bootstrap fingerprints first")
+
+        # Train the model using each bootstrap fingerprints
+        for ii in range(self._nsamples_done, self._nsamples_prepared):
+            # Update the fingerprints
+            self.calc.set_compute_arguments(self.bootstrap_fingerprints[ii])
+
+            # Minimization
+            self.loss.minimize(**min_kwargs)
+
+            # Append the parameters to the samples
+            self.samples = np.row_stack(
+                (self.samples, self.loss.calculator.get_opt_params())
+            )
+
+            # Restore the state of the model
+            self.restore_loss()  # Restore the loss function
+
+        return self.samples
+
+    def restore_loss(self):
+        # Restore the parameters and configurations back by loading the original state
+        # back.
+        self.model.load(self.orig_state_filename)
+
+    def reset(self):
+        self.restore_loss()
+        self.bootstrap_fingerprints = {}
+        self._nsamples_done = 0
+        self._nsamples_prepared = 0
+
+    @staticmethod
+    def convert_fingerprints_to_identifiers(fingerprints):
+        identifiers = [fp["configuration"].identifier for fp in fingerprints]
         return identifiers
 
 
