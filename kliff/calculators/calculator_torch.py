@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+import numpy as np
+
 import torch
 from loguru import logger
 from torch.utils.data import DataLoader
@@ -121,17 +123,34 @@ class CalculatorTorch:
                 nprocs,
             )
 
+        # Finally, assign fingerprints dataset property as a FingerprintsDataset instance
+        self.fingerprints_dataset = FingerprintsDataset(self.fingerprints_path)
+
+    def get_fingerprints_dataset(self):
+        """
+        Return a list of fingerprints of the configurations.
+        """
+        return self.fingerprints_dataset.fp
+
     def get_compute_arguments(self, batch_size: int = 1):
         """
         Return the dataloader with batch size set to `batch_size`.
         """
-        fname = self.fingerprints_path
-        fp = FingerprintsDataset(fname)
         loader = DataLoader(
-            dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
+            dataset=self.fingerprints_dataset,
+            batch_size=batch_size,
+            collate_fn=fingerprints_collate_fn,
         )
 
         return loader
+
+    def set_compute_arguments(self, fingerprints):
+        """
+        Update the fingerprints of the calculator. The fingerprints input argument should
+        be in the same format as the output of `meth:~kliff.descriptors.descriptor.load_fingerprints`,
+        which is a list of dictionaries.
+        """
+        self.fingerprints_dataset.fp = fingerprints
 
     def fit(self):
         path = self.fingerprints_path
@@ -252,6 +271,63 @@ class CalculatorTorch:
     def _compute_stress(denergy_dzeta, dzetadr, volume):
         forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
         return forces
+
+    # Added by Yonatan
+    def get_size_opt_params(self):
+        """
+        Return the size of the parameters.
+
+        Returns
+        sizes: list
+            Each element in the list gives the shape of each type of parameter tensors,
+            containing, e.g., weights and biases, for each layer.
+        nelements: list
+            Number of elements of each parameter tensor.
+        nparams: int
+            Total number of parameters
+        """
+        sizes = []  # Size of each parameter tensor
+        nelements = []  # The number of elements for each tensor
+        for param in self.model.parameters():
+            sizes.append(param.size())
+            nelements.append(np.prod(param.size()))
+        nparams = sum(nelements)
+        return sizes, nelements, nparams
+
+    def get_num_opt_params(self):
+        """
+        Return the total number of parameters.
+        """
+        return self.get_size_opt_params()[-1]
+
+    def get_opt_params(self, flat=True):
+        parameters = []
+        for param in self.model.parameters():
+            parameters = np.append(parameters, param.data.numpy().flatten())
+        if flat:
+            # Return a 1D array
+            return parameters
+        else:
+            # Return a list of tensors
+            return self._convert_from_flat_parameters(parameters)
+
+    def _convert_from_flat_parameters(self, flat_params):
+        sizes, nelems, _ = self.get_size_opt_params()
+        # Indices to index the flat array to get the appropriate portion of each parameter
+        # tensor
+        idx = np.append(0.0, np.cumsum(nelems)).astype(int)
+        parameters = []
+        for ii, size in enumerate(sizes):
+            params = flat_params[idx[ii] : idx[ii + 1]]
+            parameters.append(torch.Tensor(params.reshape(size)))
+        return parameters
+
+    def update_model_params(self, flat_params):
+        # Convert to the right format
+        parameters = self._convert_from_flat_parameters(flat_params)
+        # Update the weights and biases
+        for ii, param in enumerate(self.model.parameters()):
+            param.data = parameters[ii]
 
 
 class CalculatorTorchSeparateSpecies(CalculatorTorch):
