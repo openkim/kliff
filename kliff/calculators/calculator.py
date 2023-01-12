@@ -283,6 +283,13 @@ class Calculator:
     def _is_kim_model(self):
         return self.model.__class__.__name__ == "KIMModel"
 
+    @property
+    def _initial_params_cache(self):
+        """
+        Return the cache for the initial parameter guess.
+        """
+        return self.model._initial_params_cache
+
 
 class _WrapperCalculator(object):
     """
@@ -377,6 +384,12 @@ class _WrapperCalculator(object):
             calc.model.has_opt_params_bounds() for calc in calc_list
         ]
         return all(has_opt_params_bounds_per_calc)
+
+    @property
+    def _initial_params_cache(self):
+        return np.concatenate(
+            [calc._initial_params_cache for calc in self._calculators]
+        )
 
 
 class CalculatorError(Exception):
