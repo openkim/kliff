@@ -395,6 +395,9 @@ class Model:
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
 
+        # Cache the initial parameter guess
+        self._initial_params_cache = self.get_opt_params().copy()
+
     def set_opt_params(self, **kwargs):
         """
         Set the parameters that will be optimized.
@@ -415,6 +418,9 @@ class Model:
 
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
+
+        # Cache the initial parameter guess
+        self._initial_params_cache = self.get_opt_params().copy()
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """
