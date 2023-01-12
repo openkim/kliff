@@ -10,19 +10,22 @@ from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.loss import LossPhysicsMotivatedModel
 
 
-def default_bootstrap_generator_empirical(nsamples, orig_compute_arguments):
+def bootstrap_cas_generator_empirical(nsamples, orig_cas):
     """
-    Default class to generate bootstrap compute arguments.
+    Default class to generate bootstrap compute arguments. The compute arguments from all
+    calculators will be combined, then the bootstrap sample configurations will be
+    generated from the combined list. Afterwawrds, the configurations will be split up
+    into their respective calculators.
 
     Parameters
     ----------
     nsamples: int
         Number of the bootstrap compute arguments requested.
 
-    orig_compute_arguments: list
+    orig_cas: list
         The original list of compute arguments. The bootstrap compute arguments will be
         generated from this list. The format of this input is given below:
-        orig_compute_arguments = [
+        orig_cas = [
             [calc1_cas1, calc1_cas2, ...],
             [calc2_cas1, calc2_cas2, ...],
             ...
@@ -33,22 +36,46 @@ def default_bootstrap_generator_empirical(nsamples, orig_compute_arguments):
     dict
         A set of bootstra compute arguments, written in a dictionary format:
         bootstrap_configs = {
-            0: [[compute_arguments_calc0], [compute_arguments_calc1]],
-            1: [[compute_arguments_calc0], [compute_arguments_calc1]]
+            0: [[cas_calc0], [cas_calc1]],
+            1: [[cas_calc0], [cas_calc1]]
         }
     """
-    ncas = [len(cas) for cas in orig_compute_arguments]
-    bootstrap_compute_arguments = {}
+    orig_cas_ids = convert_compute_arguments_to_identifiers(orig_cas)
+    ncalc = len(orig_cas)  # Number of calculators
+    ncas = [len(cas) for cas in orig_cas]
+    ncas_total = sum(ncas)
+    # This list of index is used to separate cas into calculators
+    _idx_cas = [0] + ncas
+    # Combine the compute arguments
+    comb_orig_cas = np.concatenate((orig_cas))
+    bootstrap_cas = {}
     for ii in range(nsamples):
-        # Get 1 sample of bootstrap compute arguments
-        bootstrap_cas_single_sample = []
-        for jj, cas in enumerate(orig_compute_arguments):
-            # Get sets of bootstrap configurations for each calculator
-            bootstrap_cas_single_calc = np.random.choice(cas, size=ncas[jj], replace=True)
-            bootstrap_cas_single_sample.append(bootstrap_cas_single_calc)
+        # Generate a bootstrap sample configuration
+        comb_bootstrap_cas = np.random.choice(
+            comb_orig_cas, size=ncas_total, replace=True
+        )
+        comb_bootstrap_cas_ids = convert_compute_arguments_to_identifiers(
+            [comb_bootstrap_cas]
+        )[0]
+
+        # Split the bootstrap cas into separate calculators
+        bootstrap_cas_single_sample = [[] for _ in range(ncalc)]
+        for ca in comb_bootstrap_cas:
+            for jj, orig_cas_id_percalc in enumerate(orig_cas_ids):
+                if ca.conf.identifier in orig_cas_ids[jj]:
+                    bootstrap_cas_single_sample[jj].append(ca)
+
         # Update the bootstrap compute arguments dictionary
-        bootstrap_compute_arguments.update({ii: bootstrap_cas_single_sample})
-    return bootstrap_compute_arguments
+        bootstrap_cas.update({ii: bootstrap_cas_single_sample})
+    return bootstrap_cas
+
+
+def convert_compute_arguments_to_identifiers(compute_arguments):
+    identifiers = []
+    for cas in compute_arguments:
+        # Iterate over compute arguments corresponding to each calculator
+        identifiers.append([ca.conf.identifier for ca in cas])
+    return identifiers
 
 
 class BootstrapEmpiricalModel:
@@ -67,7 +94,7 @@ class BootstrapEmpiricalModel:
             )
             self.multi_calc = True
         self._orig_compute_arguments_identifiers = (
-            self.convert_compute_arguments_to_identifiers(self.orig_compute_arguments)
+            convert_compute_arguments_to_identifiers(self.orig_compute_arguments)
         )
         # Initiate the bootstrap configurations property
         self.bootstrap_compute_arguments = {}
@@ -83,7 +110,7 @@ class BootstrapEmpiricalModel:
     ):
         # Function to generate bootstrap configurations
         if bootstrap_generator_fn is None:
-            bootstrap_generator_fn = default_bootstrap_generator_empirical
+            bootstrap_generator_fn = bootstrap_cas_generator_empirical
             kwargs = {"orig_compute_arguments": self.orig_compute_arguments}
 
         # Generate a new bootstrap configurations
@@ -144,7 +171,7 @@ class BootstrapEmpiricalModel:
         for ii in self.bootstrap_compute_arguments:
             bootstrap_compute_arguments_identifiers.update(
                 {
-                    ii: self.convert_compute_arguments_to_identifiers(
+                    ii: convert_compute_arguments_to_identifiers(
                         self.bootstrap_compute_arguments[ii]
                     )
                 }
@@ -191,14 +218,6 @@ class BootstrapEmpiricalModel:
         self._nsamples_done = 0
         self._nsamples_prepared = 0
 
-    @staticmethod
-    def convert_compute_arguments_to_identifiers(compute_arguments):
-        identifiers = []
-        for cas in compute_arguments:
-            # Iterate over compute arguments corresponding to each calculator
-            identifiers.append([ca.conf.identifier for ca in cas])
-        return identifiers
-
 
 def default_bootstrap_generator_neuralnetwork(nsamples, orig_fingerprints):
     """Let's try to make the format of the bootstrap configurations as a dictionary:
@@ -218,6 +237,11 @@ def default_bootstrap_generator_neuralnetwork(nsamples, orig_fingerprints):
     return bootstrap_fingerprints
 
 
+def convert_fingerprints_to_identifiers(fingerprints):
+    identifiers = [fp["configuration"].identifier for fp in fingerprints]
+    return identifiers
+
+
 class BootstrapNeuralNetworkModel:
     def __init__(self, loss, orig_state_filename="orig_model.pkl"):
         self.loss = loss
@@ -227,7 +251,7 @@ class BootstrapNeuralNetworkModel:
         self.orig_params = copy.copy(self.calc.get_opt_params())
         # Cache the original fingerprints
         self.orig_fingerprints = self.calc.get_fingerprints_dataset()
-        self._orig_fingerprints_identifiers = self.convert_fingerprints_to_identifiers(
+        self._orig_fingerprints_identifiers = convert_fingerprints_to_identifiers(
             self.orig_fingerprints
         )
         # Initiate the bootstrap configurations property
@@ -275,11 +299,7 @@ class BootstrapNeuralNetworkModel:
         bootstrap_fingerprints_identifiers = {}
         for ii in self.bootstrap_fingerprints:
             bootstrap_fingerprints_identifiers.update(
-                {
-                    ii: self.convert_fingerprints_to_identifiers(
-                        self.bootstrap_fingerprints[ii]
-                    )
-                }
+                {ii: convert_fingerprints_to_identifiers(self.bootstrap_fingerprints[ii])}
             )
 
         with open(filename, "w") as f:
@@ -344,11 +364,6 @@ class BootstrapNeuralNetworkModel:
         self.bootstrap_fingerprints = {}
         self._nsamples_done = 0
         self._nsamples_prepared = 0
-
-    @staticmethod
-    def convert_fingerprints_to_identifiers(fingerprints):
-        identifiers = [fp["configuration"].identifier for fp in fingerprints]
-        return identifiers
 
 
 class BootstrapError(Exception):
