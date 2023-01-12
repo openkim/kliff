@@ -1,8 +1,8 @@
 """I am still working on this script to do bootstrap UQ."""
 
-from pathlib import Path
 import copy
 import json
+from pathlib import Path
 
 import numpy as np
 
@@ -78,19 +78,26 @@ def convert_compute_arguments_to_identifiers(compute_arguments):
     return identifiers
 
 
+def initial_params_fn_empirical(BS):
+    calc = BS.calculator
+    return calc._initial_params_cache
+
+
 class BootstrapEmpiricalModel:
     def __init__(self, loss):
         self.loss = loss
-        self.calc = loss.calculator
+        self.calculator = loss.calculator
         # Cache the original parameter values
-        self.orig_params = copy.copy(self.calc.get_opt_params())
+        self.orig_params = copy.copy(self.calculator.get_opt_params())
         # Cache the original compute arguments
-        if isinstance(self.calc, Calculator):
-            self.orig_compute_arguments = [copy.copy(self.calc.get_compute_arguments())]
+        if isinstance(self.calculator, Calculator):
+            self.orig_compute_arguments = [
+                copy.copy(self.calculator.get_compute_arguments())
+            ]
             self.multi_calc = False
-        elif isinstance(self.calc, _WrapperCalculator):
+        elif isinstance(self.calculator, _WrapperCalculator):
             self.orig_compute_arguments = copy.copy(
-                self.calc.get_compute_arguments(flat=False)
+                self.calculator.get_compute_arguments(flat=False)
             )
             self.multi_calc = True
         self._orig_compute_arguments_identifiers = (
@@ -98,7 +105,7 @@ class BootstrapEmpiricalModel:
         )
         # Initiate the bootstrap configurations property
         self.bootstrap_compute_arguments = {}
-        self.samples = np.empty((0, self.calc.get_num_opt_params()))
+        self.samples = np.empty((0, self.calculator.get_num_opt_params()))
         self._nsamples_prepared = 0
 
     @property
@@ -106,15 +113,15 @@ class BootstrapEmpiricalModel:
         return len(self.samples)
 
     def generate_bootstrap_compute_arguments(
-        self, nsamples, bootstrap_generator_fn=None, **kwargs
+        self, nsamples, bootstrap_cas_generator_fn=None, **kwargs
     ):
         # Function to generate bootstrap configurations
-        if bootstrap_generator_fn is None:
-            bootstrap_generator_fn = bootstrap_cas_generator_empirical
-            kwargs = {"orig_compute_arguments": self.orig_compute_arguments}
+        if bootstrap_cas_generator_fn is None:
+            bootstrap_cas_generator_fn = bootstrap_cas_generator_empirical
+            kwargs = {"orig_cas": self.orig_compute_arguments}
 
         # Generate a new bootstrap configurations
-        new_bootstrap_compute_arguments = bootstrap_generator_fn(nsamples, **kwargs)
+        new_bootstrap_compute_arguments = bootstrap_cas_generator_fn(nsamples, **kwargs)
         # Update the old list with this new list
         self.bootstrap_compute_arguments = self._update_bootstrap_compute_arguments(
             new_bootstrap_compute_arguments
@@ -180,21 +187,29 @@ class BootstrapEmpiricalModel:
         with open(filename, "w") as f:
             json.dump(bootstrap_compute_arguments_identifiers, f, indent=4)
 
-    def run(self, min_kwargs={}):
+    def run(self, initial_params_fn=None, min_kwargs={}):
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
             raise BootstrapError("Please generate a bootstrap compute arguments first")
+
+        if initial_params_fn is None:
+            initial_params_fn = initial_params_fn_empirical
 
         # Train the model using each bootstrap compute arguments
         for ii in range(self._nsamples_done, self._nsamples_prepared):
             # Update the compute arguments
             if self.multi_calc:
                 # There are multiple calculators used
-                for jj, calc in enumerate(self.calc.calculators):
+                for jj, calc in enumerate(self.calculator.calculators):
                     calc.compute_arguments = self.bootstrap_compute_arguments[ii][jj]
             else:
-                self.calc.compute_arguments = self.bootstrap_compute_arguments[ii][0]
+                self.calculator.compute_arguments = self.bootstrap_compute_arguments[
+                    ii
+                ][0]
 
+            # Set the initial parameter guess
+            initial_guess = initial_params_fn(self)
+            self.calculator.update_model_params(initial_guess)
             # Minimization
             self.loss.minimize(**min_kwargs)
 
@@ -209,8 +224,8 @@ class BootstrapEmpiricalModel:
 
     def restore_loss(self):
         # Restore the parameters and configurations back
-        self.calc.compute_arguments = self.orig_compute_arguments
-        self.calc.update_model_params(self.orig_params)
+        self.calculator.compute_arguments = self.orig_compute_arguments
+        self.calculator.update_model_params(self.orig_params)
 
     def reset(self):
         self.restore_loss()
@@ -219,7 +234,7 @@ class BootstrapEmpiricalModel:
         self._nsamples_prepared = 0
 
 
-def default_bootstrap_generator_neuralnetwork(nsamples, orig_fingerprints):
+def bootstrap_cas_generator_neuralnetwork(nsamples, orig_fingerprints):
     """Let's try to make the format of the bootstrap configurations as a dictionary:
     bootstrap_configs = {
         0: [[compute_arguments_calc0], [compute_arguments_calc1]],
@@ -245,18 +260,18 @@ def convert_fingerprints_to_identifiers(fingerprints):
 class BootstrapNeuralNetworkModel:
     def __init__(self, loss, orig_state_filename="orig_model.pkl"):
         self.loss = loss
-        self.calc = self.loss.calculator
-        self.model = self.calc.model
+        self.calculator = self.loss.calculator
+        self.model = self.calculator.model
         # Cache the original parameter values
-        self.orig_params = copy.copy(self.calc.get_opt_params())
+        self.orig_params = copy.copy(self.calculator.get_opt_params())
         # Cache the original fingerprints
-        self.orig_fingerprints = self.calc.get_fingerprints_dataset()
+        self.orig_fingerprints = self.calculator.get_fingerprints_dataset()
         self._orig_fingerprints_identifiers = convert_fingerprints_to_identifiers(
             self.orig_fingerprints
         )
         # Initiate the bootstrap configurations property
         self.bootstrap_fingerprints = {}
-        self.samples = np.empty((0, self.calc.get_num_opt_params()))
+        self.samples = np.empty((0, self.calculator.get_num_opt_params()))
         self._nsamples_prepared = 0
 
         # Save the original state of the model before running bootstrap
@@ -268,15 +283,15 @@ class BootstrapNeuralNetworkModel:
         return len(self.samples)
 
     def generate_bootstrap_fingerprints(
-        self, nsamples, bootstrap_generator_fn=None, **kwargs
+        self, nsamples, bootstrap_cas_generator_fn=None, **kwargs
     ):
         # Function to generate bootstrap configurations
-        if bootstrap_generator_fn is None:
-            bootstrap_generator_fn = default_bootstrap_generator_neuralnetwork
+        if bootstrap_cas_generator_fn is None:
+            bootstrap_cas_generator_fn = bootstrap_cas_generator_neuralnetwork
             kwargs = {"orig_fingerprints": self.orig_fingerprints}
 
         # Generate a new bootstrap configurations
-        new_bootstrap_fingerprints = bootstrap_generator_fn(nsamples, **kwargs)
+        new_bootstrap_fingerprints = bootstrap_cas_generator_fn(nsamples, **kwargs)
         # Update the old list with this new list
         self.bootstrap_fingerprints = self._update_bootstrap_fingerprints(
             new_bootstrap_fingerprints
@@ -299,7 +314,11 @@ class BootstrapNeuralNetworkModel:
         bootstrap_fingerprints_identifiers = {}
         for ii in self.bootstrap_fingerprints:
             bootstrap_fingerprints_identifiers.update(
-                {ii: convert_fingerprints_to_identifiers(self.bootstrap_fingerprints[ii])}
+                {
+                    ii: convert_fingerprints_to_identifiers(
+                        self.bootstrap_fingerprints[ii]
+                    )
+                }
             )
 
         with open(filename, "w") as f:
@@ -320,7 +339,9 @@ class BootstrapNeuralNetworkModel:
             # List of identifier for step ii
             identifiers_ii = new_bootstrap_fingerprints_identifiers[str(ii)]
             reference = self._orig_fingerprints_identifiers
-            fp_ii = [self.orig_fingerprints[reference.index(ss)] for ss in identifiers_ii]
+            fp_ii = [
+                self.orig_fingerprints[reference.index(ss)] for ss in identifiers_ii
+            ]
             # Update the new bootstrap fingerprints dictionary
             new_bootstrap_fingerprints.update({ii: fp_ii})
 
@@ -339,7 +360,7 @@ class BootstrapNeuralNetworkModel:
         # Train the model using each bootstrap fingerprints
         for ii in range(self._nsamples_done, self._nsamples_prepared):
             # Update the fingerprints
-            self.calc.set_compute_arguments(self.bootstrap_fingerprints[ii])
+            self.calculator.set_compute_arguments(self.bootstrap_fingerprints[ii])
 
             # Minimization
             self.loss.minimize(**min_kwargs)
