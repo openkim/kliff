@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.loss import LossPhysicsMotivatedModel
 
 
 def bootstrap_cas_generator_empirical(nsamples, orig_cas):
@@ -44,8 +43,6 @@ def bootstrap_cas_generator_empirical(nsamples, orig_cas):
     ncalc = len(orig_cas)  # Number of calculators
     ncas = [len(cas) for cas in orig_cas]
     ncas_total = sum(ncas)
-    # This list of index is used to separate cas into calculators
-    _idx_cas = [0] + ncas
     # Combine the compute arguments
     comb_orig_cas = np.concatenate((orig_cas))
     bootstrap_cas = {}
@@ -54,9 +51,6 @@ def bootstrap_cas_generator_empirical(nsamples, orig_cas):
         comb_bootstrap_cas = np.random.choice(
             comb_orig_cas, size=ncas_total, replace=True
         )
-        comb_bootstrap_cas_ids = convert_compute_arguments_to_identifiers(
-            [comb_bootstrap_cas]
-        )[0]
 
         # Split the bootstrap cas into separate calculators
         bootstrap_cas_single_sample = [[] for _ in range(ncalc)]
