@@ -78,11 +78,6 @@ def convert_compute_arguments_to_identifiers(compute_arguments):
     return identifiers
 
 
-def initial_params_fn_empirical(BS):
-    calc = BS.calculator
-    return calc._initial_params_cache
-
-
 class BootstrapEmpiricalModel:
     def __init__(self, loss):
         self.loss = loss
@@ -187,13 +182,10 @@ class BootstrapEmpiricalModel:
         with open(filename, "w") as f:
             json.dump(bootstrap_compute_arguments_identifiers, f, indent=4)
 
-    def run(self, initial_params_fn=None, min_kwargs={}):
+    def run(self, min_kwargs={}):
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
             raise BootstrapError("Please generate a bootstrap compute arguments first")
-
-        if initial_params_fn is None:
-            initial_params_fn = initial_params_fn_empirical
 
         # Train the model using each bootstrap compute arguments
         for ii in range(self._nsamples_done, self._nsamples_prepared):
@@ -208,7 +200,7 @@ class BootstrapEmpiricalModel:
                 ][0]
 
             # Set the initial parameter guess
-            initial_guess = initial_params_fn(self)
+            initial_guess = self.calculator._initial_params_cache
             self.calculator.update_model_params(initial_guess)
             # Minimization
             self.loss.minimize(**min_kwargs)
@@ -362,6 +354,12 @@ class BootstrapNeuralNetworkModel:
             # Update the fingerprints
             self.calculator.set_compute_arguments(self.bootstrap_fingerprints[ii])
 
+            # Reset the initial parameters
+            for layer in self.model.layers:
+                try:
+                    layer.reset_parameters()
+                except AttributeError:
+                    pass
             # Minimization
             self.loss.minimize(**min_kwargs)
 
@@ -370,9 +368,8 @@ class BootstrapNeuralNetworkModel:
                 (self.samples, self.loss.calculator.get_opt_params())
             )
 
-            # Restore the state of the model
-            self.restore_loss()  # Restore the loss function
-
+        # Finishing up, restore the state
+        self.restore_loss()
         return self.samples
 
     def restore_loss(self):
