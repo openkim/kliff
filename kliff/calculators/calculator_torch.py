@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
-
 import torch
 from loguru import logger
 from torch.utils.data import DataLoader
