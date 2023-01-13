@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.loss import energy_forces_residual, energy_residual, forces_residual
 
 
 def bootstrap_cas_generator_empirical(nsamples, orig_cas):
@@ -83,12 +84,12 @@ class BootstrapEmpiricalModel:
             self.orig_compute_arguments = [
                 copy.copy(self.calculator.get_compute_arguments())
             ]
-            self.multi_calc = False
+            self.use_multi_calc = False
         elif isinstance(self.calculator, _WrapperCalculator):
             self.orig_compute_arguments = copy.copy(
                 self.calculator.get_compute_arguments(flat=False)
             )
-            self.multi_calc = True
+            self.use_multi_calc = True
         self._orig_compute_arguments_identifiers = (
             convert_compute_arguments_to_identifiers(self.orig_compute_arguments)
         )
@@ -184,7 +185,7 @@ class BootstrapEmpiricalModel:
         # Train the model using each bootstrap compute arguments
         for ii in range(self._nsamples_done, self._nsamples_prepared):
             # Update the compute arguments
-            if self.multi_calc:
+            if self.use_multi_calc:
                 # There are multiple calculators used
                 for jj, calc in enumerate(self.calculator.calculators):
                     calc.compute_arguments = self.bootstrap_compute_arguments[ii][jj]
@@ -196,6 +197,24 @@ class BootstrapEmpiricalModel:
             # Set the initial parameter guess
             initial_guess = self.calculator._initial_params_cache
             self.calculator.update_model_params(initial_guess)
+            # TODO This assumes that we use the built-in residual functions
+            if self.use_multi_calc:
+                # If multiple calculators are used, we need to update the residual
+                # function used for each configuration. This is to ensure that we use
+                # the correct residual function for each configuration.
+                calc_list = self.calculator.get_calculator_list()
+                residual_fn_list = []
+                for calculator in calc_list:
+                    if calculator.use_energy and calculator.use_forces:
+                        residual_fn = energy_forces_residual
+                    elif calculator.use_energy:
+                        residual_fn = energy_residual
+                    elif calculator.use_forces:
+                        residual_fn = forces_residual
+                    else:
+                        raise RuntimeError("Calculator does not use energy or forces.")
+                    residual_fn_list.append(residual_fn)
+                self.loss.residual_fn = residual_fn_list
             # Minimization
             self.loss.minimize(**min_kwargs)
 
