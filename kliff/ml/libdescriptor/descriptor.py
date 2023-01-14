@@ -53,6 +53,8 @@ class Descriptor:
                 return get_set51()
             elif hyperparameters == "set30":
                 return get_set30()
+            elif hyperparameters == "bs_defaults":
+                return get_default_bispectrum()
             else:
                 raise ValueError("Hyperparameter set not found")
         elif isinstance(hyperparameters, OrderedDict):
@@ -61,8 +63,8 @@ class Descriptor:
             raise TypeError("Hyperparameters must be either a string or an OrderedDict")
 
     def _init_descriptor_from_kind(self):
+        cutoff_array = np.ones((len(self.species), len(self.species))) * self.cutoff
         if self.descriptor_kind == lds.AvailableDescriptors(0):
-            cutoff_array = np.ones((len(self.species), len(self.species))) * self.cutoff
             symmetry_function_types = list(self.hyperparameters.keys())
             symmetry_function_sizes = []
 
@@ -114,12 +116,24 @@ class Descriptor:
                                                       symmetry_function_types, symmetry_function_sizes,
                                                       symmetry_function_param), width
         elif self.descriptor_kind == lds.AvailableDescriptors(1):
+            if self.hyperparameters["weights"] is None:
+                weights = np.ones(len(self.species))
+            else:
+                weights = self.hyperparameters["weights"]
+
             return lds.DescriptorKind.init_descriptor(self.descriptor_kind, self.hyperparameters["rfac0"],
-                                                      self.hyperparameters["jmax"], self.hyperparameters["diagonalstyle"],
-                                                      0, self.hyperparameters["rmin0"], self.hyperparameters["switch_flag"],
-                                                      self.hyperparameters["bzero_flag"])
+                                                      2 * self.hyperparameters["jmax"],
+                                                      self.hyperparameters["diagonalstyle"],
+                                                      1 if self.hyperparameters["use_shared_array"] else 0,
+                                                      self.hyperparameters["rmin0"],
+                                                      self.hyperparameters["switch_flag"],
+                                                      self.hyperparameters["bzero_flag"],
+                                                      cutoff_array,
+                                                      self.species,
+                                                      weights), \
+                get_bs_size(int(2 * self.hyperparameters["jmax"]), self.hyperparameters["diagonalstyle"])
         else:
-            raise ValueError("Descriptor kind not supported yet")
+            raise ValueError(f"Descriptor kind: {self.descriptor_kind} not supported yet")
 
     def _map_species_to_int(self, species):
         return [self.species.index(s) for s in species]
@@ -168,11 +182,7 @@ class Descriptor:
             fout.write("#" + "=" * 80 + "\n\n")
 
             # cutoff and species
-            # cutname, rcut = self.get_cutoff()
             cutname, rcut = self.cutoff_function, self.cutoff
-
-            # unique_pairs = generate_unique_cutoff_pairs(rcut)
-            # species = generate_species_code(rcut)
 
             fout.write("{}  # cutoff type\n\n".format(cutname))
             fout.write("{}  # number of species\n\n".format(len(self.species)))
@@ -180,85 +190,90 @@ class Descriptor:
             for i, species1 in enumerate(self.species):
                 for j, species2 in enumerate(self.species):
                     fout.write("{}  {}  {}\n".format(species1, species2, self.cutoff))
-            # for key, value in unique_pairs.items():
-            #     s1, s2 = key.split("-")
-            #     fout.write(("{}  {}  " + fmt + "\n").format(s1, s2, value))
             fout.write("\n")
 
-            #
-            # symmetry functions
-            #
+            if self.descriptor_kind == lds.AvailableDescriptors(0):
+                # header
+                fout.write("#" + "=" * 80 + "\n")
+                fout.write("# symmetry functions\n")
+                fout.write("#" + "=" * 80 + "\n\n")
 
-            # header
-            fout.write("#" + "=" * 80 + "\n")
-            fout.write("# symmetry functions\n")
-            fout.write("#" + "=" * 80 + "\n\n")
+                num_sym_func = len(self.hyperparameters.keys())
+                fout.write("{}  # number of symmetry functions types\n\n".format(num_sym_func))
 
-            num_sym_func = len(self.hyperparameters.keys())
-            fout.write("{}  # number of symmetry functions types\n\n".format(num_sym_func))
+                # descriptor values
+                fout.write("# sym_function    rows    cols\n")
+                for name, values in self.hyperparameters.items():
+                    if name == "g1":
+                        fout.write("g1\n\n")
+                    else:
+                        rows = len(values)
+                        cols = len(values[0])
+                        fout.write("{}    {}    {}\n".format(name, rows, cols))
+                        if name == "g2":
+                            for val in values:
+                                fout.write("{}    {}".format(val["eta"], val["Rs"]))
+                                fout.write("    # eta  Rs\n")
+                            fout.write("\n")
+                        elif name == "g3":
+                            for val in values:
+                                fout.write("{}".format(val["kappa"]))
+                                fout.write("    # kappa\n")
+                            fout.write("\n")
+                        elif name == "g4":
+                            for val in values:
+                                zeta = val["zeta"]
+                                lam = val["lambda"]
+                                eta = val["eta"]
+                                fout.write("{}    {}    {}".format(zeta, lam, eta))
+                                fout.write("    # zeta  lambda  eta\n")
+                            fout.write("\n")
+                        elif name == "g5":
+                            for val in values:
+                                zeta = val["zeta"]
+                                lam = val["lambda"]
+                                eta = val["eta"]
+                                fout.write("{}    {}    {}".format(zeta, lam, eta))
+                                fout.write("    # zeta  lambda  eta\n")
+                            fout.write("\n")
 
-            # descriptor values
-            fout.write("# sym_function    rows    cols\n")
-            for name, values in self.hyperparameters.items():
-                if name == "g1":
-                    fout.write("g1\n\n")
+                # header
+                fout.write("#" + "=" * 80 + "\n")
+                fout.write("# Preprocessing data to center and normalize\n")
+                fout.write("#" + "=" * 80 + "\n")
+
+                # mean and stdev
+                mean = [0.0]
+                stdev = [1.0]
+                if mean is None and stdev is None:
+                    fout.write("center_and_normalize  False\n")
                 else:
-                    rows = len(values)
-                    cols = len(values[0])
-                    fout.write("{}    {}    {}\n".format(name, rows, cols))
-                    if name == "g2":
-                        for val in values:
-                            fout.write("{}    {}".format(val["eta"], val["Rs"]))
-                            fout.write("    # eta  Rs\n")
-                        fout.write("\n")
-                    elif name == "g3":
-                        for val in values:
-                            fout.write("{}".format(val["kappa"]))
-                            fout.write("    # kappa\n")
-                        fout.write("\n")
-                    elif name == "g4":
-                        for val in values:
-                            zeta = val["zeta"]
-                            lam = val["lambda"]
-                            eta = val["eta"]
-                            fout.write("{}    {}    {}".format(zeta, lam, eta))
-                            fout.write("    # zeta  lambda  eta\n")
-                        fout.write("\n")
-                    elif name == "g5":
-                        for val in values:
-                            zeta = val["zeta"]
-                            lam = val["lambda"]
-                            eta = val["eta"]
-                            fout.write("{}    {}    {}".format(zeta, lam, eta))
-                            fout.write("    # zeta  lambda  eta\n")
-                        fout.write("\n")
+                    fout.write("center_and_normalize  True\n\n")
 
-            #
-            # data centering and normalization
-            #
+                    fout.write("{}   # descriptor size\n".format(self.width))
 
-            # header
-            fout.write("#" + "=" * 80 + "\n")
-            fout.write("# Preprocessing data to center and normalize\n")
-            fout.write("#" + "=" * 80 + "\n")
-
-            # mean and stdev
-            mean = [0.0]
-            stdev = [1.0]
-            if mean is None and stdev is None:
-                fout.write("center_and_normalize  False\n")
-            else:
-                fout.write("center_and_normalize  True\n\n")
-
-                fout.write("{}   # descriptor size\n".format(self.width))
-
-                fout.write("# mean\n")
-                for i in mean:
-                    fout.write("{} \n".format(i))
-                fout.write("\n# standard deviation\n")
-                for i in stdev:
-                    fout.write("{} \n".format(i))
-                fout.write("\n")
+                    fout.write("# mean\n")
+                    for i in mean:
+                        fout.write("{} \n".format(i))
+                    fout.write("\n# standard deviation\n")
+                    for i in stdev:
+                        fout.write("{} \n".format(i))
+                    fout.write("\n")
+            elif self.descriptor_kind == lds.AvailableDescriptors(1):
+                fout.write(f"# jmax\n{self.hyperparameters['jmax']}\n\n")
+                fout.write(f"# rfac0\n{self.hyperparameters['rfac0']}\n\n")
+                fout.write(f"# diagonalstyle\n{self.hyperparameters['diagonalstyle']}\n\n")
+                fout.write(f"# rmin0\n{self.hyperparameters['rmin0']}\n\n")
+                fout.write(f"# switch_flag\n{self.hyperparameters['switch_flag']}\n\n")
+                fout.write(f"# bzero_flag\n{self.hyperparameters['bzero_flag']}\n\n")
+                fout.write("# weights\n")
+                if self.hyperparameters['weights'] is None:
+                    for i in range(len(self.species)):
+                        fout.write("1.0    ")
+                else:
+                    for i in self.hyperparameters['weights']:
+                        fout.write(f"{i}    ")
+                fout.write("\n\n")
 
     def save_kim_model(self, path: str, model: str):
         with open(f"{path}/kim_model.param", "w") as f:
@@ -385,3 +400,39 @@ def get_set30():
                           {'zeta': 2, 'lambda': 1, 'eta': 0.16069804526622655},
                           {'zeta': 4, 'lambda': 1, 'eta': 0.16069804526622655},
                           {'zeta': 16, 'lambda': 1, 'eta': 0.16069804526622655}])])
+
+
+def get_default_bispectrum():
+    return OrderedDict({
+            "jmax": 4,
+            "rfac0": 0.99363,
+            "diagonalstyle": 3,
+            "rmin0": 0,
+            "switch_flag": 1,
+            "bzero_flag": 0,
+            "use_shared_array": False,
+            "weights": None
+        })
+
+
+def get_bs_size(twojmax, diagonal):
+        """
+        Return the size of descriptor.
+        """
+        N = 0
+        for j1 in range(0, twojmax + 1):
+            if diagonal == 2:
+                N += 1
+            elif diagonal == 1:
+                for j in range(0, min(twojmax, 2 * j1) + 1, 2):
+                    N += 1
+            elif diagonal == 0:
+                for j2 in range(0, j1 + 1):
+                    for j in range(j1 - j2, min(twojmax, j1 + j2) + 1, 2):
+                        N += 1
+            elif diagonal == 3:
+                for j2 in range(0, j1 + 1):
+                    for j in range(j1 - j2, min(twojmax, j1 + j2) + 1, 2):
+                        if j >= j1:
+                            N += 1
+        return N
