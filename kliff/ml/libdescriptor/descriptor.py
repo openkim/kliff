@@ -114,7 +114,10 @@ class Descriptor:
                                                       symmetry_function_types, symmetry_function_sizes,
                                                       symmetry_function_param), width
         elif self.descriptor_kind == lds.AvailableDescriptors(1):
-            raise ValueError("Descriptor kind not supported yet")
+            return lds.DescriptorKind.init_descriptor(self.descriptor_kind, self.hyperparameters["rfac0"],
+                                                      self.hyperparameters["jmax"], self.hyperparameters["diagonalstyle"],
+                                                      0, self.hyperparameters["rmin0"], self.hyperparameters["switch_flag"],
+                                                      self.hyperparameters["bzero_flag"])
         else:
             raise ValueError("Descriptor kind not supported yet")
 

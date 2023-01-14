@@ -1,10 +1,36 @@
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import torch
 from torch.utils.data import Dataset
 
-from kliff.legacy.descriptors.descriptor import load_fingerprints
+import pickle
+
+# loading the older descriptor module sometimes creates clashes
+# from kliff.legacy.descriptors.descriptor import load_fingerprints
+
+def load_fingerprints(path: Union[Path, str]):
+    """
+    Read preprocessed fingerprints from file.
+
+    This is the reverse operation of Descriptor._dump_fingerprints.
+
+    Args:
+        path: Path to the pickled data file.
+
+    Returns:
+        Fingerprints
+    """
+    data = []
+    with open(path, "rb") as f:
+        try:
+            while True:
+                x = pickle.load(f)
+                data.append(x)
+        except EOFError:
+            pass
+
+    return data
 
 
 class FingerprintsDataset(Dataset):

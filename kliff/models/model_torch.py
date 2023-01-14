@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from loguru import logger
 
-from kliff.legacy.descriptors.descriptor import Descriptor
+# from kliff.legacy.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
 
 
@@ -23,7 +23,7 @@ class ModelTorch(nn.Module):
         seed: random seed.
     """
 
-    def __init__(self, descriptor: Descriptor, seed: int = 35):
+    def __init__(self, descriptor, seed: int = 35):
         super(ModelTorch, self).__init__()
 
         self._descriptor = descriptor
