@@ -1,4 +1,4 @@
-# KIM-based Learning-Integrated Fitting Framework (KLIFF)
+# KIM-based Learning-Integrated Fitting Framework with Torch extensions (KLIFF-Torch)
 
 This is a development fork of KLIFF for adding more ML capabilities and PyTorch integration.
 All the changes will be integrated in KLIFF soon.
