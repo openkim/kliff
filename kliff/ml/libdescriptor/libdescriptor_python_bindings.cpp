@@ -55,7 +55,7 @@ PYBIND11_MODULE(libdescriptor, m) {
 
             // Return descriptor object created from Bispectrum, using direct parameters
             .def("init_descriptor", py::overload_cast<AvailableDescriptor, double, int, int, int, double, int,
-                 int>(&DescriptorKind::initDescriptor))
+                 int, double *, std::vector<std::string> *, std::vector<double> *>(&DescriptorKind::initDescriptor))
 
             // Compute function for calculating the descriptor
             .def("compute",

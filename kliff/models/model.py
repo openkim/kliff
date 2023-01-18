@@ -31,13 +31,13 @@ class ComputeArguments:
     implemented_property = []
 
     def __init__(
-        self,
-        conf: Configuration,
-        supported_species: Dict[str, int],
-        influence_distance: float,
-        compute_energy: bool = True,
-        compute_forces: bool = True,
-        compute_stress: bool = False,
+            self,
+            conf: Configuration,
+            supported_species: Dict[str, int],
+            influence_distance: float,
+            compute_energy: bool = True,
+            compute_forces: bool = True,
+            compute_stress: bool = False,
     ):
 
         self.conf = conf
@@ -196,9 +196,9 @@ class Model:
     """
 
     def __init__(
-        self,
-        model_name: str = None,
-        params_transform: Optional[ParameterTransform] = None,
+            self,
+            model_name: str = None,
+            params_transform: Optional[ParameterTransform] = None,
     ):
         self.model_name = model_name
         self.params_transform = params_transform
@@ -280,9 +280,9 @@ class Model:
         return self.model_params
 
     def echo_model_params(
-        self,
-        filename: Union[Path, TextIO, None] = sys.stdout,
-        params_space: str = "original",
+            self,
+            filename: Union[Path, TextIO, None] = sys.stdout,
+            params_space: str = "original",
     ) -> str:
         """
         Echo the model parameters.
@@ -486,7 +486,7 @@ class Model:
         )
 
     def get_opt_param_name_value_and_indices(
-        self, index: int
+            self, index: int
     ) -> Tuple[str, float, int, int]:
         """
         Get the `name`, `value`, `parameter_index`, and `component_index` of optimizing

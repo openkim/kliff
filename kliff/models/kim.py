@@ -41,14 +41,14 @@ class KIMComputeArguments(ComputeArguments):
     implemented_property = []
 
     def __init__(
-        self,
-        kim_ca,
-        config: Configuration,
-        supported_species: Dict[str, int],
-        influence_distance: float,
-        compute_energy: bool = True,
-        compute_forces: bool = True,
-        compute_stress: bool = False,
+            self,
+            kim_ca,
+            config: Configuration,
+            supported_species: Dict[str, int],
+            influence_distance: float,
+            compute_energy: bool = True,
+            compute_forces: bool = True,
+            compute_stress: bool = False,
     ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
@@ -272,8 +272,8 @@ class KIMComputeArguments(ComputeArguments):
                 )
 
             if not (
-                support_status == kimpy.support_status.required
-                or support_status == kimpy.support_status.optional
+                    support_status == kimpy.support_status.required
+                    or support_status == kimpy.support_status.optional
             ):
                 KIMModelError("Energy not supported by model")
 
@@ -288,8 +288,8 @@ class KIMComputeArguments(ComputeArguments):
                 )
 
             if not (
-                support_status == kimpy.support_status.required
-                or support_status == kimpy.support_status.optional
+                    support_status == kimpy.support_status.required
+                    or support_status == kimpy.support_status.optional
             ):
                 KIMModelError("Forces not supported by model")
 
@@ -392,9 +392,9 @@ class KIMModel(Model):
     """
 
     def __init__(
-        self,
-        model_name: str,
-        params_transform: Optional[ParameterTransform] = None,
+            self,
+            model_name: str,
+            params_transform: Optional[ParameterTransform] = None,
     ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
@@ -695,11 +695,11 @@ class KIMModel(Model):
         logger.info(f"KLIFF trained model write to `{path}`")
 
     def __call__(
-        self,
-        config: Configuration,
-        compute_energy: bool = True,
-        compute_forces: bool = True,
-        compute_stress: bool = False,
+            self,
+            config: Configuration,
+            compute_energy: bool = True,
+            compute_forces: bool = True,
+            compute_stress: bool = False,
     ) -> Any:
         supported_species = self.get_supported_species()
         influence_dist = self.get_influence_distance()
@@ -717,16 +717,21 @@ class KIMModel(Model):
         return kim_ca_instance.results
 
     def parameters(self):
-        num_opt_parameters = self.get_num_opt_params()
+        num_opt_parameters = self.opt_params.get_num_opt_params()
+        bounds = self.opt_params.get_opt_params_bounds()
+
         parameter_list = []
 
+        # Parameter tuple: (name, value, parameter_index, component_index, lower_bound, upper_bound)
         for i in range(num_opt_parameters):
-            parameter_list.append(self.get_opt_param_name_value_and_indices(i))
-
+            mutable_param_list = list(self.get_opt_param_name_value_and_indices(i))
+            mutable_param_list.append(bounds[i][0] if bounds[i][0] else -np.inf)
+            mutable_param_list.append(bounds[i][1] if bounds[i][1] else np.inf)
+            parameter_list.append(tuple(mutable_param_list))
         return parameter_list
 
     def copy_parameters(self, parameter, new_value):
-        # modify parameter class for more coherent approach
+        # TODO: modify parameter class for more coherent approach
         self.kim_model.set_parameter(parameter[2], parameter[3], new_value)
         self.kim_model.clear_then_refresh()
 

@@ -17,9 +17,11 @@ But this also results in confusing two-way mishmash of doing things.
 ML centric applications is highlighted. It offers cleaner API which reflects more of the popular workflows.
 It is not a pure additive change in sense that your old scripts might not work out of the box, but no previous 
 functionality has been removed. The original KLIFF modules which are being redesigned are kept in `legacy` submodule. 
-**This is the recommended version for future-proof applications**.
+** Ver2 is the recommended version for future-proof applications**.
 
 Both versions live on different branches, and can be accessed as `master-V1` and `master-V2` for `Ver1` and `Ver2` respectively.
+
+> The default branch (`master`) will always mirror `Ver2`.
 
 ### Installation from source
 ```

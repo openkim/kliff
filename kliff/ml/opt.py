@@ -1,22 +1,24 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
-import scipy.optimize
+from scipy import optimize as opt
 from loguru import logger
 
+from kliff.models import KIMModel
 from kliff.models.parameter import OptimizingParameters
 from kliff.dataset import Dataset
 
 import torch
 from torch.nn import Parameter, Module
 
-try:
-    from mpi4py import MPI
-
-    mpi4py_avail = True
-except ImportError:
-    mpi4py_avail = False
-
+# TODO: MPI and geodesic
+# try:
+#     from mpi4py import MPI
+#
+#     mpi4py_avail = True
+# except ImportError:
+#     mpi4py_avail = False
+#
 try:
     from geodesicLM import geodesiclm
 
@@ -32,25 +34,30 @@ class OptimizerScipy:
 
     def __init__(
             self,
-            model_fn: Callable,
+            model_fn: KIMModel,
             parameters: Union[List[Parameter], List[OptimizingParameters]],
             dataset: Dataset,
             weights: Dict = {"energy": 1.0, "forces": 1.0, "stress": 1.0},
-            optimizer: Optional[Callable] = None,
+            optimizer=None,
             optimizer_kwargs: Optional[Dict] = None,
-            max_iter: Optional[int] = 1000,
-            target_property: List = ["energy"]
+            maxiter: Optional[int] = 1000,
+            tol: Optional[float] = 1e-8,
+            target_property: List = ["energy"],
+            verbose: bool = False
     ):
         # TODO: parallelization of the optimizer based on torch and mpi
-        self.model_fn = model_fn if not callable(model_fn) else [model_fn]
+        self.model_fn = model_fn
         self.parameters = parameters
-        self.max_iter = max_iter
+        self.maxiter = maxiter
+        self.tol = tol
         self.optimizer_kwargs = optimizer_kwargs
         self.optimizer_str = self._get_optimizer(optimizer)
         self.dataset = dataset
         self.weights = weights
         self.loss_agg_func = lambda x, y: np.mean(np.sum((x - y) ** 2))
         self.target_property = target_property
+        self.verbose = verbose
+        self.options = {"maxiter": self.maxiter, "disp": self.verbose}
 
     def _get_optimizer(self, optimizer_str):
         scipy_minimize_methods = [
@@ -69,9 +76,9 @@ class OptimizerScipy:
             "trust-exact",
             "trust-krylov",
         ]
-        scipy_minimize_methods_not_supported_args = ["bounds"]
-        scipy_least_squares_methods = ["trf", "dogbox", "lm", "geodesiclm"]
-        scipy_least_squares_methods_not_supported_args = ["bounds"]
+        # scipy_minimize_methods_not_supported_args = ["bounds"]
+        # scipy_least_squares_methods = ["trf", "dogbox", "lm", "geodesiclm"]
+        # scipy_least_squares_methods_not_supported_args = ["bounds"]
 
         if optimizer_str in scipy_minimize_methods:
             return optimizer_str
@@ -87,19 +94,16 @@ class OptimizerScipy:
         raise ValueError("No optimizer provided")
 
     def update_parameters(self, new_parameters: List[Union[Parameter, OptimizingParameters]]):
-        for model in self.model_fn:
-            for new_parameter, parameter in zip(new_parameters, self.parameters):
-                model.copy_parameters(parameter, new_parameter)
+        for new_parameter, parameter in zip(new_parameters, self.parameters):
+            self.model_fn.copy_parameters(parameter, new_parameter)
 
     def loss_fn(self, models, dataset, weights, properties):
         loss = 0.0
-        # self.update_parameters(new_parameters)
         for configuration in dataset:
-            for i, model in enumerate(models):
-                model_eval = model(configuration)
-                for property_ in properties:
-                    loss += weights[property_] * self.loss_agg_func(model_eval[property_],
-                                                                    configuration.__getattribute__(property_))
+            model_eval = self.model_fn(configuration)
+            for property_ in properties:
+                loss += weights[property_] * self.loss_agg_func(model_eval[property_],
+                                                                configuration.__getattribute__(property_))
         return loss
 
     def _scipy_loss_wrapper(self, new_parameters):
@@ -114,7 +118,19 @@ class OptimizerScipy:
             kwargs = {}
         x0 = list(map(lambda x: x[1], self.parameters))
         logger.info(f"Starting with method {self.optimizer_str}")
-        result = scipy.optimize.minimize(self._scipy_loss_wrapper, np.array(x0), method=self.optimizer_str, **kwargs)
+
+        bounds = []
+        for param in self.parameters:
+            bounds.append([param[-2], param[-1]])
+
+        result = opt.minimize(self._scipy_loss_wrapper, np.array(x0), bounds=bounds, method=self.optimizer_str,
+                              tol=self.tol, options=self.options, **kwargs)
+
+        # Update model one last time if successful:
+        if result.success:
+            for in_param, opt_param in zip(self.parameters, result.x):
+                self.model_fn.opt_params.set_one(in_param[0], [[opt_param]], suppress_warnings=True)
+
         return result
 
 

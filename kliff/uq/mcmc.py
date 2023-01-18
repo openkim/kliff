@@ -4,7 +4,7 @@ from typing import Callable, List, Optional
 import numpy as np
 
 from kliff.error import report_import_error
-from kliff.loss import Loss
+from kliff.legacy.loss import Loss
 
 try:
     import emcee
