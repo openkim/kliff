@@ -25,7 +25,8 @@ struct GraphData
     py::array_t<double> forces;
     py::array_t<int64_t> images;
     py::array_t<int64_t> species;
-    py::array_t<int> contributions;
+    py::array_t<int64_t> z;
+    py::array_t<int64_t> contributions;
 };
 
 // Quick and dirty
@@ -201,7 +202,24 @@ GraphData get_complete_graph(
     }
     // cast vector  to int_64
     auto species_code_64 = std::vector<int64_t>(species_code.begin(), species_code.end());
-    gs.species = py::array_t<int64_t>(species_code_64.size(), species_code_64.data());
+    gs.z = py::array_t<int64_t>(species_code_64.size(), species_code_64.data());
+
+    // species map to increasing index, from 0 to n_species
+    // Count number of unique elements in species_code, and assign them 0 to n numbers
+    std::set<int64_t> unique_species(species_code.begin(), species_code.end());
+    std::map<int64_t, int64_t> species_map;
+    int64_t species_index = 0;
+    for (auto species_ : unique_species){
+        species_map[species_] = species_index;
+        species_index++;
+    }
+    // map species_code to species_map
+    std::vector<int64_t> species_code_mapped;
+    species_code_mapped.reserve(species_code.size());
+    for (auto species_ : species_code){
+        species_code_mapped.push_back(species_map[species_]);
+    }
+    gs.species = py::array_t<int64_t>(species_code_mapped.size(), species_code_mapped.data());
 
     // Full Image vector for easier post processing (torch scatter sum)
     std::vector<int64_t> pad_image_full;
@@ -213,8 +231,11 @@ GraphData get_complete_graph(
     gs.images = py::array_t<int64_t>(pad_image_full.size(), pad_image_full.data());
 
     for (int i = 0; i < n_atoms; i++) { need_neighbors[i] = 0; }
+    // TODO: check if this is needed
+    // convert need_neighbors to 64 bit integer vector
+    std::vector<int64_t> need_neighbors_64(need_neighbors, need_neighbors + n_atoms + n_pad);
     gs.contributions
-        = py::array_t<int>(n_atoms + n_pad, need_neighbors);
+        = py::array_t<int64_t>(n_atoms + n_pad, need_neighbors_64.data());
 
     gs.n_nodes = n_atoms + n_pad;
     delete[] padded_coords;
@@ -238,6 +259,7 @@ PYBIND11_MODULE(tg, m)
         .def_readwrite("forces", &GraphData::forces)
         .def_readwrite("images", &GraphData::images)
         .def_readwrite("species", &GraphData::species)
+        .def_readwrite("z", &GraphData::species)
         .def_readwrite("contributions", &GraphData::contributions);
     m.def("get_complete_graph", &get_complete_graph, "gets complete graphs");
 }

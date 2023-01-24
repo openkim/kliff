@@ -14,6 +14,7 @@ class KIMTorchGraph(Data):
         self.coords = None
         self.images = None
         self.species = None
+        self.z = None
         self.contributions = None
 
     def __inc__(self, key, value, *args, **kwargs):
@@ -63,6 +64,7 @@ class KIMTorchGraphGenerator:
             torch_geom_graph.coords = torch.as_tensor(graph.coords)
             torch_geom_graph.images = torch.as_tensor(graph.images)
             torch_geom_graph.species = torch.as_tensor(graph.species)
+            torch_geom_graph.z = torch.as_tensor(graph.z)
             torch_geom_graph.contributions = torch.as_tensor(graph.contributions)
             torch_geom_graph.num_nodes = torch.as_tensor(graph.n_nodes)
             for i in range(graph.n_layers):
