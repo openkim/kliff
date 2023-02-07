@@ -10,6 +10,12 @@ from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
 from kliff.utils import to_path
 
+# KLIFF-Torch imports
+from torch.utils.data import Dataset as TorchDataset
+import colabfit.tools.configuration
+from colabfit.tools.database import MongoDatabase
+import sys
+
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
 
@@ -37,19 +43,28 @@ class Configuration:
         weight: an instance that computes the weight of the configuration in the loss
             function.
         identifier: a (unique) identifier of the configuration
+
+    If colabfit-tools is identified as the source of the configuration data then the configuration
+    getter and setter functions would a shallow wrapper over mongodb datacalls.
     """
 
     def __init__(
         self,
-        cell: np.ndarray,
-        species: List[str],
-        coords: np.ndarray,
-        PBC: List[bool],
+        cell: np.ndarray = None,
+        species: List[str] = None,
+        coords: np.ndarray = None,
+        PBC: List[bool] = None,
         energy: float = None,
         forces: Optional[np.ndarray] = None,
         stress: Optional[List[float]] = None,
-        weight: Optional[Weight] = None,
+        weight: float = 1.0,
         identifier: Optional[Union[str, Path]] = None,
+        is_colabfit_dataset: Optional[bool] = None,
+        database_client: Optional[MongoDatabase] = None,
+        property_id: Optional[str] = None,
+        configuration_id: Optional[str] = None,
+        aux_property_fields: List[str] = None,
+        dynamic_load=False
     ):
         self._cell = cell
         self._species = species
@@ -58,12 +73,23 @@ class Configuration:
         self._energy = energy
         self._forces = forces
         self._stress = stress
-
+        self._weight = weight
         self._identifier = identifier
         self._path = None
+        self.is_colabfit_dataset = is_colabfit_dataset
+        self.colabfit_dataclient = database_client
+        self.property_id = property_id
+        self.configuration_id = configuration_id
+        self.aux_property_fields = aux_property_fields
+        self._is_initialized = False
+        self.descriptor = None
+        self.dynamic_load = dynamic_load
 
-        self._weight = Weight() if weight is None else weight
-        self._weight.compute_weight(self)  # Compute the weight
+        if self.aux_property_fields:
+            self._set_aux_properties()
+
+        if dynamic_load and is_colabfit_dataset:
+            self._load_at_once()
 
     # TODO enable config weight read in from file
     @classmethod
@@ -112,6 +138,40 @@ class Configuration:
 
         return self
 
+    @classmethod
+    def from_colabfit(
+        cls,
+        database_client: MongoDatabase,
+        configuration_id: str,
+        property_ids: str,
+        aux_property_fields: List[str] = None,
+        dynamic_load = False
+    ):
+        """
+        Read configuration from colabfit database .
+
+        Args:
+            database_client: Instance of connected MongoDatabase client, which can be used to
+            fetch database from colabfit-tools dataset.
+            configuration_id: ID of the configuration instance to be collected from the collection
+            "configuration" in colabfit-tools.
+            property_ids: ID of the property instance to be associated with current configuration.
+            Usually properties would be trained against. Each associated property "field" will be
+            matched against provided list of aux_property_fields.
+            aux_property_fields: associated colabfit-tools property fields to be associated.
+             Default is energy, forces, and stress but more can be added. Provided property field will be
+             available under the "property" field.
+        """
+        self = cls(
+            is_colabfit_dataset=True,
+            database_client=database_client,
+            configuration_id=configuration_id,
+            property_id=property_ids,
+            aux_property_fields=aux_property_fields,
+            dynamic_load=dynamic_load
+        )
+        return self
+
     def to_file(self, filename: Path, file_format: str = "xyz"):
         """
         Write the configuration to file.
@@ -143,7 +203,17 @@ class Configuration:
         """
         3x3 matrix of the lattice vectors of the configurations.
         """
-        return self._cell
+        if not self.is_colabfit_dataset:
+            # For normal configuration data is already there
+            return self._cell
+        else:
+            # If it is colabfit dataset then initially it only contains ids with `_is_initialized` flag = False
+            # if it is already instantiated then return values else call instantiate method first
+            if self._is_initialized:
+                return self._cell
+            else:
+                self._initialize_from_colabfit()
+                return self._cell
 
     @property
     def PBC(self) -> List[bool]:
@@ -151,21 +221,42 @@ class Configuration:
         A list with 3 components indicating whether periodic boundary condition
         is used along the directions of the first, second, and third lattice vectors.
         """
-        return self._PBC
+        if not self.is_colabfit_dataset:
+            return self._PBC
+        else:
+            if self._is_initialized:
+                return self._PBC
+            else:
+                self._initialize_from_colabfit()
+                return self._PBC
 
     @property
     def species(self) -> List[str]:
         """
         Species string of all atoms.
         """
-        return self._species
+        if not self.is_colabfit_dataset:
+            return self._species
+        else:
+            if self._is_initialized:
+                return self._species
+            else:
+                self._initialize_from_colabfit()
+                return self._species
 
     @property
     def coords(self) -> np.ndarray:
         """
         A Nx3 matrix of the Cartesian coordinates of all atoms.
         """
-        return self._coords
+        if not self.is_colabfit_dataset:
+            return self._coords
+        else:
+            if self._is_initialized:
+                return self._coords
+            else:
+                self._initialize_from_colabfit()
+                return self._coords
 
     @property
     def energy(self) -> Union[float, None]:
@@ -173,6 +264,11 @@ class Configuration:
         Potential energy of the configuration.
         """
         if self._energy is None:
+            # check if it colabfit-datasbase and hence needs initialization
+            if self.is_colabfit_dataset:
+                energy = self.get_colabfit_property("energy")
+                self._energy = energy
+                return self._energy
             raise ConfigurationError("Configuration does not contain energy.")
         return self._energy
 
@@ -182,6 +278,12 @@ class Configuration:
         Return a `Nx3` matrix of the forces on each atoms.
         """
         if self._forces is None:
+            # check if it colabfit-datasbase and hence needs initialization
+            if self.is_colabfit_dataset:
+                forces = self.get_colabfit_property("forces")
+                if forces is not None:
+                    self._forces = np.array(forces)
+                    return self._forces
             raise ConfigurationError("Configuration does not contain forces.")
         return self._forces
 
@@ -189,11 +291,20 @@ class Configuration:
     def stress(self) -> List[float]:
         r"""
         Stress of the configuration.
+
         The stress is given in Voigt notation i.e
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
         \sigma_{xy}]`.
+
         """
+        # TODO avoid reloading the property if it is explicitly set to None
         if self._stress is None:
+            # check if it colabfit-datasbase and hence needs initialization
+            if self.is_colabfit_dataset:
+                stress = self.get_colabfit_property("stress")
+                if stress is not None:
+                    self._stress = stress
+                    return self._stress
             raise ConfigurationError("Configuration does not contain stress.")
         return self._stress
 
@@ -301,8 +412,99 @@ class Configuration:
             self._species = np.asarray(species)
             self._coords = np.asarray(coords)
 
+    def _initialize_from_colabfit(self):
+        """
+        Time to fill up the data. To minimize Mongo calls, entire dataset is initialized at once.
+        Returns:
 
-class Dataset:
+        """
+        try:
+            fetched_configuration: colabfit.tools.configuration.Configuration = (
+                self.colabfit_dataclient.get_configuration(self.configuration_id)
+            )
+        except:
+            raise ConnectionError(
+                "Looks like Mongo database did not return appropriate response. "
+                f"Please run db.configurations.find('_id':{self.configuration_id}) to verify response. "
+                f"Or try running the following in separate Python terminal:\n",
+                "from colabfit.tools.database import MongoDatabase\n"
+                f"client = MongoDatabase({self.colabfit_dataclient.database_name})\n"
+                f"client.get_configuration({self.configuration_id})\n"
+                " \n"
+                "Above shall return a Configuration object with ASE Atoms format.",
+            )
+        # print("loading coordinates")
+        self._coords = fetched_configuration.arrays["positions"]
+        self._species = fetched_configuration.get_chemical_symbols()
+        self._cell = np.array(fetched_configuration.cell.todict()["array"])
+        self._PBC = fetched_configuration.pbc
+        self._is_initialized = True
+
+    def _set_aux_properties(self):
+        """
+        Setup any extra property to be read from property definitions, specially in case of colabfit-tools.
+        This routine shall set attributes of the class based on `aux_property_fields`. The fields will be accessed
+        by first finding the property type using `type` field in `client.aggregate_property_info`, then suffixing
+        the aux_property_fields for field query `<type>.<aux_property_fields>`. By default three properties are defined,
+        Energy, forces and stress. This subroutine adds the attributes to the class. As these properties
+        will be accessed outside directly and will be determined at runtime, they will be public member.
+        Also as of now aux attributes get initialized with the initialization of the Configuration itself.
+        Might change this behaviour in future
+        Returns: None
+
+        """
+        for new_property in self.aux_property_fields:
+            property_value = self.get_colabfit_property(new_property)
+            if property_value is not None:
+                self.__setattr__(new_property, property_value)
+            else:
+                raise ConfigurationError(
+                    f"Configuration does not contain {new_property}."
+                )
+
+    def get_colabfit_property(self, property_name: str):
+        """
+        Returns colabfit-property. workaround till we get proper working get_property routine
+        Args:
+            property_name: name of the property to fetch
+
+        Returns: fetched value, None if query comes empty
+
+        """
+        # print(f"loading {property_name}")
+        property_info = self.colabfit_dataclient.aggregate_property_info(
+            self.property_id
+        )
+        property_value = self.colabfit_dataclient.get_data(
+            "properties",
+            fields=[f"{property_info['types'][0]}.{property_name}"],
+            query={"_id": self.property_id},
+        )
+        if property_value:
+            # Temporary workaround against https://github.com/colabfit/colabfit-tools/issues/9
+            try:
+                property_value = property_value[0].item()
+            except AttributeError:
+                property_value = property_value[0]
+            except ValueError:
+                property_value = property_value[0]
+            return property_value
+        else:
+            return None
+
+    def _load_at_once(self):
+        """
+        This method initializes and loads the properties during object creation only.
+        Can be disabled by setting dynamic_load flag to True.
+        Returns:
+        #TODO: more performant way of initializing from colabfit
+        """
+        self._initialize_from_colabfit()
+        _ = self.energy
+        _ = self.forces
+
+
+class Dataset(TorchDataset):
     """
     A dataset of multiple configurations (:class:`~kliff.dataset.Configuration`).
 
@@ -319,16 +521,44 @@ class Dataset:
     def __init__(
         self,
         path: Optional[Path] = None,
-        weight: Optional[Weight] = None,
         file_format="xyz",
+        colabfit_database=None,
+        kim_property=None,
+        colabfit_dataset=None,
+        descriptor=None,
     ):
         self.file_format = file_format
-
+        self.descriptor = descriptor
         if path is not None:
-            self.configs = self._read(path, weight, file_format)
+            self.configs = self._read(path, file_format)
+
+        elif colabfit_database is not None:
+            if colabfit_dataset is not None:
+                # open link to the mongo
+                if "colabfit" in sys.modules:
+                    self.mongo_client = MongoDatabase(colabfit_database)
+                    self.colabfit_dataset = colabfit_dataset
+                    self.kim_property = kim_property
+                    self.configs = self._read_colabfit(
+                        self.mongo_client, colabfit_dataset, kim_property
+                    )
+                else:
+                    logger.error(f"colabfit tools not installed.")
+                    raise ModuleNotFoundError(
+                        f"You are trying to read configuration from colabfit dataset"
+                        " but colabfit-tools module is not installed."
+                        " Please do `pip install colabfit` first"
+                    )
+            else:
+                logger.error(
+                    f"colabfit database provided ({colabfit_database}) but not dataset."
+                )
+                raise DatasetError(f"No dataset name given.")
 
         else:
-            self.configs = []
+            self.configs: List[Configuration] = []
+
+        self.train_on = None
 
     def add_configs(self, path: Path, weight: Optional[Weight] = None):
         """
@@ -398,6 +628,59 @@ class Dataset:
         logger.info(f"{len(configs)} configurations read from {path}")
 
         return configs
+
+    @staticmethod
+    def _read_colabfit(
+        client: MongoDatabase, dataset_name: str, aux_property_fields: str = None
+    ):
+        """
+        Read atomic configurations from path.
+        """
+
+        # get configuration and property ID and send it to load configuration
+        dataset_id_query = client.get_data(
+            "datasets", fields=["_id"], query={"name": dataset_name}
+        )
+        if not dataset_id_query:
+            logger.error(f"{dataset_name} is either empty or does not exist")
+            raise DatasetError(f"{dataset_name} is either empty or does not exist")
+        if len(dataset_id_query) > 1:
+            raise DatasetError(f"{dataset_name} apparently links to {len(dataset_id_query)} datasets with "
+                               f"following ids {' '.join(dataset_id_query)}." 
+                               " Please remove or rename the redundant dataset.")
+
+        colabfit_dataset = client.get_dataset(dataset_id_query[0])
+        configuration_ids = []
+        for cs in colabfit_dataset["dataset"].configuration_set_ids:
+            cos = client.get_configuration_set(cs)["configuration_set"].configuration_ids
+            configuration_ids.extend(cos)
+        property_ids = colabfit_dataset["dataset"].property_ids
+
+        if len(configuration_ids) != len(property_ids):
+            raise ConfigurationError("Number of Configurations and Properties do no match")
+
+        configs = [
+            Configuration.from_colabfit(
+                client, ids[0], ids[1], aux_property_fields=aux_property_fields
+            )
+            for ids in zip(configuration_ids, property_ids)
+        ]
+
+        if len(configs) <= 0:
+            raise DatasetError(f"No dataset file with in {dataset_name} dataset.")
+
+        logger.info(f"{len(configs)} configurations read from {dataset_name}")
+
+        return configs
+
+    def __len__(self) -> int:
+        return len(self.configs)
+
+    def __getitem__(self, idx):
+        if self.descriptor and not self.configs[idx].descriptor:
+            self.configs[idx].descriptor = self.descriptor.transform(self.configs[idx])
+        else:
+            return self.configs[idx]
 
 
 class ConfigurationError(Exception):

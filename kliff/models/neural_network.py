@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from kliff.descriptors.descriptor import Descriptor
+# from kliff.legacy.descriptors.descriptor import Descriptor
 from kliff.models.model_torch import ModelTorch
 
 
@@ -23,7 +23,7 @@ class NeuralNetwork(ModelTorch):
         seed: Global seed for random numbers.
     """
 
-    def __init__(self, descriptor: Descriptor, seed=35):
+    def __init__(self, descriptor, seed=35):
         super(NeuralNetwork, self).__init__(descriptor, seed)
 
         self.layers = None
