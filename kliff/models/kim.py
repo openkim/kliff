@@ -223,9 +223,7 @@ class KIMComputeArguments(ComputeArguments):
                 raise kimpy.KimPyError("Calling `nl.create_paddings()` failed.")
 
             num_padding = padding_species_code.size
-            self.num_particles = np.array(
-                [num_contributing + num_padding], dtype=np.intc
-            )
+            self.num_particles = np.array([num_contributing + num_padding], dtype=np.intc)
             tmp = np.concatenate((contributing_coords, padding_coords))
             self.coords = np.asarray(tmp, dtype=np.double)
             tmp = np.concatenate((contributing_species_code, padding_species_code))
@@ -316,9 +314,7 @@ class KIMComputeArguments(ComputeArguments):
             try:
                 self.kim_ca.set_argument_pointer(kim_can.partialEnergy, self.energy)
             except RuntimeError:
-                raise kimpy.KimPyError(
-                    "Calling `kim_ca.set_argument_pointer()` failed."
-                )
+                raise kimpy.KimPyError("Calling `kim_ca.set_argument_pointer()` failed.")
 
         else:
             self.energy = None
@@ -334,9 +330,7 @@ class KIMComputeArguments(ComputeArguments):
             try:
                 self.kim_ca.set_argument_pointer(kim_can.partialForces, self.forces)
             except RuntimeError:
-                raise kimpy.KimPyError(
-                    "Calling `kim_ca.set_argument_pointer()` failed."
-                )
+                raise kimpy.KimPyError("Calling `kim_ca.set_argument_pointer()` failed.")
 
         else:
             self.forces = None
@@ -558,9 +552,7 @@ class KIMModel(Model):
                 try:
                     self.kim_model.set_parameter(p_idx, c_idx, v)
                 except RuntimeError:
-                    raise kimpy.KimPyError(
-                        "Calling `kim_model.set_parameter()` failed."
-                    )
+                    raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
         try:
             self.kim_model.clear_then_refresh()
@@ -569,9 +561,6 @@ class KIMModel(Model):
 
         # reset influence distance in case it changes
         self.init_influence_distance()
-
-        # Cache the initial parameter guess
-        self._initial_params_cache = self.get_opt_params().copy()
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """
@@ -625,9 +614,7 @@ class KIMModel(Model):
                 try:
                     self.kim_model.set_parameter(p_idx, c_idx, value)
                 except RuntimeError:
-                    raise kimpy.KimPyError(
-                        "Calling `kim_model.set_parameter()` failed."
-                    )
+                    raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
         # When params_transform is set, a user can do whatever in it
         # function, e.g. update a parameter that is not an optimizing parameter.
