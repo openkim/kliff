@@ -283,13 +283,6 @@ class Calculator:
     def _is_kim_model(self):
         return self.model.__class__.__name__ == "KIMModel"
 
-    @property
-    def _initial_params_cache(self):
-        """
-        Return the cache for the initial parameter guess.
-        """
-        return self.model._initial_params_cache
-
 
 class _WrapperCalculator(object):
     """
@@ -332,6 +325,11 @@ class _WrapperCalculator(object):
         return start_end
 
     def get_compute_arguments(self, flat=True):
+        """
+        Retrieve list of compute arguments. If ``flat=True``, then a 1D list will be
+        returned. Otherwise, nested lists (2D) will be returned, where each nested list
+        contain the compute arguments for each calculator.
+        """
         all_cas = []
         for calc in self._calculators:
             cas = calc.get_compute_arguments()
@@ -376,7 +374,7 @@ class _WrapperCalculator(object):
 
     def has_opt_params_bounds(self):
         """
-        Return a bool to indicate whether there are parameters whose bounds are
+        Return a boolean to indicate whether there are parameters whose bounds are
         provided.
         """
         calc_list = self.get_calculator_list()
@@ -384,12 +382,6 @@ class _WrapperCalculator(object):
             calc.model.has_opt_params_bounds() for calc in calc_list
         ]
         return all(has_opt_params_bounds_per_calc)
-
-    @property
-    def _initial_params_cache(self):
-        return np.concatenate(
-            [calc._initial_params_cache for calc in self._calculators]
-        )
 
 
 class CalculatorError(Exception):

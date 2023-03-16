@@ -1,30 +1,10 @@
-"""
-What to test for empirical model:
-- [] Default bootstrap cas generator function, check the shape of the returned list. I
-     think we can also combine this test with the other tests below.
-- [] Check if we get the correct identifier from the function. Create a calculator with
-     only 4 configs. However, we might be able to skip this, since we just use the
-     built-in function to do this.
-- [] Test if function to generate bootstrap cas works. Check the shape of the prepared
-     cas.
-- [] If we call this function again, will we append the prepared cas?
-- [] What if we load from file? Will we append the prepared cas?
-- [] After we run the calculation, do we get the correct number of samples?
-- [] If we restore loss, will we return to the initial state?
-- [] Check reset method.
-- [] There is also things to check if we use multiple calculators, e.g., calc0 compute
-     forces and calc1 compute energies.
-"""
-
 from pathlib import Path
 import numpy as np
-import pytest
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
-from kliff.uq import MCMC, get_T0
 
 from kliff.uq.bootstrap import BootstrapEmpiricalModel
 

@@ -260,19 +260,23 @@ class BootstrapEmpiricalModel:
         )
         return new_bootstrap_compute_arguments_identifiers
 
-    def run(self, min_kwargs={}, residual_fn_list=None):
+    def run(self, initial_guess=None, residual_fn_list=None, min_kwargs={}):
         """
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
 
         Parameters
         ----------
-        min_kwargs: dict
-            Keyword arguments for: meth: `~kliff.loss.Loss.minimize`.
-        residual_fn_list: list
+        initial_guess: np.ndarray (optional)
+            Initial guess of parameters to use for the minimization. It is recommended to
+            use the same values as used in the training process if such step is done prior
+            to running bootstrap.
+        residual_fn_list: list (optional)
             List of residual function to use in each calculator. Currently, this only
             affect the case when multiple calculators are used. If there is only a single
             calculator, don't worry about this argument.
+        min_kwargs: dict (optional)
+            Keyword arguments for: meth: `~kliff.loss.Loss.minimize`.
         """
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
@@ -291,7 +295,8 @@ class BootstrapEmpiricalModel:
                 ]
 
             # Set the initial parameter guess
-            initial_guess = self.calculator._initial_params_cache
+            if initial_guess is None:
+                initial_guess = self.calculator.get_opt_params().copy()
             self.calculator.update_model_params(initial_guess)
             # TODO This assumes that we use the built-in residual functions
             if self.use_multi_calc:
