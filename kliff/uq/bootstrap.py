@@ -434,11 +434,18 @@ class BootstrapNeuralNetworkModel:
         # Initiate the bootstrap configurations property
         self.bootstrap_fingerprints = {}
         self.samples = np.empty((0, self.calculator.get_num_opt_params()))
-        self._nsamples_prepared = 0
 
         # Save the original state of the model before running bootstrap
         self.orig_state_filename = orig_state_filename
         self.model.save(orig_state_filename)
+
+    @property
+    def _nsamples_prepared(self):
+        """
+        Get how many bootstrap compute arguments are prepared. This also include those
+        compute arguments set that have been evaluated.
+        """
+        return len(self.bootstrap_compute_arguments)
 
     @property
     def _nsamples_done(self):
@@ -450,14 +457,15 @@ class BootstrapNeuralNetworkModel:
         """
         return len(self.samples)
 
-    def generate_bootstrap_fingerprints(
+    def generate_bootstrap_compute_arguments(
         self, nsamples, bootstrap_cas_generator_fn=None, **kwargs
     ):
         """
-        Generate bootstrap compute arguments samples. If this function is called multiple,
-        say, K times, then it will in total generate :math:`K \times nsamples` bootstrap
-        compute arguments samples. That is, consecutive call of this function will append
-        the generated compute arguments samples.
+        Generate bootstrap compute arguments (fingerprints) samples. If this function is
+        called multiple, say, K times, then it will in total generate
+        :math:`K \times nsamples` bootstrap compute arguments samples. That is,
+        consecutive call of this function will append the generated compute arguments
+        samples.
 
         Parameters
         ----------
@@ -480,12 +488,11 @@ class BootstrapNeuralNetworkModel:
         # Generate a new bootstrap configurations
         new_bootstrap_fingerprints = bootstrap_cas_generator_fn(nsamples, **kwargs)
         # Update the old list with this new list
-        self.bootstrap_fingerprints = self._update_bootstrap_fingerprints(
+        self.bootstrap_fingerprints = self._update_bootstrap_compute_arguments(
             new_bootstrap_fingerprints
         )
-        self._nsamples_prepared += nsamples
 
-    def _update_bootstrap_fingerprints(self, new_bootstrap_fingerprints):
+    def _update_bootstrap_compute_arguments(self, new_bootstrap_fingerprints):
         """
         Append the new generated bootstrap compute arguments samples to the old list.
         """
@@ -496,7 +503,7 @@ class BootstrapNeuralNetworkModel:
 
         return bootstrap_fingerprints
 
-    def save_bootstrap_fingerprints(self, filename):
+    def save_bootstrap_compute_arguments(self, filename):
         """
         Export the generated bootstrap compute arguments as a json file. The json file
         will contain the identifier of the compute arguments for each sample.
@@ -518,7 +525,7 @@ class BootstrapNeuralNetworkModel:
         with open(filename, "w") as f:
             json.dump(bootstrap_fingerprints_identifiers, f, indent=4)
 
-    def load_bootstrap_fingerprints(self, filename):
+    def load_bootstrap_compute_arguments(self, filename):
         """
         Load the bootstrap compute arguments from a json file. If a list of bootstrap
         compute arguments samples exists prior to this function call, then the samples
@@ -552,10 +559,9 @@ class BootstrapNeuralNetworkModel:
             new_bootstrap_fingerprints.update({ii: fp_ii})
 
         # Update the old list with this new list
-        self.bootstrap_fingerprints = self._update_bootstrap_fingerprints(
+        self.bootstrap_fingerprints = self._update_bootstrap_compute_arguments(
             new_bootstrap_fingerprints
         )
-        self._nsamples_prepared += len(new_bootstrap_fingerprints)
         return new_bootstrap_fingerprints_identifiers
 
     def run(self, min_kwargs={}):
@@ -610,8 +616,6 @@ class BootstrapNeuralNetworkModel:
         """
         self.restore_loss()
         self.bootstrap_fingerprints = {}
-        self._nsamples_done = 0
-        self._nsamples_prepared = 0
 
 
 class BootstrapError(Exception):
