@@ -27,6 +27,8 @@ tests/echo*
 tests/fingerprints/
 tmp_*
 *_kliff_trained/
+tests/uq/*.pkl
+tests/uq/kliff_saved_model
 
 # dataset
 Si_training_set_4_configs
