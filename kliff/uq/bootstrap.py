@@ -1,8 +1,8 @@
 """I am still working on this script to do bootstrap UQ."""
 
-import os
 import copy
 import json
+import os
 from pathlib import Path
 from typing import Callable, List, Optional
 
@@ -12,8 +12,8 @@ from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.loss import (
     Loss,
-    LossPhysicsMotivatedModel,
     LossNeuralNetworkModel,
+    LossPhysicsMotivatedModel,
     energy_forces_residual,
     energy_residual,
     forces_residual,
@@ -86,7 +86,9 @@ class _BaseBootstrap:
             new_bootstrap_compute_arguments
         )
 
-    def _update_bootstrap_compute_arguments(self, new_bootstrap_compute_arguments: dict):
+    def _update_bootstrap_compute_arguments(
+        self, new_bootstrap_compute_arguments: dict
+    ):
         """
         Append the new generated bootstrap compute arguments samples to the old list.
         """
@@ -199,7 +201,9 @@ def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List):
     for ii in range(nsamples):
         # Generate a bootstrap sample configuration
         # Generate the bootstrap indices
-        bootstrap_idx = np.random.choice(range(ncas_total), size=ncas_total, replace=True)
+        bootstrap_idx = np.random.choice(
+            range(ncas_total), size=ncas_total, replace=True
+        )
         # From the indices, get bootstrap compute arguments
         comb_bootstrap_cas = [comb_orig_cas[ii] for ii in bootstrap_idx]
         # We also need to deal with the calculator index
@@ -259,8 +263,8 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 self.calculator.get_compute_arguments(flat=False)
             )
             self.use_multi_calc = True
-        self._orig_compute_arguments_identifiers = get_identifiers_from_compute_arguments(
-            self.orig_compute_arguments
+        self._orig_compute_arguments_identifiers = (
+            get_identifiers_from_compute_arguments(self.orig_compute_arguments)
         )
 
     def generate_bootstrap_compute_arguments(
@@ -395,9 +399,9 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 for jj, calc in enumerate(self.calculator.calculators):
                     calc.compute_arguments = self.bootstrap_compute_arguments[ii][jj]
             else:
-                self.calculator.compute_arguments = self.bootstrap_compute_arguments[ii][
-                    0
-                ]
+                self.calculator.compute_arguments = self.bootstrap_compute_arguments[
+                    ii
+                ][0]
 
             # Set the initial parameter guess
             if initial_guess is None:
@@ -524,7 +528,9 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         to the initial state.
     """
 
-    def __init__(self, loss: Loss, orig_state_filename: Optional[str] = "orig_model.pkl"):
+    def __init__(
+        self, loss: Loss, orig_state_filename: Optional[str] = "orig_model.pkl"
+    ):
         super().__init__(loss)
         # Check if the calculator uses separate species
         if isinstance(self.calculator, CalculatorTorchSeparateSpecies):
@@ -629,7 +635,8 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             identifiers_ii = new_bootstrap_compute_arguments_identifiers[str(ii)]
             reference = self._orig_compute_arguments_identifiers
             fp_ii = [
-                self.orig_compute_arguments[reference.index(ss)] for ss in identifiers_ii
+                self.orig_compute_arguments[reference.index(ss)]
+                for ss in identifiers_ii
             ]
             # Update the new bootstrap fingerprints dictionary
             new_bootstrap_compute_arguments.update({ii: fp_ii})

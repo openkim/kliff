@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 import numpy as np
 
 from kliff import nn
@@ -8,7 +9,6 @@ from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
-
 from kliff.uq.bootstrap import BootstrapNeuralNetworkModel
 
 seed = 1717
@@ -77,7 +77,9 @@ def test_original_state():
     ), "There should be 2 elements in orig_state_filename"
     # check elements
     splitted_path = os.path.splitext(orig_state_filename)
-    fnames = [Path(splitted_path[0] + f"_{el}" + splitted_path[1]) for el in ["Si", "C"]]
+    fnames = [
+        Path(splitted_path[0] + f"_{el}" + splitted_path[1]) for el in ["Si", "C"]
+    ]
     assert np.all(
         [str(fname) in BS.orig_state_filename for fname in fnames]
     ), "Not all original state filename are listed"

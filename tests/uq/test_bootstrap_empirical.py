@@ -1,12 +1,12 @@
 from pathlib import Path
-import pytest
+
 import numpy as np
+import pytest
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
-
 from kliff.uq.bootstrap import Bootstrap, BootstrapEmpiricalModel, BootstrapError
 
 seed = 1717

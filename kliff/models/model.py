@@ -481,7 +481,9 @@ class Model:
             params: updated parameter values from the optimizer.
         """
         self.model_params_transformed = self.opt_params.update_opt_params(params)
-        self.model_params = self._inverse_transform_params(self.model_params_transformed)
+        self.model_params = self._inverse_transform_params(
+            self.model_params_transformed
+        )
 
     def get_opt_param_name_value_and_indices(
         self, index: int
