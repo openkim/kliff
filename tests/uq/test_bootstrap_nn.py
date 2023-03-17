@@ -4,8 +4,9 @@ TODO:
 """
 
 from pathlib import Path
-import pytest
+
 import numpy as np
+import pytest
 
 from kliff import nn
 from kliff.calculators import CalculatorTorch
@@ -13,8 +14,7 @@ from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
-
-from kliff.uq.bootstrap import Bootstrap, BootstrapNeuralNetworkModel, BootstrapError
+from kliff.uq.bootstrap import Bootstrap, BootstrapError, BootstrapNeuralNetworkModel
 
 seed = 1717
 np.random.seed(seed)
@@ -80,7 +80,9 @@ def test_bootstrap_cas_generator():
     assert (
         len(BS.bootstrap_compute_arguments) == nsamples
     ), "The number of generated cas is not the same as requested, check the generator"
-    assert BS._nsamples_prepared == nsamples, "`_nsamples_prepared` property doesn't work"
+    assert (
+        BS._nsamples_prepared == nsamples
+    ), "`_nsamples_prepared` property doesn't work"
 
 
 def test_run():

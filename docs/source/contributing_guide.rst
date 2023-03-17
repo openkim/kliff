@@ -9,7 +9,7 @@ Code style
 
   .. code-block:: bash
 
-    pre-commit run pre-commit run --all-files --show-diff-on-failure
+    pre-commit run --all-files --show-diff-on-failure
 
 - The docstring of **KLIFF** follows the `Google` style, which can be found at googledoc_.
 
