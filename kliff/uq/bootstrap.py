@@ -1,5 +1,6 @@
 """I am still working on this script to do bootstrap UQ."""
 
+import os
 import copy
 import json
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.loss import Loss, energy_forces_residual, energy_residual, forces_residual
 
 
@@ -430,7 +432,13 @@ class BootstrapNeuralNetworkModel:
     def __init__(self, loss, orig_state_filename="orig_model.pkl"):
         self.loss = loss
         self.calculator = self.loss.calculator
-        self.model = self.calculator.model
+        if isinstance(self.calculator, CalculatorTorchSeparateSpecies):
+            self._calc_separate_species = True
+            self.model = [model[1] for model in self.calculator.models.items()]
+            self._species = self.calculator.models
+        else:
+            self._calc_separate_species = False
+            self.model = [self.calculator.model]
         # Cache the original parameter values
         self.orig_params = copy.copy(self.calculator.get_opt_params())
         # Cache the original fingerprints
@@ -443,8 +451,16 @@ class BootstrapNeuralNetworkModel:
         self.samples = np.empty((0, self.calculator.get_num_opt_params()))
 
         # Save the original state of the model before running bootstrap
-        self.orig_state_filename = orig_state_filename
-        self.model.save(orig_state_filename)
+        if self._calc_separate_species:
+            self.orig_state_filename = []
+            for sp, model in zip(self._species, self.model):
+                splitted_path = os.path.splitext(orig_state_filename)
+                path_with_species = splitted_path[0] + f"_{sp}" + splitted_path[1]
+                self.orig_state_filename.append(path_with_species)
+                model.save(path_with_species)
+        else:
+            self.orig_state_filename = [orig_state_filename]
+            self.model[0].save(orig_state_filename)
 
     @property
     def _nsamples_prepared(self):
@@ -596,12 +612,13 @@ class BootstrapNeuralNetworkModel:
             # Update the fingerprints
             self.calculator.set_compute_arguments(self.bootstrap_compute_arguments[ii])
 
-            # Reset the initial parameters
-            for layer in self.model.layers:
-                try:
-                    layer.reset_parameters()
-                except AttributeError:
-                    pass
+            for model in self.model:
+                # Reset the initial parameters
+                for layer in model.layers:
+                    try:
+                        layer.reset_parameters()
+                    except AttributeError:
+                        pass
             # Minimization
             self.loss.minimize(**min_kwargs)
 
@@ -621,7 +638,8 @@ class BootstrapNeuralNetworkModel:
         """
         # Restore the parameters and configurations back by loading the original state
         # back.
-        self.model.load(self.orig_state_filename)
+        for model, fname in zip(self.model, self.orig_state_filename):
+            model.load(fname)
 
     def reset(self):
         """
