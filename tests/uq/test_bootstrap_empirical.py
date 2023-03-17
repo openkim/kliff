@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 import numpy as np
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
@@ -6,7 +7,7 @@ from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
 
-from kliff.uq.bootstrap import BootstrapEmpiricalModel
+from kliff.uq.bootstrap import Bootstrap, BootstrapEmpiricalModel, BootstrapError
 
 seed = 1717
 np.random.seed(seed)
@@ -42,7 +43,7 @@ loss_forces.minimize(**min_kwargs)
 orig_params = calc_forces.get_opt_params()
 
 # Bootstrap class
-BS_1calc = BootstrapEmpiricalModel(loss_forces)
+BS_1calc = Bootstrap(loss_forces)
 nsamples = np.random.randint(1, 5)
 
 
@@ -52,7 +53,22 @@ loss_comb = Loss(calc_comb)
 loss_comb.minimize(**min_kwargs)
 
 # Bootstrap class
-BS_2calc = BootstrapEmpiricalModel(loss_comb)
+BS_2calc = Bootstrap(loss_comb)
+
+
+def test_wrapper():
+    """Test if the Bootstrap class wrapper instantiate the correct class."""
+    assert isinstance(
+        BS_1calc, BootstrapEmpiricalModel
+    ), "Wrapper should instantiate BootstrapEmpiricalModel"
+
+
+def test_error():
+    """Test if BootstrapError is raised when we try to call run before generating
+    bootstrap compute arguments.
+    """
+    with pytest.raises(BootstrapError):
+        BS_1calc.run(min_kwargs=min_kwargs)
 
 
 def test_bootstrap_cas_generator():
@@ -137,6 +153,7 @@ def test_multi_calc_cas_generator():
 
 
 if __name__ == "__main__":
+    test_error()
     test_bootstrap_cas_generator()
     test_run()
     test_appending_cas()

@@ -4,6 +4,7 @@ TODO:
 """
 
 from pathlib import Path
+import pytest
 import numpy as np
 
 from kliff import nn
@@ -13,7 +14,7 @@ from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
 
-from kliff.uq.bootstrap import BootstrapNeuralNetworkModel
+from kliff.uq.bootstrap import Bootstrap, BootstrapNeuralNetworkModel, BootstrapError
 
 seed = 1717
 np.random.seed(seed)
@@ -47,8 +48,23 @@ min_kwargs = dict(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 result = loss.minimize(**min_kwargs)
 
 orig_state_filename = FILE_DIR / "orig_model.pkl"
-BS = BootstrapNeuralNetworkModel(loss, orig_state_filename=orig_state_filename)
+BS = Bootstrap(loss, orig_state_filename=orig_state_filename)
 nsamples = np.random.randint(1, 5)
+
+
+def test_wrapper():
+    """Test if the Bootstrap class wrapper instantiate the correct class."""
+    assert isinstance(
+        BS, BootstrapNeuralNetworkModel
+    ), "Wrapper should instantiate BootstrapNeuralNetworkModel"
+
+
+def test_error():
+    """Test if BootstrapError is raised when we try to call run before generating
+    bootstrap compute arguments.
+    """
+    with pytest.raises(BootstrapError):
+        BS.run(min_kwargs=min_kwargs)
 
 
 def test_original_state():
@@ -73,7 +89,7 @@ def test_run():
     # Test the shape of ensembles
     samples = BS.samples
     shape = samples.shape
-    exp_shape = (nsamples, 30 * N1 + N1 + N1 + 1)
+    exp_shape = (nsamples, calc.get_size_opt_params()[-1])
     assert (
         shape == exp_shape
     ), f"Samples doesn't have the right shape; expected {exp_shape}, got {shape}"
