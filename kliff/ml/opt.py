@@ -8,8 +8,14 @@ from kliff.models import KIMModel
 from kliff.models.parameter import OptimizingParameters
 from kliff.dataset import Dataset
 
-import torch
-from torch.nn import Parameter, Module
+try:
+    import torch
+    from torch.nn import Parameter, Module
+except ImportError:
+    torch = None
+    Parameter = None
+    Module = None
+    logger.warning("Torch is not installed. OptimizerTorch will not work correctly.")
 
 # TODO: MPI and geodesic
 # try:

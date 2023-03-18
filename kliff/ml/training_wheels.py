@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from .graphs import KIMTorchGraphGenerator, KIMTorchGraph
 from torch_scatter import scatter
-from .libdescriptor import Descriptor
+from .descriptors import Descriptor
 import os
 
 # TODO: Figure out way to incorporate original descriptor class

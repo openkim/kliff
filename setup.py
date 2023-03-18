@@ -48,18 +48,18 @@ graph_ext = Extension(
     )
 
 
-libdescriptor = Extension(
-    "kliff.ml.libdescriptor.libdescriptor",
-    sources=[
-        "kliff/ml/libdescriptor/libdescriptor_python_bindings.cpp",
-    ],
-    include_dirs=get_includes(),
-    library_dirs=["/usr/local/lib"],
-    runtime_library_dirs=["/usr/local/lib"],
-    libraries=["descriptor"],
-    extra_compile_args=get_extra_compile_args(),
-    language="c++",
-)
+# libdescriptor = Extension(
+#     "kliff.ml.libdescriptor.libdescriptor",
+#     sources=[
+#         "kliff/ml/libdescriptor/libdescriptor_python_bindings.cpp",
+#     ],
+#     include_dirs=get_includes(),
+#     library_dirs=["/usr/local/lib"],
+#     runtime_library_dirs=["/usr/local/lib"],
+#     libraries=["descriptor"],
+#     extra_compile_args=get_extra_compile_args(),
+#     language="c++",
+# )
 # -----------------------------------------------------------------
 
 
@@ -126,7 +126,7 @@ setup(
     name="kliff",
     version=get_version(),
     packages=find_packages(),
-    ext_modules=[sym_fn, bispectrum, neighlist, libdescriptor, graph_ext],
+    ext_modules=[sym_fn, bispectrum, neighlist, graph_ext],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     extras_require={
         "test": ["pytest", "kimpy", "ptemcee", "emcee"],

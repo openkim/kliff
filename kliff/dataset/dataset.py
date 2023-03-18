@@ -11,10 +11,21 @@ from kliff.dataset.weight import Weight
 from kliff.utils import to_path
 
 # KLIFF-Torch imports
-from torch.utils.data import Dataset as TorchDataset
+try:
+    from torch.utils.data import Dataset as TorchDataset
+except ImportError:
+    logger.warning("Torch not installed. Dataset will not be Torch compatible.")
+    TorchDataset = object
 import colabfit.tools.configuration
 from colabfit.tools.database import MongoDatabase
 import sys
+
+try:
+    from ase import Atoms
+    is_ase_installed = True
+except ImportError:
+    logger.warning("ASE not installed.")
+    is_ase_installed = False
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
@@ -502,6 +513,19 @@ class Configuration:
         self._initialize_from_colabfit()
         _ = self.energy
         _ = self.forces
+
+    def as_ase_config(self):
+        if is_ase_installed:
+            return Atoms(
+                positions=self.coords,
+                symbols=self.species,
+                cell=self.cell,
+                pbc=self.PBC,
+            )
+        else:
+            raise ModuleNotFoundError(
+                "ASE is not installed. Please install ASE to use this feature."
+            )
 
 
 class Dataset(TorchDataset):

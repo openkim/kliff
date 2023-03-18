@@ -9,7 +9,7 @@ set_logger(level="INFO", stderr=True)
 
 if not torch_available():
     warnings.warn(
-        "'PyTorch' not found. All kliff machine learning modules (e.g. NeuralNetwork) "
+        "'PyTorch' not found. All kliff machine learning modules (e.g. NeuralNetwork, TrainingWheels) "
         "are not imported. Ignore this if you want to use kliff to train "
         "physics-based models."
     )
