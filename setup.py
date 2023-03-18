@@ -102,7 +102,14 @@ setup(
     ext_modules=[sym_fn, bispectrum, neighlist],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     extras_require={
-        "test": ["pytest", "kimpy", "ptemcee", "emcee"],
+        "test": ["pytest", "kimpy", "ptemcee", "emcee", "torch"],
+        "docs": [
+            "sphinx",
+            "furo",
+            "sphinx-gallery",
+            "sphinx-autodoc-typehints",
+            "matplotlib",
+        ],
     },
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
     author="Mingjian Wen",
