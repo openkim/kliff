@@ -1,7 +1,8 @@
 from pathlib import Path
+import pytest
 
 import numpy as np
-import pytest
+from scipy.optimize.optimize import OptimizeResult
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
@@ -85,6 +86,19 @@ def test_bootstrap_cas_generator():
     ), "For each sample, generator should generate the same number of cas as the original"
 
 
+def test_callback():
+    """Test if callback function works and can break the loop in run method."""
+
+    def callback(_, opt):
+        assert isinstance(opt, OptimizeResult), "Callback cannot capture the run"
+        return True
+
+    BS_1calc.run(min_kwargs=min_kwargs, callback=callback)
+    assert (
+        len(BS_1calc.samples) == 1
+    ), "Callback function cannot break the loop in run method."
+
+
 def test_run():
     """Test the method to run the calculation."""
     BS_1calc.run(min_kwargs=min_kwargs)
@@ -153,8 +167,10 @@ def test_multi_calc_cas_generator():
 
 
 if __name__ == "__main__":
+    test_wrapper()
     test_error()
     test_bootstrap_cas_generator()
+    test_callback()
     test_run()
     test_appending_cas()
     test_save_load_cas()
