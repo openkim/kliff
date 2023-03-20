@@ -86,9 +86,7 @@ class _BaseBootstrap:
             new_bootstrap_compute_arguments
         )
 
-    def _update_bootstrap_compute_arguments(
-        self, new_bootstrap_compute_arguments: dict
-    ):
+    def _update_bootstrap_compute_arguments(self, new_bootstrap_compute_arguments: dict):
         """
         Append the new generated bootstrap compute arguments samples to the old list.
         """
@@ -201,9 +199,7 @@ def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List):
     for ii in range(nsamples):
         # Generate a bootstrap sample configuration
         # Generate the bootstrap indices
-        bootstrap_idx = np.random.choice(
-            range(ncas_total), size=ncas_total, replace=True
-        )
+        bootstrap_idx = np.random.choice(range(ncas_total), size=ncas_total, replace=True)
         # From the indices, get bootstrap compute arguments
         comb_bootstrap_cas = [comb_orig_cas[ii] for ii in bootstrap_idx]
         # We also need to deal with the calculator index
@@ -240,6 +236,13 @@ def get_identifiers_from_compute_arguments(compute_arguments: List):
     return identifiers
 
 
+def default_callback(*args):
+    """
+    Default callback function that does nothing.
+    """
+    return False
+
+
 class BootstrapEmpiricalModel(_BaseBootstrap):
     """
     Bootstrap sampler class for empirical, physics-based potentials.
@@ -263,8 +266,8 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 self.calculator.get_compute_arguments(flat=False)
             )
             self.use_multi_calc = True
-        self._orig_compute_arguments_identifiers = (
-            get_identifiers_from_compute_arguments(self.orig_compute_arguments)
+        self._orig_compute_arguments_identifiers = get_identifiers_from_compute_arguments(
+            self.orig_compute_arguments
         )
 
     def generate_bootstrap_compute_arguments(
@@ -365,6 +368,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         initial_guess: Optional[np.ndarray] = None,
         residual_fn_list: Optional[List] = None,
         min_kwargs: Optional[dict] = None,
+        callback: Optional[Callable] = None,
     ):
         """
         Iterate over the generated bootstrap compute arguments samples and train the
@@ -381,7 +385,11 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
             affect the case when multiple calculators are used. If there is only a single
             calculator, don't worry about this argument.
         min_kwargs: dict (optional)
-            Keyword arguments for: meth: `~kliff.loss.Loss.minimize`.
+            Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
+        callback: callable `callback(self, minimize output) -> bool` (optional)
+            Called after each iteration. The arguments for this function are the
+            bootstrap instance and and output of :meth:`~kliff.loss.Loss.minimize`. This
+            function can also be used to break the run, by returning `True`.
         """
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
@@ -391,6 +399,10 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         if min_kwargs is None:
             min_kwargs = {}
 
+        # Callback function
+        if callback is None:
+            callback = default_callback
+
         # Train the model using each bootstrap compute arguments
         for ii in range(self._nsamples_done, self._nsamples_prepared):
             # Update the compute arguments
@@ -399,9 +411,9 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 for jj, calc in enumerate(self.calculator.calculators):
                     calc.compute_arguments = self.bootstrap_compute_arguments[ii][jj]
             else:
-                self.calculator.compute_arguments = self.bootstrap_compute_arguments[
-                    ii
-                ][0]
+                self.calculator.compute_arguments = self.bootstrap_compute_arguments[ii][
+                    0
+                ]
 
             # Set the initial parameter guess
             if initial_guess is None:
@@ -429,12 +441,16 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                         residual_fn_list.append(residual_fn)
                 self.loss.residual_fn = residual_fn_list
             # Minimization
-            self.loss.minimize(**min_kwargs)
+            opt_res = self.loss.minimize(**min_kwargs)
 
             # Append the parameters to the samples
             self.samples = np.row_stack(
                 (self.samples, self.loss.calculator.get_opt_params())
             )
+
+            # Callback
+            if callback(self, opt_res):
+                break
 
         # Finishing up
         self.restore_loss()  # Restore the loss function
@@ -528,9 +544,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         to the initial state.
     """
 
-    def __init__(
-        self, loss: Loss, orig_state_filename: Optional[str] = "orig_model.pkl"
-    ):
+    def __init__(self, loss: Loss, orig_state_filename: Optional[str] = "orig_model.pkl"):
         super().__init__(loss)
         # Check if the calculator uses separate species
         if isinstance(self.calculator, CalculatorTorchSeparateSpecies):
@@ -635,8 +649,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             identifiers_ii = new_bootstrap_compute_arguments_identifiers[str(ii)]
             reference = self._orig_compute_arguments_identifiers
             fp_ii = [
-                self.orig_compute_arguments[reference.index(ss)]
-                for ss in identifiers_ii
+                self.orig_compute_arguments[reference.index(ss)] for ss in identifiers_ii
             ]
             # Update the new bootstrap fingerprints dictionary
             new_bootstrap_compute_arguments.update({ii: fp_ii})

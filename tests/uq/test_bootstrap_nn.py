@@ -80,9 +80,7 @@ def test_bootstrap_cas_generator():
     assert (
         len(BS.bootstrap_compute_arguments) == nsamples
     ), "The number of generated cas is not the same as requested, check the generator"
-    assert (
-        BS._nsamples_prepared == nsamples
-    ), "`_nsamples_prepared` property doesn't work"
+    assert BS._nsamples_prepared == nsamples, "`_nsamples_prepared` property doesn't work"
 
 
 def test_run():
@@ -128,6 +126,8 @@ def test_reset():
 
 
 if __name__ == "__main__":
+    test_wrapper()
+    test_error()
     test_original_state()
     test_bootstrap_cas_generator()
     test_run()
