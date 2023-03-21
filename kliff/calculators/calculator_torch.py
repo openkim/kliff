@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any, Tuple
 
 import numpy as np
 import torch
@@ -125,7 +125,7 @@ class CalculatorTorch:
         # Finally, assign fingerprints dataset property as a FingerprintsDataset instance
         self.fingerprints_dataset = FingerprintsDataset(self.fingerprints_path)
 
-    def get_fingerprints_dataset(self):
+    def get_fingerprints(self) -> List[Any]:
         """
         Return a list of fingerprints of the configurations.
         """
@@ -143,7 +143,7 @@ class CalculatorTorch:
 
         return loader
 
-    def set_compute_arguments(self, fingerprints):
+    def set_fingerprints(self, fingerprints: List[Any]):
         """
         Update the fingerprints of the calculator. The fingerprints input argument should
         be in the same format as the output of `meth:~kliff.descriptors.descriptor.load_fingerprints`,
@@ -276,7 +276,7 @@ class CalculatorTorch:
         forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
         return forces
 
-    def get_size_opt_params(self):
+    def get_size_opt_params(self) -> Tuple[List[int], List[int], int]:
         """
         Return the size of the parameters.
 
@@ -298,13 +298,13 @@ class CalculatorTorch:
         nparams = sum(nelements)
         return sizes, nelements, nparams
 
-    def get_num_opt_params(self):
+    def get_num_opt_params(self) -> int:
         """
         Return the total number of parameters.
         """
         return self.get_size_opt_params()[-1]
 
-    def get_opt_params(self, flat=True):
+    def get_opt_params(self, flat: bool = True) -> Union[List, np.array]:
         """
         Retrieve the parameters, i.e., weights and biases.
 
@@ -330,7 +330,7 @@ class CalculatorTorch:
             # Return a list of tensors
             return self._convert_from_flat_parameters(parameters)
 
-    def update_model_params(self, parameters):
+    def update_model_params(self, parameters: np.array):
         """
         Update the model parameters from a 1D array.
 
@@ -345,7 +345,7 @@ class CalculatorTorch:
         for ii, param in enumerate(self.model.parameters()):
             param.data = parameters[ii]
 
-    def _convert_from_flat_parameters(self, flat_params):
+    def _convert_from_flat_parameters(self, flat_params: np.array) -> List:
         """
         Convert the parameters from a 1D array format to nested lists format.
         """
@@ -356,7 +356,7 @@ class CalculatorTorch:
         parameters = []
         for ii, size in enumerate(sizes):
             params = flat_params[idx[ii] : idx[ii + 1]]
-            parameters.append(torch.Tensor(params.reshape(size)))
+            parameters.append(torch.Parameter(params.reshape(size)))
         return parameters
 
 
