@@ -324,7 +324,7 @@ class _WrapperCalculator(object):
             i += n
         return start_end
 
-    def get_compute_arguments(self, flat=True):
+    def get_compute_arguments(self, flat: bool = True) -> np.array:
         """
         Retrieve list of compute arguments. If ``flat=True``, then a 1D list will be
         returned. Otherwise, nested lists (2D) will be returned, where each nested list
@@ -372,12 +372,12 @@ class _WrapperCalculator(object):
             calc_list.extend([calc] * N)
         return calc_list
 
-    def has_opt_params_bounds(self):
+    def has_opt_params_bounds(self) -> bool:
         """
         Return a boolean to indicate whether there are parameters whose bounds are
         provided.
         """
-        calc_list = self.get_calculator_list()
+        calc_list = self._calculators
         has_opt_params_bounds_per_calc = [
             calc.model.has_opt_params_bounds() for calc in calc_list
         ]

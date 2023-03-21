@@ -4,7 +4,7 @@ import copy
 import json
 import os
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Any, Union
 
 import numpy as np
 
@@ -40,7 +40,7 @@ class _BaseBootstrap:
         self.samples = np.empty((0, self.calculator.get_num_opt_params()))
 
     @property
-    def _nsamples_done(self):
+    def _nsamples_done(self) -> int:
         """
         For each bootstrap compute arguments sample, we need to train the potential using
         these compute arguments. This function retrieve how many bootstrap compute
@@ -50,7 +50,7 @@ class _BaseBootstrap:
         return len(self.samples)
 
     @property
-    def _nsamples_prepared(self):
+    def _nsamples_prepared(self) -> int:
         """
         Get how many bootstrap compute arguments are prepared. This also include those
         compute arguments set that have been evaluated.
@@ -86,7 +86,9 @@ class _BaseBootstrap:
             new_bootstrap_compute_arguments
         )
 
-    def _update_bootstrap_compute_arguments(self, new_bootstrap_compute_arguments: dict):
+    def _update_bootstrap_compute_arguments(
+        self, new_bootstrap_compute_arguments: dict
+    ) -> dict:
         """
         Append the new generated bootstrap compute arguments samples to the old list.
         """
@@ -98,7 +100,7 @@ class _BaseBootstrap:
         return bootstrap_compute_arguments
 
     def _save_bootstrap_compute_arguments(
-        self, filename: str, identifiers_converter_fn: Callable
+        self, filename: Union[Path, str], identifiers_converter_fn: Callable
     ):
         """
         Export the generated bootstrap compute arguments as a json file. The json file
@@ -154,7 +156,7 @@ class Bootstrap:
             return BootstrapNeuralNetworkModel(loss, *args, **kwargs)
 
 
-def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List):
+def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List) -> dict:
     """
     Default class to generate bootstrap compute arguments for empirical, physics-based
     model. The compute arguments from all calculators will be combined, then the bootstrap
@@ -215,7 +217,7 @@ def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List):
     return bootstrap_cas
 
 
-def get_identifiers_from_compute_arguments(compute_arguments: List):
+def get_identifiers_from_compute_arguments(compute_arguments: List) -> List[List[str]]:
     """
     Retrieve the identifiers of a list of compute arguments.
 
@@ -303,7 +305,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
             nsamples, bootstrap_cas_generator_fn, **kwargs
         )
 
-    def save_bootstrap_compute_arguments(self, filename: str):
+    def save_bootstrap_compute_arguments(self, filename: Union[Path, str]):
         """
         Export the generated bootstrap compute arguments as a json file. The json file
         will contain the identifier of the compute arguments for each sample.
@@ -317,7 +319,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
             filename, get_identifiers_from_compute_arguments
         )
 
-    def load_bootstrap_compute_arguments(self, filename: str):
+    def load_bootstrap_compute_arguments(self, filename: Union[Path, str]) -> dict:
         """
         Load the bootstrap compute arguments from a json file. If a list of bootstrap
         compute arguments samples exists prior to this function call, then the samples
@@ -365,11 +367,11 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
 
     def run(
         self,
-        initial_guess: Optional[np.ndarray] = None,
+        initial_guess: Optional[np.array] = None,
         residual_fn_list: Optional[List] = None,
         min_kwargs: Optional[dict] = None,
         callback: Optional[Callable] = None,
-    ):
+    ) -> np.array:
         """
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
@@ -390,6 +392,11 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
             Called after each iteration. The arguments for this function are the
             bootstrap instance and and output of :meth:`~kliff.loss.Loss.minimize`. This
             function can also be used to break the run, by returning `True`.
+
+        Returns
+        -------
+        samples: np.ndarray
+            Parameter samples from bootstrapping.
         """
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
@@ -466,7 +473,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         self.calculator.update_model_params(self.orig_params)
 
 
-def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List):
+def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List) -> dict:
     """
     Default class to generate bootstrap compute arguments(fingerprints) for neural
     network model. Currently, we only have a simple case, where we assume that there is
@@ -512,7 +519,7 @@ def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List
     return bootstrap_fingerprints
 
 
-def get_identifiers_from_fingerprints(fingerprints: List):
+def get_identifiers_from_fingerprints(fingerprints: List) -> List[str]:
     """
     Retrieve the identifiers of a list of fingerprints.
 
@@ -555,7 +562,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             self._calc_separate_species = False
             self.model = [self.calculator.model]
         # Cache the original fingerprints
-        self.orig_compute_arguments = self.calculator.get_fingerprints_dataset()
+        self.orig_compute_arguments = self.calculator.get_fingerprints()
         self._orig_compute_arguments_identifiers = get_identifiers_from_fingerprints(
             self.orig_compute_arguments
         )
@@ -605,7 +612,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             nsamples, bootstrap_cas_generator_fn, **kwargs
         )
 
-    def save_bootstrap_compute_arguments(self, filename: str):
+    def save_bootstrap_compute_arguments(self, filename: Union[Path, str]):
         """
         Export the generated bootstrap compute arguments as a json file. The json file
         will contain the identifier of the compute arguments for each sample.
@@ -619,7 +626,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             filename, get_identifiers_from_fingerprints
         )
 
-    def load_bootstrap_compute_arguments(self, filename: str):
+    def load_bootstrap_compute_arguments(self, filename: Union[Path, str]) -> dict:
         """
         Load the bootstrap compute arguments from a json file. If a list of bootstrap
         compute arguments samples exists prior to this function call, then the samples
@@ -660,7 +667,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         )
         return new_bootstrap_compute_arguments_identifiers
 
-    def run(self, min_kwargs: Optional[dict] = None):
+    def run(self, min_kwargs: Optional[dict] = None) -> np.array:
         """
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
@@ -669,6 +676,11 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         ----------
         min_kwargs: dict
             Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
+
+        Returns
+        -------
+        samples: np.ndarray
+            Parameter samples from bootstrapping.
         """
         if self._nsamples_prepared == 0:
             # Bootstrap fingerprints have not been generated
@@ -681,7 +693,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         # Train the model using each bootstrap fingerprints
         for ii in range(self._nsamples_done, self._nsamples_prepared):
             # Update the fingerprints
-            self.calculator.set_compute_arguments(self.bootstrap_compute_arguments[ii])
+            self.calculator.set_fingerprints(self.bootstrap_compute_arguments[ii])
 
             for model in self.model:
                 # Reset the initial parameters

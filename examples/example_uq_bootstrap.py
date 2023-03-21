@@ -1,5 +1,5 @@
 """
-.. _tut_mcmc:
+.. _tut_bootstrap:
 
 Bootstrapping
 =============
@@ -9,10 +9,9 @@ bootstrap method. We use a Stillinger-Weber (SW) potential for silicon that is a
 in OpenKIM_.
 
 For simplicity, we only set the energy-scaling parameters, i.e., ``A`` and ``lambda`` as
-the tunable parameters. Furthermore, these parameters are physically constrained to be
-positive, thus we will work in log parameterization, i.e. ``log(A)`` and ``log(lambda)``.
-These parameters will be calibrated to energies and forces of a small dataset,
-consisting of 4 compressed and stretched configurations of diamond silicon structure.
+the tunable parameters. These parameters will be calibrated to energies and forces of a
+small dataset, consisting of 4 compressed and stretched configurations of diamond silicon
+structure.
 """
 
 
@@ -31,7 +30,6 @@ import numpy as np
 
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset
-from kliff.dataset.weight import MagnitudeInverseWeight
 from kliff.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
@@ -45,13 +43,9 @@ from kliff.utils import download_dataset
 
 # Instantiate a transformation class to do the log parameter transform
 param_names = ["A", "lambda"]
-params_transform = LogParameterTransform(param_names)
 
 # Create the model
-model = KIMModel(
-    model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006",
-    params_transform=params_transform,
-)
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
 
 # Set the tunable parameters and the initial guess
 opt_params = {"A": [["default"]], "lambda": [["default"]]}
