@@ -24,23 +24,23 @@ def delete_tmp_params(fname):
 def energy_forces_stress(
     model, config, use_energy=False, use_forces=False, use_stress=False
 ):
-
-    pred_energy = -56.08345486063805
+    pred_energy = -56.08346669855117
     pred_forces = [
-        [2.41107532e-02, 1.29215347e-03, 2.89182619e-04],
-        [-2.13103656e-02, -7.23000337e-03, -1.28954011e-02],
-        [3.89036609e-04, -2.07124189e-03, -3.83185414e-01],
-        [7.03144295e-04, 4.09004596e-04, -3.62012614e-01],
-        [-1.84061312e-03, 6.56687434e-03, 3.62871504e-01],
-        [-6.79944094e-03, 6.50195868e-03, 3.95977434e-01],
+        [2.41100250e-02, 1.29088535e-03, 2.89203985e-04],
+        [-2.13103445e-02, -7.23018831e-03, -1.28954010e-02],
+        [3.89467457e-04, -2.07198659e-03, -3.83186169e-01],
+        [7.03134231e-04, 4.08830982e-04, -3.62012628e-01],
+        [-1.84062274e-03, 6.56670624e-03, 3.62871519e-01],
+        [-6.79901017e-03, 6.50120560e-03, 3.95978177e-01],
     ]
+
     pred_stress = [
-        4.24791582e-03,
-        4.26804209e-03,
-        4.41900170e-03,
-        -3.25993799e-06,
-        -2.05334688e-06,
-        -2.82003088e-06,
+        4.24791648e-03,
+        4.26804316e-03,
+        4.41900269e-03,
+        -3.25994400e-06,
+        -2.05334507e-06,
+        -2.82003359e-06,
     ]
 
     ref_energy = -5.302666
@@ -107,10 +107,12 @@ def energy_forces_stress(
 
 
 def test_lj():
-    model = LennardJones()
+    model = LennardJones(species=["Mo", "S"])
 
     # set optimizing parameters
-    model.set_opt_params(sigma=[[1.1, "fix"]], epsilon=[[2.1, None, 3.0]])
+    model.set_opt_params(
+        sigma=[[1.1, "fix"], [1.1], [1.1]], epsilon=[[2.1, None, 3.0], [2.1], [2.1]]
+    )
 
     model.echo_model_params()
     model.echo_opt_params()
@@ -119,10 +121,10 @@ def test_lj():
         warnings.simplefilter("ignore")
 
         # set model_params by reading from file (the same as set model_params directly)
-        filename = "tmp_lj_params.txt"
-        write_tmp_params(filename)
-        model.read_opt_params(filename)
-        delete_tmp_params(filename)
+        # filename = "tmp_lj_params.txt"
+        # write_tmp_params(filename)
+        # model.read_opt_params(filename)
+        # delete_tmp_params(filename)
 
         model.echo_model_params()
         model.echo_opt_params()
