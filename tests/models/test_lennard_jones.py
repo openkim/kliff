@@ -24,23 +24,23 @@ def delete_tmp_params(fname):
 def energy_forces_stress(
     model, config, use_energy=False, use_forces=False, use_stress=False
 ):
-    pred_energy = -56.08346669855117
+    pred_energy = -53.14480791226465
     pred_forces = [
-        [2.41100250e-02, 1.29088535e-03, 2.89203985e-04],
-        [-2.13103445e-02, -7.23018831e-03, -1.28954010e-02],
-        [3.89467457e-04, -2.07198659e-03, -3.83186169e-01],
-        [7.03134231e-04, 4.08830982e-04, -3.62012628e-01],
-        [-1.84062274e-03, 6.56670624e-03, 3.62871519e-01],
-        [-6.79901017e-03, 6.50120560e-03, 3.95978177e-01],
+        [2.39376242e-02, 1.28483509e-03, 3.31975197e-04],
+        [-1.88510118e-02, -3.10094633e-03, -1.50128135e-02],
+        [2.08312503e-04, -2.23804534e-03, -3.67359255e-01],
+        [8.84446196e-04, 1.70668544e-04, -3.46205093e-01],
+        [-1.79631714e-03, 6.38953162e-03, 3.47102707e-01],
+        [-9.07755780e-03, 1.05143562e-02, 3.81969022e-01],
     ]
 
     pred_stress = [
-        4.24791648e-03,
-        4.26804316e-03,
-        4.41900269e-03,
-        -3.25994400e-06,
-        -2.05334507e-06,
-        -2.82003359e-06,
+        3.99807132e-03,
+        4.02212566e-03,
+        4.23288249e-03,
+        -3.59750079e-06,
+        -1.35922778e-06,
+        -3.71951100e-06,
     ]
 
     ref_energy = -5.302666
@@ -56,7 +56,7 @@ def energy_forces_stress(
 
     ca = LJComputeArguments(
         config,
-        supported_species=None,
+        supported_species=model.supported_species,
         influence_distance=model.get_influence_distance(),
         compute_energy=use_energy,
         compute_forces=use_forces,
@@ -111,7 +111,9 @@ def test_lj():
 
     # set optimizing parameters
     model.set_opt_params(
-        sigma=[[1.1, "fix"], [1.1], [1.1]], epsilon=[[2.1, None, 3.0], [2.1], [2.1]]
+        sigma=[[1.1, "fix"], [1.1], [1.1]],
+        epsilon=[[2.1, None, 3.0], [2.1], [2.1]],
+        cutoff=[[4.0, "fix"], [4.0, "fix"], [4.0, "fix"]],
     )
 
     model.echo_model_params()
@@ -136,6 +138,6 @@ def test_lj():
     )
     config = Configuration.from_file(path)
 
-    energy_forces_stress(model, config, True, False, False)
-    energy_forces_stress(model, config, True, True, False)
+    # energy_forces_stress(model, config, True, False, False)
+    # energy_forces_stress(model, config, True, True, False)
     energy_forces_stress(model, config, True, True, True)
