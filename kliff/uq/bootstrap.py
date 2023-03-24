@@ -1,5 +1,3 @@
-"""I am still working on this script to do bootstrap UQ."""
-
 import copy
 import json
 import os
@@ -24,10 +22,8 @@ class _BaseBootstrap:
     """
     Base class for bootstrap sampler.
 
-    Parameters
-    ----------
-    loss: Loss
-        Loss function class instance from :class:`~kliff.loss.Loss`.
+    Args:
+        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
     """
 
     def __init__(self, loss: Loss):
@@ -42,8 +38,11 @@ class _BaseBootstrap:
     @property
     def _nsamples_done(self) -> int:
         """
+        Returns the number of bootstrap compute arguments have been used in to train the
+        model.
+
         For each bootstrap compute arguments sample, we need to train the potential using
-        these compute arguments. This function retrieve how many bootstrap compute
+        these compute arguments. This function returns how many bootstrap compute
         arguments samples have been used in the training. This is to help so that we can
         continue the calculation midway.
         """
@@ -52,8 +51,9 @@ class _BaseBootstrap:
     @property
     def _nsamples_prepared(self) -> int:
         """
-        Get how many bootstrap compute arguments are prepared. This also include those
-        compute arguments set that have been evaluated.
+        Get how many bootstrap compute arguments are prepared.
+
+        This also include those compute arguments set that have been evaluated.
         """
         return len(self.bootstrap_compute_arguments)
 
@@ -61,23 +61,22 @@ class _BaseBootstrap:
         self, nsamples: int, bootstrap_cas_generator_fn: Callable, **kwargs
     ):
         """
-        Generate bootstrap compute arguments samples. If this function is called multiple,
-        say, K times, then it will in total generate: math: `K \times nsamples` bootstrap
-        compute arguments samples. That is , consecutive call of this function will append
-        the generated compute arguments samples.
+        Generate bootstrap compute arguments samples.
 
-        Parameters
-        ----------
-        nsamples: int
-            Number of bootstrap samples to generate.
-        bootstrap_cas_generator_fn: callable ``fn(nsamples, **kwargs)`` (optional)
-            A function to generate bootstrap compute argument samples. The default
-            function combine the compute arguments across all calculators and do sampling
-            with replacement from the combined list. Another possible convention is to
-            do sampling with replacement on the compute arguments list of each calculator
-            separately, in which case a custom function needs to be defined and used.
-        kwargs: dict
-            Additional keyword arguments to ``bootstrap_cas_generator_fn``.
+        If this function is called multiple, say, K times, then it will in total
+        generate: math: `K \times nsamples` bootstrap compute arguments samples. That is,
+        consecutive call of this function will append the generated compute arguments
+        samples.
+
+        Args:
+            nsamples: Number of bootstrap samples to generate.
+            bootstrap_cas_generator_fn: A function to generate bootstrap compute argument
+                samples. The default function combine the compute arguments across all
+                calculators and do sampling with replacement from the combined list.
+                Another possible convention is to do sampling with replacement on the
+                compute arguments list of each calculator separately, in which case a
+                custom function needs to be defined and used.
+            kwargs: Additional keyword arguments to ``bootstrap_cas_generator_fn``.
         """
         # Generate a new bootstrap configurations
         new_bootstrap_compute_arguments = bootstrap_cas_generator_fn(nsamples, **kwargs)
@@ -91,6 +90,14 @@ class _BaseBootstrap:
     ) -> dict:
         """
         Append the new generated bootstrap compute arguments samples to the old list.
+
+        Args:
+            new_bootstrap_compute_arguments: Newly generated bootstrap compute arguments
+                to append to the old dictionary of bootstrap compute arguments.
+
+        Returns:
+            Updated dictionary containing all generated compute arguments, including the
+            newly generated ones.
         """
         bootstrap_compute_arguments = copy.copy(self.bootstrap_compute_arguments)
         for ii, vals in new_bootstrap_compute_arguments.items():
@@ -103,13 +110,15 @@ class _BaseBootstrap:
         self, filename: Union[Path, str], identifiers_converter_fn: Callable
     ):
         """
-        Export the generated bootstrap compute arguments as a json file. The json file
-        will contain the identifier of the compute arguments for each sample.
+        Export the generated bootstrap compute arguments as a json file.
 
-        Parameters
-        ----------
-        filename: str or Path
-            Where to export the bootstrap compute arguments samples
+        The json file will contain the identifier of the compute arguments for each
+        sample.
+
+        Args:
+            filename: Where to export the bootstrap compute arguments samples
+            identifiers_conferter_fn: A function to convert the compute arguments to their
+                identifiers.
         """
         # We cannot directly export the bootstrap compute arguments. Instead, we will
         # first convert it and list the identifiers and export the identifiers.
@@ -140,13 +149,10 @@ class Bootstrap:
     :class:`BootstrapNeuralNetworkModel` to provide a united interface. You can use the
     two classes directly.
 
-    Parameters
-    ----------
-    loss: Loss
-        Loss function class instance from :class:`~kliff.loss.Loss`.
-    args, kwargs:
-        Additional positional and keyword arguments for instantiating
-        :class:`BootstrapEmpiricalModel` or :class:`BootstrapNeuralNetworkModel`.
+    Args:
+        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        args, kwargs: Additional positional and keyword arguments for instantiating
+            :class:`BootstrapEmpiricalModel` or :class:`BootstrapNeuralNetworkModel`.
     """
 
     def __new__(self, loss: Loss, *args, **kwargs):
@@ -159,28 +165,24 @@ class Bootstrap:
 def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List) -> dict:
     """
     Default class to generate bootstrap compute arguments for empirical, physics-based
-    model. The compute arguments from all calculators will be combined, then the bootstrap
+    model.
+
+    The compute arguments from all calculators will be combined, then the bootstrap
     sample configurations will be generated from the combined list. Afterwards, the
     configurations will be split into their respective calculators.
 
-    Parameters
-    ----------
-    nsamples: int
-        Number of the bootstrap compute arguments requested.
+    Args:
+        nsamples: Number of the bootstrap compute arguments requested.
+        orig_cas: The original list of compute arguments. The bootstrap compute arguments
+            will be generated from this list. The format of this input is given below::
 
-    orig_cas: list
-        The original list of compute arguments. The bootstrap compute arguments will be
-        generated from this list. The format of this input is given below::
+                orig_cas = [
+                    [calc0_ca0, calc0_ca1, ...],
+                    [calc1_ca0, calc1_ca1, ...],
+                    ...
+                ]
 
-            orig_cas = [
-                [calc0_ca0, calc0_ca1, ...],
-                [calc1_ca0, calc1_ca1, ...],
-                ...
-            ]
-
-    Returns
-    -------
-    dict
+    Returns:
         A set of bootstrap compute arguments, written in a dictionary format, where the
         keys index the bootstrap samples compute arguments::
 
@@ -219,17 +221,14 @@ def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List) -> dict:
 
 def get_identifiers_from_compute_arguments(compute_arguments: List) -> List[List[str]]:
     """
-    Retrieve the identifiers of a list of compute arguments.
+    Retrieve the identifiers from a list of compute arguments.
 
-    Parameters
-    ----------
-    compute_arguments: list
-        A list of :class:`~kliff.models.model.ComputeArguments`.
+    Args:
+        compute_arguments: A list of :class:`~kliff.models.model.ComputeArguments`.
 
-    Returns
-    -------
-    identifiers: list
-        A list of compute arguments' identifiers, which shows the paths to the xyz files.
+    Returns:
+        identifiers: A list of compute arguments' identifiers, which shows the paths to
+            the xyz files.
     """
     identifiers = []
     for cas in compute_arguments:
@@ -249,10 +248,8 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
     """
     Bootstrap sampler class for empirical, physics-based potentials.
 
-    Parameters
-    ----------
-    loss: Loss
-        Loss function class instance from :class:`~kliff.loss.Loss`.
+    Args:
+        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
     """
 
     def __init__(self, loss: Loss):
@@ -279,23 +276,21 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         **kwargs,
     ):
         """
-        Generate bootstrap compute arguments samples. If this function is called multiple,
-        say, K times, then it will in total generate: math: `K \times nsamples` bootstrap
-        compute arguments samples. That is , consecutive call of this function will append
-        the generated compute arguments samples.
+        Generate bootstrap compute arguments samples.
+        If this function is called multiple, say, K times, then it will in total
+        generate: math: `K \times nsamples` bootstrap compute arguments samples. That is,
+        consecutive call of this function will append the generated compute arguments
+        samples.
 
-        Parameters
-        ----------
-        nsamples: int
-            Number of bootstrap samples to generate.
-        bootstrap_cas_generator_fn: callable ``fn(nsamples, **kwargs)`` (optional)
-            A function to generate bootstrap compute argument samples. The default
-            function combine the compute arguments across all calculators and do sampling
-            with replacement from the combined list. Another possible convention is to
-            do sampling with replacement on the compute arguments list of each calculator
-            separately, in which case a custom function needs to be defined and used.
-        kwargs: dict
-            Additional keyword arguments to ``bootstrap_cas_generator_fn``.
+        Args:
+            nsamples: Number of bootstrap samples to generate.
+            bootstrap_cas_generator_fn: A function to generate bootstrap compute argument
+                samples. The default function combine the compute arguments across all
+                calculators and do sampling with replacement from the combined list.
+                Another possible convention is to do sampling with replacement on the
+                compute arguments list of each calculator separately, in which case a
+                custom function needs to be defined and used.
+            kwargs: Additional keyword arguments to ``bootstrap_cas_generator_fn``.
         """
         # Function to generate bootstrap configurations
         if bootstrap_cas_generator_fn is None:
@@ -307,13 +302,13 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
 
     def save_bootstrap_compute_arguments(self, filename: Union[Path, str]):
         """
-        Export the generated bootstrap compute arguments as a json file. The json file
-        will contain the identifier of the compute arguments for each sample.
+        Export the generated bootstrap compute arguments as a json file.
 
-        Parameters
-        ----------
-        filename: str or Path
-            Where to export the bootstrap compute arguments samples
+        The json file will contain the identifier of the compute arguments for each
+        sample.
+
+        Args:
+            filename: Where to export the bootstrap compute arguments samples
         """
         self._save_bootstrap_compute_arguments(
             filename, get_identifiers_from_compute_arguments
@@ -321,19 +316,17 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
 
     def load_bootstrap_compute_arguments(self, filename: Union[Path, str]) -> dict:
         """
-        Load the bootstrap compute arguments from a json file. If a list of bootstrap
-        compute arguments samples exists prior to this function call, then the samples
-        read from this file will be appended to the old list.
+        Load the bootstrap compute arguments from a json file.
 
-        Parameters
-        ----------
-        filename: str or Path
-            Name or path of json file to read.
+        If a list of bootstrap compute arguments samples exists prior to this function
+        call, then the samples read from this file will be appended to the old list.
 
-        Returns
-        -------
-        new_bootstrap_compute_arguments_identifiers: dict
-            Dictionary read from the json file.
+        Args:
+            filename: Name or path of json file to read.
+
+        Returns:
+            new_bootstrap_compute_arguments_identifiers: Dictionary read from the json
+                file.
         """
         # Load the json file
         with open(filename, "r") as f:
@@ -376,27 +369,26 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
 
-        Parameters
-        ----------
-        initial_guess: np.ndarray (optional)
-            Initial guess of parameters to use for the minimization. It is recommended to
-            use the same values as used in the training process if such step is done prior
-            to running bootstrap.
-        residual_fn_list: list (optional)
-            List of residual function to use in each calculator. Currently, this only
-            affect the case when multiple calculators are used. If there is only a single
-            calculator, don't worry about this argument.
-        min_kwargs: dict (optional)
-            Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
-        callback: callable `callback(self, minimize output) -> bool` (optional)
-            Called after each iteration. The arguments for this function are the
-            bootstrap instance and and output of :meth:`~kliff.loss.Loss.minimize`. This
-            function can also be used to break the run, by returning `True`.
+        Args:
+            initial_guess: Initial guess of parameters to use for the minimization. It is
+                recommended to use the same values as used in the training process if
+                such step is done prior to running bootstrap.
+            residual_fn_list: List of residual function to use in each calculator.
+                Currently, this only affect the case when multiple calculators are used.
+                If there is only a single calculator, don't worry about this argument.
+            min_kwargs: Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
+            callback: Called after each iteration. The arguments for this function are
+                the bootstrap instance and and output of
+                :meth:`~kliff.loss.Loss.minimize`. This function can also be used to
+                break the run, by returning boolean `True`.
 
-        Returns
-        -------
-        samples: np.ndarray
-            Parameter samples from bootstrapping.
+        Returns:
+            samples: Parameter samples from bootstrapping.
+
+        Raises:
+            BootstrapError: If there is no bootstrap compute areguments generated prior to
+                calling this method.
+            ValueError: If the calculators use neither the energy nor forces.
         """
         if self._nsamples_prepared == 0:
             # Bootstrap compute arguments have not been generated
@@ -442,9 +434,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                         elif calculator.use_forces:
                             residual_fn = forces_residual
                         else:
-                            raise RuntimeError(
-                                "Calculator does not use energy or forces."
-                            )
+                            raise ValueError("Calculator does not use energy or forces.")
                         residual_fn_list.append(residual_fn)
                 self.loss.residual_fn = residual_fn_list
             # Minimization
@@ -475,31 +465,24 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
 
 def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List) -> dict:
     """
-    Default class to generate bootstrap compute arguments(fingerprints) for neural
-    network model. Currently, we only have a simple case, where we assume that there is
-    only a single list of compute arguments and we sample with replacement from the list.
+    Default class to generate bootstrap compute arguments (fingerprints) for neural
+    network model.
 
-    TODO:
-    - [] Work on default bootstrap cas generator function when we have multiple elements,
-      i.e., multiple NN models, each for separate element.
-    - [] Alternatively, test this implementation for such case.
+    When models for separate species are used, we assume that the compute arguments used
+    for those models are the same. This assumption is valid since usually the atomic
+    configurations contain multiple atom species, which are the same as the species used
+    for those models.
 
-    Parameters
-    ----------
-    nsamples: int
-        Number of the bootstrap compute arguments requested.
+    Args:
+        nsamples: Number of the bootstrap compute arguments requested.
+        orig_fingerprints: The original list of compute arguments(fingerprints). The
+            bootstrap compute arguments will be generated from this list. The format of
+            this input is given below: :
 
-    orig_fingerprints: list
-        The original list of compute arguments(fingerprints). The bootstrap compute
-        arguments will be generated from this list. The format of this input is given
-        below: :
+                orig_fingerprints = [ca0, ca1, ...]
 
-            orig_fingerprints = [ca0, ca1, ...]
-
-    Returns
-    -------
-    dict
-        A set of bootstrap compute arguments(fingerprints), written in a dictionary
+    Returns:
+       A set of bootstrap compute arguments(fingerprints), written in a dictionary
        format, where the keys index the bootstrap samples compute arguments::
 
             bootstrap_configs = {
@@ -523,15 +506,12 @@ def get_identifiers_from_fingerprints(fingerprints: List) -> List[str]:
     """
     Retrieve the identifiers of a list of fingerprints.
 
-    Parameters
-    ----------
-    fingerprints: list
-        A list of fingerprints.
+    Args:
+        fingerprints: A list of fingerprints.
 
-    Returns
-    -------
-    identifiers: list
-        A list of fingerprints' identifiers, which shows the paths to the xyz files.
+    Returns:
+        identifiers: A list of fingerprints' identifiers, which shows the paths to the
+        xyz files.
     """
     identifiers = [fp["configuration"].identifier for fp in fingerprints]
     return identifiers
@@ -541,17 +521,18 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
     """
     Bootstrap sampler class for neural network potentials.
 
-    Parameters
-    ----------
-    loss: Loss
-        Loss function class instance from :class:`~kliff.loss.Loss`.
-    orig_state_filename: str or Path
-        Name of the file in which the initial state of the model prior to bootstrapping
-        will be stored. This is to use at the end of the bootstrap run to reset the model
-        to the initial state.
+    Args:
+        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        orig_state_filename: Name of the file in which the initial state of the model
+            prior to bootstrapping will be stored. This is to use at the end of the
+            bootstrap run to reset the model to the initial state.
     """
 
-    def __init__(self, loss: Loss, orig_state_filename: Optional[str] = "orig_model.pkl"):
+    def __init__(
+        self,
+        loss: Loss,
+        orig_state_filename: Optional[Union[Path, str]] = "orig_model.pkl",
+    ):
         super().__init__(loss)
         # Check if the calculator uses separate species
         if isinstance(self.calculator, CalculatorTorchSeparateSpecies):
@@ -586,23 +567,22 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         **kwargs,
     ):
         """
-        Generate bootstrap compute arguments samples. If this function is called multiple,
-        say, K times, then it will in total generate: math: `K \times nsamples` bootstrap
-        compute arguments samples. That is , consecutive call of this function will append
-        the generated compute arguments samples.
+        Generate bootstrap compute arguments samples.
 
-        Parameters
-        ----------
-        nsamples: int
-            Number of bootstrap samples to generate.
-        bootstrap_cas_generator_fn: callable ``fn(nsamples, **kwargs)`` (optional)
-            A function to generate bootstrap compute argument samples. The default
-            function combine the compute arguments across all calculators and do sampling
-            with replacement from the combined list. Another possible convention is to
-            do sampling with replacement on the compute arguments list of each calculator
-            separately, in which case a custom function needs to be defined and used.
-        kwargs: dict
-            Additional keyword arguments to ``bootstrap_cas_generator_fn``.
+        If this function is called multiple, say, K times, then it will in total
+        generate: math: `K \times nsamples` bootstrap compute arguments samples. That is,
+        consecutive call of this function will append the generated compute arguments
+        samples.
+
+        Args:
+            nsamples: Number of bootstrap samples to generate.
+            bootstrap_cas_generator_fn: A function to generate bootstrap compute argument
+                samples. The default function combine the compute arguments across all
+                calculators and do sampling with replacement from the combined list.
+                Another possible convention is to do sampling with replacement on the
+                compute arguments list of each calculator separately, in which case a
+                custom function needs to be defined and used.
+            kwargs: Additional keyword arguments to ``bootstrap_cas_generator_fn``.
         """
         # Function to generate bootstrap configurations
         if bootstrap_cas_generator_fn is None:
@@ -614,13 +594,13 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
 
     def save_bootstrap_compute_arguments(self, filename: Union[Path, str]):
         """
-        Export the generated bootstrap compute arguments as a json file. The json file
-        will contain the identifier of the compute arguments for each sample.
+        Export the generated bootstrap compute arguments as a json file.
 
-        Parameters
-        ----------
-        filename: str or Path
-            Where to export the bootstrap compute arguments samples
+        The json file will contain the identifier of the compute arguments for each
+        sample.
+
+        Args:
+            filename: Where to export the bootstrap compute arguments samples
         """
         self._save_bootstrap_compute_arguments(
             filename, get_identifiers_from_fingerprints
@@ -628,19 +608,17 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
 
     def load_bootstrap_compute_arguments(self, filename: Union[Path, str]) -> dict:
         """
-        Load the bootstrap compute arguments from a json file. If a list of bootstrap
-        compute arguments samples exists prior to this function call, then the samples
-        read from this file will be appended to the old list.
+        Load the bootstrap compute arguments from a json file.
 
-        Parameters
-        ----------
-        filename: str or Path
-            Name or path of json file to read.
+        If a list of bootstrap compute arguments samples exists prior to this function
+        call, then the samples read from this file will be appended to the old list.
 
-        Returns
-        -------
-        new_bootstrap_compute_arguments_identifiers: dict
-            Dictionary read from the json file.
+        Args:
+            filename: Name or path of json file to read.
+
+        Returns:
+            new_bootstrap_compute_arguments_identifiers: Dictionary read from the json
+            file.
         """
         # Load the json file
         with open(filename, "r") as f:
@@ -672,15 +650,15 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
 
-        Parameters
-        ----------
-        min_kwargs: dict
-            Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
+        Args:
+            min_kwargs: Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
 
-        Returns
-        -------
-        samples: np.ndarray
-            Parameter samples from bootstrapping.
+        Returns:
+            samples: Parameter samples from bootstrapping.
+
+        Raises:
+            BootstrapError: If there is no bootstrap compute areguments generated prior to
+                calling this method.
         """
         if self._nsamples_prepared == 0:
             # Bootstrap fingerprints have not been generated

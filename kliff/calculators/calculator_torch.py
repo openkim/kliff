@@ -125,7 +125,7 @@ class CalculatorTorch:
         # Finally, assign fingerprints dataset property as a FingerprintsDataset instance
         self.fingerprints_dataset = FingerprintsDataset(self.fingerprints_path)
 
-    def get_fingerprints(self) -> List[Any]:
+    def get_fingerprints(self) -> List[dict]:
         """
         Return a list of fingerprints of the configurations.
         """
@@ -143,16 +143,14 @@ class CalculatorTorch:
 
         return loader
 
-    def set_fingerprints(self, fingerprints: List[Any]):
+    def set_fingerprints(self, fingerprints: List[dict]):
         """
         Update the fingerprints of the calculator. The fingerprints input argument should
         be in the same format as the output of `meth:~kliff.descriptors.descriptor.load_fingerprints`,
         which is a list of dictionaries.
 
-        Parameters
-        ----------
-        fingerprints: list
-            A list of fingerprints.
+        Args:
+            fingerprints: A list of fingerprints.
         """
         self.fingerprints_dataset.fp = fingerprints
 
@@ -280,15 +278,11 @@ class CalculatorTorch:
         """
         Return the size of the parameters.
 
-        Returns
-        -------
-        sizes: list
-            Each element in the list gives the shape of each type of parameter tensors,
-            containing, e.g., weights and biases, for each layer.
-        nelements: list
-            Number of elements of each parameter tensor.
-        nparams: int
-            Total number of parameters
+        Returns:
+            sizes: Each element in the list gives the shape of each type of parameter
+                tensors, containing, e.g., weights and biases, for each layer.
+            nelements: Number of elements of each parameter tensor.
+            nparams: Total number of parameters
         """
         sizes = []  # Size of each parameter tensor
         nelements = []  # The number of elements for each tensor
@@ -308,14 +302,10 @@ class CalculatorTorch:
         """
         Retrieve the parameters, i.e., weights and biases.
 
-        Parameters
-        ----------
-        flat: bool (optional)
-            A flag to return a flat, 1D array.
+        Args:
+            flat: A flag to return a flat, 1D array.
 
-        Returns
-        -------
-        list or np.ndarray
+        Returns:
             Parameters, i.e., weights and biases. If ``flat=True``, a 1D np.ndarray will
             be returned. Otherwise, nested lists will be returned, where each list contain
             the weights and biases for each layer.
@@ -334,10 +324,8 @@ class CalculatorTorch:
         """
         Update the model parameters from a 1D array.
 
-        Parameters
-        ----------
-        parameters: np.ndarray
-            New parameter values to set. It needs to be a 1D array.
+        Args:
+            parameters: New parameter values to set. It needs to be a 1D array.
         """
         # Convert to the right format
         parameters = self._convert_from_flat_parameters(parameters)
@@ -348,6 +336,12 @@ class CalculatorTorch:
     def _convert_from_flat_parameters(self, flat_params: np.array) -> List:
         """
         Convert the parameters from a 1D array format to nested lists format.
+
+        Args:
+            flat_params: A 1D array containing weights and biases of the model.
+
+        Returns:
+            parameters: Parameters (weiths and biases) in nested lists format.
         """
         sizes, nelems, _ = self.get_size_opt_params()
         # Indices to index the flat array to get the appropriate portion of each parameter
