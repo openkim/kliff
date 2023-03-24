@@ -312,13 +312,13 @@ class CalculatorTorch:
         """
         parameters = []
         for param in self.model.parameters():
-            parameters = np.append(parameters, param.data.numpy().flatten())
-        if flat:
-            # Return a 1D array
-            return parameters
-        else:
-            # Return a list of tensors
-            return self._convert_from_flat_parameters(parameters)
+            if flat:
+                # Make sure that the parameters are stored in host memory
+                param_host = param.data.cpu()
+                parameters = np.append(parameters, param_host.numpy().flatten())
+            else:
+                parameters.append(param)
+        return parameters
 
     def update_model_params(self, parameters: np.array):
         """
@@ -328,12 +328,12 @@ class CalculatorTorch:
             parameters: New parameter values to set. It needs to be a 1D array.
         """
         # Convert to the right format
-        parameters = self._convert_from_flat_parameters(parameters)
+        parameters = self._convert_parameters_from_1d_array(parameters)
         # Update the weights and biases
         for ii, param in enumerate(self.model.parameters()):
-            param.data = parameters[ii]
+            param = torch.nn.Parameter(parameters[ii])
 
-    def _convert_from_flat_parameters(self, flat_params: np.array) -> List:
+    def _convert_parameters_from_1d_array(self, flat_params: np.array) -> List:
         """
         Convert the parameters from a 1D array format to nested lists format.
 
@@ -350,7 +350,7 @@ class CalculatorTorch:
         parameters = []
         for ii, size in enumerate(sizes):
             params = flat_params[idx[ii] : idx[ii + 1]]
-            parameters.append(torch.Parameter(params.reshape(size)))
+            parameters.append(torch.Tensor(params.reshape(size)))
         return parameters
 
 
