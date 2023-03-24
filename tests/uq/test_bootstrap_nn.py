@@ -14,7 +14,12 @@ from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
-from kliff.uq.bootstrap import Bootstrap, BootstrapError, BootstrapNeuralNetworkModel
+from kliff.uq.bootstrap import (
+    Bootstrap,
+    BootstrapError,
+    BootstrapNeuralNetworkModel,
+    bootstrap_cas_generator_neuralnetwork,
+)
 
 seed = 1717
 np.random.seed(seed)
@@ -42,6 +47,8 @@ configs = data.get_configs()
 # calculators
 calc = CalculatorTorch(model)
 _ = calc.create(configs, use_energy=False, use_forces=True)
+fingerprints = calc.get_fingerprints()
+nfingerprints = len(fingerprints)
 
 loss = Loss(calc)
 min_kwargs = dict(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
@@ -76,11 +83,25 @@ def test_bootstrap_cas_generator():
     """Test the generator function generate the same number of bootstrap compute arguments
     samples as requested.
     """
+    # Test the shape of bootstrap cas samples with default arguments
     BS.generate_bootstrap_compute_arguments(nsamples)
+    bootstrap_cas = BS.bootstrap_compute_arguments
     assert (
-        len(BS.bootstrap_compute_arguments) == nsamples
+        len(bootstrap_cas) == nsamples
     ), "The number of generated cas is not the same as requested, check the generator"
+    assert np.all(
+        [len(bs_cas) == nfingerprints for _, bs_cas in bootstrap_cas.items()]
+    ), "For each sample, generator should generate the same number of cas as the original"
     assert BS._nsamples_prepared == nsamples, "`_nsamples_prepared` property doesn't work"
+
+    # Test the shape of bootstrap cas samples if we specify the number of cas to generate
+    nfp = nfingerprints - 1
+    bootstrap_cas_2 = bootstrap_cas_generator_neuralnetwork(
+        nsamples, fingerprints, nfingerprints=nfp
+    )
+    assert np.all(
+        [len(bs_cas) == nfp for _, bs_cas in bootstrap_cas_2.items()]
+    ), "Generator doesn't generate the same number of cas as requested for each sample"
 
 
 def test_run():

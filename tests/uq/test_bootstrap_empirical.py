@@ -8,7 +8,12 @@ from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
-from kliff.uq.bootstrap import Bootstrap, BootstrapEmpiricalModel, BootstrapError
+from kliff.uq.bootstrap import (
+    Bootstrap,
+    BootstrapEmpiricalModel,
+    BootstrapError,
+    bootstrap_cas_generator_empirical,
+)
 
 seed = 1717
 np.random.seed(seed)
@@ -73,17 +78,32 @@ def test_error():
 
 
 def test_bootstrap_cas_generator():
-    """Test the shape of generated bootstrap compute arguments. This also test the default
-    generator function.
-    """
+    """Test the shape of generated bootstrap compute arguments."""
     BS_1calc.generate_bootstrap_compute_arguments(nsamples)
     bootstrap_cas = BS_1calc.bootstrap_compute_arguments
+    # Test the shape of bootstrap cas samples with default arguments
     assert (
         len(bootstrap_cas) == nsamples
     ), "The number of generated cas is not the same as requested, check the generator"
-    assert (
-        len(bootstrap_cas[0][0]) == ncas_forces
+    assert np.all(
+        [
+            [len(bs_cas) == ncas_forces for bs_cas in bootstrap_cas[ii]]
+            for ii in range(nsamples)
+        ]
     ), "For each sample, generator should generate the same number of cas as the original"
+    assert (
+        BS_1calc._nsamples_prepared == nsamples
+    ), "`_nsamples_prepared` property doesn't work"
+
+    # Test the shape of bootstrap cas samples if we specify the number of cas to generate
+    ncas = ncas_forces - 1
+    bootstrap_cas_2 = bootstrap_cas_generator_empirical(nsamples, [cas_forces], ncas=ncas)
+    assert np.all(
+        [
+            [len(bs_cas) == ncas for bs_cas in bootstrap_cas_2[ii]]
+            for ii in range(nsamples)
+        ]
+    ), "Generator doesn't generate the same number of cas as requested for each sample"
 
 
 def test_callback():
