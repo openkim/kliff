@@ -162,7 +162,9 @@ class Bootstrap:
             return BootstrapNeuralNetworkModel(loss, *args, **kwargs)
 
 
-def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List) -> dict:
+def bootstrap_cas_generator_empirical(
+    nsamples: int, orig_cas: List, ncas: Optional[int] = None
+) -> dict:
     """
     Default class to generate bootstrap compute arguments for empirical, physics-based
     model.
@@ -182,6 +184,11 @@ def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List) -> dict:
                     ...
                 ]
 
+        ncas: Number of compute arguments to have in each sample. If not specified, the
+            function will generate the same number of compute arguments sample as the
+            number of the original compute argument list.
+
+
     Returns:
         A set of bootstrap compute arguments, written in a dictionary format, where the
         keys index the bootstrap samples compute arguments::
@@ -193,17 +200,19 @@ def bootstrap_cas_generator_empirical(nsamples: int, orig_cas: List) -> dict:
 
     """
     ncalc = len(orig_cas)  # Number of calculators
-    ncas = [len(cas) for cas in orig_cas]  # Number of compute args per calc
-    ncas_total = sum(ncas)  # Total number of compute arguments
+    # Number of compute args per calc
+    ncas_per_calc = [len(cas) for cas in orig_cas]
+    if ncas is None:
+        ncas = sum(ncas_per_calc)  # Total number of compute arguments
     # Combine the compute arguments
     comb_orig_cas = np.concatenate((orig_cas))
     # Index of which calculator each ca correspond to
-    calc_idx = np.concatenate([[ii] * nc for ii, nc in enumerate(ncas)])
+    calc_idx = np.concatenate([[ii] * nc for ii, nc in enumerate(ncas_per_calc)])
     bootstrap_cas = {}
     for ii in range(nsamples):
         # Generate a bootstrap sample configuration
         # Generate the bootstrap indices
-        bootstrap_idx = np.random.choice(range(ncas_total), size=ncas_total, replace=True)
+        bootstrap_idx = np.random.choice(range(ncas), size=ncas, replace=True)
         # From the indices, get bootstrap compute arguments
         comb_bootstrap_cas = [comb_orig_cas[ii] for ii in bootstrap_idx]
         # We also need to deal with the calculator index
@@ -295,7 +304,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         # Function to generate bootstrap configurations
         if bootstrap_cas_generator_fn is None:
             bootstrap_cas_generator_fn = bootstrap_cas_generator_empirical
-            kwargs = {"orig_cas": self.orig_compute_arguments}
+            kwargs.update({"orig_cas": self.orig_compute_arguments})
         self._generate_bootstrap_compute_arguments(
             nsamples, bootstrap_cas_generator_fn, **kwargs
         )
@@ -463,7 +472,9 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         self.calculator.update_model_params(self.orig_params)
 
 
-def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List) -> dict:
+def bootstrap_cas_generator_neuralnetwork(
+    nsamples: int, orig_fingerprints: List, nfingerprints: Optional[int] = None
+) -> dict:
     """
     Default class to generate bootstrap compute arguments (fingerprints) for neural
     network model.
@@ -481,6 +492,10 @@ def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List
 
                 orig_fingerprints = [ca0, ca1, ...]
 
+        nfingerprints: Number of compute arguments to have in each sample. If not specified, the
+            function will generate the same number of compute arguments sample as the
+            number of the original compute argument list.
+
     Returns:
        A set of bootstrap compute arguments(fingerprints), written in a dictionary
        format, where the keys index the bootstrap samples compute arguments::
@@ -492,7 +507,8 @@ def bootstrap_cas_generator_neuralnetwork(nsamples: int, orig_fingerprints: List
 
     """
     bootstrap_fingerprints = {}
-    nfingerprints = len(orig_fingerprints)
+    if nfingerprints is None:
+        nfingerprints = len(orig_fingerprints)
     for ii in range(nsamples):
         # Get 1 sample of bootstrap fingerprints
         bootstrap_fingerprints_single_sample = np.random.choice(
@@ -587,7 +603,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         # Function to generate bootstrap configurations
         if bootstrap_cas_generator_fn is None:
             bootstrap_cas_generator_fn = bootstrap_cas_generator_neuralnetwork
-            kwargs = {"orig_fingerprints": self.orig_compute_arguments}
+            kwargs.update({"orig_fingerprints": self.orig_compute_arguments})
         self._generate_bootstrap_compute_arguments(
             nsamples, bootstrap_cas_generator_fn, **kwargs
         )
