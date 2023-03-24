@@ -295,13 +295,7 @@ class _WrapperCalculator(object):
 
     # TODO methods like get_prediction needs to be implemented. The prediction of
     #  energy (force) should be the sum of each calculator.
-    def __init__(self, calculators=List[Calculator]):
-        """
-        Parameters
-        ----------
-
-        calculators: instance of Calculator
-        """
+    def __init__(self, calculators: List[Calculator]):
         self._calculators = calculators
         self._start_end = self._set_start_end()
 
@@ -329,6 +323,13 @@ class _WrapperCalculator(object):
         Retrieve list of compute arguments. If ``flat=True``, then a 1D list will be
         returned. Otherwise, nested lists (2D) will be returned, where each nested list
         contain the compute arguments for each calculator.
+
+        Args:
+            flat: Whether return a flat, 1D array or nested lists. If nested lists is
+                returned, each nested list contains compute arguments for each calculator.
+
+        Returns:
+            all_cas: Compute arguments of all calculators.
         """
         all_cas = []
         for calc in self._calculators:
@@ -376,6 +377,9 @@ class _WrapperCalculator(object):
         """
         Return a boolean to indicate whether there are parameters whose bounds are
         provided.
+
+        Returns:
+            True if all calculators have bounds on the parameters, otherwise it is false.
         """
         calc_list = self._calculators
         has_opt_params_bounds_per_calc = [
