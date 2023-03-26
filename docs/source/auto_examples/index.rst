@@ -37,7 +37,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_linear_regression_thumb.png
-    :alt: Train a linear regression potential
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_linear_regression.py`
 
@@ -54,7 +54,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_lennard_jones_thumb.png
-    :alt: Train a Lennard-Jones potential
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_lennard_jones.py`
 
@@ -71,7 +71,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_kim_SW_Si_thumb.png
-    :alt: Train a Stillinger-Weber potential
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py`
 
@@ -88,7 +88,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_parameter_transform_thumb.png
-    :alt: Parameter transformation for the Stillinger-Weber potential
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_parameter_transform.py`
 
@@ -105,7 +105,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_nn_Si_thumb.png
-    :alt: Train a neural network potential
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_nn_Si.py`
 
@@ -122,7 +122,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_nn_SiC_thumb.png
-    :alt: Train a neural network potential for SiC
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_nn_SiC.py`
 
@@ -134,12 +134,29 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 
 .. raw:: html
 
+    <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to perform uncertainty quantification (UQ) using bootstrap ...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_uq_bootstrap_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_example_uq_bootstrap.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Bootstrapping</div>
+    </div>
+
+
+.. raw:: html
+
     <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to perform uncertainty quantification (UQ) using parallel t...">
 
 .. only:: html
 
   .. image:: /auto_examples/images/thumb/sphx_glr_example_uq_mcmc_thumb.png
-    :alt: MCMC sampling
+    :alt:
 
   :ref:`sphx_glr_auto_examples_example_uq_mcmc.py`
 
@@ -163,6 +180,7 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
    /auto_examples/example_parameter_transform
    /auto_examples/example_nn_Si
    /auto_examples/example_nn_SiC
+   /auto_examples/example_uq_bootstrap
    /auto_examples/example_uq_mcmc
 
 
