@@ -73,12 +73,12 @@ min_kwargs = dict(method="lm")  # Optimizer setting
 loss.minimize(**min_kwargs)
 model.echo_opt_params()
 
-
 ##########################################################################################
 # To perform UQ by bootstrapping, the general workflow starts by instantiating
 # :class:`~kliff.uq.bootstrap.BootstrapEmpiricalModel`, or
 # :class:`~kliff.uq.bootstrap.BootstrapNeuralNetworkModel` if using a neural network
 # potential.
+
 
 # It is a good practice to specify the random seed to use in the calculation to generate
 # a reproducible simulation.
@@ -87,7 +87,7 @@ np.random.seed(1717)
 # Instantiate bootstrap class object
 BS = BootstrapEmpiricalModel(loss)
 
-
+##########################################################################################
 # Then, we generate some bootstrap compute arguments. This is equivalent to generating
 # bootstrap data. Typically, we just need to specify how many bootstrap data samples to
 # generate. Additionally, if we call ``generate_bootstrap_compute_arguments`` multiple
@@ -99,7 +99,7 @@ BS = BootstrapEmpiricalModel(loss)
 # Generate bootstrap compute arguments
 BS.generate_bootstrap_compute_arguments(100)
 
-
+##########################################################################################
 # Finally, we will iterate over these bootstrap data samples and train the potential
 # using each data sample. The resulting optimal parameters from each data sample give a
 # single sample of parameters. By iterating over all data samples, then we will get an
@@ -114,7 +114,7 @@ BS.generate_bootstrap_compute_arguments(100)
 # Run bootstrap
 BS.run(min_kwargs=min_kwargs)
 
-
+##########################################################################################
 # The resulting parameter ensemble can be accessed in `BS.samples` as a `np.ndarray`.
 # Then, we can plot the distribution of the parameters, as an example, or propagate the
 # error to the target quantities we want to study.
@@ -125,3 +125,7 @@ plt.figure()
 plt.plot(*(BS.samples.T), ".", alpha=0.5)
 plt.xlabel(param_names[0])
 plt.ylabel(param_names[1])
+plt.show()
+
+##########################################################################################
+# .. _OpenKIM: https://openkim.org
