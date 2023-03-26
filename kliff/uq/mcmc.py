@@ -22,20 +22,17 @@ except ImportError:
 
 
 def logprior_uniform(x: np.ndarray, bounds: np.ndarray) -> float:
-    """Logarithm of the non-normalized joint uniform prior. This is the default prior
-    distribution.
+    """Logarithm of the non-normalized joint uniform prior.
 
-    Parameters
-    ----------
-    x : np.ndarray
-        Parameter values to evaluate.
-    bounds : np.ndarray (nparams, 2,)
-        An array containing the boundaries of the uniform prior. The first column of the
-        array contains the lower bounds and the second column contains the upper bounds.
+    This is the default prior distribution.
 
-    Returns
-    -------
-    float:
+    Args:
+        x: Parameter values to evaluate.
+        bounds: An array containing the boundaries of the uniform prior. The first column
+        of the array contains the lower bounds and the second column contains the upper
+        bounds.
+
+    Returns:
         Logarithm of the non-normalized joint uniform prior evaluated at parameter ``x``.
     """
     l_bounds, u_bounds = bounds.T
@@ -48,17 +45,14 @@ def logprior_uniform(x: np.ndarray, bounds: np.ndarray) -> float:
 
 
 def get_T0(loss: Loss):
-    """Compute the natural temperature. The minimum loss is the loss value at the optimal
-    parameters.
+    """Compute the natural temperature.
 
-    Parameters
-    ----------
-    loss : Loss
-        Loss function class from :class:`~kliff.loss.Loss`.
+    The minimum loss is the loss value at the optimal parameters.
 
-    Returns
-    -------
-    float
+    Args:
+        loss: Loss function class from :class:`~kliff.loss.Loss`.
+
+    Returns:
         Value of the natural temperature.
     """
     xopt = loss.calculator.get_opt_params()
@@ -73,29 +67,21 @@ class MCMC:
     This is a wrapper over :class:`PtemceeSampler` and
     :class:`EmceeSampler`. Currently, only these  2 samplers implemented.
 
-    Parameters
-    ----------
-    loss : Loss
-        Loss function class from :class:`~kliff.loss.Loss`.
-    nwalkers : Optional[int]
-        Number of walkers to simulate. The minimum number of walkers
-        is twice the number of parameters. It defaults to this minimum
-        value.
-    logprior_fn : Optional[Callable]
-        A function that evaluate logarithm of the prior
-        distribution. The prior doesn't need to be normalized. It
-        defaults to a uniform prior over a finite range.
-    logprior_args : Optional[tuple]
-        Additional positional arguments of the ``logprior_fn``. If the
-        default ``logprior_fn`` is used, then the boundaries of the
-        uniform prior can be specified here.
-    sampler : Optional[str] or sampler instance
-        An argument that specifies the MCMC sampler to use. The value can be one of the
-        strings ``"ptemcee"`` (the default value) or ``"emcee"``, or a sampler class
-        instance. If ``"ptemcee"`` or ``"emcee"`` is given, a respective internal sampler
-        class will be uses.
-    **kwargs : Optional[dict]
-        Additional keyword arguments for ``ptemcee.Sampler`` or ``emcee.EnsembleSampler``.
+    Args:
+        loss: Loss function class from :class:`~kliff.loss.Loss`.
+        nwalkers: Number of walkers to simulate. The minimum number of walkers is twice
+        the number of parameters. It defaults to this minimum value.
+        logprior_fn: A function that evaluate logarithm of the prior distribution. The
+            prior doesn't need to be normalized. It defaults to a uniform prior over a
+            finite range.
+        logprior_args: Additional positional arguments of the ``logprior_fn``. If the
+            default ``logprior_fn`` is used, then the boundaries of the uniform prior can
+            be specified here.
+        sampler: An argument that specifies the MCMC sampler to use. The value can be one
+            of the strings ``"ptemcee"`` (the default value) or ``"emcee"``, or a sampler
+            class instance. If ``"ptemcee"`` or ``"emcee"`` is given, a respective
+            internal sampler class will be uses.
+        **kwargs: Additional keyword arguments for ``ptemcee.Sampler`` or ``emcee.EnsembleSampler``.
     """
 
     builtin_samplers = ["ptemcee", "emcee"]
@@ -166,45 +152,30 @@ if ptemcee_avail:
     class PtemceeSampler(ptemcee.Sampler):
         """Sampler class for PTMCMC via ``ptemcee`` Python package.
 
-        Parameters
-        ----------
-        loss : Loss
-            Loss function instance from :class:`~kliff.loss.Loss`.
-        nwalkers : Optional[int]
-            Number of walkers to simulate. The minimum number of walkers
-            is twice the number of parameters. It defaults to this minimum
-            value.
-        ntemps: Optional[int]
-            Number of temperatures to simulate. It defaults to 10.
-        Tmax_ratio: Optional[float]
-            The ratio between the highest temperature to use and the natural temperature.
-            Higher value means that the maximum temperature is higher than :math:`T_0`
-            [Frederiksen2004]_. It defaults to 1.0.
-        Tladder: Optional[List]
-            A list containing the temperature values to use. The values nedd to be
-            monotonically increasing or decreasing. It defaults to ``None``, which will
-            be generated from ``ntemps`` and ``Tmax_ratio``.
-        logprior_fn : Optional[Callable]
-            A function that evaluate logarithm of the prior
-            distribution. The prior doesn't need to be normalized. It
-            defaults to a uniform prior over a finite range.
-        logprior_args : Optional[tuple]
-            Additional positional arguments of the ``logprior_fn``. If the
-            default ``logprior_fn`` is used, then the boundaries of the
-            uniform prior can be specified here.
-        **kwargs : Optional[dict]
-            Additional keyword arguments for ``ptemcee.Sampler``.
+        Args:
+            loss: Loss function instance from :class:`~kliff.loss.Loss`.
+                nwalkers: Number of walkers to simulate. The minimum number of walkers is
+                twice the number of parameters. It defaults to this minimum value.
+            ntemps: Number of temperatures to simulate. It defaults to 10.
+            Tmax_ratio: The ratio between the highest temperature to use and the natural
+                temperature. Higher value means that the maximum temperature is higher
+                than :math:`T_0` [Frederiksen2004]_. It defaults to 1.0.
+            Tladder: A list containing the temperature values to use. The values nedd to
+                be monotonically increasing or decreasing. It defaults to ``None``, which
+                will be generated from ``ntemps`` and ``Tmax_ratio``.
+            logprior_fn: A function that evaluate logarithm of the prior distribution.
+                The prior doesn't need to be normalized. It defaults to a uniform prior
+                over a finite range.
+            logprior_args: Additional positional arguments of the ``logprior_fn``. If the
+                default ``logprior_fn`` is used, then the boundaries of the uniform prior
+                can be specified here.
+            **kwargs: Additional keyword arguments for ``ptemcee.Sampler``.
 
-        Attributes
-        ----------
-        loss: Loss
-            Loss function instance from :class:`~kliff.loss.Loss`
-        T0: float
-            Values of the natural temperature, :math:`T_0` [Frederiksen2004]_.
-        Tladder: np.ndarray
-            An array containing the values of the sampling temperatures.
-        sampler: ptemcee.Sampler
-            Sampler instance from ``ptemcee.Sampler``
+        Attributes:
+            loss: Loss function instance from :class:`~kliff.loss.Loss`
+            T0: Values of the natural temperature, :math:`T_0` [Frederiksen2004]_.
+            Tladder: An array containing the values of the sampling temperatures.
+            sampler: Sampler instance from ``ptemcee.Sampler``
         """
 
         def __init__(
@@ -277,51 +248,37 @@ if emcee_avail:
     class EmceeSampler(emcee.EnsembleSampler):
         """Sampler class for affine invariant MCMC via ``emcee`` Python package.
 
-        Parameters
-        ----------
-        loss : Loss
-            Loss function instance from :class:`~kliff.loss.Loss`.
-        nwalkers : Optional[int]
-            Number of walkers to simulate. The minimum number of walkers
-            is twice the number of parameters. It defaults to this minimum
-            value.
-        T: Optional[float]
-            Sampling temperatures, used to inflate the likelihood function in the MCMC
-            sampling. It defaults to the natural temperature :math:`T_0` [Frederiksen2004]_.
-        logprior_fn : Optional[Callable]
-            A function that evaluate logarithm of the prior
-            distribution. The prior doesn't need to be normalized. It
-            defaults to a uniform prior over a finite range.
-        logprior_args : Optional[tuple]
-            Additional positional arguments of the ``logprior_fn``. If the
-            default ``logprior_fn`` is used, then the boundaries of the
-            uniform prior can be specified here.
-        **kwargs : Optional[dict]
-            Additional keyword arguments for ``emcee.EnsembleSampler``.
+        Args:
+            loss: Loss function instance from :class:`~kliff.loss.Loss`.
+            nwalkers: Number of walkers to simulate. The minimum number of walkers is
+                twice the number of parameters. It defaults to this minimum value.
+            T: Sampling temperatures, used to inflate the likelihood function in the MCMC
+                sampling. It defaults to the natural temperature :math:`T_0` [Frederiksen2004]_.
+            logprior_fn: A function that evaluate logarithm of the prior distribution.
+                The prior doesn't need to be normalized. It defaults to a uniform prior
+                over a finite range.
+            logprior_args: Additional positional arguments of the ``logprior_fn``. If the
+                default ``logprior_fn`` is used, then the boundaries of the uniform prior
+                can be specified here.
+            **kwargs: Additional keyword arguments for ``emcee.EnsembleSampler``.
 
-        Attributes
-        ----------
-        loss: Loss
-            Loss function instance from :class:`~kliff.loss.Loss`
-        T: float
-            Values of the sampling temperature.
-        sampler: emcee.EnsembleSampler
-            Sampler instance from ``emcee.EnsembleSampler``
+        Attributes:
+            loss: Loss function instance from :class:`~kliff.loss.Loss`
+            T: Values of the sampling temperature.
+            sampler: Sampler instance from ``emcee.EnsembleSampler``
 
-        Notes
-        -----
-        As a convention, KLIFF inflates the likelihood by some sampling temperature, i.e.,
-        :math:`L(\\theta) \propto \exp(-C(\\theta) / T)`. As a default, the sampling
-        temperature is set to the natural temperature. To use the untempered likelihood
-        (:math:`T=1`), user should specify the argument ``T=1``.
+        Notes:
+            As a convention, KLIFF inflates the likelihood by some sampling temperature,
+            i.e., :math:`L(\\theta) \propto \exp(-C(\\theta) / T)`. As a default, the
+            sampling temperature is set to the natural temperature. To use the untempered
+            likelihood (:math:`T=1`), user should specify the argument ``T=1``.
 
 
-        References
-        ----------
-        .. [Frederiksen2004] S. L. Frederiksen, K. W. Jacobsen, K. S. Brown, and J. P.
-           Sethna, “Bayesian Ensemble Approach to Error Estimation of Interatomic
-           Potentials,” Phys. Rev. Lett., vol. 93, no. 16, p. 165501, Oct. 2004,
-           doi: 10.1103/PhysRevLett.93.165501.
+        References:
+            .. [Frederiksen2004] S. L. Frederiksen, K. W. Jacobsen, K. S. Brown, and J. P.
+               Sethna, “Bayesian Ensemble Approach to Error Estimation of Interatomic
+               Potentials,” Phys. Rev. Lett., vol. 93, no. 16, p. 165501, Oct. 2004,
+               doi: 10.1103/PhysRevLett.93.165501.
         """
 
         def __init__(
