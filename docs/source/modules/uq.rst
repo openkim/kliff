@@ -11,12 +11,28 @@ potential, to predict material properties that are not used in the
 training process. Thus, UQ process is especially important to assess the reliability of
 these out-of-sample predictions.
 
-In UQ process, we first quantify the uncertainty of the model parameters. Having found
-the parametric uncertainty, then we can propagate the uncertainty of the parameters and
-get the uncertainty of the material properties of interest, e.g., by evaluating the
-ensemble that is obtained from sampling the distribution of the parameters. As the first
-uncertainty propagation is more involved, KLIFF implements tools to quantify the
-uncertainty of the parameters.
+.. figure:: ../img/uq_cartoon.png
+   :alt: Illustration of general uncertainty quantification process.
+   :align: left
+
+   Illustration of general uncertainty quantification process. The error from the
+   training data (represented by dashed ellipse on the bottom left plot) is
+   propagated to the uncertainty of model's parameters (the ellipse on the middle
+   plot). Then, the uncertainty of the parameters is propagated forward further to
+   the uncertainty of the material properties of interest (the ellipse on the bottom
+   right plot).
+
+In UQ process, we first quantify the uncertainty of the model parameters (represented by
+the dashed ellipse on the middle plot of the figure above). Having found the parametric
+uncertainty, then we can propagate the uncertainty of the parameters and get the
+uncertainty of the material properties of interest, e.g., by evaluating the ensemble that
+is obtained from sampling the distribution of the parameters. As the first uncertainty
+propagation is more involved, KLIFF implements tools to quantify the uncertainty of the
+parameters.
+
+In KLIFF, the UQ tools are implemented in :mod:`~kliff.uq`. In the currect version, there
+are 2 methods implemented: Bayesian MCMC sampling and bootstrapping, with the integration
+of other UQ methods will be added in the future.
 
 
 MCMC
@@ -71,16 +87,14 @@ parameters and :math:`N` is the number of tunable parameters.
 .. [KurniawanKLIFFUQ]
    Kurniawan, Y., Petrie, C.L., Transtrum, M.K., Tadmor, E.B., Elliott, R.S., Karls,
    D.S., Wen, M., 2022. Extending OpenKIM with an Uncertainty Quantification Toolkit for
-   Molecular Modeling. arXiv:2206.00578 [physics.comp-ph]
+   Molecular Modeling, in: 2022 IEEE 18th International Conference on E-Science
+   (e-Science). Presented at the 2022 IEEE 18th International Conference on e-Science
+   (e-Science), pp. 367–377. https://doi.org/10.1109/eScience55777.2022.00050
 
 
 
-MCMC implementation
-===================
-
-In KLIFF, the UQ tools are implemented in :mod:`~kliff.uq`. In the currect version, only
-MCMC sampling is implemented, with the integration of other UQ methods will be added in
-the future.
+Implementation
+--------------
 
 For the MCMC sampling, KLIFF adopts parallel-tempered MCMC (PTMCMC) methods, via the
 ptemcee_ Python package, as a way to perform MCMC sampling with several different
@@ -159,7 +173,7 @@ iteratiions.
 
 
 Parallelization
----------------
+^^^^^^^^^^^^^^^
 
 In principle, parallelization for the MCMC run can be done in 2 places: in the likelihood
 (or loss function) evaluation for each parameter set (see :ref:`run_in_parallel`) and in
@@ -206,7 +220,7 @@ can run the Python script as follows.
 
 
 MCMC analysis
-=============
+-------------
 
 The chains from the MCMC simulation needs to be processed. In a nutshell, the steps to
 take are
@@ -218,7 +232,7 @@ take are
 
 
 Burn-in time
-------------
+^^^^^^^^^^^^
 
 First we need to discard the first few iterations in the beginning of each chain as a
 burn-in time. This is similar to the equilibration time in a molecular dynamics
@@ -231,7 +245,7 @@ Error Rule (MSER). This can calculation can be done using the function
 performed for each temperature, walker, and parameter dimension separately.
 
 Autocorrelation length
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 In Markov chain, the position at step :math:`i` is not independent from the previous step.
 However, after several iterations (denote this number by :math:`\tau`, which is the
@@ -248,7 +262,7 @@ respectively, and :math:`\tilde{M}` is the remaining number of iterations after
 discarding the burn-in time.
 
 Convergence
------------
+^^^^^^^^^^^
 
 Finally, after a sufficient number of iterations, the distribution of the MCMC samples
 will converge to the posterior. For multi-chain MCMC simulation, the convergence can be
@@ -272,3 +286,124 @@ satisfied.
 
 .. seealso::
    See the tutorial for running MCMC in :ref:`tut_mcmc`.
+
+
+
+Bootstrap
+=========
+
+In general, the training dataset contains some random noise. When the data collection
+process is repeated, we will not get the exactly same values, but instead we will get
+(slightly) different values, where the diviation comes from the random noise. If we
+train the model to fit different realizations of the training dataset, we will get a
+distribution of the parameters. The uncertainty of the parameters from this distribution
+gives how the error in the training data is propagated to the uncertainty of the
+parameters. However, often times we don't have the luxury to repeat the data collection.
+A suggestion in this case is to generate artificial datasets and train the model to fit
+these artificial datasets.
+
+.. figure:: ../img/bootstrap.png
+   :alt: Illustration on how bootstrapping works.
+
+Bootstrapping is a way to generate the artificial datasets. We assume that the original
+dataset contains :math:`N` *independent and identically distributed (iid)* data points.
+An artificial, bootstrap dataset is generated by sample :math:`N` points from the original
+dataset with replacement. Note that this means that there are some data points which are
+repeated, while some other data points are not sampled, thus the bootstrap dataset is not
+the same as the original dataset. The difference between the datasets gives the sense of
+probability in data.
+
+
+
+Implementation
+--------------
+
+Bootstrapping is implemented in :class:`~kliff.uq.Bootstrap`. A general workflow for this
+calculation is
+
+1. Instantiate :class:`~kliff.uq.Bootstrap` class instance.
+
+   This process is straightfoward. The only required argument is the :class:`~kliff.loss.Loss`
+   instance.
+
+   .. code-block:: python
+
+      from kliff.uq import Bootstrap
+
+      loss = ...  # define the loss function
+      # Train the potential
+      min_kwargs = ...  # Optimizer setting
+      loss.minimize(**min_kwargs)
+
+      bs = Bootstrap(loss, *args, **kwargs)
+
+   When instantiating the parent class :class:`~kliff.uq.Bootstrap`, it will return either
+   an instance of :class:`~kliff.uq.BootstrapEmpiricalModel` or
+   :class:`~kliff.uq.BootstrapNeuralNetworkModel`, depending on whether we have a
+   physics-based (empirical) model or a neural network model, respectively. When a neural
+   network model is used, user can specify an additional argument `orig_state_filename`,
+   which specified the name and path of the file to use to export the initial state of the
+   model prior to running bootstrap. This is to reset the state of the model at the end
+   of performing bootstrap UQ.
+
+2. Generate bootstrap datasets.
+
+   In this implementation, we assume that the training dataset consists of many atomic
+   configurations and the corresponding quantities. Note that the quantities corresponding
+   to a single atomic configuration are **not** independent to each other. Thus, the
+   resampling process to generate bootstrap dataset should not be done in data point
+   level. Instead we should generate bootstrap dataset by resampling the atomic
+   configurations.
+
+   The built-in bootstrap dataset generator function was setup to perform this type of
+   resampling. Note that atomic configurations here is referred as compute arguments,
+   which also contains type of data and weights to use.
+
+   .. code-block:: python
+
+      nsamples = ...  # Number of samples to generate
+      bs.generate_bootstrap_compute_arguments(nsamples)
+
+   When an empirical model with multiple calculators is used, the resampling is done to
+   the combined list of the compute arguments across all calculators. Then, an internal
+   function will automatically assign back the bootstrap compute arguments to their
+   respective calculators. This means that the number of compute arguments in each
+   calculator when we do bootstrapping is more likely be different than the original
+   number of compute arguments per calculator, although the total number of compute
+   argumnets is still the same.
+
+   Also note that the built-in bootstrap compute argumnents generator assume that the
+   configurations are independent to each other. In the case where this is not satisfied,
+   then a more sophisticated resampling method should be used. This can be done by
+   defining a custom bootstrap compute arguments generator function. The only required
+   arguments for this function is the requested number of samples.
+
+3. Run the optimization for each bootstrap dataset.
+
+   After a set of bootstrap compute arguments is generated, then we need to iterate over
+   each of them, and train the potential to fit each bootstrap dataset.
+
+   .. code-block:: python
+
+      bs.run(min_kwargs=min_kwargs)
+
+   There are 2 arguments that are the same to run the optimization stage of bootstrapping,
+   regardless if we use an empirical or neural network model. These arguments are:
+
+   * ``min_kwargs``, which is a dictionary containing the keyword arguments that will be
+     passed in to the optimizer. This argument can be thought as the optimizer setting.
+
+     .. note::
+	Since the mapping from the bootstrap dataset to the inferred parameters contains
+	optimization, then it is recommended to use the same optimizer setting when we
+	iterate over each bootstrap compute arguments and train the potential.
+	Additionally, the optimizer setting should also be the same as the setting used
+	in the initial training, when we use the original set of compute arguments to
+	train the potential.
+
+   * ``callback``, which is an option to specify a function that will be called in each
+     iteration. This can be used as a debugging tool or to monitor convergence.
+
+   For other additional arguments, please refer to the respective function documentation,
+   i.e., :meth:`~kliff.uq.BootstrapEmpiricalModel.run` for empirical model or
+   :meth:`~kliff.uq.BootstrapNeuralNetworkModel.run` for neural network model.
