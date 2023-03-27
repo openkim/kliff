@@ -331,7 +331,7 @@ class CalculatorTorch:
         parameters = self._convert_parameters_from_1d_array(parameters)
         # Update the weights and biases
         for ii, param in enumerate(self.model.parameters()):
-            param = torch.nn.Parameter(parameters[ii])
+            param.data = parameters[ii]
 
     def _convert_parameters_from_1d_array(self, flat_params: np.array) -> List:
         """
