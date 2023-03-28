@@ -32,7 +32,6 @@ from kliff.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.loss import Loss
 from kliff.models import KIMModel
-from kliff.models.parameter_transform import LogParameterTransform
 from kliff.uq.bootstrap import BootstrapEmpiricalModel
 from kliff.utils import download_dataset
 
@@ -40,9 +39,6 @@ from kliff.utils import download_dataset
 # Before running bootstrap, we need to define a loss function and train the model. More
 # detail information about this step can be found in :ref:`tut_kim_sw` and
 # :ref:`tut_params_transform`.
-
-# Instantiate a transformation class to do the log parameter transform
-param_names = ["A", "lambda"]
 
 # Create the model
 model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
@@ -123,6 +119,7 @@ BS.run(min_kwargs=min_kwargs)
 # Plot the distribution of the parameters
 plt.figure()
 plt.plot(*(BS.samples.T), ".", alpha=0.5)
+param_names = list(opt_params.keys())
 plt.xlabel(param_names[0])
 plt.ylabel(param_names[1])
 plt.show()

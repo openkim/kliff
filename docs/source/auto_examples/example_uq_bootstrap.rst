@@ -42,7 +42,7 @@ To start, let's first install the SW model::
    This installs the model and its driver into the ``User Collection``. See
    :ref:`install_model` for more information about installing KIM models.
 
-.. GENERATED FROM PYTHON SOURCE LINES 26-39
+.. GENERATED FROM PYTHON SOURCE LINES 26-38
 
 .. code-block:: default
 
@@ -55,7 +55,6 @@ To start, let's first install the SW model::
     from kliff.dataset import Dataset
     from kliff.loss import Loss
     from kliff.models import KIMModel
-    from kliff.models.parameter_transform import LogParameterTransform
     from kliff.uq.bootstrap import BootstrapEmpiricalModel
     from kliff.utils import download_dataset
 
@@ -66,19 +65,16 @@ To start, let's first install the SW model::
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 40-43
+.. GENERATED FROM PYTHON SOURCE LINES 39-42
 
 Before running bootstrap, we need to define a loss function and train the model. More
 detail information about this step can be found in :ref:`tut_kim_sw` and
 :ref:`tut_params_transform`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-76
+.. GENERATED FROM PYTHON SOURCE LINES 42-72
 
 .. code-block:: default
 
-
-    # Instantiate a transformation class to do the log parameter transform
-    param_names = ["A", "lambda"]
 
     # Create the model
     model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
@@ -130,11 +126,11 @@ detail information about this step can be found in :ref:`tut_kim_sw` and
       4.5532200000000003e+01 
 
 
-    2023-03-25 16:30:36.346 | INFO     | kliff.dataset.dataset:_read:398 - 4 configurations read from /home/yonatank/modules/kliff/examples/Si_training_set_4_configs
-    2023-03-25 16:30:36.348 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 4 configurations.
-    2023-03-25 16:30:36.348 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.348 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.389 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.199 | INFO     | kliff.dataset.dataset:_read:398 - 4 configurations read from /home/yonatank/modules/kliff/examples/Si_training_set_4_configs
+    2023-03-28 09:29:12.202 | INFO     | kliff.calculators.calculator:create:107 - Create calculator for 4 configurations.
+    2023-03-28 09:29:12.202 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.203 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.245 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
     #================================================================================
     # Model parameters that are optimized.
     # Note that the parameters are in the transformed space if 
@@ -153,14 +149,14 @@ detail information about this step can be found in :ref:`tut_kim_sw` and
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 77-81
+.. GENERATED FROM PYTHON SOURCE LINES 73-77
 
 To perform UQ by bootstrapping, the general workflow starts by instantiating
 :class:`~kliff.uq.bootstrap.BootstrapEmpiricalModel`, or
 :class:`~kliff.uq.bootstrap.BootstrapNeuralNetworkModel` if using a neural network
 potential.
 
-.. GENERATED FROM PYTHON SOURCE LINES 81-90
+.. GENERATED FROM PYTHON SOURCE LINES 77-86
 
 .. code-block:: default
 
@@ -180,7 +176,7 @@ potential.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 91-97
+.. GENERATED FROM PYTHON SOURCE LINES 87-93
 
 Then, we generate some bootstrap compute arguments. This is equivalent to generating
 bootstrap data. Typically, we just need to specify how many bootstrap data samples to
@@ -189,7 +185,7 @@ times, the new generated data samples will be appended to the previously generat
 samples. This is also the behavior if we read the data samples from the previously
 exported file.
 
-.. GENERATED FROM PYTHON SOURCE LINES 97-102
+.. GENERATED FROM PYTHON SOURCE LINES 93-98
 
 .. code-block:: default
 
@@ -205,7 +201,7 @@ exported file.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 103-112
+.. GENERATED FROM PYTHON SOURCE LINES 99-108
 
 Finally, we will iterate over these bootstrap data samples and train the potential
 using each data sample. The resulting optimal parameters from each data sample give a
@@ -217,7 +213,7 @@ training step. This also means to use the same set of initial parameter guess wh
 loss potentially has multiple local minima. For neural network model, we need to reset
 the initial parameter value, which is done internally.
 
-.. GENERATED FROM PYTHON SOURCE LINES 112-117
+.. GENERATED FROM PYTHON SOURCE LINES 108-113
 
 .. code-block:: default
 
@@ -234,306 +230,306 @@ the initial parameter value, which is done internally.
 
  .. code-block:: none
 
-    2023-03-25 16:30:36.393 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.393 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.437 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.437 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.437 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.473 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.473 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.474 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.516 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.516 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.517 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.554 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.554 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.555 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.585 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.586 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.586 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.626 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.627 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.627 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.669 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.670 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.671 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.710 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.711 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.711 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.748 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.749 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.749 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.791 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.791 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.791 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.833 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.833 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.834 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.878 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.878 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.879 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.920 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.920 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.921 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:36.960 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:36.961 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:36.961 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.001 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.002 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.002 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.068 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.069 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.069 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.109 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.110 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.111 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.147 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.147 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.148 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.175 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.175 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.176 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.215 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.216 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.216 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.255 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.255 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.256 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.294 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.294 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.294 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.322 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.322 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.322 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.354 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.354 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.355 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.406 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.407 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.407 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.446 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.447 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.447 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.489 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.489 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.490 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.526 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.527 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.527 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.566 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.567 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.567 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.607 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.607 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.608 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.644 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.644 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.645 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.682 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.682 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.683 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.723 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.724 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.724 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.763 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.764 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.764 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.804 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.805 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.806 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.853 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.853 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.853 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.895 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.896 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.896 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.946 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.946 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.947 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:37.988 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:37.988 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:37.989 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.019 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.019 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.020 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.064 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.065 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.065 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.107 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.108 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.108 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.144 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.145 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.145 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.187 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.187 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.188 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.231 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.232 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.232 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.276 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.276 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.277 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.323 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.323 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.324 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.365 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.366 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.366 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.403 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.403 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.404 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.440 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.441 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.441 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.483 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.484 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.484 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.525 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.525 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.526 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.559 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.559 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.560 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.597 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.598 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.598 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.636 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.636 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.636 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.675 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.675 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.675 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.710 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.711 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.711 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.746 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.746 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.747 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.785 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.786 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.786 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.827 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.827 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.828 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.862 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.863 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.863 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.899 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.900 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.900 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.934 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.934 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.935 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:38.973 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:38.973 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:38.973 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.015 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.015 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.016 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.052 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.053 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.053 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.091 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.092 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.092 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.127 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.128 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.128 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.163 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.163 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.163 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.199 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.199 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.200 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.236 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.237 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.237 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.267 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.267 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.268 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.306 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.306 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.307 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.351 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.352 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.353 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.392 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.392 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.393 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.429 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.430 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.430 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.466 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.466 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.467 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.502 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.503 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.503 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.541 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.542 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.542 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.586 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.586 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.586 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.623 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.623 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.624 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.658 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.658 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.658 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.686 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.686 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.686 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.724 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.724 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.725 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.761 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.762 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.762 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.806 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.807 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.807 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.847 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.848 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.848 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.887 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.888 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.888 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.927 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.928 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.928 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:39.971 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:39.972 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:39.972 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.010 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.010 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.011 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.048 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.048 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.049 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.089 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.090 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.091 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.128 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.129 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.129 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.173 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.173 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.174 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.214 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.215 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.215 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.242 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.243 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.243 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.278 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.278 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.279 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.314 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
-    2023-03-25 16:30:40.314 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
-    2023-03-25 16:30:40.314 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
-    2023-03-25 16:30:40.356 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.248 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.249 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.289 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.290 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.290 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.330 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.330 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.330 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.366 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.367 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.367 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.409 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.409 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.410 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.445 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.445 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.446 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.480 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.481 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.481 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.515 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.516 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.516 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.561 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.561 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.562 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.596 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.597 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.597 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.631 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.632 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.632 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.667 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.667 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.668 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.704 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.704 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.704 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.741 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.741 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.742 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.779 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.779 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.780 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.816 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.816 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.817 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.857 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.857 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.858 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.898 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.898 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.899 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.938 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.939 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.939 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:12.971 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:12.972 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:12.972 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.014 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.014 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.015 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.057 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.058 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.059 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.097 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.098 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.098 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.125 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.125 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.125 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.152 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.153 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.153 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.188 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.189 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.189 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.224 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.224 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.224 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.260 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.260 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.261 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.296 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.296 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.297 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.331 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.332 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.332 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.373 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.373 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.374 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.413 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.413 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.414 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.451 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.451 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.451 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.490 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.491 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.491 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.528 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.529 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.529 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.568 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.568 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.568 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.605 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.606 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.606 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.650 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.651 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.651 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.685 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.686 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.686 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.723 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.724 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.724 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.754 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.755 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.755 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.790 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.790 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.791 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.830 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.831 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.831 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.866 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.866 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.867 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.901 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.902 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.902 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.938 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.939 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.939 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:13.973 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:13.974 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:13.974 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.011 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.012 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.012 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.049 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.049 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.050 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.088 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.088 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.089 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.129 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.130 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.130 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.169 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.170 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.170 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.207 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.208 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.208 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.236 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.236 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.237 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.274 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.274 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.275 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.313 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.314 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.314 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.355 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.355 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.355 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.400 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.400 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.401 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.440 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.441 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.441 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.480 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.481 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.481 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.517 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.518 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.518 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.553 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.554 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.554 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.597 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.598 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.598 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.626 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.627 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.627 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.664 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.666 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.666 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.704 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.705 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.705 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.740 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.741 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.741 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.777 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.778 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.778 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.813 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.813 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.814 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.853 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.853 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.854 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.890 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.891 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.891 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.928 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.928 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.929 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.959 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.959 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.960 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:14.998 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:14.998 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:14.999 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.033 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.034 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.034 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.072 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.072 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.073 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.108 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.108 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.109 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.142 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.143 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.143 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.179 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.179 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.180 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.215 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.216 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.216 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.251 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.251 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.252 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.288 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.288 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.291 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.326 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.327 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.327 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.354 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.354 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.354 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.389 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.389 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.390 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.425 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.426 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.426 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.463 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.464 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.464 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.506 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.506 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.507 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.544 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.544 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.545 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.580 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.580 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.581 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.617 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.617 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.618 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.652 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.652 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.653 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.687 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.687 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.687 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.722 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.722 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.723 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.760 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.760 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.761 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.796 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.797 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.797 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.830 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.831 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.831 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.859 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.859 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.860 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.893 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.894 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.894 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.929 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
+    2023-03-28 09:29:15.930 | INFO     | kliff.loss:minimize:312 - Start minimization using method: lm.
+    2023-03-28 09:29:15.930 | INFO     | kliff.loss:_scipy_optimize:431 - Running in serial mode.
+    2023-03-28 09:29:15.964 | INFO     | kliff.loss:minimize:314 - Finish minimization using method: lm.
 
     array([[15.28616743, 45.53413524],
            [15.28539627, 45.53724361],
@@ -638,13 +634,13 @@ the initial parameter value, which is done internally.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 118-121
+.. GENERATED FROM PYTHON SOURCE LINES 114-117
 
 The resulting parameter ensemble can be accessed in `BS.samples` as a `np.ndarray`.
 Then, we can plot the distribution of the parameters, as an example, or propagate the
 error to the target quantities we want to study.
 
-.. GENERATED FROM PYTHON SOURCE LINES 121-130
+.. GENERATED FROM PYTHON SOURCE LINES 117-127
 
 .. code-block:: default
 
@@ -653,6 +649,7 @@ error to the target quantities we want to study.
     # Plot the distribution of the parameters
     plt.figure()
     plt.plot(*(BS.samples.T), ".", alpha=0.5)
+    param_names = list(opt_params.keys())
     plt.xlabel(param_names[0])
     plt.ylabel(param_names[1])
     plt.show()
@@ -669,14 +666,14 @@ error to the target quantities we want to study.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 131-132
+.. GENERATED FROM PYTHON SOURCE LINES 128-129
 
 .. _OpenKIM: https://openkim.org
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  5.682 seconds)
+   **Total running time of the script:** ( 0 minutes  5.699 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example_uq_bootstrap.py:
