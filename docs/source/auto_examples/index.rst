@@ -117,23 +117,6 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for a system containing two species:...">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_example_nn_SiC_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_example_nn_SiC.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Train a neural network potential for SiC</div>
-    </div>
-
-
-.. raw:: html
-
     <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to perform uncertainty quantification (UQ) using bootstrap ...">
 
 .. only:: html
@@ -146,6 +129,23 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Bootstrapping</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this tutorial, we train a neural network (NN) potential for a system containing two species:...">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example_nn_SiC_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_example_nn_SiC.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Train a neural network potential for SiC</div>
     </div>
 
 
@@ -179,8 +179,8 @@ More examples can be found at `<https://github.com/openkim/kliff/tree/master/exa
    /auto_examples/example_kim_SW_Si
    /auto_examples/example_parameter_transform
    /auto_examples/example_nn_Si
-   /auto_examples/example_nn_SiC
    /auto_examples/example_uq_bootstrap
+   /auto_examples/example_nn_SiC
    /auto_examples/example_uq_mcmc
 
 
