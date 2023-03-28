@@ -236,8 +236,7 @@ def get_identifiers_from_compute_arguments(compute_arguments: List) -> List[List
         compute_arguments: A list of :class:`~kliff.models.model.ComputeArguments`.
 
     Returns:
-        identifiers: A list of compute arguments' identifiers, which shows the paths to
-            the xyz files.
+        A list of compute arguments' identifiers, which shows the paths to the xyz files.
     """
     identifiers = []
     for cas in compute_arguments:
@@ -334,8 +333,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
             filename: Name or path of json file to read.
 
         Returns:
-            new_bootstrap_compute_arguments_identifiers: Dictionary read from the json
-                file.
+            Dictionary read from the json file.
         """
         # Load the json file
         with open(filename, "r") as f:
@@ -370,19 +368,19 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
     def run(
         self,
         min_kwargs: Optional[dict] = None,
-        initial_guess: Optional[np.array] = None,
+        initial_guess: Optional[np.ndarray] = None,
         residual_fn_list: Optional[List] = None,
         callback: Optional[Callable] = None,
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
 
         Args:
             min_kwargs: Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
-            initial_guess: Initial guess of parameters to use for the minimization. It is
-                recommended to use the same values as used in the training process if
-                such step is done prior to running bootstrap.
+            initial_guess: (ndim,) Initial guess of parameters to use for the
+                minimization. It is recommended to use the same values as used in the
+                training process if such step is done prior to running bootstrap.
             residual_fn_list: List of residual function to use in each calculator.
                 Currently, this only affect the case when multiple calculators are used.
                 If there is only a single calculator, don't worry about this argument.
@@ -392,7 +390,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 break the run, by returning boolean `True`.
 
         Returns:
-            samples: Parameter samples from bootstrapping.
+            (nsamples, ndim,) Parameter samples from bootstrapping.
 
         Raises:
             BootstrapError: If there is no bootstrap compute areguments generated prior to
@@ -526,8 +524,7 @@ def get_identifiers_from_fingerprints(fingerprints: List) -> List[str]:
         fingerprints: A list of fingerprints.
 
     Returns:
-        identifiers: A list of fingerprints' identifiers, which shows the paths to the
-        xyz files.
+        A list of fingerprints' identifiers, which shows the paths to the xyz files.
     """
     identifiers = [fp["configuration"].identifier for fp in fingerprints]
     return identifiers
@@ -633,8 +630,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             filename: Name or path of json file to read.
 
         Returns:
-            new_bootstrap_compute_arguments_identifiers: Dictionary read from the json
-            file.
+            Dictionary read from the json file.
         """
         # Load the json file
         with open(filename, "r") as f:
@@ -663,7 +659,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
 
     def run(
         self, min_kwargs: Optional[dict] = None, callback: Optional[Callable] = None
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         Iterate over the generated bootstrap compute arguments samples and train the
         potential using each compute arguments sample.
@@ -676,7 +672,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
                 break the run, by returning boolean `True`.
 
         Returns:
-            samples: Parameter samples from bootstrapping.
+            (nsamples, ndim,) Parameter samples from bootstrapping.
 
         Raises:
             BootstrapError: If there is no bootstrap compute areguments generated prior to

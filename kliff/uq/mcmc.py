@@ -27,10 +27,10 @@ def logprior_uniform(x: np.ndarray, bounds: np.ndarray) -> float:
     This is the default prior distribution.
 
     Args:
-        x: Parameter values to evaluate.
-        bounds: An array containing the boundaries of the uniform prior. The first column
-        of the array contains the lower bounds and the second column contains the upper
-        bounds.
+        x: (ndim,) Parameter values to evaluate.
+        bounds: (ndim, 2,) An array containing the boundaries of the uniform prior. The
+            first column of the array contains the lower bounds and the second column
+            contains the upper bounds.
 
     Returns:
         Logarithm of the non-normalized joint uniform prior evaluated at parameter ``x``.
@@ -44,7 +44,7 @@ def logprior_uniform(x: np.ndarray, bounds: np.ndarray) -> float:
     return ret
 
 
-def get_T0(loss: Loss):
+def get_T0(loss: Loss) -> float:
     """Compute the natural temperature.
 
     The minimum loss is the loss value at the optimal parameters.
@@ -154,7 +154,7 @@ if ptemcee_avail:
 
         Args:
             loss: Loss function instance from :class:`~kliff.loss.Loss`.
-                nwalkers: Number of walkers to simulate. The minimum number of walkers is
+            nwalkers: Number of walkers to simulate. The minimum number of walkers is
                 twice the number of parameters. It defaults to this minimum value.
             ntemps: Number of temperatures to simulate. It defaults to 10.
             Tmax_ratio: The ratio between the highest temperature to use and the natural
