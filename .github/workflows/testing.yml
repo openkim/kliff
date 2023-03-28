@@ -38,7 +38,7 @@ jobs:
       - name: Install kim-api
         run: |
           export KIMAPI_DIR=${PWD}
-          export KIM_API_VERSION="2.2.1"
+          export KIM_API_VERSION="2.3.0"
           cd $KIMAPI_DIR && cd ..
           wget http://s3.openkim.org/kim-api/kim-api-$KIM_API_VERSION.txz
           tar Jxvf kim-api-$KIM_API_VERSION.txz
