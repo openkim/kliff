@@ -196,7 +196,6 @@ class Loss:
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
     ):
-
         if isinstance(calculator, CalculatorTorch):
             return LossNeuralNetworkModel(
                 calculator, nprocs, residual_fn, residual_data
@@ -254,7 +253,6 @@ class LossPhysicsMotivatedModel:
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
     ):
-
         default_residual_data = {
             "normalize_by_natoms": True,
         }
@@ -324,7 +322,6 @@ class LossPhysicsMotivatedModel:
         """
 
         if method in self.scipy_least_squares_methods:
-
             # check support status
             for i in self.scipy_least_squares_methods_not_supported_args:
                 if i in kwargs:
@@ -345,7 +342,6 @@ class LossPhysicsMotivatedModel:
                     raise LossError(f"Method `{method}` cannot handle bounds.")
 
         elif method in self.scipy_minimize_methods:
-
             # check support status
             for i in self.scipy_minimize_methods_not_supported_args:
                 if i in kwargs:
@@ -555,7 +551,6 @@ class LossPhysicsMotivatedModel:
         cas = self._split_data()
 
         while True:
-
             if rank == 0:
                 break_flag = False
                 for i in range(1, size):
@@ -605,7 +600,6 @@ class LossPhysicsMotivatedModel:
 
     @staticmethod
     def _get_residual_single_config(ca, calculator, residual_fn, residual_data):
-
         # prediction data
         calculator.compute(ca)
         pred = calculator.get_prediction(ca)
@@ -667,7 +661,6 @@ class LossNeuralNetworkModel(object):
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
     ):
-
         if not torch_avail:
             report_import_error("pytorch")
 
@@ -744,7 +737,6 @@ class LossNeuralNetworkModel(object):
 
         epoch = 0  # in case never enters loop
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
-
             # get the loss without any optimization if continue a training
             if self.start_epoch != 0 and epoch == self.start_epoch:
                 epoch_loss = self._get_loss_epoch(loader)
@@ -824,7 +816,6 @@ class LossNeuralNetworkModel(object):
         return loss_batch
 
     def _get_loss_single_config(self, sample, pred_energy, pred_forces, pred_stress):
-
         device = self.calculator.model.device
 
         if self.calculator.use_energy:

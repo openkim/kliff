@@ -31,7 +31,6 @@ class Tree:
         return s
 
     def walk(self, directory, prefix=""):
-
         num_current = 0
         num_all = 0
 
@@ -46,7 +45,6 @@ class Tree:
 
         filepaths = os.listdir(directory)
         for index, path in enumerate(filepaths):
-
             if path[0] == ".":
                 continue
 
@@ -125,7 +123,6 @@ class Command:
 
     @staticmethod
     def run(args, parser):
-
         if args.count is not None:
             dataset_count(args.count)
         elif args.split is not None:
@@ -138,7 +135,6 @@ class Command:
 
 
 if __name__ == "__main__":
-
     directory = "."
     if len(sys.argv) > 1:
         directory = sys.argv[1]

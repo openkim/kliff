@@ -44,7 +44,6 @@ class Parameter(MSONable):
         name: Optional[str] = None,
         index: Optional[int] = None,
     ):
-
         self._value = np.asarray(_check_shape(value, "parameter value"))
         self._fixed = (
             [False] * len(self._value)
@@ -603,7 +602,6 @@ class OptimizingParameters(MSONable):
         p_idx = self.model_params[name].index
 
         for c_idx in range(size):
-
             if not fix[c_idx]:
                 idx = _Index(name, p_idx, c_idx)
 

@@ -50,7 +50,6 @@ class Descriptor:
         normalize: bool = True,
         dtype=np.float32,
     ):
-
         self.cut_dists = cut_dists
         self.cut_name = cut_name
         self.hyperparams = hyperparams

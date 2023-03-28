@@ -6,7 +6,6 @@ from kliff.models.parameter import OptimizingParameters, Parameter, ParameterErr
 
 
 def test_parameter():
-
     # scalar
     try:
         p = Parameter(1.1)
@@ -70,7 +69,6 @@ def create_all_possible_input(v):
 
 
 def test_optimizing_parameter():
-
     # model params
     p1 = [1.1]
     p2 = [2.2, 3.3]

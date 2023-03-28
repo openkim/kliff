@@ -26,7 +26,6 @@ class Command:
 
     @staticmethod
     def run(args, parser):
-
         if args.avail_params is not None:
             get_avail_params(args.avail_params)
         else:
@@ -34,7 +33,6 @@ class Command:
 
 
 if __name__ == "__main__":
-
     model_name = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
     if len(sys.argv) > 1:
         model_name = sys.argv[1]

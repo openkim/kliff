@@ -95,7 +95,6 @@ def download_dataset(dataset_name: str) -> Path:
     path = to_path(dataset_name)
 
     if not path.exists():
-
         tarball = path.with_suffix(".tar.gz")
 
         # download

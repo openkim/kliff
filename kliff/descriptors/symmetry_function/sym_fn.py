@@ -283,9 +283,7 @@ class SymmetryFunction(Descriptor):
             self._cdesc.add_descriptor(name, params)
 
     def write_kim_params(self, path, fname="descriptor.params"):
-
         with open(os.path.join(path, fname), "w") as fout:
-
             if self.dtype == np.float64:
                 fmt = "{:.15e} "
             else:

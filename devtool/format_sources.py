@@ -49,7 +49,6 @@ def format_cpp_code(path):
 
 
 if __name__ == "__main__":
-
     root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
     format_py_code(root_dir)
     format_cpp_code(root_dir)

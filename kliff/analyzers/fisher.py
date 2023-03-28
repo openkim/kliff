@@ -73,7 +73,6 @@ class Fisher:
         return I, I_stdev
 
     def _write_result(self, I, stdev, verbose, path="analysis_Fisher_info_matrix.txt"):
-
         params = self.calculator.get_opt_params()
         nparams = len(params)
         names = []
@@ -106,7 +105,6 @@ class Fisher:
         # write to file
         if verbose > 0:
             with open(path, "w") as fout:
-
                 fout.write(header)
 
                 fout.write(

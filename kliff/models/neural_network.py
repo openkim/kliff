@@ -121,7 +121,6 @@ class NeuralNetwork(ModelTorch):
         logger.info(f"KLIFF trained model written to {path}.")
 
     def _write_kim_params(self, path, filename="NN.params"):
-
         weights, biases = self._get_weights_and_biases()
         activations = self._get_activations()
         drop_ratios = self._get_drop_ratios()
@@ -167,7 +166,6 @@ class NeuralNetwork(ModelTorch):
 
             # weights and biases
             for i, (w, b) in enumerate(zip(weights, biases)):
-
                 # weight
                 rows, cols = w.shape
                 if i != num_layers - 1:
@@ -205,7 +203,6 @@ class NeuralNetwork(ModelTorch):
     def _write_kim_dropout_binary(
         self, path, filename="dropout_binary.params", size=None
     ):
-
         drop_ratios = self._get_drop_ratios()
         keep_prob = [1.0 - i for i in drop_ratios]
         _, biases = self._get_weights_and_biases()

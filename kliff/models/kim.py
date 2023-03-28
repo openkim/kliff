@@ -162,7 +162,6 @@ class KIMComputeArguments(ComputeArguments):
                     KIMModelError(f"Unsupported required ComputeCallback `{name}`")
 
     def _init_neigh(self):
-
         # create neighbor list
         try:
             neigh = nl.create()
@@ -206,7 +205,6 @@ class KIMComputeArguments(ComputeArguments):
         )
 
         if any(PBC):  # need padding atoms
-
             try:
                 (
                     padding_coords,
@@ -348,7 +346,6 @@ class KIMComputeArguments(ComputeArguments):
                 )
 
     def compute(self, kim_model):
-
         try:
             kim_model.compute(self.kim_ca)
         except RuntimeError:

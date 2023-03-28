@@ -142,7 +142,6 @@ def write_extxyz(
     """
 
     with open(filename, "w") as fout:
-
         # first line (number of atoms)
         natoms = len(species)
         fout.write("{}\n".format(natoms))

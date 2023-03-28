@@ -109,7 +109,6 @@ class MCMC:
         sampler: Optional[str] = "ptemcee",
         **kwargs,
     ):
-
         if sampler == "ptemcee":
             if ptemcee_avail:
                 # Force pool to be declared after MCMC is instantiated

@@ -92,7 +92,6 @@ class Bispectrum(Descriptor):
         self._set_hyperparams()
 
     def transform(self, conf, grad=False):
-
         # neighbor list
         infl_dist = max(self.cutoff.values())
 
