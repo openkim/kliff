@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 import numpy as np
 
@@ -19,7 +19,7 @@ def mser(
     dstep: Optional[int] = 10,
     dmax: Optional[int] = -1,
     full_output: Optional[bool] = False,
-) -> int:
+) -> Union[int, dict]:
     """Estimate the equilibration time using marginal standard error rule (MSER).
 
     This is done by calculating the standard error (square) of ``chain_d``, where
@@ -29,7 +29,7 @@ def mser(
     Then we search the minimum element in the list and return the index of that element.
 
     Args:
-        chain: Array containing the time series.
+        chain: (nsteps,) Array containing the time series.
         dmin: Index where to start the search in the time series.
         dstep: How much to increment the search is done.
         dmax: Index where to stop the search in the time series.
@@ -58,13 +58,12 @@ def mser(
 
 
 # Estimate autocorrelation length
-def autocorr(chain: np.ndarray, *args, **kwargs):
+def autocorr(chain: np.ndarray, *args, **kwargs) -> np.ndarray:
     """Use ``emcee`` package to estimate the autocorrelation length.
 
     Args:
-        chain: Chains from the MCMC simulation. The shape of the chains needs to be
-            (nsteps, nwalkers, ndim). Note that the burn-in time needs to be discarded
-            prior to this calculation
+        chain: (nwalkers, nsteps, ndim,) Chains from the MCMC simulation. Note that the
+            burn-in time needs to be discarded prior to this calculation
         args, kwargs: Additional positional and keyword arguments of ``emcee.autocorr.integrated_time``.
 
     Returns:
@@ -78,7 +77,9 @@ def autocorr(chain: np.ndarray, *args, **kwargs):
 
 
 # Assess convergence
-def rhat(chain, time_axis: Optional[int] = 1, return_WB: Optional[bool] = False):
+def rhat(
+    chain: np.ndarray, time_axis: Optional[int] = 1, return_WB: Optional[bool] = False
+) -> Union[float, Tuple[float, np.ndarray, np.ndarray]]:
     """Compute the value of :math:`\\hat{r}` proposed by Brooks and Gelman [BrooksGelman1998]_.
 
     If the samples come from PTMCMC simulation, then the chain needs to be from one of
@@ -86,16 +87,16 @@ def rhat(chain, time_axis: Optional[int] = 1, return_WB: Optional[bool] = False)
 
     Args:
         chain: The MCMC chain as a ndarray, preferrably with the shape
-            (nwalkers, nsteps, ndims). However, the shape can also be
-            (nsteps, nwalkers, ndims), but the argument time_axis needs to be set to 0.
+            (nwalkers, nsteps, ndim,). However, the shape can also be
+            (nsteps, nwalkers, ndim,), but the argument time_axis needs to be set to 0.
         time_axis: Axis in which the time series is stored (0 or 1). For emcee results,
             the time series is stored in axis 0, but for ptemcee for a given temperature,
             the time axis is 1.
         return_WB: A flag to return covariance matrices within and between chains.
 
     Returns:
-        r: The value of rhat.
-        W, B: Matrices of covariance within and between the chains.
+        The value of rhat. if ``return_WB=True``, also returns matrices of
+        covariance within and between the chains.
 
     References:
         .. [BrooksGelman1998]
