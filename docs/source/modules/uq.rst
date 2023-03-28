@@ -5,7 +5,7 @@ Uncertainty Quantification (UQ)
 ===============================
 
 Uncertainty quantification (UQ) is an emerging field in applied mathematics that aims to
-quantify uncertainties in mathematical models as a result from error propagation in the
+quantify uncertainties in mathematical models as a result of error propagation in the
 modeling process. This is especially important since we use the model, i.e., the
 potential, to predict material properties that are not used in the
 training process. Thus, UQ process is especially important to assess the reliability of
@@ -16,8 +16,8 @@ these out-of-sample predictions.
    :align: left
 
    Illustration of general uncertainty quantification process. The error from the
-   training data (represented by dashed ellipse on the bottom left plot) is
-   propagated to the uncertainty of model's parameters (the ellipse on the middle
+   training data (represented by a dashed ellipse on the bottom left plot) is
+   propagated to the uncertainty of the model's parameters (the ellipse in the middle
    plot). Then, the uncertainty of the parameters is propagated forward further to
    the uncertainty of the material properties of interest (the ellipse on the bottom
    right plot).
@@ -30,7 +30,7 @@ is obtained from sampling the distribution of the parameters. As the first uncer
 propagation is more involved, KLIFF implements tools to quantify the uncertainty of the
 parameters.
 
-In KLIFF, the UQ tools are implemented in :mod:`~kliff.uq`. In the currect version, there
+In KLIFF, the UQ tools are implemented in :mod:`~kliff.uq`. In the current version, there
 are 2 methods implemented: Bayesian MCMC sampling and bootstrapping, with the integration
 of other UQ methods will be added in the future.
 
@@ -59,7 +59,7 @@ The likelihood function is given by
 
 The inclusion of the sampling temperature :math:`T` is to account for model inadequacy,
 or bias, in the potential [Kurniawan2022]_. Frederiksen et al. (2004) [Frederiksen2004]_
-suggest to estimate the bias by setting the temperature to
+suggest estimating the bias by setting the temperature to
 
 .. math::
 
@@ -123,9 +123,9 @@ instantiate the sampler are:
 * ``nwalkers`` specifies the number of parallel walkers to run for each sampling
   temperature. As a default, this quantity is set to twice the number of parameters in
   the model.
-* ``logprior_fn`` argument allows user to specify the prior distribution
+* ``logprior_fn`` argument allows the user to specify the prior distribution
   :math:`\pi(\theta)` to use. The function should accept an array of parameter values as
-  an input and compute the logarithm of the prior distribution. Note that the prior
+  input and compute the logarithm of the prior distribution. Note that the prior
   distribution doesn't need to be normalized. The default prior is a uniform distribution
   over a finite range. See the next argument on how to set the boundaries of the uniform
   prior.
@@ -159,7 +159,7 @@ The required arguments are:
 * ``p0``, which is a :math:`K \times L \times N` array containing the position of each
   walker for each temperature in parameter space, where :math:`K`, :math:`L`, and
   :math:`N` are the number of temperatures, walkers, and parameters, respectively.
-* ``iterations`` specifies the number of MCMC step to take. Since the position is step
+* ``iterations`` specifies the number of MCMC steps to take. Since the position of step
   :math:`i` in Markov chain only depends on step :math:`(i-1)`, it is possible to break
   up the MCMC run into smaller batches, with the note that the initial positions of the
   current run needs to be set to the last positions of the previous run.
@@ -167,9 +167,9 @@ The required arguments are:
 .. seealso::
    For other possible arguments, see also ptemcee.Sampler.run_mcmc_.
 
-The resulting chain can be retrieved from via ``sampler.chain`` as a
+The resulting chain can be retrieved via ``sampler.chain`` as a
 :math:`K \times L \times M \times N` array, where :math:`M` is the total number of
-iteratiions.
+iterations.
 
 
 Parallelization
@@ -181,14 +181,14 @@ the likelihood evaluation across different walkers. In the current implementatio
 supports OpenMP-style parallelization in the loss evaluation and both OpenMP and MPI for
 the sampling for different walkers when running MCMC sampling.
 
-In general, parallelization in the sampling process is done by declaring a pool and set
-it to ``sampler.pool`` prior to running MCMC, for example:
+In general, parallelization in the sampling process is done by declaring a pool and
+setting it to ``sampler.pool`` prior to running MCMC, for example:
 
 .. code-block:: python
 
    from multiprocessing import Pool
    
-   sampler.pool = Pool(nprocs)  # nprocs is the number of parallel process to use
+   sampler.pool = Pool(nprocs)  # nprocs is the number of parallel processes to use
    sampler.run_mcmc(p0, iterations, *args, **kwargs)
 
 To do parallelization with MPI, we can utilize ``MPIPool`` from schwimmbad_:
@@ -203,7 +203,7 @@ To do parallelization with MPI, we can utilize ``MPIPool`` from schwimmbad_:
 and run the Python script with ``mpiexec`` bash command.
 
 If enough compute resources are available, we can also employ a hybrid parallelization,
-for example, using ``multiprocessing`` in the loss evaluation (by specifying argument
+for example, using ``multiprocessing`` in the loss evaluation (by specifying the argument
 ``nprocs`` > 1) and MPI in the likelihood evaluation across different walkers. Then, we
 can run the Python script as follows.
 
@@ -222,7 +222,7 @@ can run the Python script as follows.
 MCMC analysis
 -------------
 
-The chains from the MCMC simulation needs to be processed. In a nutshell, the steps to
+The chains from the MCMC simulation need to be processed. In a nutshell, the steps to
 take are
 
 * Estimate the burn-in time and discard it from the beginning of the chain,
@@ -234,9 +234,9 @@ take are
 Burn-in time
 ^^^^^^^^^^^^
 
-First we need to discard the first few iterations in the beginning of each chain as a
+First, we need to discard the first few iterations at the beginning of each chain as a
 burn-in time. This is similar to the equilibration time in a molecular dynamics
-simulation before the measurement. This action also ensure that the result is independent
+simulation before the measurement. This action also ensures that the result is independent
 of the initial positions of the walkers.
 
 KLIFF provides a function to estimate the burn-in time, based on the Marginal Standard
@@ -247,11 +247,11 @@ performed for each temperature, walker, and parameter dimension separately.
 Autocorrelation length
 ^^^^^^^^^^^^^^^^^^^^^^
 
-In Markov chain, the position at step :math:`i` is not independent from the previous step.
-However, after several iterations (denote this number by :math:`\tau`, which is the
+In the Markov chain, the position at step :math:`i` is not independent of the previous
+step. However, after several iterations (denote this number by :math:`\tau`, which is the
 autocorrelation length), the walker will "forget" where it started, i.e., the position at
 step :math:`i` is independent from step :math:`(i + \tau)`. Thus, we need to only keep
-every :math:`\tau \text{-th}` step to obtain the independent, unceorrelated samples.
+every :math:`\tau \text{-th}` step to obtain the independent, uncorrelated samples.
 
 The estimation of the autocorrelation length in KLIFF is done via the function
 :func:`~kliff.uq.mcmc_utils.autocorr`, which wraps over
@@ -275,11 +275,11 @@ In KLIFF, the function :func:`~kliff.uq.rhat` computes :math:`\hat{R}^p` for one
 temperature. The required input argument is a :math:`L \times \tilde{M}^* \times N` array
 of independent samples (:math:`\tilde{M}^*` is the number of independent samples in each
 walker). When the resulting :math:`\hat{R}^p` values are larger than the threshold
-(e.g., 1.1), then the MCMC simulation should be continued until this criteria is
+(e.g., 1.1), then the MCMC simulation should be continued until this criterion is
 satisfied.
 
 .. note::
-   Some sampling temperatures might converge at slower rates compared to the others.
+   Some sampling temperatures might converge at slower rates compared to others.
    So, user can terminate the MCMC simulation as long as the samples at the target
    temperatures, e.g., :math:`T_0`, have converged.
 
@@ -293,25 +293,29 @@ Bootstrap
 =========
 
 In general, the training dataset contains some random noise. When the data collection
-process is repeated, we will not get the exactly same values, but instead we will get
-(slightly) different values, where the diviation comes from the random noise. If we
+process is repeated, we will not get the exact same values, but instead, we will get
+(slightly) different values, where the deviation comes from the random noise. If we
 train the model to fit different realizations of the training dataset, we will get a
 distribution of the parameters. The uncertainty of the parameters from this distribution
 gives how the error in the training data is propagated to the uncertainty of the
-parameters. However, often times we don't have the luxury to repeat the data collection.
-A suggestion in this case is to generate artificial datasets and train the model to fit
+parameters. However, oftentimes we don't have the luxury to repeat the data collection.
+A suggestion, in this case, is to generate artificial datasets and train the model to fit
 these artificial datasets.
 
 .. figure:: ../img/bootstrap.png
    :alt: Illustration on how bootstrapping works.
 
-Bootstrapping is a way to generate the artificial datasets. We assume that the original
+Bootstrapping is a way to generate artificial datasets. We assume that the original
 dataset contains :math:`N` *independent and identically distributed (iid)* data points.
-An artificial, bootstrap dataset is generated by sample :math:`N` points from the original
-dataset with replacement. Note that this means that there are some data points which are
+An artificial, bootstrap dataset is generated by sample :math:`M` points from the original
+dataset with replacement. Note that this means that there are some data points that are
 repeated, while some other data points are not sampled, thus the bootstrap dataset is not
-the same as the original dataset. The difference between the datasets gives the sense of
+the same as the original dataset. The difference between the datasets gives a sense of
 probability in data.
+
+.. note::
+   Although usually :math:`M` is set to be the same as :math:`N`, in principle it
+   doesn't need to be.
 
 
 
@@ -323,7 +327,7 @@ calculation is
 
 1. Instantiate :class:`~kliff.uq.Bootstrap` class instance.
 
-   This process is straightfoward. The only required argument is the :class:`~kliff.loss.Loss`
+   This process is straightforward. The only required argument is the :class:`~kliff.loss.Loss`
    instance.
 
    .. code-block:: python
@@ -341,7 +345,7 @@ calculation is
    an instance of :class:`~kliff.uq.BootstrapEmpiricalModel` or
    :class:`~kliff.uq.BootstrapNeuralNetworkModel`, depending on whether we have a
    physics-based (empirical) model or a neural network model, respectively. When a neural
-   network model is used, user can specify an additional argument `orig_state_filename`,
+   network model is used, the user can specify an additional argument `orig_state_filename`,
    which specified the name and path of the file to use to export the initial state of the
    model prior to running bootstrap. This is to reset the state of the model at the end
    of performing bootstrap UQ.
@@ -350,14 +354,14 @@ calculation is
 
    In this implementation, we assume that the training dataset consists of many atomic
    configurations and the corresponding quantities. Note that the quantities corresponding
-   to a single atomic configuration are **not** independent to each other. Thus, the
-   resampling process to generate bootstrap dataset should not be done in data point
-   level. Instead we should generate bootstrap dataset by resampling the atomic
+   to a single atomic configuration are **not** independent of each other. Thus, the
+   resampling process to generate a bootstrap dataset should not be done at the data point
+   level. Instead, we should generate a bootstrap dataset by resampling the atomic
    configurations.
 
-   The built-in bootstrap dataset generator function was setup to perform this type of
-   resampling. Note that atomic configurations here is referred as compute arguments,
-   which also contains type of data and weights to use.
+   The built-in bootstrap dataset generator function was set up to perform this type of
+   resampling. Note that atomic configurations here are referred to as compute arguments,
+   which also contain the type of data and weights to use.
 
    .. code-block:: python
 
@@ -368,15 +372,15 @@ calculation is
    the combined list of the compute arguments across all calculators. Then, an internal
    function will automatically assign back the bootstrap compute arguments to their
    respective calculators. This means that the number of compute arguments in each
-   calculator when we do bootstrapping is more likely be different than the original
+   calculator when we do bootstrapping is more likely to be different than the original
    number of compute arguments per calculator, although the total number of compute
-   argumnets is still the same.
+   arguments is still the same.
 
-   Also note that the built-in bootstrap compute argumnents generator assume that the
-   configurations are independent to each other. In the case where this is not satisfied,
+   Also, note that the built-in bootstrap compute arguments generator assumes that the
+   configurations are independent of each other. In the case where this is not satisfied,
    then a more sophisticated resampling method should be used. This can be done by
    defining a custom bootstrap compute arguments generator function. The only required
-   arguments for this function is the requested number of samples.
+   argument for this function is the requested number of samples.
 
 3. Run the optimization for each bootstrap dataset.
 
@@ -391,12 +395,12 @@ calculation is
    regardless if we use an empirical or neural network model. These arguments are:
 
    * ``min_kwargs``, which is a dictionary containing the keyword arguments that will be
-     passed in to the optimizer. This argument can be thought as the optimizer setting.
+     passed into the optimizer. This argument can be thought of as the optimizer setting.
 
      .. note::
 	Since the mapping from the bootstrap dataset to the inferred parameters contains
 	optimization, then it is recommended to use the same optimizer setting when we
-	iterate over each bootstrap compute arguments and train the potential.
+	iterate over each bootstrap compute argument and train the potential.
 	Additionally, the optimizer setting should also be the same as the setting used
 	in the initial training, when we use the original set of compute arguments to
 	train the potential.
@@ -405,5 +409,5 @@ calculation is
      iteration. This can be used as a debugging tool or to monitor convergence.
 
    For other additional arguments, please refer to the respective function documentation,
-   i.e., :meth:`~kliff.uq.BootstrapEmpiricalModel.run` for empirical model or
+   i.e., :meth:`~kliff.uq.BootstrapEmpiricalModel.run` for an empirical model or
    :meth:`~kliff.uq.BootstrapNeuralNetworkModel.run` for neural network model.
