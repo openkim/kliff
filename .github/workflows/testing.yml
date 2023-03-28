@@ -34,7 +34,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -yq gcc
           sudo apt-get install -yq gfortran
-          cmake --version
+          sudo apt-get install -yq cmake=3.24.1
 
       - name: Install kim-api
         run: |
