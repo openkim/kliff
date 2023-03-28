@@ -34,7 +34,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -yq gcc
           sudo apt-get install -yq gfortran
-          sudo apt-get install -yq cmake=3.25.3
+
+      # cannot install cmake with apt-get, so using this action
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~3.25.0"
 
       - name: Install kim-api
         run: |
