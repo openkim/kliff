@@ -77,7 +77,6 @@ def test_1D():
     species = ["C", "O"]
 
     for P in [True, False]:
-
         atoms = Configuration(
             cell=cell,
             species=species,

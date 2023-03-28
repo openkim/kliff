@@ -5,7 +5,6 @@ from kliff.models.parameter_transform import LogParameterTransform
 
 
 def test_log_transform():
-
     a_val = [1.0, 2.0]
     b_val = [3.0, 4.0]
 

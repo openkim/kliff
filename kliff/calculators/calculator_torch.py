@@ -138,7 +138,6 @@ class CalculatorTorch:
         self.model.fit(path)
 
     def compute(self, batch):
-
         #
         # shape N--number of atoms in a config; D--feature dim
         # zeta: (N, D)
@@ -291,7 +290,6 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         self.results = dict([(i, None) for i in self.implemented_property])
 
     def compute(self, batch):
-
         device = self.model.device
 
         grad = self.use_forces or self.use_stress
@@ -319,7 +317,6 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
         # evaluate model to compute energy
         energy_config = [None for _ in range(len(batch))]
         for s, zeta in zeta_by_species.items():
-
             # have no species "s" in this batch of data
             if not zeta:  # zeta == []
                 continue
@@ -345,7 +342,6 @@ class CalculatorTorchSeparateSpecies(CalculatorTorch):
             stress_config = []
         if grad:
             for i, sample in enumerate(batch):
-
                 # derivative of energy w.r.t. zeta
                 energy = energy_config[i]
                 zeta = zeta_config[i]
@@ -484,7 +480,6 @@ class CalculatorTorchError(Exception):
 
 
 def _get_device(gpu):
-
     device = None
     if isinstance(gpu, bool):
         if gpu:

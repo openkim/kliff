@@ -117,7 +117,6 @@ def test_descriptor():
     for normalize, fp_path, mean_std_path in itertools.product(
         [False, True], ["fp.pkl"], [None, "ms.pkl"]
     ):
-
         delete_file("fingerprints.pkl")
         delete_file("fingerprints_mean_and_stdev.pkl")
         delete_file("fp.pkl")

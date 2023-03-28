@@ -189,7 +189,6 @@ class EnergyForcesRMSE:
         logger.info("Finish analyzing energy and forces RMSE.")
 
     def _compute_single_config(self, ca, normalize, verbose, common_path, prefix):
-
         self.calculator.compute(ca)
         conf = _get_config(ca)
         conf_path = os.path.abspath(conf.path)

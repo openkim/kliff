@@ -39,7 +39,6 @@ class ComputeArguments:
         compute_forces: bool = True,
         compute_stress: bool = False,
     ):
-
         self.conf = conf
         self.supported_species = supported_species
         self.influence_distance = influence_distance

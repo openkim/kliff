@@ -25,7 +25,6 @@ class LJComputeArguments(ComputeArguments):
         compute_forces: bool = True,
         compute_stress: bool = False,
     ):
-
         if supported_species is None:
             species = sorted(set(conf.species))
             supported_species = {si: i for i, si in enumerate(species)}
@@ -67,11 +66,9 @@ class LJComputeArguments(ComputeArguments):
 
         energy = 0
         for i, (xyz_i, si) in enumerate(zip(coords, species)):
-
             neighlist, _, neigh_species = self.neigh.get_neigh(i)
 
             for j, sj in zip(neighlist, neigh_species):
-
                 idx = self.specie_pairs_to_param_index[(si, sj)]
                 epsilon = params["epsilon"][idx]
                 sigma = params["sigma"][idx]

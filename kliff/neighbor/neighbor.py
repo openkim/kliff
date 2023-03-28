@@ -172,7 +172,6 @@ class NeighborList:
         numneigh = []
         neighlist = []
         for i in range(N):
-
             try:
                 num_neigh, neigh_indices = self.neigh.get_neigh(
                     cutoffs, neigh_list_index, i
@@ -282,7 +281,6 @@ def assemble_forces(forces: np.array, n: int, padding_image: np.array) -> np.arr
     has_padding = True if padding_image.size != 0 else False
 
     if has_padding:
-
         pad_forces = forces[n:]
         n_padding = pad_forces.shape[0]
 

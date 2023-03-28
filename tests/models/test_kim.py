@@ -35,7 +35,6 @@ ref_forces = [
 
 
 def test_compute():
-
     # model
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
     model = KIMModel(modelname)
@@ -138,7 +137,6 @@ def test_get_update_params():
 
 
 def test_params_transform():
-
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
     model = KIMModel(
         modelname, params_transform=LogParameterTransform(param_names=["sigma", "A"])
