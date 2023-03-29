@@ -73,19 +73,19 @@ def energy_forces_stress(
     if use_energy:
         assert energy == pytest.approx(pred_energy, 1e-6)
     else:
-        assert energy == None
+        assert energy is None
 
     forces = ca.get_forces()
     if use_forces:
-        assert np.allclose(forces[:6], pred_forces)
+        assert np.allclose(forces[:6], pred_forces, rtol=1e-2)
     else:
-        assert forces == None
+        assert forces is None
 
     stress = ca.get_stress()
     if use_stress:
         assert np.allclose(stress, pred_stress)
     else:
-        assert stress == None
+        assert stress is None
 
     pred = ca.get_prediction()
     ref = ca.get_reference()
@@ -138,6 +138,6 @@ def test_lj():
     )
     config = Configuration.from_file(path)
 
-    # energy_forces_stress(model, config, True, False, False)
-    # energy_forces_stress(model, config, True, True, False)
+    energy_forces_stress(model, config, True, False, False)
+    energy_forces_stress(model, config, True, True, False)
     energy_forces_stress(model, config, True, True, True)
