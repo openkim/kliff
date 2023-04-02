@@ -174,7 +174,9 @@ class MagnitudeInverseWeight(Weight):
         Compute the weight based for one property.
         """
         c1, c2 = property_weight_params
-        sigma = np.linalg.norm([c1, (c2 * data_norm)])
+        c1_arr = np.ones_like(data_norm) * c1
+        c2_arr = data_norm * c2
+        sigma = np.linalg.norm(np.vstack((c1_arr, c2_arr)), axis=0)
         weight = 1 / sigma
         if np.any(sigma < 1e-12):
             logger.warning(

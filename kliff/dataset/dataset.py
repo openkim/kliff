@@ -102,6 +102,9 @@ class Configuration:
         if dynamic_load and is_colabfit_dataset:
             self._load_at_once()
 
+        self._weight = Weight() if weight is None else weight
+        self._weight.compute_weight(self)  # Compute the weight
+
     # TODO enable config weight read in from file
     @classmethod
     def from_file(
@@ -332,6 +335,7 @@ class Configuration:
         Set the weight of the configuration if the loss function.
         """
         self._weight = weight
+        print("Setting weight for configuration: ", self._weight)
         self._weight.compute_weight(self)
 
     @property
@@ -550,11 +554,12 @@ class Dataset(TorchDataset):
         kim_property=None,
         colabfit_dataset=None,
         descriptor=None,
+        weight=None
     ):
         self.file_format = file_format
         self.descriptor = descriptor
         if path is not None:
-            self.configs = self._read(path, file_format)
+            self.configs = self._read(path, weight=weight, file_format=file_format)
 
         elif colabfit_database is not None:
             if colabfit_dataset is not None:
