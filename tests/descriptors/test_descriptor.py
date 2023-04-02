@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from kliff.dataset import Configuration
-from kliff.descriptors.descriptor import Descriptor, DescriptorError, load_fingerprints
+from kliff.legacy.descriptors.descriptor import Descriptor, DescriptorError, load_fingerprints
 
 # make up some data
 num_atoms = 4

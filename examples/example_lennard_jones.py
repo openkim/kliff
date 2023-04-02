@@ -12,9 +12,9 @@ Compare this with :ref:`tut_kim_sw`.
 
 .. _OpenKIM: https://openkim.org
 """
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
-from kliff.loss import Loss
+from kliff.ase.loss import Loss
 from kliff.models import LennardJones
 from kliff.utils import download_dataset
 

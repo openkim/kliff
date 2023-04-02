@@ -8,9 +8,9 @@ In this tutorial, we train a linear regression model on the descriptors obtained
 symmetry functions.
 """
 
-from kliff.calculators import CalculatorTorch
+from kliff.ase.calculators import CalculatorTorch
 from kliff.dataset import Dataset
-from kliff.descriptors import SymmetryFunction
+from kliff.legacy.descriptors import SymmetryFunction
 from kliff.models import LinearRegression
 from kliff.utils import download_dataset
 
