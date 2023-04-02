@@ -16,8 +16,15 @@ try:
 except ImportError:
     logger.warning("Torch not installed. Dataset will not be Torch compatible.")
     TorchDataset = object
-import colabfit.tools.configuration
-from colabfit.tools.database import MongoDatabase
+try:
+    import colabfit.tools.configuration
+    from colabfit.tools.database import MongoDatabase
+    is_colabfit_installed = True
+except ImportError:
+    logger.warning("Colabfit not installed.")
+    is_colabfit_installed = False
+    MongoDatabase = object
+
 import sys
 
 try:
@@ -176,15 +183,20 @@ class Configuration:
              Default is energy, forces, and stress but more can be added. Provided property field will be
              available under the "property" field.
         """
-        self = cls(
-            is_colabfit_dataset=True,
-            database_client=database_client,
-            configuration_id=configuration_id,
-            property_id=property_ids,
-            aux_property_fields=aux_property_fields,
-            dynamic_load=dynamic_load
-        )
-        return self
+        if is_colabfit_installed:
+            self = cls(
+                is_colabfit_dataset=True,
+                database_client=database_client,
+                configuration_id=configuration_id,
+                property_id=property_ids,
+                aux_property_fields=aux_property_fields,
+                dynamic_load=dynamic_load
+            )
+            return self
+        else:
+            raise ConfigurationError(
+                f"Expect colabfit-tools to be installed to use this function."
+            )
 
     def to_file(self, filename: Path, file_format: str = "xyz"):
         """
