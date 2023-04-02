@@ -31,10 +31,10 @@ from multiprocessing import Pool
 import numpy as np
 from corner import corner
 
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.dataset.weight import MagnitudeInverseWeight
-from kliff.loss import Loss
+from kliff.ase.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
 from kliff.uq import MCMC, autocorr, mser, rhat

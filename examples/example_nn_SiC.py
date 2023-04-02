@@ -10,12 +10,12 @@ specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 """
 
 
-from kliff import nn
-from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
+from kliff.legacy import nn
+from kliff.ase.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.dataset import Dataset
 from kliff.dataset.weight import Weight
-from kliff.descriptors import SymmetryFunction
-from kliff.loss import Loss
+from kliff.legacy.descriptors import SymmetryFunction
+from kliff.ase.loss import Loss
 from kliff.models import NeuralNetwork
 from kliff.utils import download_dataset
 

@@ -2,8 +2,14 @@ import numpy as np
 import torch
 from .graphs import KIMTorchGraphGenerator, KIMTorchGraph
 from torch_scatter import scatter
-from .libdescriptor import Descriptor
+from .descriptors import Descriptor
 import os
+
+try:
+    import numdifftools as nd
+    num_diff_available = True
+except ImportError:
+    num_diff_available = False
 
 # TODO: Figure out way to incorporate original descriptor class
 # you will need to take manual jacobian vector product
@@ -88,6 +94,50 @@ class TorchLegacyDescriptorFunction(torch.autograd.Function):
         dE_dr = torch.from_numpy(dE_dr.reshape(-1, 3))
         dE_dr.requires_grad_(True)
         return None, None, dE_dr
+
+if num_diff_available:
+    # KIMModel wrappers, there will two kind of wrappers, one which computes the dataset,
+    # and the others which accept parameters and configurations as input.
+    class TorchKIMModelWrapper(torch.autograd.Function):
+        """
+        This class wraps the KIMModel for compatibility with torch autograd.
+        It uses numdifftools for differentiation over model parameters. This method would
+        not accept dataset as a parameter
+        """
+        @staticmethod
+        def forward(ctx, model, configuration, parameters:torch.Tensor):
+            """
+            Coordinates tensor needs to be passed separately .
+            :param ctx:
+            :param model:
+            :param configuration:
+            :param parameters:
+            :return:
+            """
+            model_param_fn = model.get_parameter_function(configuration)
+            ctx.model_param_fn = model_param_fn
+            ctx.parameters = parameters
+            ctx.grad_fn = nd.Gradient(model_param_fn)
+            return torch.tensor(model_param_fn(parameters.numpy()), requires_grad=True)
+
+        @staticmethod
+        def backward(ctx, grad_outputs):
+            """
+            Args:
+            :param ctx:
+            :param grad_outputs:
+            :return:
+            """
+            grad_fn = ctx.grad_fn
+            parameters = ctx.parameters
+            dE_dparam = grad_fn(parameters.numpy())
+            if type(dE_dparam) == np.float64 or dE_dparam.shape == ():
+                dE_dparam = np.array([dE_dparam])
+            input_grad = grad_outputs.numpy()
+            dE_dparam = np.dot(dE_dparam, input_grad)
+            dE_dparam = torch.from_numpy(dE_dparam)
+            dE_dparam.requires_grad_(True)
+            return None, None, dE_dparam
 
 
 class TorchGraphFunction(torch.autograd.Function):

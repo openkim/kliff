@@ -7,7 +7,6 @@ from loguru import logger
 
 from kliff.utils import create_directory, split_string
 
-
 class EnergyForcesRMSE:
     r"""
     Analyzer to compute the root-mean-square error (RMSE) for energy and forces.
@@ -44,8 +43,9 @@ class EnergyForcesRMSE:
     in which :math:`M` is the total number of configurations in the dataset.
     """
 
-    def __init__(self, calculator, energy=True, forces=True):
-        self.calculator = calculator
+    def __init__(self, model, configurations, energy=True, forces=True):
+        self.model = model
+        self.configurations = configurations
         self.compute_energy = energy
         self.compute_forces = forces
 
@@ -82,14 +82,14 @@ class EnergyForcesRMSE:
 
         logger.info("Start analyzing energy and forces RMSE.")
 
-        cas = self.calculator.get_compute_arguments()
+        cas = self.configurations
 
         all_enorm = []
         all_fnorm = []
         all_identifier = []
 
         # common path of dataset
-        paths = [_get_config(ca).path for ca in cas]
+        paths = [ca.path for ca in cas]
         common = _get_common_path(paths)
 
         for i, ca in enumerate(cas):
@@ -102,7 +102,7 @@ class EnergyForcesRMSE:
             )
             all_enorm.append(enorm)
             all_fnorm.append(fnorm)
-            all_identifier.append(_get_config(ca).identifier)
+            all_identifier.append(ca.identifier)
         all_enorm = np.asarray(all_enorm)
         all_fnorm = np.asarray(all_fnorm)
         all_identifier = np.asarray(all_identifier)
@@ -190,13 +190,13 @@ class EnergyForcesRMSE:
 
     def _compute_single_config(self, ca, normalize, verbose, common_path, prefix):
 
-        self.calculator.compute(ca)
-        conf = _get_config(ca)
+        ef_dict = self.model(ca, compute_forces=self.compute_forces)
+        conf = ca
         conf_path = os.path.abspath(conf.path)
         natoms = conf.get_num_atoms()
 
         if self.compute_energy:
-            pred_e = self.calculator.get_energy(ca)
+            pred_e = ef_dict["energy"]
             pred_e = _to_numpy(pred_e, ca)
             ref_e = conf.energy
             ediff = pred_e - ref_e
@@ -208,7 +208,7 @@ class EnergyForcesRMSE:
             enorm = None
 
         if self.compute_forces:
-            pred_f = self.calculator.get_forces(ca)
+            pred_f = ef_dict["forces"]
             pred_f = _to_numpy(pred_f, ca).reshape(-1, 3)
             ref_f = conf.forces.reshape(-1, 3)
             fdiff = pred_f - ref_f
@@ -236,22 +236,22 @@ class EnergyForcesRMSE:
 
         return enorm, fnorm
 
-
-def _get_config(compute_argument):
-    """
-    Get the configuration attached to a compute argument.
-
-    For KIM model and Torch model, the way is different. It would be better to unify these
-    two. The method here is very vulnerable.
-    """
-    if isinstance(compute_argument, Iterable):
-        # compute argument from Torch dataset; [0] because it is a batch of 1 element
-        conf = compute_argument[0]["configuration"]
-    else:
-        # For KIM and built-in models, it is a compute argument class
-        conf = compute_argument.conf
-
-    return conf
+#
+# def _get_config(compute_argument):
+#     """
+#     Get the configuration attached to a compute argument.
+#
+#     For KIM model and Torch model, the way is different. It would be better to unify these
+#     two. The method here is very vulnerable.
+#     """
+#     if isinstance(compute_argument, Iterable):
+#         # compute argument from Torch dataset; [0] because it is a batch of 1 element
+#         conf = compute_argument[0]["configuration"]
+#     else:
+#         # For KIM and built-in models, it is a compute argument class
+#         conf = compute_argument.conf
+#
+#     return conf
 
 
 def _to_numpy(x, compute_argument):

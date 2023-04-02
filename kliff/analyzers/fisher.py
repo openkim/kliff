@@ -23,15 +23,16 @@ class Fisher:
 
     Parameters
     ----------
-    calculator:
-        A calculator object.
+    model:
+        A model object.
     """
 
-    def __init__(self, calculator):
-        self.calculator = calculator
+    def __init__(self, model, configurations):
+        self.model = model
         self.F = None
         self.F_stdev = None
         self.delta_params = None
+        self.configurations = configurations
 
     def run(self, verbose=1):
         """
@@ -57,8 +58,8 @@ class Fisher:
 
         I_all = []
 
-        cas = self.calculator.get_compute_arguments()
-        for i, ca in enumerate(cas):
+        # cas = self.model.get_compute_arguments()
+        for i, ca in enumerate(self.configurations):
             if i % 100 == 0:
                 logger.info(f"Processing configuration {i}.")
 
@@ -74,13 +75,13 @@ class Fisher:
 
     def _write_result(self, I, stdev, verbose, path="analysis_Fisher_info_matrix.txt"):
 
-        params = self.calculator.get_opt_params()
+        params = self.model.get_opt_params()
         nparams = len(params)
         names = []
         values = []
         component_idx = []
         for i in range(len(params)):
-            out = self.calculator.model.get_opt_param_name_value_and_indices(i)
+            out = self.model.get_opt_param_name_value_and_indices(i)
             n, v, p_idx, c_idx = out
             names.append(n)
             values.append(v)
@@ -145,12 +146,12 @@ class Fisher:
             )
 
         # compute Jacobian of forces w.r.t. parameters
-        original_params = self.calculator.get_opt_params()
+        original_params = self.model.get_opt_params()
         Jfunc = nd.Jacobian(self._compute_forces_one_config)
         j = Jfunc(copy.deepcopy(original_params), ca)
 
         # restore params back
-        self.calculator.update_model_params(original_params)
+        self.model.update_model_params(original_params)
 
         return j
 
@@ -171,9 +172,9 @@ class Fisher:
         forces: 1D array
             the forces on atoms in this configuration
         """
-        self.calculator.update_model_params(params)
-        self.calculator.compute(ca)
-        forces = self.calculator.get_forces(ca)
+        self.model.update_model_params(params)
+        forces = self.model(ca, compute_forces=True)["forces"]
+        # forces = self.model.get_forces(ca)
         forces = np.reshape(forces, (-1,))
 
         return forces

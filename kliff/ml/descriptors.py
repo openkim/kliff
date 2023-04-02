@@ -2,10 +2,22 @@ import os
 from collections import OrderedDict
 from typing import List, Dict, Union
 
-import kliff.ml.libdescriptor.libdescriptor as lds
+from loguru import logger
 from kliff.neighbor import NeighborList
-from kliff.dataset import Configuration
 import numpy as np
+from kliff.dataset import Configuration
+
+# stubs for type hinting
+try:
+    from ase import Atoms
+except ImportError:
+    Atoms = None
+    # LOG warning
+try:
+    import libdescriptor as lds
+except ImportError:
+    logger.error("Descriptors module depends on libdescriptor, which is not found. Please install it first.")
+    # raise ImportError("Descriptors module depends on libdescriptor, which is not found. Please install it first.")
 
 
 class AvailableDescriptors:
@@ -23,9 +35,9 @@ class AvailableDescriptors:
 class Descriptor:
     @staticmethod
     def show_available_descriptors():
-        print("--------------------------------------------------------------------------------------------------")
+        print("-"*80)
         print("Descriptors below are currently available, select them by `descriptor: str` attribute:")
-        print("--------------------------------------------------------------------------------------------------")
+        print("-"*80)
         _instance = AvailableDescriptors()
         for key in _instance.__dict__.keys():
             print(f"{key}")
@@ -138,7 +150,7 @@ class Descriptor:
     def _map_species_to_int(self, species):
         return [self.species.index(s) for s in species]
 
-    def forward(self, configuration: Configuration):
+    def forward(self, configuration: Union[Configuration, Atoms]):
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
@@ -151,7 +163,7 @@ class Descriptor:
                                                         self.nl_ctx.coords)
         return descriptors
 
-    def backward(self, configuration: Configuration, dE_dZeta: np.ndarray):
+    def backward(self, configuration: Union[Configuration, Atoms], dE_dZeta: np.ndarray):
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
@@ -436,3 +448,4 @@ def get_bs_size(twojmax, diagonal):
                         if j >= j1:
                             N += 1
         return N
+

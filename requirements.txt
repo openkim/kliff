@@ -1,4 +1,4 @@
-pybind11==2.10.2
+pybind11-global==2.10.2
 scipy==1.10.0
 numpy==1.24.1
 pyyaml==6.0
@@ -10,3 +10,4 @@ torch_sparse==0.6.16
 torch_scatter==2.1.0
 torch_geometric==2.2.0
 git+https://github.com/colabfit/colabfit-tools@aa2d1e3b160275cdb7d8734afdbbb4a570a92a94#egg=colabfit_tools
+git+https://github.com/ipcamit/libdescriptor.git@2082c9868f64fc4e971dfc632f1a9a0fb6849ab0

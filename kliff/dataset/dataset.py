@@ -11,10 +11,28 @@ from kliff.dataset.weight import Weight
 from kliff.utils import to_path
 
 # KLIFF-Torch imports
-from torch.utils.data import Dataset as TorchDataset
-import colabfit.tools.configuration
-from colabfit.tools.database import MongoDatabase
+try:
+    from torch.utils.data import Dataset as TorchDataset
+except ImportError:
+    logger.warning("Torch not installed. Dataset will not be Torch compatible.")
+    TorchDataset = object
+try:
+    import colabfit.tools.configuration
+    from colabfit.tools.database import MongoDatabase
+    is_colabfit_installed = True
+except ImportError:
+    logger.warning("Colabfit not installed.")
+    is_colabfit_installed = False
+    MongoDatabase = object
+
 import sys
+
+try:
+    from ase import Atoms
+    is_ase_installed = True
+except ImportError:
+    logger.warning("ASE not installed.")
+    is_ase_installed = False
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
@@ -91,6 +109,9 @@ class Configuration:
         if dynamic_load and is_colabfit_dataset:
             self._load_at_once()
 
+        self._weight = Weight() if weight is None else weight
+        self._weight.compute_weight(self)  # Compute the weight
+
     # TODO enable config weight read in from file
     @classmethod
     def from_file(
@@ -162,15 +183,20 @@ class Configuration:
              Default is energy, forces, and stress but more can be added. Provided property field will be
              available under the "property" field.
         """
-        self = cls(
-            is_colabfit_dataset=True,
-            database_client=database_client,
-            configuration_id=configuration_id,
-            property_id=property_ids,
-            aux_property_fields=aux_property_fields,
-            dynamic_load=dynamic_load
-        )
-        return self
+        if is_colabfit_installed:
+            self = cls(
+                is_colabfit_dataset=True,
+                database_client=database_client,
+                configuration_id=configuration_id,
+                property_id=property_ids,
+                aux_property_fields=aux_property_fields,
+                dynamic_load=dynamic_load
+            )
+            return self
+        else:
+            raise ConfigurationError(
+                f"Expect colabfit-tools to be installed to use this function."
+            )
 
     def to_file(self, filename: Path, file_format: str = "xyz"):
         """
@@ -321,6 +347,7 @@ class Configuration:
         Set the weight of the configuration if the loss function.
         """
         self._weight = weight
+        print("Setting weight for configuration: ", self._weight)
         self._weight.compute_weight(self)
 
     @property
@@ -503,6 +530,19 @@ class Configuration:
         _ = self.energy
         _ = self.forces
 
+    def as_ase_config(self):
+        if is_ase_installed:
+            return Atoms(
+                positions=self.coords,
+                symbols=self.species,
+                cell=self.cell,
+                pbc=self.PBC,
+            )
+        else:
+            raise ModuleNotFoundError(
+                "ASE is not installed. Please install ASE to use this feature."
+            )
+
 
 class Dataset(TorchDataset):
     """
@@ -526,11 +566,12 @@ class Dataset(TorchDataset):
         kim_property=None,
         colabfit_dataset=None,
         descriptor=None,
+        weight=None
     ):
         self.file_format = file_format
         self.descriptor = descriptor
         if path is not None:
-            self.configs = self._read(path, file_format)
+            self.configs = self._read(path, weight=weight, file_format=file_format)
 
         elif colabfit_database is not None:
             if colabfit_dataset is not None:

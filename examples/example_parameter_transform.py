@@ -32,10 +32,10 @@ silicon that is archived on OpenKIM_. Compare this with :ref:`tut_kim_sw`.
 
 import numpy as np
 
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.dataset.weight import Weight
-from kliff.loss import Loss
+from kliff.ase.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
 from kliff.utils import download_dataset

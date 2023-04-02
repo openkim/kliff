@@ -1,3 +1,8 @@
-from .generate_graph import KIMTorchGraphGenerator, KIMTorchGraph
+from kliff.utils import torch_available
 
-__all__ = ['KIMTorchGraphGenerator', 'KIMTorchGraph']
+if torch_available():
+    from .generate_graph import KIMTorchGraphGenerator, KIMTorchGraph
+    __all__ = ['KIMTorchGraphGenerator', 'KIMTorchGraph']
+else:
+    from .generate_graph import KIMTorchGraphGenerator
+    __all__ = ['KIMTorchGraphGenerator']
