@@ -102,7 +102,7 @@ setup(
     ext_modules=[sym_fn, bispectrum, neighlist],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     extras_require={
-        "test": ["pytest", "kimpy", "ptemcee", "emcee", "torch"],
+        "test": ["pytest", "kimpy", "ptemcee", "emcee", "torch", "numpy<1.20"],
         "docs": [
             "sphinx",
             "furo",

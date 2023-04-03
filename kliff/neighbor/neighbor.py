@@ -229,11 +229,11 @@ class NeighborList:
         """
         return self.padding_coords.copy()
 
-    def get_padding_speices(self) -> List[str]:
+    def get_padding_species(self) -> List[str]:
         """
         Return species string of padding atoms.
         """
-        return self.padding_speices[:]
+        return self.padding_species[:]
 
     def get_padding_species_code(self, mapping: Dict[str, int]) -> np.array:
         """
@@ -296,6 +296,8 @@ def assemble_forces(forces: np.array, n: int, padding_image: np.array) -> np.arr
     return total_forces
 
 
+# TODO, use the full 3x3 matrix to avoid confusion of the order of the components in
+#  the 6 components array
 def assemble_stress(coords: np.array, forces: np.array, volume: float) -> np.array:
     """
     Calculate the virial stress using the negative f dot r method.
