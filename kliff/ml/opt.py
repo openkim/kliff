@@ -35,7 +35,23 @@ except ImportError:
 
 class OptimizerScipy:
     """
-
+    Container class for wrapping the :class:`scipy.optimize.minimize` function. This class is used to contain
+    the model, dataset, and parameters to be optimized. The :meth:`minimize` method will call the
+    :class:`scipy.optimize.minimize` function and return the optimized parameters. This optimizer is meant
+    to be used with physics-based KIM models. For loss functions currently only mean squared error is supported
+    as the loss function (:meth:`loss_fn`), but it can be edited by monkey-patching.
+    TODO: better API for loss function
+    Args:
+        model_fn (KIMModel): KIM model function.
+        parameters (list): List of parameters to be optimized.
+        dataset (Dataset): :class:`kliff.dataset.Dataset` object.
+        weights (dict): Weights for the loss function. Default is ``{"energy": 1.0, "forces": 1.0, "stress": 1.0}``.
+        optimizer (str): Optimizer to use. Default is ``"L-BFGS-B"``.
+        optimizer_kwargs (dict): Keyword arguments for the optimizer. Default is ``None``.
+        maxiter (int): Maximum number of iterations. Default is ``1000``.
+        tol (float): Tolerance for termination. Default is ``1e-8``.
+        target_property (list): List of target properties to be optimized. Default is ``["energy"]``.
+        verbose (bool): If ``True``, print out the loss function value at each iteration. Default is ``False``.
     """
 
     def __init__(
@@ -66,22 +82,14 @@ class OptimizerScipy:
         self.options = {"maxiter": self.maxiter, "disp": self.verbose}
 
     def _get_optimizer(self, optimizer_str):
-        scipy_minimize_methods = [
-            "Nelder-Mead",
-            "Powell",
-            "CG",
-            "BFGS",
-            "Newton-CG",
-            "L-BFGS-B",
-            "TNC",
-            "COBYLA",
-            "SLSQP",
-            "trust-constr",
-            "dogleg",
-            "trust-ncg",
-            "trust-exact",
-            "trust-krylov",
-        ]
+        """
+        Get the optimizer string for :class:`scipy.optimize.minimize`. Based on the optimizer string,
+        the corresponding optimizer will be returned.
+        :param optimizer_str:
+        :return:
+        """
+        scipy_minimize_methods = [ "Nelder-Mead", "Powell", "CG", "BFGS", "Newton-CG", "L-BFGS-B", "TNC", "COBYLA",
+                                   "SLSQP", "trust-constr", "dogleg", "trust-ncg", "trust-exact", "trust-krylov"]
         # scipy_minimize_methods_not_supported_args = ["bounds"]
         # scipy_least_squares_methods = ["trf", "dogbox", "lm", "geodesiclm"]
         # scipy_least_squares_methods_not_supported_args = ["bounds"]
@@ -100,10 +108,23 @@ class OptimizerScipy:
         raise ValueError("No optimizer provided")
 
     def update_parameters(self, new_parameters: List[Union[Parameter, OptimizingParameters]]):
+        """
+        Copy the new parameters to the model parameters.
+        :param new_parameters:
+        :return:
+        """
         for new_parameter, parameter in zip(new_parameters, self.parameters):
             self.model_fn.copy_parameters(parameter, new_parameter)
 
     def loss_fn(self, models, dataset, weights, properties):
+        """
+        Loss function for the optimizer. Currently only mean squared error is supported.
+        :param models: :class:`kliff.models.KIMModel` object.
+        :param dataset: :class:`kliff.dataset.Dataset` object.
+        :param weights: Broadcast-able weights for the loss function.
+        :param properties: Properties to use while computing the loss function
+        :return:
+        """
         loss = 0.0
         for configuration in dataset:
             model_eval = self.model_fn(configuration)
@@ -113,11 +134,21 @@ class OptimizerScipy:
         return loss
 
     def _scipy_loss_wrapper(self, new_parameters):
+        """
+        Wrapper for the loss function to be used with :class:`scipy.optimize.minimize`.
+        :param new_parameters: Parameter input for the loss function.
+        :return:
+        """
         self.update_parameters(new_parameters)
         loss = self.loss_fn(self.model_fn, self.dataset, self.weights, self.target_property)
         return loss
 
     def minimize(self, kwargs=None):
+        """
+        Call minimize function from :class:`scipy.optimize.minimize`.
+        :param kwargs: Optional keyword arguments for the optimizer.
+        :return: Scipy result object.
+        """
         if kwargs:
             kwargs = self.optimizer_kwargs
         else:
@@ -202,6 +233,11 @@ class OptimizerTorch:
         self.print_loss = False
 
     def _get_optimizer(self, optimizer_str):
+        """
+        Get optimizer from string or torch optimizer object. Same as in kliff.optimizer.Optimizer
+        :param optimizer_str: String or torch optimizer object.
+        :return:
+        """
         torch_minimize_methods = ["Adadelta", "Adagrad", "Adam", "SparseAdam", "Adamax", "ASGD", "LBFGS",
                                   "RMSprop", "Rprop", "SGD"]
         if isinstance(optimizer_str, str):
@@ -217,11 +253,25 @@ class OptimizerTorch:
             raise ValueError("No optimizer provided")
 
     def update_parameters(self, new_parameters: List[Parameter]):
+        """
+        Copy new parameters to the model parameters.
+        :param new_parameters:
+        :return:
+        """
         for new_parameter, parameter in zip(new_parameters, self.parameters):
             with torch.no_grad():
                 parameter.copy_(new_parameter)
 
     def loss_fn(self, model, dataset, weights, properties):
+        """
+        Loss function for the optimizer. This function is called by the optimizer to compute the loss.
+        Currently only the mean squared error is supported.
+        :param model: :class:`torch.nn.Module` to be optimized
+        :param dataset: :class:`torch.utils.data.Dataset` to optimize on
+        :param weights: Broadcastable weights for the different properties
+        :param properties: Properties to optimize on (energy, forces, stress)
+        :return: loss (torch.tensor)
+        """
         loss = torch.tensor(0.0)
         for configuration in dataset:
             model_eval = model(configuration)
@@ -232,6 +282,11 @@ class OptimizerTorch:
         return loss
 
     def minimize(self, kwargs=None):
+        """
+        Minimize the model function. It contains a simple PyTorch loop to compute loss, and update the parameters.
+        :param kwargs:
+        :return:
+        """
         if kwargs:
             kwargs = self.optimizer_kwargs
         else:

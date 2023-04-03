@@ -16,7 +16,7 @@ To carry out optimization, first create a loss object:
 
 .. code-block:: python
 
-    from kliff.loss import Loss
+    from kliff.ase.loss import Loss
 
     calculator = ...  # create a calculator
     Loss(calculator, nprocs=1, residual_fn=None, residual_data=None)
@@ -125,8 +125,8 @@ for example, if one wants to ignore the normalization by the number of atoms.
 
 .. code-block:: python
 
-    from kliff.loss import Loss
-    from kliff.loss import energy_forces_residual
+    from kliff.ase.loss import Loss
+    from kliff.ase.loss import energy_forces_residual
 
     calculator = ...  # create a calculator
 
@@ -160,7 +160,7 @@ weigh more for the configurations with cracks.
 
 .. code-block:: python
 
-    from kliff.loss import Loss
+    from kliff.ase.loss import Loss
 
     # define my own residual function
     def residual_fn(identifier, natoms, weight, prediction, reference, data):

@@ -21,6 +21,9 @@ except ImportError:
 
 
 class AvailableDescriptors:
+    """
+    This class lists all the available descriptors in libdescriptor as enums.
+    """
     def __init__(self):
         i = 0
         while True:
@@ -33,8 +36,22 @@ class AvailableDescriptors:
 
 
 class Descriptor:
+    """
+    Descriptor class, which is a wrapper of libdescriptor. It provides a unified interface to all the
+    descriptors in libdescriptor. The descriptor is initialized with a cutoff radius, a list of species,
+     a descriptor type and an ordered list of hyperparameters. The descriptor type is a string, which can
+        be obtained by `AvailableDescriptors.show_available_descriptors()`. The hyperparameters are a list
+        of dictionaries, some sane default values are provided by `get_set51()` and `get_set30()` for Symmetry
+        Functions, and `get_default_bispectrum()` for Bispectrum. This class also provides a methods to compute
+        derivatives of the descriptor with respect to atomic positions. The functions generating descriptors and
+        their derivatives are implemented as `forward()` and `backward()`, respectively, to match the PyTorch
+        nomeclature.
+    """
     @staticmethod
     def show_available_descriptors():
+        """
+        Show all the available descriptors in libdescriptor.
+        """
         print("-"*80)
         print("Descriptors below are currently available, select them by `descriptor: str` attribute:")
         print("-"*80)
@@ -44,6 +61,14 @@ class Descriptor:
 
     def __init__(self, cutoff: float, species: List[str], descriptor: str, hyperparameters: Union[Dict, str],
                  cutoff_function: str = "cos", nl_ctx: NeighborList = None):
+        """
+        :param cutoff: Cutoff radius.
+        :param species: List of strings, each string is a species (atomic symbols).
+        :param descriptor: String of descriptor type, can be obtained by `show_available_descriptors()`.
+        :param hyperparameters: Ordered dictionary of hyperparameters, or a string of preset hyperparameters.
+        :param cutoff_function: Cut-off function, currently only "cos" is supported.
+        :param nl_ctx: function to compute neighbor list, if not provided, will be computed internally.
+        """
         self.cutoff = cutoff
         self.species = species
         _available_descriptors = AvailableDescriptors()
@@ -60,6 +85,11 @@ class Descriptor:
             self.external_nl_ctx = False
 
     def _set_hyperparams(self, hyperparameters):
+        """
+        Set hyperparameters.
+        :param hyperparameters:
+        :return:
+        """
         if isinstance(hyperparameters, str):
             if hyperparameters == "set51":
                 return get_set51()
@@ -75,6 +105,10 @@ class Descriptor:
             raise TypeError("Hyperparameters must be either a string or an OrderedDict")
 
     def _init_descriptor_from_kind(self):
+        """
+        Initialize descriptor from descriptor kind. Currently only Symmetry Functions and Bispectrum are supported.
+        :return:
+        """
         cutoff_array = np.ones((len(self.species), len(self.species))) * self.cutoff
         if self.descriptor_kind == lds.AvailableDescriptors(0):
             symmetry_function_types = list(self.hyperparameters.keys())
@@ -151,6 +185,13 @@ class Descriptor:
         return [self.species.index(s) for s in species]
 
     def forward(self, configuration: Union[Configuration, Atoms]):
+        """
+        Compute the descriptors for a given configuration, by calling the C++ implementation,
+        :py:func:`libdescriptor.compute_single_atom`. Takes in either a KLIFF Configuration or ASE Atoms object.
+        TODO: Use the :py:func:`libdescriptor.compute` function for faster evaluation. Which loops in C++.
+        :param configuration: :py:class:`kliff.dataset.Configuration` or :py:class:`ase.Atoms` object.
+        :return: :numpy:`ndarray` of shape (n_atoms, width)
+        """
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
@@ -164,6 +205,15 @@ class Descriptor:
         return descriptors
 
     def backward(self, configuration: Union[Configuration, Atoms], dE_dZeta: np.ndarray):
+        """
+        Compute the gradients of the descriptors with respect to the atomic coordinates. It takes in an array of
+        shape (n_atoms, width) and the configuration, and performs the vector-Jacobian product (revrse mode
+        automatic differentiation). The output is an array of shape (n_atoms, 3) yielding the gradients of the
+        descriptors with respect to the atomic coordinates.
+        :param configuration: :py:class:`kliff.dataset.Configuration` or :py:class:`ase.Atoms` object.
+        :param dE_dZeta: :numpy:`ndarray` of shape (n_atoms, width)
+        :return: :numpy:`ndarray` of shape (n_atoms, 3)
+        """
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
@@ -187,6 +237,14 @@ class Descriptor:
         return derivatives
 
     def write_kim_params(self, path, fname="descriptor.params"):
+        """
+        Write the descriptor parameters to a file, which can be used by KIM-API. This is the additional
+        information besides the :py:function:`save_kim_model` function, which saves complete descriptor model.
+         Currently supports exporting Symmetry Functions and Bispectrum descriptors.
+        :param path: path to the directory where the file will be saved.
+        :param fname: name of the descriptor file.
+        :return:
+        """
         with open(os.path.join(path, fname), "w") as fout:
             # header
             fout.write("#" + "=" * 80 + "\n")
@@ -288,6 +346,10 @@ class Descriptor:
                 fout.write("\n\n")
 
     def save_kim_model(self, path: str, model: str):
+        """Saves the descriptor model in the KIM format.
+        :param path: path to the directory where the file will be saved.
+        :param model: name of the model.
+        """
         with open(f"{path}/kim_model.param", "w") as f:
             n_elements = len(self.species)
             f.write(f"# Number of elements\n")

@@ -3,6 +3,22 @@
 ==========
 Change Log
 ==========
+v0.9.0 (2023/04/02)
+===================
+Added
+-----
+- Restructured KLIFF for "ML first" approach
+- `Loss` and `Calculator` class are now part of the `kliff.ase` module
+- `KIMModel` class now supports a `__call__` method, which can be used to calculate energy, forces, and stress
+- `KIMModel` class now supports a `get_parameters` method, which can be used to get the parameters of the model
+- `Dataset` class is now an instance of `torch.utils.data.Dataset`, so it can be used in a `torch.utils.data.DataLoader` object
+- Old descriptors moved to `kliff.legacy` module for backward compatibility (will be removed in future versions)
+- New `kliff.ml` module for machine learning tools
+    - `kliff.ml.graphs` module for generating `torch_geometric` graphs
+    - `kliff.ml.descritptors` module for generating descriptors using `libdescriptor` library
+    - `kliff.ml.training_wheel` module for seamless `torch.autograd` based gradient calculation of `kliff.dataset.Configurations` objects.
+    -  `kliff.ml.opt` module for new Physics based and ML based optimizers, `OptimizerScipy` and `OptimizerTorch`
+
 
 v0.4.1 (2022/10/06)
 ===================

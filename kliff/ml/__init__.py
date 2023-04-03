@@ -6,7 +6,9 @@ from .descriptors import Descriptor
 from .opt import OptimizerScipy, OptimizerTorch
 
 try:
-    from .training_wheels import TrainingWheels, TorchGraphFunction, TorchDescriptorFunction, TorchLegacyDescriptorFunction
+    from .training_wheels import TrainingWheels
+    from .grad import TorchGraphFunction, TorchDescriptorFunction, TorchLegacyDescriptorFunction, TorchKIMModelWrapper
+
     __all__ = ["graphs", "Descriptor", "OptimizerScipy", "OptimizerTorch", "TrainingWheels", "TorchGraphFunction",
            "TorchDescriptorFunction"]
 except ImportError:

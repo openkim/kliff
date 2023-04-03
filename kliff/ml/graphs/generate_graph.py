@@ -13,7 +13,13 @@ from kliff.dataset import Configuration
 try:
     from torch_geometric.data import Data
     pyg_available = True
+
     class KIMTorchGraph(Data):
+        """
+        A Pytorch Geometric compatible graph representation of a configuration. When loaded into a
+        class:`torch_geometric.data.DataLoader` the graphs of type KIMTorchGraph will be automatically collated and
+         batched.
+        """
         def __init__(self):
             super(KIMTorchGraph, self).__init__()
             self.num_nodes = None  # Simplify sizes and frees up pos key word, coords is cleaner
@@ -47,7 +53,17 @@ except ImportError:
 
 
 class KIMTorchGraphGenerator:
-
+    """
+    Generate a graph representation of a configuration. This generator will also save the required parameters
+    for porting the model over to KIM-API using TorchMLModelDriver. The configuration file saved here will generate
+    identical graphs at KIM-API runtime. For porting the graph representation you also need to provide the
+    TorchScript model file name.
+    Args:
+        species (list): List of species.
+        cutoff (float): Cutoff distance.
+        n_layers (int): Number of convolution layers.
+        as_torch_geometric_data (bool): If True, the graph will be returned as a Pytorch Geometric Data object.
+    """
     def __init__(self, species, cutoff, n_layers, as_torch_geometric_data=False):
         self.species = species
         self.cutoff = cutoff
@@ -59,6 +75,11 @@ class KIMTorchGraphGenerator:
         self.as_torch_geometric_data = as_torch_geometric_data
 
     def generate_graph(self, configuration: Configuration):
+        """
+        Generate a graph representation of a configuration.
+        :param configuration:
+        :return: C++ custom graph object or Pytorch Geometric Data object.
+        """
         graph = tg.get_complete_graph(
             self.n_layers,
             self.cutoff,
@@ -75,8 +96,21 @@ class KIMTorchGraphGenerator:
                 return self._to_py_graph(graph)
         return graph
 
+    def __call__(self, configuration: Configuration):
+        """
+        Function wrapper over `generate_graph` for convenience and consistency.
+        :param configuration:
+        :return: Custom graph object or Pytorch Geometric Data object.
+        """
+        return self.generate_graph(configuration)
+
     @staticmethod
     def _to_py_graph(graph):
+        """
+        Convert a C++ graph object to a Pytorch Geometric Data object.
+        :param graph: C++ graph object.
+        :return: KIMTorchGraph object.
+        """
         torch_geom_graph = KIMTorchGraph()
         torch_geom_graph.energy = torch.as_tensor(graph.energy)
         torch_geom_graph.forces = torch.as_tensor(graph.forces)
@@ -93,6 +127,11 @@ class KIMTorchGraphGenerator:
         return torch_geom_graph
 
     def collate_fn(self, config_list):
+        """
+        Collate function for use with a Pytorch DataLoader.
+        :param config_list:
+        :return: list of graphs.
+        """
         graph_list = []
         for conf in config_list:
             graph = self.generate_graph(conf)
@@ -104,6 +143,11 @@ class KIMTorchGraphGenerator:
         return graph
 
     def save_kim_model(self, path: str, model: str):
+        """
+        Save a KIM model parameter file. This is used to load the model into KIM-API.
+        :param path: Path to save the parameter file.
+        :param model: name of model to save.
+        """
         with open(f"{path}/kim_model.param", "w") as f:
             n_elements = len(self.species)
             f.write(f"# Number of species\n")

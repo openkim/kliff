@@ -71,6 +71,16 @@ network models and conduct the training. So if you want to train neural network
 potentials, PyTorch_ needs to be installed.
 Please follow the instructions given on the official PyTorch_ website to install it.
 
+Singularty
+----------
+You can also use KLIFF on prebuilt singularity images. The images are available on Singularity_ cloud and
+you can pull the images from Singularity Cloud and run them as follows:
+
+.. code-block:: bash
+
+    $ singularity pull --arch amd64 library://kliff/dev/kliff:latest
+
+
 
 .. _Python: http://www.python.org
 .. _PyTorch: https://pytorch.org
@@ -78,3 +88,4 @@ Please follow the instructions given on the official PyTorch_ website to install
 .. _kim-api: https://openkim.org/kim-api
 .. _openkim-models: https://openkim.org/doc/usage/obtaining-models
 .. _kimpy: https://github.com/openkim/kimpy
+.. _Singularity: https://cloud.sylabs.io/library/kliff/dev/kliff

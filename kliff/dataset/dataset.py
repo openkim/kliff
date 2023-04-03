@@ -44,6 +44,9 @@ class Configuration:
     This is used to store the information of an atomic configuration, e.g. supercell,
     species, coords, energy, and forces.
 
+    If colabfit-tools is identified as the source of the configuration data then the configuration
+    getter and setter functions would a shallow wrapper over mongodb data calls.
+
     Args:
         cell: A 3x3 matrix of the lattice vectors. The first, second, and third rows are
             :math:`a_1`, :math:`a_2`, and :math:`a_3`, respectively.
@@ -62,8 +65,13 @@ class Configuration:
             function.
         identifier: a (unique) identifier of the configuration
 
-    If colabfit-tools is identified as the source of the configuration data then the configuration
-    getter and setter functions would a shallow wrapper over mongodb datacalls.
+        is_colabfit_dataset: True if the configuration is from a colabfit dataset
+        database_client: A MongoDatabase object which is used to connect to the database
+        property_id: The unique id of the property in the database
+        configuration_id: The unique id of the configuration in the database
+        aux_property_fields: A list of strings that are the names of the additional fields (limited support)
+        dynamic_load: If True, the configuration data fields like forces and stresses will be loaded from the database
+        on demand, rather than all at once. This is useful for large datasets where the memory footprint is a concern.
     """
 
     def __init__(
@@ -546,7 +554,12 @@ class Configuration:
 
 class Dataset(TorchDataset):
     """
-    A dataset of multiple configurations (:class:`~kliff.dataset.Configuration`).
+    A dataset of multiple configurations (:class:`~kliff.dataset.Configuration`).  The dataset object is an instance
+    of :class:`~torch.utils.data.Dataset`, which can be used to create a PyTorch DataLoader. The dataset object returns
+    list of :class:`~kliff.dataset.Configuration` objects. It can be initialized from a file or a directory containing
+    multiple xyz files (with one configuration per file, and an instance of Colabfit dataset.
+
+    Currently only file load option supports weights.
 
     Args:
         path: Path of a file storing a configuration or filename to a directory containing
@@ -556,6 +569,11 @@ class Dataset(TorchDataset):
         weight: an instance that computes the weight of the configuration in the loss
             function.
         file_format: Format of the file that stores the configuration, e.g. `xyz`.
+        colabfit_database: Name of the colabfit database to connect to.
+        kim_property: Name of the KIM property to fetch from colabfit database.
+        colabfit_dataset: Name of the colabfit dataset to fetch from colabfit database.
+        descriptor: Descriptor object to compute the descriptor of the configuration.
+        weight: an instance that computes the weight of the configuration in the loss
     """
 
     def __init__(
@@ -675,7 +693,7 @@ class Dataset(TorchDataset):
         client: MongoDatabase, dataset_name: str, aux_property_fields: str = None
     ):
         """
-        Read atomic configurations from path.
+        Read atomic configurations from Colabfit dataset.
         """
 
         # get configuration and property ID and send it to load configuration
