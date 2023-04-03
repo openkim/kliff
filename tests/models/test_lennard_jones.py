@@ -77,7 +77,7 @@ def energy_forces_stress(
 
     forces = ca.get_forces()
     if use_forces:
-        assert np.allclose(forces[:6], pred_forces, rtol=1e-2)
+        assert np.allclose(forces[:6], pred_forces)
     else:
         assert forces is None
 
@@ -93,6 +93,7 @@ def energy_forces_stress(
     if use_energy:
         assert pred[0] == pytest.approx(pred_energy, 1e-6)
         assert ref[0] == pytest.approx(ref_energy, 1e-6)
+
     if use_forces:
         if use_energy:
             assert np.allclose(pred[1 : 1 + 3 * 6], np.ravel(pred_forces))
