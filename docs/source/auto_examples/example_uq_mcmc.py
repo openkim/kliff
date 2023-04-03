@@ -31,10 +31,10 @@ from multiprocessing import Pool
 import numpy as np
 from corner import corner
 
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.dataset.weight import MagnitudeInverseWeight
-from kliff.loss import Loss
+from kliff.ase.loss import Loss
 from kliff.models import KIMModel
 from kliff.models.parameter_transform import LogParameterTransform
 from kliff.uq import MCMC, autocorr, mser, rhat
@@ -103,7 +103,7 @@ nwalkers = 2 * ndim  # Number of parallel walkers to simulate
 
 
 ##########################################################################################
-# We start by instantiating :class:`~kliff.uq.MCMC`. This requires :class:`~kliff.loss.Loss`
+# We start by instantiating :class:`~kliff.uq.MCMC`. This requires :class:`~kliff.ase.loss.Loss`
 # instance to construct the likelihood function. Additionally, we can specify the prior
 # (or log-prior to be more precise) via the ``logprior_fn`` argument, with the default
 # option be a uniform prior that is bounded over a finite range that we specify via the

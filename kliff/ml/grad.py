@@ -20,7 +20,7 @@ except ImportError:
 
 class TorchDescriptorFunction(torch.autograd.Function):
     """
-    This class is a :class:`torch.autograd.Function` wrapper for the Descriptor class :class:`kliff.descriptors.Descriptor`.
+    This class is a :class:`torch.autograd.Function` wrapper for the Descriptor class :class:`kliff.ml.Descriptor`.
     It is used to compute the descriptor values and derivatives in a PyTorch compatible API. It performs the
     vector-Jacobian product for the descriptor values and derivatives, and return gradients w.r.t positions.
     """
@@ -30,7 +30,7 @@ class TorchDescriptorFunction(torch.autograd.Function):
         Forward function for computing the descriptors. Coordinates tensor needs to be passed separately .
         Args:
         :param ctx: Context object of the autograd function
-        :param DescFunCtx: Descriptor context object :class:`kliff.descriptors.Descriptor`
+        :param DescFunCtx: Descriptor context object :class:`kliff.ml.Descriptor`
         :param coordinates: Coordinate tensor to accumulate gradients in the backward pass (`coordinates.grad`)
 
         Returns: Descriptor tensor

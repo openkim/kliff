@@ -42,10 +42,10 @@ on OpenKIM_.
 #
 # Let's first import the modules that will be used in this example.
 
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.dataset.weight import Weight
-from kliff.loss import Loss
+from kliff.ase.loss import Loss
 from kliff.models import KIMModel
 from kliff.utils import download_dataset
 

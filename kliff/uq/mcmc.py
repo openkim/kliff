@@ -54,7 +54,7 @@ def get_T0(loss: Loss):
     Parameters
     ----------
     loss : Loss
-        Loss function class from :class:`~kliff.loss.Loss`.
+        Loss function class from :class:`~kliff.ase.loss.Loss`.
 
     Returns
     -------
@@ -76,7 +76,7 @@ class MCMC:
     Parameters
     ----------
     loss : Loss
-        Loss function class from :class:`~kliff.loss.Loss`.
+        Loss function class from :class:`~kliff.ase.loss.Loss`.
     nwalkers : Optional[int]
         Number of walkers to simulate. The minimum number of walkers
         is twice the number of parameters. It defaults to this minimum
@@ -169,7 +169,7 @@ if ptemcee_avail:
         Parameters
         ----------
         loss : Loss
-            Loss function instance from :class:`~kliff.loss.Loss`.
+            Loss function instance from :class:`~kliff.ase.loss.Loss`.
         nwalkers : Optional[int]
             Number of walkers to simulate. The minimum number of walkers
             is twice the number of parameters. It defaults to this minimum
@@ -198,7 +198,7 @@ if ptemcee_avail:
         Attributes
         ----------
         loss: Loss
-            Loss function instance from :class:`~kliff.loss.Loss`
+            Loss function instance from :class:`~kliff.ase.loss.Loss`
         T0: float
             Values of the natural temperature, :math:`T_0` [Frederiksen2004]_.
         Tladder: np.ndarray
@@ -280,7 +280,7 @@ if emcee_avail:
         Parameters
         ----------
         loss : Loss
-            Loss function instance from :class:`~kliff.loss.Loss`.
+            Loss function instance from :class:`~kliff.ase.loss.Loss`.
         nwalkers : Optional[int]
             Number of walkers to simulate. The minimum number of walkers
             is twice the number of parameters. It defaults to this minimum
@@ -302,7 +302,7 @@ if emcee_avail:
         Attributes
         ----------
         loss: Loss
-            Loss function instance from :class:`~kliff.loss.Loss`
+            Loss function instance from :class:`~kliff.ase.loss.Loss`
         T: float
             Values of the sampling temperature.
         sampler: emcee.EnsembleSampler

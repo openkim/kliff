@@ -18,8 +18,8 @@ class ModelTorch(nn.Module):
 
     Args:
         descriptor: atomic environment descriptor for computing configuration
-            fingerprints. See :meth:`~kliff.descriptors.SymmetryFunction` and
-            :meth:`~kliff.descriptors.Bispectrum`.
+            fingerprints. See :meth:`~kliff.legacy.descriptors.SymmetryFunction` and
+            :meth:`~kliff.legacy.descriptors.Bispectrum`.
         seed: random seed.
     """
 

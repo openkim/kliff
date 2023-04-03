@@ -4,7 +4,7 @@ the dataset.
 """
 
 from kliff.analyzers import EnergyForcesRMSE
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.models import KIMModel
 from kliff.utils import download_dataset

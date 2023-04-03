@@ -9,10 +9,10 @@ parameters of the model and the state dictionary of the parameter.
 """
 
 from kliff import nn
-from kliff.calculators import CalculatorTorch
+from kliff.ase.calculators import CalculatorTorch
 from kliff.dataset import Dataset
-from kliff.descriptors import SymmetryFunction
-from kliff.loss import Loss
+from kliff.legacy.descriptors import SymmetryFunction
+from kliff.ase.loss import Loss
 from kliff.models import NeuralNetwork
 from kliff.utils import download_dataset
 

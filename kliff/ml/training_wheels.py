@@ -67,7 +67,7 @@ class TrainingWheels(torch.nn.Module):
         Initialize a descriptor context from  an initialized descriptor context . The generated descriptor
         context will be passed to the forward function.
         :param model: TorchScript model to be trained
-        :param descriptor: :class:`kliff.descriptors.Descriptor` instance
+        :param descriptor: :class:`kliff.ml.Descriptor` instance
         :param model_returns_forces: Whether the model is a gradient domain model
         :return: :class:`kliff.ml.training_wheels.TrainingWheels` instance
         """

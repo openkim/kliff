@@ -7,7 +7,7 @@ information theory based sensitivity analysis <https://doi.org/10.1063/1.5007842
 
 
 from kliff.analyzers import Fisher
-from kliff.calculators import Calculator
+from kliff.ase.calculators import Calculator
 from kliff.dataset import Dataset
 from kliff.models import KIMModel
 from kliff.utils import download_dataset

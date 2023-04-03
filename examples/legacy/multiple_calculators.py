@@ -1,6 +1,6 @@
-from kliff.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.ase.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
-from kliff.loss import Loss
+from kliff.ase.loss import Loss
 from kliff.models import KIMModel
 
 # training set

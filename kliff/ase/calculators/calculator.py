@@ -15,7 +15,7 @@ class Calculator:
     each configuration in the dataset.
 
     The properties, together with the corresponding reference data stored in the
-    configurations, are provided to :class:`~kliff.loss.Loss` to construct a loss
+    configurations, are provided to :class:`~kliff.ase.loss.Loss` to construct a loss
     function for the optimizer.
 
     In the reverse direction, a calculator grabs the new parameters from the optimizer

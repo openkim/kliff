@@ -71,7 +71,7 @@ model_tw.save_kim_model("KIM_DESC_MODEL")
 # kim-api-collections-management install user  KIM_DESC_MODEL 
 
 # Comparison with old KLIFF Descriptors ==========================================
-# from kliff.descriptors import SymmetryFunction
+# from kliff.legacy.descriptors import SymmetryFunction
 # desc_kliff = SymmetryFunction({"Si-Si":3.0},"cos","set51")
 # old_desc,jacobian_old_desc,_ = desc_kliff.transform(dataset[0],fit_forces=True)
 # print(np.max(np.abs(new_desc - old_desc)))
