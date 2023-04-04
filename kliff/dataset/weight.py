@@ -144,8 +144,8 @@ class MagnitudeInverseWeight(Weight):
             # Use the absolute value of the energy
             energy_norm = np.abs(energy)
             self._energy_weight = self._compute_weight_one_property(
-                energy_norm, self._weight_params["energy_weight_params"], "energy"
-            )
+                [energy_norm], self._weight_params["energy_weight_params"], "energy"
+            )[0]
         # Forces
         if forces is not None:
             # Use the magnitude of the force vector
@@ -163,8 +163,8 @@ class MagnitudeInverseWeight(Weight):
             shear_stress_norm = np.linalg.norm(stress[3:])
             stress_norm = np.sqrt(normal_stress_norm**2 + 2 * shear_stress_norm**2)
             self._stress_weight = self._compute_weight_one_property(
-                stress_norm, self._weight_params["stress_weight_params"], "stress"
-            )
+                [stress_norm], self._weight_params["stress_weight_params"], "stress"
+            )[0]
 
         self._check_compute_flag(config)
 
@@ -174,7 +174,7 @@ class MagnitudeInverseWeight(Weight):
         Compute the weight based for one property.
         """
         c1, c2 = property_weight_params
-        sigma = np.linalg.norm([c1, (c2 * data_norm)])
+        sigma = np.array([np.linalg.norm([c1, c2 * dn]) for dn in data_norm])
         weight = 1 / sigma
         if np.any(sigma < 1e-12):
             logger.warning(
