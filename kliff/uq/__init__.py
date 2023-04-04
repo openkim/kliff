@@ -1,3 +1,4 @@
+from .bootstrap import Bootstrap, BootstrapEmpiricalModel, BootstrapNeuralNetworkModel
 from .mcmc import MCMC, get_T0
 from .mcmc_utils import autocorr, mser, rhat
 
@@ -7,4 +8,7 @@ __all__ = [
     "mser",
     "autocorr",
     "rhat",
+    "Bootstrap",
+    "BootstrapEmpiricalModel",
+    "BootstrapNeuralNetworkModel",
 ]

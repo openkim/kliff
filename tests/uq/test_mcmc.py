@@ -116,9 +116,9 @@ def test_dimensionality():
     if emcee_avail:
         p0 = np.random.uniform(0, 10, (nwalkers, ndim))
         sampler.run_mcmc(initial_state=p0, nsteps=nsteps)
-        assert sampler.chain.shape == (
-            nwalkers,
+        assert sampler.get_chain().shape == (
             nsteps,
+            nwalkers,
             ndim,
         ), "Dimensionality from the emcee wrapper is not right"
     else:

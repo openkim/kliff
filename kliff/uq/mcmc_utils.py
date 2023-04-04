@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import numpy as np
 
@@ -19,30 +19,23 @@ def mser(
     dstep: Optional[int] = 10,
     dmax: Optional[int] = -1,
     full_output: Optional[bool] = False,
-) -> int:
-    """Estimate the equilibration time using marginal standard error rule (MSER). This is
-    done by calculating the standard error (square) of ``chain_d``, where ``chain_d``
-    contains the last :math:`n-d` element of the chain (n is the total number of
-    iterations for each chain), for progresively larger d values, starting from ``dmin``
-    upto ``dmax``, incremented by ``dstep``. The SE values are stored in a list. Then we
-    search the minimum element in the list and return the index of that element.
+) -> Union[int, dict]:
+    """Estimate the equilibration time using marginal standard error rule (MSER).
 
-    Parameters
-    ----------
-    chain: 1D np.ndarray
-        Array containing the time series.
-    dmin: int
-        Index where to start the search in the time series.
-    dstep: int
-        How much to increment the search is done.
-    dmax: int
-        Index where to stop the search in the time series.
-    full_output: bool
-        A flag to return the list of squared standard error.
+    This is done by calculating the standard error (square) of ``chain_d``, where
+    ``chain_d`` contains the last :math:`n-d` element of the chain (n is the total number
+    of iterations for each chain), for progresively larger d values, starting from
+    ``dmin`` upto ``dmax``, incremented by ``dstep``. The SE values are stored in a list.
+    Then we search the minimum element in the list and return the index of that element.
 
-    Returns
-    -------
-    dstar: int or dict
+    Args:
+        chain: (nsteps,) Array containing the time series.
+        dmin: Index where to start the search in the time series.
+        dstep: How much to increment the search is done.
+        dmax: Index where to stop the search in the time series.
+        full_output: A flag to return the list of squared standard error.
+
+    Returns:
         Estimate of the equilibration time using MSER. If ``full_output=True``, then a
         dictionary containing the estimated equilibration time and the list of squared
         standard errors will be returned.
@@ -65,21 +58,15 @@ def mser(
 
 
 # Estimate autocorrelation length
-def autocorr(chain: np.ndarray, *args, **kwargs):
+def autocorr(chain: np.ndarray, *args, **kwargs) -> np.ndarray:
     """Use ``emcee`` package to estimate the autocorrelation length.
 
-    Parameters
-    ----------
-    chain: np.ndarray (nwalkers, nsteps, ndim,)
-        Chains from the MCMC simulation. The shape of the chains needs to be
-        (nsteps, nwalkers, ndim). Note that the burn-in time needs to be discarded prior
-        to this calculation
-    args, kwargs
-        Additional positional and keyword arguments of ``emcee.autocorr.integrated_time``.
+    Args:
+        chain: (nwalkers, nsteps, ndim,) Chains from the MCMC simulation. Note that the
+            burn-in time needs to be discarded prior to this calculation
+        args, kwargs: Additional positional and keyword arguments of ``emcee.autocorr.integrated_time``.
 
-    Returns
-    -------
-    float or array:
+    Returns:
         Estimate of the autocorrelation length for each parameter.
     """
     if emcee_avail:
@@ -90,38 +77,32 @@ def autocorr(chain: np.ndarray, *args, **kwargs):
 
 
 # Assess convergence
-def rhat(chain, time_axis: int = 1, return_WB: bool = False):
-    """Compute the value of :math:`\\hat{r}` proposed by Brooks and Gelman
-    [BrooksGelman1998]_. If the samples come from PTMCMC simulation, then the chain needs
-    to be from one of the temperature only.
+def rhat(
+    chain: np.ndarray, time_axis: Optional[int] = 1, return_WB: Optional[bool] = False
+) -> Union[float, Tuple[float, np.ndarray, np.ndarray]]:
+    """Compute the value of :math:`\\hat{r}` proposed by Brooks and Gelman [BrooksGelman1998]_.
 
-    Parameters
-    ----------
-    chain: ndarray
-        The MCMC chain as a ndarray, preferrably with the shape
-        (nwalkers, nsteps, ndims). However, the shape can also be
-        (nsteps, nwalkers, ndims), but the argument time_axis needs to be set
-        to 0.
-    time_axis: int (optional)
-        Axis in which the time series is stored (0 or 1). For emcee results,
-        the time series is stored in axis 0, but for ptemcee for a given
-        temperature, the time axis is 1.
-    return_WB: bool (optional)
-        A flag to return covariance matrices within and between chains.
+    If the samples come from PTMCMC simulation, then the chain needs to be from one of
+    the temperature only.
 
-    Returns
-    -------
-    r: float
-        The value of rhat.
-    W, B: 2d ndarray
-        Matrices of covariance within and between the chains.
+    Args:
+        chain: The MCMC chain as a ndarray, preferrably with the shape
+            (nwalkers, nsteps, ndim,). However, the shape can also be
+            (nsteps, nwalkers, ndim,), but the argument time_axis needs to be set to 0.
+        time_axis: Axis in which the time series is stored (0 or 1). For emcee results,
+            the time series is stored in axis 0, but for ptemcee for a given temperature,
+            the time axis is 1.
+        return_WB: A flag to return covariance matrices within and between chains.
 
-    References
-    ----------
-    .. [BrooksGelman1998]
-       Brooks, S.P., Gelman, A., 1998. General Methods for Monitoring Convergence of
-       Iterative Simulations. Journal of Computational and Graphical Statistics 7,
-       434455. https://doi.org/10.1080/10618600.1998.10474787
+    Returns:
+        The value of rhat. if ``return_WB=True``, also returns matrices of
+        covariance within and between the chains.
+
+    References:
+        .. [BrooksGelman1998]
+           Brooks, S.P., Gelman, A., 1998. General Methods for Monitoring Convergence of
+           Iterative Simulations. Journal of Computational and Graphical Statistics 7,
+           434455. https://doi.org/10.1080/10618600.1998.10474787
     """
     if time_axis == 1:
         # Reshape the chain so that the time axis is in axis 1

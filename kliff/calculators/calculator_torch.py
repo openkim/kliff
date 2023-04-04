@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from loguru import logger
 from torch.utils.data import DataLoader
@@ -121,17 +122,37 @@ class CalculatorTorch:
                 nprocs,
             )
 
+        # Finally, assign fingerprints dataset property as a FingerprintsDataset instance
+        self.fingerprints_dataset = FingerprintsDataset(self.fingerprints_path)
+
+    def get_fingerprints(self) -> List[dict]:
+        """
+        Return a list of fingerprints of the configurations.
+        """
+        return self.fingerprints_dataset.fp
+
     def get_compute_arguments(self, batch_size: int = 1):
         """
         Return the dataloader with batch size set to `batch_size`.
         """
-        fname = self.fingerprints_path
-        fp = FingerprintsDataset(fname)
         loader = DataLoader(
-            dataset=fp, batch_size=batch_size, collate_fn=fingerprints_collate_fn
+            dataset=self.fingerprints_dataset,
+            batch_size=batch_size,
+            collate_fn=fingerprints_collate_fn,
         )
 
         return loader
+
+    def set_fingerprints(self, fingerprints: List[dict]):
+        """
+        Update the fingerprints of the calculator. The fingerprints input argument should
+        be in the same format as the output of `meth:~kliff.descriptors.descriptor.load_fingerprints`,
+        which is a list of dictionaries.
+
+        Args:
+            fingerprints: A list of fingerprints.
+        """
+        self.fingerprints_dataset.fp = fingerprints
 
     def fit(self):
         path = self.fingerprints_path
@@ -251,6 +272,85 @@ class CalculatorTorch:
     def _compute_stress(denergy_dzeta, dzetadr, volume):
         forces = torch.tensordot(denergy_dzeta, dzetadr, dims=([0, 1], [0, 1])) / volume
         return forces
+
+    def get_size_opt_params(self) -> Tuple[List[int], List[int], int]:
+        """
+        Return the size of the parameters.
+
+        Returns:
+            sizes: Each element in the list gives the shape of each type of parameter
+                tensors, containing, e.g., weights and biases, for each layer.
+            nelements: Number of elements of each parameter tensor.
+            nparams: Total number of parameters
+        """
+        sizes = []  # Size of each parameter tensor
+        nelements = []  # The number of elements for each tensor
+        for param in self.model.parameters():
+            sizes.append(param.size())
+            nelements.append(np.prod(param.size()))
+        nparams = sum(nelements)
+        return sizes, nelements, nparams
+
+    def get_num_opt_params(self) -> int:
+        """
+        Return the total number of parameters.
+        """
+        return self.get_size_opt_params()[-1]
+
+    def get_opt_params(self, flat: bool = True) -> Union[List, np.array]:
+        """
+        Retrieve the parameters, i.e., weights and biases.
+
+        Args:
+            flat: A flag to return a flat, 1D array.
+
+        Returns:
+            Parameters, i.e., weights and biases. If ``flat=True``, a 1D np.ndarray will
+            be returned. Otherwise, nested lists will be returned, where each list contain
+            the weights and biases for each layer.
+        """
+        parameters = []
+        for param in self.model.parameters():
+            if flat:
+                # Make sure that the parameters are stored in host memory
+                param_host = param.data.cpu()
+                parameters = np.append(parameters, param_host.numpy().flatten())
+            else:
+                parameters.append(param)
+        return parameters
+
+    def update_model_params(self, parameters: np.array):
+        """
+        Update the model parameters from a 1D array.
+
+        Args:
+            parameters: New parameter values to set. It needs to be a 1D array.
+        """
+        # Convert to the right format
+        parameters = self._convert_parameters_from_1d_array(parameters)
+        # Update the weights and biases
+        for ii, param in enumerate(self.model.parameters()):
+            param.data = parameters[ii]
+
+    def _convert_parameters_from_1d_array(self, flat_params: np.array) -> List:
+        """
+        Convert the parameters from a 1D array format to nested lists format.
+
+        Args:
+            flat_params: A 1D array containing weights and biases of the model.
+
+        Returns:
+            parameters: Parameters (weiths and biases) in nested lists format.
+        """
+        sizes, nelems, _ = self.get_size_opt_params()
+        # Indices to index the flat array to get the appropriate portion of each parameter
+        # tensor
+        idx = np.append(0.0, np.cumsum(nelems)).astype(int)
+        parameters = []
+        for ii, size in enumerate(sizes):
+            params = flat_params[idx[ii] : idx[ii + 1]]
+            parameters.append(torch.Tensor(params.reshape(size)))
+        return parameters
 
 
 class CalculatorTorchSeparateSpecies(CalculatorTorch):
