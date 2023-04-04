@@ -2,7 +2,7 @@ import copy
 import json
 import os
 from pathlib import Path
-from typing import Callable, List, Optional, Any, Union
+from typing import Any, Callable, List, Optional, Union
 
 import numpy as np
 
@@ -288,8 +288,8 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 self.calculator.get_compute_arguments(flat=False)
             )
             self.use_multi_calc = True
-        self._orig_compute_arguments_identifiers = get_identifiers_from_compute_arguments(
-            self.orig_compute_arguments
+        self._orig_compute_arguments_identifiers = (
+            get_identifiers_from_compute_arguments(self.orig_compute_arguments)
         )
 
     def generate_bootstrap_compute_arguments(
@@ -436,9 +436,9 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 for jj, calc in enumerate(self.calculator.calculators):
                     calc.compute_arguments = self.bootstrap_compute_arguments[ii][jj]
             else:
-                self.calculator.compute_arguments = self.bootstrap_compute_arguments[ii][
-                    0
-                ]
+                self.calculator.compute_arguments = self.bootstrap_compute_arguments[
+                    ii
+                ][0]
 
             # Set the initial parameter guess
             if initial_guess is None:
@@ -460,7 +460,9 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                         elif calculator.use_forces:
                             residual_fn = forces_residual
                         else:
-                            raise ValueError("Calculator does not use energy or forces.")
+                            raise ValueError(
+                                "Calculator does not use energy or forces."
+                            )
                         residual_fn_list.append(residual_fn)
                 self.loss.residual_fn = residual_fn_list
             # Minimization
@@ -681,7 +683,8 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
             identifiers_ii = new_bootstrap_compute_arguments_identifiers[str(ii)]
             reference = self._orig_compute_arguments_identifiers
             fp_ii = [
-                self.orig_compute_arguments[reference.index(ss)] for ss in identifiers_ii
+                self.orig_compute_arguments[reference.index(ss)]
+                for ss in identifiers_ii
             ]
             # Update the new bootstrap fingerprints dictionary
             new_bootstrap_compute_arguments.update({ii: fp_ii})
