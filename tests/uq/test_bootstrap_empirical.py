@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 
 import numpy as np
-from scipy.optimize.optimize import OptimizeResult
+from scipy.optimize import OptimizeResult
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
