@@ -24,9 +24,10 @@ class _BaseBootstrap:
 
     Args:
         loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        seed: Random number generator seed.
     """
 
-    def __init__(self, loss: Loss):
+    def __init__(self, loss: Loss, seed: Optional[int] = 1717):
         self.loss = loss
         self.calculator = loss.calculator
         # Cache the original parameter values
@@ -34,6 +35,9 @@ class _BaseBootstrap:
         # Initiate the bootstrap configurations property
         self.bootstrap_compute_arguments = {}
         self.samples = np.empty((0, self.calculator.get_num_opt_params()))
+
+        # Set the random state
+        self.random_state = np.random.RandomState(seed)
 
     @property
     def _nsamples_done(self) -> int:
@@ -151,19 +155,23 @@ class Bootstrap:
 
     Args:
         loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        seed: Random number generator seed.
         args, kwargs: Additional positional and keyword arguments for instantiating
             :class:`BootstrapEmpiricalModel` or :class:`BootstrapNeuralNetworkModel`.
     """
 
-    def __new__(self, loss: Loss, *args, **kwargs):
+    def __new__(self, loss: Loss, seed: Optional[int] = 1717, *args, **kwargs):
         if isinstance(loss, LossPhysicsMotivatedModel):
-            return BootstrapEmpiricalModel(loss, *args, **kwargs)
+            return BootstrapEmpiricalModel(loss, seed, *args, **kwargs)
         elif isinstance(loss, LossNeuralNetworkModel):
-            return BootstrapNeuralNetworkModel(loss, *args, **kwargs)
+            return BootstrapNeuralNetworkModel(loss, seed, *args, **kwargs)
 
 
 def bootstrap_cas_generator_empirical(
-    nsamples: int, orig_cas: List, ncas: Optional[int] = None
+    nsamples: int,
+    orig_cas: List,
+    ncas: Optional[int] = None,
+    rstate: Optional[np.random.RandomState] = None,
 ) -> dict:
     """
     Default class to generate bootstrap compute arguments for empirical, physics-based
@@ -187,6 +195,7 @@ def bootstrap_cas_generator_empirical(
         ncas: Number of compute arguments to have in each sample. If not specified, the
             function will generate the same number of compute arguments sample as the
             number of the original compute argument list.
+        rstate: The state of random number generator.
 
 
     Returns:
@@ -199,6 +208,11 @@ def bootstrap_cas_generator_empirical(
             }
 
     """
+    if rstate is None:
+        state = np.random.get_state()  # Get the state of global random number generator
+        rstate = np.random.RandomState()  # Instantiate a local random state
+        rstate.set_state(state)  # Set the state
+
     ncalc = len(orig_cas)  # Number of calculators
     # Number of compute args per calc
     ncas_per_calc = [len(cas) for cas in orig_cas]
@@ -212,7 +226,7 @@ def bootstrap_cas_generator_empirical(
     for ii in range(nsamples):
         # Generate a bootstrap sample configuration
         # Generate the bootstrap indices
-        bootstrap_idx = np.random.choice(range(ncas), size=ncas, replace=True)
+        bootstrap_idx = rstate.choice(range(ncas), size=ncas, replace=True)
         # From the indices, get bootstrap compute arguments
         comb_bootstrap_cas = [comb_orig_cas[ii] for ii in bootstrap_idx]
         # We also need to deal with the calculator index
@@ -258,10 +272,11 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
 
     Args:
         loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        seed: Random number generator seed.
     """
 
-    def __init__(self, loss: Loss):
-        super().__init__(loss)
+    def __init__(self, loss: Loss, seed: Optional[int] = 1717):
+        super().__init__(loss, seed)
         # Cache the original compute arguments
         if isinstance(self.calculator, Calculator):
             self.orig_compute_arguments = [
@@ -285,6 +300,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
     ):
         """
         Generate bootstrap compute arguments samples.
+
         If this function is called multiple, say, K times, then it will in total
         generate: math: `K \times nsamples` bootstrap compute arguments samples. That is,
         consecutive call of this function will append the generated compute arguments
@@ -297,13 +313,16 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 calculators and do sampling with replacement from the combined list.
                 Another possible convention is to do sampling with replacement on the
                 compute arguments list of each calculator separately, in which case a
-                custom function needs to be defined and used.
+                custom function needs to be defined and used. The required argument for
+                the custom generator functions is the requested number of samples.
             kwargs: Additional keyword arguments to ``bootstrap_cas_generator_fn``.
         """
         # Function to generate bootstrap configurations
         if bootstrap_cas_generator_fn is None:
             bootstrap_cas_generator_fn = bootstrap_cas_generator_empirical
-            kwargs.update({"orig_cas": self.orig_compute_arguments})
+            kwargs.update(
+                {"orig_cas": self.orig_compute_arguments, "rstate": self.random_state}
+            )
         self._generate_bootstrap_compute_arguments(
             nsamples, bootstrap_cas_generator_fn, **kwargs
         )
@@ -471,7 +490,10 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
 
 
 def bootstrap_cas_generator_neuralnetwork(
-    nsamples: int, orig_fingerprints: List, nfingerprints: Optional[int] = None
+    nsamples: int,
+    orig_fingerprints: List,
+    nfingerprints: Optional[int] = None,
+    rstate: Optional[np.random.RandomState] = None,
 ) -> dict:
     """
     Default class to generate bootstrap compute arguments (fingerprints) for neural
@@ -493,6 +515,7 @@ def bootstrap_cas_generator_neuralnetwork(
         nfingerprints: Number of compute arguments to have in each sample. If not specified, the
             function will generate the same number of compute arguments sample as the
             number of the original compute argument list.
+        rstate: The state of random number generator
 
     Returns:
        A set of bootstrap compute arguments(fingerprints), written in a dictionary
@@ -504,12 +527,17 @@ def bootstrap_cas_generator_neuralnetwork(
             }
 
     """
+    if rstate is None:
+        state = np.random.get_state()  # Get the state of global random number generator
+        rstate = np.random.RandomState()  # Instantiate a local random state
+        rstate.set_state(state)  # Set the state
+
     bootstrap_fingerprints = {}
     if nfingerprints is None:
         nfingerprints = len(orig_fingerprints)
     for ii in range(nsamples):
         # Get 1 sample of bootstrap fingerprints
-        bootstrap_fingerprints_single_sample = np.random.choice(
+        bootstrap_fingerprints_single_sample = rstate.choice(
             orig_fingerprints, size=nfingerprints, replace=True
         )
         bootstrap_fingerprints.update({ii: bootstrap_fingerprints_single_sample})
@@ -536,6 +564,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
 
     Args:
         loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        seed: Random number generator seed.
         orig_state_filename: Name of the file in which the initial state of the model
             prior to bootstrapping will be stored. This is to use at the end of the
             bootstrap run to reset the model to the initial state.
@@ -544,9 +573,10 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
     def __init__(
         self,
         loss: Loss,
+        seed: Optional[int] = 1717,
         orig_state_filename: Optional[Union[Path, str]] = "orig_model.pkl",
     ):
-        super().__init__(loss)
+        super().__init__(loss, seed)
         # Check if the calculator uses separate species
         if isinstance(self.calculator, CalculatorTorchSeparateSpecies):
             self._calc_separate_species = True
@@ -600,7 +630,12 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         # Function to generate bootstrap configurations
         if bootstrap_cas_generator_fn is None:
             bootstrap_cas_generator_fn = bootstrap_cas_generator_neuralnetwork
-            kwargs.update({"orig_fingerprints": self.orig_compute_arguments})
+            kwargs.update(
+                {
+                    "orig_fingerprints": self.orig_compute_arguments,
+                    "rstate": self.random_state,
+                }
+            )
         self._generate_bootstrap_compute_arguments(
             nsamples, bootstrap_cas_generator_fn, **kwargs
         )
