@@ -6,10 +6,10 @@
 
 Computation times
 =================
-**00:05.699** total execution time for **auto_examples** files:
+**00:05.912** total execution time for **auto_examples** files:
 
 +---------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_uq_bootstrap.py` (``example_uq_bootstrap.py``)               | 00:05.699 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_uq_bootstrap.py` (``example_uq_bootstrap.py``)               | 00:05.912 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_kim_SW_Si.py` (``example_kim_SW_Si.py``)                     | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------+-----------+--------+

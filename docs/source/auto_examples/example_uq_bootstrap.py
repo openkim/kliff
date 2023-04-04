@@ -64,11 +64,6 @@ ca = calc.create(configs, use_energy=False, use_forces=True)
 residual_data = {"normalize_by_natoms": False}
 loss = Loss(calc, residual_data=residual_data)
 
-# Train the model
-min_kwargs = dict(method="lm")  # Optimizer setting
-loss.minimize(**min_kwargs)
-model.echo_opt_params()
-
 ##########################################################################################
 # To perform UQ by bootstrapping, the general workflow starts by instantiating
 # :class:`~kliff.uq.bootstrap.BootstrapEmpiricalModel`, or
@@ -76,12 +71,8 @@ model.echo_opt_params()
 # potential.
 
 
-# It is a good practice to specify the random seed to use in the calculation to generate
-# a reproducible simulation.
-np.random.seed(1717)
-
 # Instantiate bootstrap class object
-BS = BootstrapEmpiricalModel(loss)
+BS = BootstrapEmpiricalModel(loss, seed=1717)
 
 ##########################################################################################
 # Then, we generate some bootstrap compute arguments. This is equivalent to generating
@@ -101,14 +92,18 @@ BS.generate_bootstrap_compute_arguments(100)
 # single sample of parameters. By iterating over all data samples, then we will get an
 # ensemble of parameters.
 #
-# We also recommend in using the same optimizer setting as the one used in the model
-# training step. This also means to use the same set of initial parameter guess when the
-# loss potentially has multiple local minima. For neural network model, we need to reset
+# Note that the mapping from the bootstrap dataset to the parameters involve optimization.
+# We suggest to use the same mapping, i.e., the same optimizer setting, in each iteration.
+# This includes using the same set of initial parameter guess. In the case when the loss
+# function has multiple local minima, we don't want the parameter ensemble to be biased
+# on the results of the other optimizations. For neural network model, we need to reset
 # the initial parameter value, which is done internally.
 
 
 # Run bootstrap
-BS.run(min_kwargs=min_kwargs)
+min_kwargs = dict(method="lm")  # Optimizer setting
+initial_guess = calc.get_opt_params()  # Initial guess in the optimization
+BS.run(min_kwargs=min_kwargs, initial_guess=initial_guess)
 
 ##########################################################################################
 # The resulting parameter ensemble can be accessed in `BS.samples` as a `np.ndarray`.
