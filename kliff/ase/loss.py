@@ -6,7 +6,10 @@ from loguru import logger
 
 from kliff import parallel
 from kliff.ase.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.ase.calculators import CalculatorTorch
+try:
+    from kliff.ase.calculators import CalculatorTorch
+except ImportError:
+    CalculatorTorch = object
 from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
 
