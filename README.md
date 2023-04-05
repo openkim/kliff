@@ -1,40 +1,60 @@
-# KIM-based Learning-Integrated Fitting Framework with Torch extensions (KLIFF-Torch)
+# KIM-based Learning-Integrated Fitting Framework (KLIFF)
 
-This is a development fork of KLIFF for adding more ML capabilities and PyTorch integration.
-All the changes will be integrated in KLIFF soon.
-It integrates: 
-1. the new KIM `TorchMLModelDriver`, which interfaces between KIM-API and PyTorch models, 
-2. `libdescriptor` library, which is the new unified auto-differentiated descriptor library, and
-3. `colabfit-tools`, which provides ability to directly interact with datasets on ColabFit exchange.
+KLIFF is an interatomic potential fitting package that can be used to fit physics-motivated (PM) potentials, as well as 
+machine learning potentials such as the neural network (NN) models.
 
-There exist two versions of these modifications, `Ver1` and `Ver2`.
-While both versions contains same functionality, the difference is backward API compatibility with KLIFF.
-`Ver1` maintains full-backward API compatibility, with all the changes being purely additive. 
-But this also results in confusing two-way mishmash of doing things.
-**This version is temporary and is only there for a risk-free alpha evaluation**.
+KLIFF can be used to fit both Physics motivated and Machine Learning based Portable OpenKIM models.
+It utilizes the KIM-API model drivers to interface with the portable models and ML capabilities are driven by the PyTorch
+integration.
 
-`Ver2` breaks the old API and highlights the major design ideas for next revision, where functional design approach for 
-ML centric applications is highlighted. It offers cleaner API which reflects more of the popular workflows.
-It is not a pure additive change in sense that your old scripts might not work out of the box, but no previous 
-functionality has been removed. The original KLIFF modules which are being redesigned are kept in `legacy` submodule. 
-** Ver2 is the recommended version for future-proof applications**.
+Added KLIFF capabilities include:
+1. Ability to export TorchScript ML models to KIM-API using the [`TorchMLModelDriver`](https://github.com/ipcamit/colabfit-model-driver) 
+2. Integration with [`libdescriptor`](https://github.com/ipcamit/libdescriptor) library, which is the new unified auto-differentiated descriptor library, and
+3. Data streaming capabilities from ColabFit database instance using [`colabfit-tools`](https://github.com/colabfit/colabfit-tools).
 
-Both versions live on different branches, and can be accessed as `master-V1` and `master-V2` for `Ver1` and `Ver2` respectively.
+## Installation
+The latest version of KLIF can be installed directly from source using `pip`:
 
-> The default branch (`master`) will always mirror `Ver2`.
-
-### Installation from source
+```bash
+pip install git+https://github.com/openkim/kliff.git@ml
 ```
-git clone https://github.com/ipcamit/kliff
-cd kliff
-git checkout master-V2 # master-V1 for Ver1
-pip install .
-```
+> Note: The `ml` branch is the latest development branch, but has not yet been merged into the `master` branch.
 
-To train a KIM model, `kim-api` and `kimpy` are needed; to train a machine learning
-model, `PyTorch` is needed. For Graph neural networks you would need `PyTorch Geometric` and dependencies.
+## Dependencies
+Listed below are the major dependencies of KLIFF, along with their intended use. For a complete list of dependencies, see the `requirements.txt` file.
+
+Essential dependencies:
+
+| Dependency | Version    | Usage                                                            |
+|------------|------------|------------------------------------------------------------------|
+| numpy      | =>1.22.0   | General Python numerical requirement                             |
+| scipy      | =>1.10.0   | Optimization of Physics based models                             |
+| loguru     | =>0.5.3    | Logging                                                          |
+| pybind11   | =>2.10     | Python bindings for C++ code                                     |
+| monty      | =>2022.9.9 | General Python utilities (for implementing posrtale `parameters` |
+| pyyaml     | =>5.4.1    | YAML file parsing                                                |
+| loguru     | =>0.6.0    | Logging                                                          |
+| kimpy      | =>2.1.0    | KIM API bindings (for interacting with KIM Portable models       |
+| KIM-API    | =>2.2.0    | KIM API backend for Physics based models (needed by KIMPY)       |
+| torch      | =>1.10.0   | PyTorch backend for ML models                                    |
+
+Optional dependencies (You can still use KLIFF without these, but some features will be disabled):
+
+| Dependency      | Version  | Usage                                                                 |
+|-----------------|----------|-----------------------------------------------------------------------|
+| torch-geometric | =>1.7.2  | PyTorch Supported GNN backend, (used for GNN and graph dataset format |
+| libdescriptor   | =>0.5.0  | Unified auto-differentiable descriptor library                        |
+| colabfit-tools  | =>0.1.0  | ColabFit database tools                                               |
+| torch-scatter   | =>2.0.9  | High performance scatter-gather operations needed for torch-geometric |
+| torch-sparse    | =>0.6.12 | High performance sparse matrix operations needed for torch-geometric  |
+| ASE             | =>3.21.1 | ASE backend as an alternative configuration file-io parser            |
+
 
 ## Quick examples on how to train your models:
+KLIFF supports several workflows for training your models. You can train KIM models using ASE `calculator` like objects 
+for more object-oriented workflow, or use KIM Models as a functor/closure datastructure for more 
+functional approach. For most common workflows, KLIFF provides a `Optimizer` classes that can be used to train your models.
+Below are some examples of how to use these workflows in KLIFF to train your models.
 
 ### Neural network based model
 
@@ -43,7 +63,7 @@ model, `PyTorch` is needed. For Graph neural networks you would need `PyTorch Ge
 from kliff.dataset import Dataset
 from kliff.ml import TrainingWheels  # Model adapter and export
 from kliff.ml import OptimizerTorch  # Optimizer workflow
-from kliff.ml.libdescriptor import Descriptor  # New descriptor workflow
+from kliff.ml import Descriptor  # New descriptor workflow
 
 from torch import nn
 
@@ -71,11 +91,12 @@ model_optimizer = OptimizerTorch(model_tw, dataset[0:10], target_property=["ener
 model_optimizer.minimize()
 
 # Once optimized, save the model as OpenKIM model
-model_tw.save_kim_model("KIM_DESC_MODEL")
+model_tw.save_kim_model("MLMODEL__MO_000000000000_000")
 
 ```
 
-#### OpenKIM based model
+#### Physics based model
+##### 1. Conventional workflow
 ```python
 from kliff.models import KIMModel
 from kliff.dataset import Dataset
@@ -101,11 +122,37 @@ opt = OptimizerScipy(model, params, ds[0:10], optimizer="L-BFGS-B", maxiter=400,
                      target_property=["energy", "forces"])
 opt.minimize()
 
-model.write_kim_model("KIM_OPT_MODEL")
-
+model.write_kim_model("SW__MO_000000000000_000")
 ```
 
+##### 2. Object-oriented approach
+```python
+from kliff.ase.calculators import Calculator
+from kliff.dataset import Dataset
+from kliff.ase.loss import Loss
+from kliff.models import KIMModel
 
+# Define model and parameters
+model = KIMModel(model_name="SW_StillingerWeber_1985_Si__MO_405512056662_006")
+model.set_opt_params(
+    A=[[5.0, 1.0, 20]], B=[["default"]], sigma=[[2.0951, "fix"]], gamma=[[1.5]]
+)
+
+# Stream dataset from ColabFit Database, named "colabfit_database", and Si dataset 
+dataset = Dataset(colabfit_database="colabfit_database", colabfit_dataset="my_si_dataset")
+
+# Define ASE calculator
+calc = Calculator(model)
+_ = calc.create(dataset.get_configs())
+
+# Optimize the model
+steps = 100
+loss = Loss(calc, nprocs=2)
+loss.minimize(method="L-BFGS-B", options={"disp": True, "maxiter": steps})
+
+# Export the model
+model.write_kim_model()
+```
 ## Why you want to use KLIFF (or not use it)
 
 - Interacting seamlessly with[ KIM](https://openkim.org), the fitted model can
