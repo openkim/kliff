@@ -266,7 +266,7 @@ class Configuration:
         if self._energy is None:
             # check if it colabfit-datasbase and hence needs initialization
             if self.is_colabfit_dataset:
-                energy = self.get_colabfit_property("energy")
+                energy = self.get_colabfit_property("energy", "potential-energy")
                 self._energy = energy
                 return self._energy
             raise ConfigurationError("Configuration does not contain energy.")
@@ -280,7 +280,7 @@ class Configuration:
         if self._forces is None:
             # check if it colabfit-datasbase and hence needs initialization
             if self.is_colabfit_dataset:
-                forces = self.get_colabfit_property("forces")
+                forces = self.get_colabfit_property("forces", "atomic-forces")
                 if forces is not None:
                     self._forces = np.array(forces)
                     return self._forces
@@ -301,7 +301,7 @@ class Configuration:
         if self._stress is None:
             # check if it colabfit-datasbase and hence needs initialization
             if self.is_colabfit_dataset:
-                stress = self.get_colabfit_property("stress")
+                stress = self.get_colabfit_property("stress", "cauchy-stress")
                 if stress is not None:
                     self._stress = stress
                     return self._stress
@@ -462,33 +462,19 @@ class Configuration:
                     f"Configuration does not contain {new_property}."
                 )
 
-    def get_colabfit_property(self, property_name: str):
+    def get_colabfit_property(self, property_name: str, property_type: str):
         """
         Returns colabfit-property. workaround till we get proper working get_property routine
         Args:
-            property_name: name of the property to fetch
+            property_name: subfield of the property to fetch
+            property_type: type of property to fetch
 
         Returns: fetched value, None if query comes empty
 
         """
-        # print(f"loading {property_name}")
-        property_info = self.colabfit_dataclient.aggregate_property_info(
-            self.property_id
-        )
-        property_value = self.colabfit_dataclient.get_data(
-            "properties",
-            fields=[f"{property_info['types'][0]}.{property_name}"],
-            query={"_id": self.property_id},
-        )
-        if property_value:
-            # Temporary workaround against https://github.com/colabfit/colabfit-tools/issues/9
-            try:
-                property_value = property_value[0].item()
-            except AttributeError:
-                property_value = property_value[0]
-            except ValueError:
-                property_value = property_value[0]
-            return property_value
+        pi_doc = self.colabfit_dataclient.property_instances.find_one({"colabfit-id": {'$in':self.property_id},'type':property_type})
+        if pi_doc:
+            return  pi_doc[property_type][property_name]['source-value']
         else:
             return None
 
@@ -553,7 +539,7 @@ class Dataset(TorchDataset):
                 logger.error(
                     f"colabfit database provided ({colabfit_database}) but not dataset."
                 )
-                raise DatasetError(f"No dataset name given.")
+                raise DatasetError(f"No dataset ID given.")
 
         else:
             self.configs: List[Configuration] = []
@@ -631,45 +617,37 @@ class Dataset(TorchDataset):
 
     @staticmethod
     def _read_colabfit(
-        client: MongoDatabase, dataset_name: str, aux_property_fields: str = None
+        client: MongoDatabase, dataset_id: str, aux_property_fields: str = None
     ):
         """
         Read atomic configurations from path.
         """
 
-        # get configuration and property ID and send it to load configuration
-        dataset_id_query = client.get_data(
-            "datasets", fields=["_id"], query={"name": dataset_name}
+        # get configuration and property ID and send it to load configuration-first get Data Objects
+        dataset_dos = client.get_data(
+                "data_objects", fields=["colabfit-id"], query={"relationships.datasets": {'$in':[dataset_id]}}
         )
-        if not dataset_id_query:
-            logger.error(f"{dataset_name} is either empty or does not exist")
-            raise DatasetError(f"{dataset_name} is either empty or does not exist")
-        if len(dataset_id_query) > 1:
-            raise DatasetError(f"{dataset_name} apparently links to {len(dataset_id_query)} datasets with "
-                               f"following ids {' '.join(dataset_id_query)}." 
-                               " Please remove or rename the redundant dataset.")
+        if not dataset_dos:
+            logger.error(f"{dataset_id} is either empty or does not exist")
+            raise DatasetError(f"{dataset_id} is either empty or does not exist")
 
-        colabfit_dataset = client.get_dataset(dataset_id_query[0])
-        configuration_ids = []
-        for cs in colabfit_dataset["dataset"].configuration_set_ids:
-            cos = client.get_configuration_set(cs)["configuration_set"].configuration_ids
-            configuration_ids.extend(cos)
-        property_ids = colabfit_dataset["dataset"].property_ids
+        configs = []
+        for do in dataset_dos:
+            co_doc = client.configurations.find_one({'relationships.data_objects':{'$in':[do]}})
+            pi_doc = client.property_instances.find({'relationships.data_objects':{'$in':[do]}})
+            co_id = co_doc['colabfit-id']
+            pi_ids = [i['colabfit-id'] for i in pi_doc]
 
-        if len(configuration_ids) != len(property_ids):
-            raise ConfigurationError("Number of Configurations and Properties do no match")
-
-        configs = [
-            Configuration.from_colabfit(
-                client, ids[0], ids[1], aux_property_fields=aux_property_fields
-            )
-            for ids in zip(configuration_ids, property_ids)
-        ]
+            configs.append(
+                Configuration.from_colabfit(
+                    client, co_id , pi_ids, aux_property_fields=aux_property_fields
+                    )
+                )
 
         if len(configs) <= 0:
-            raise DatasetError(f"No dataset file with in {dataset_name} dataset.")
+            raise DatasetError(f"No dataset file with in {dataset_id} dataset.")
 
-        logger.info(f"{len(configs)} configurations read from {dataset_name}")
+        logger.info(f"{len(configs)} configurations read from {dataset_id}")
 
         return configs
 
