@@ -163,7 +163,7 @@ class TrainingWheels(torch.nn.Module):
 
             f.write('add_kim_api_model_library(\n')
             f.write('  NAME            ${PROJECT_NAME}\n')
-            f.write('  DRIVER_NAME     "TorchMLModelDriver"\n')
+            f.write('  DRIVER_NAME     "TorchMLMD__MD_000000000000_000"\n')
             f.write('  PARAMETER_FILES  ')
             for file in file_names:
                 f.write(f' "{file}" ')
