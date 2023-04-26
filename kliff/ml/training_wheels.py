@@ -114,7 +114,7 @@ class TrainingWheels(torch.nn.Module):
     def get_parameters(self):
         return self.parameters
 
-    def save_kim_model(self, model_name):
+    def save_kim_model(self, model_name="MO_000000000000_000"):
         """
         Save the TorchScript model as the KIM ported model. It will also save the descriptor and graph
         information if applicable. The model will be saved in the model_name directory. The model will be saved as
@@ -123,7 +123,7 @@ class TrainingWheels(torch.nn.Module):
         .. code-block:: bash
             kim-api-collections-management install user/system  model_name
 
-        :param model_name: Model name (Recommended format: MD_000000000000_000)
+        :param model_name: Model name (Recommended format: MO_000000000000_000)
         :return:
         """
         try:
@@ -143,6 +143,10 @@ class TrainingWheels(torch.nn.Module):
         else:
             raise NotImplementedError("Only graph and descriptor context are supported.")
         self._write_cmake_file(model_name, file_names)
+        # save the model as a tar.gz file
+        import tarfile
+        with tarfile.open(f"{model_name}.tar.gz", "w:gz") as tar:
+            tar.add(model_name)
 
     @staticmethod
     def _write_cmake_file(model_name, file_names):
