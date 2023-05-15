@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 import numpy as np
 
 from kliff.dataset.dataset import Configuration
-from kliff.models.parameter import OptimizingParameters, Parameter
-from kliff.models.parameter_transform import ParameterTransform
+from kliff.models.parameter import Parameter
+from kliff.models.parameter_transform import LogTransform, ParameterTransform
 from kliff.utils import yaml_dump, yaml_load
 
 
@@ -87,7 +87,7 @@ class ComputeArguments:
             name: name of the property, e.g. energy, forces, and stresses
         """
         if name not in self.compute_property:
-            ModelError(f"Model not initialized to comptue `{name}`.")
+            ModelError(f"Model not initialized to compute `{name}`.")
         return self.results[name]
 
     def get_energy(self) -> float:
@@ -211,7 +211,7 @@ class Model:
         else:
             self.model_params_transformed = self.model_params
 
-        self.opt_params = OptimizingParameters(self.model_params_transformed)
+        self.opt_params = Parameter(self.model_params_transformed, is_trainable=True)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
 
@@ -530,7 +530,15 @@ class Model:
             filename: Path where the model is stored.
         """
         d = yaml_load(filename)
-        self.opt_params = OptimizingParameters.from_dict(d["opt_params"])
+        #             value=d["value"],
+#             fixed=d["fixed"],
+#             lower_bound=d["lower_bound"],
+#             upper_bound=d["upper_bound"],
+#             name=d["name"],
+#             index=d["index"],
+
+        self.opt_params = Parameter(d["opt_params"]["value"],
+
 
         # Set model_params to opt_params.model_params since they should share the
         # underlying `Parameter` objects
