@@ -463,7 +463,8 @@ class KIMModel(Model):
             KIMModelError("requested units not accepted in kimpy.model.create")
         return model
 
-    def get_kim_model_params(self) -> Dict[str, Parameter]:
+    def get_kim_model_params(self):
+    # def get_kim_model_params(self) -> Dict[str, Parameter]:
         """
         Inquire the KIM model to get all the parameters.
 
@@ -514,7 +515,10 @@ class KIMModel(Model):
                 else:  # should never reach here
                     KIMModelError(f"get unexpected parameter data type `{dtype}`")
 
-            params[name] = Parameter(value=values, name=name, index=i)
+            print(f"values = {values}")
+            print(f"name = {name}")
+            print(f"index = {i}")
+            params[name] = Parameter(values, name=name, index=i)
 
         return params
 
@@ -531,7 +535,7 @@ class KIMModel(Model):
 
         return kim_ca
 
-    def set_opt_params(self, **kwargs):
+    def set_opt_params(self, list_of_params):
         """
         Set the parameters that will be optimized.
 
@@ -546,23 +550,26 @@ class KIMModel(Model):
         Example:
            instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
         """
-        self.opt_params.set(**kwargs)
+        # self.opt_params.set(**kwargs)
+        #
+        # # update kim internal model param (note, set_one will update model_params)
+        # for name, _ in kwargs.items():
+        #     p_idx = self.model_params[name].index
+        #     for c_idx, v in enumerate(self.model_params[name].value):
+        #         try:
+        #             self.kim_model.set_parameter(p_idx, c_idx, v)
+        #         except RuntimeError:
+        #             raise kimpy.KimPyError(
+        #                 "Calling `kim_model.set_parameter()` failed."
+        #             )
+        #
+        # try:
+        #     self.kim_model.clear_then_refresh()
+        # except RuntimeError:
+        #     raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
-        # update kim internal model param (note, set_one will update model_params)
-        for name, _ in kwargs.items():
-            p_idx = self.model_params[name].index
-            for c_idx, v in enumerate(self.model_params[name].value):
-                try:
-                    self.kim_model.set_parameter(p_idx, c_idx, v)
-                except RuntimeError:
-                    raise kimpy.KimPyError(
-                        "Calling `kim_model.set_parameter()` failed."
-                    )
-
-        try:
-            self.kim_model.clear_then_refresh()
-        except RuntimeError:
-            raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
+        for param in list_of_params:
+            self.model_params_transformed[param].is_trainable = True
 
         # reset influence distance in case it changes
         self.init_influence_distance()

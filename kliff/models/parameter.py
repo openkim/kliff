@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 import numpy as np
-
+import pickle
 
 class Parameter(np.ndarray):
     """
@@ -12,11 +12,12 @@ class Parameter(np.ndarray):
     Trying to keep the terminology same but it seems a bit difficult. Subclassing ndarray.
     Make it immutable?
     """
-    def __new__(cls, input_array, name=None, transform=None, clamp=None, is_trainable=False):
+    def __new__(cls, input_array, name=None, transform=None, clamp=None, is_trainable=False,index=None):
         obj = np.asarray(input_array).view(cls)
         obj.name = name
         obj.transform = transform
         obj.original = input_array
+        obj.index = index
         if isinstance(clamp, float) or isinstance(clamp, int):
             obj.clamp = (clamp, clamp)
         else:
@@ -31,6 +32,7 @@ class Parameter(np.ndarray):
         self.original = getattr(obj, 'original', None)
         self.clamp = getattr(obj, 'clamp', None)
         self.is_trainable = getattr(obj, 'is_trainable', False)
+        self.index = getattr(obj, 'index', None)
 
     def __repr__(self):
         return "Parameter {0}:".format(self.name) + np.ndarray.__repr__(self)
@@ -76,6 +78,33 @@ class Parameter(np.ndarray):
         for i, j in zip(index, arr):
             self[i] = j
         self.clamp_()
+
+    def save(self, filename):
+        data_dict = {
+            "name": self.name,
+            "transform": self.transform,
+            "original": self.original,
+            "clamp": self.clamp,
+            "is_trainable": self.is_trainable,
+            "data": self,
+        }
+        # save pkl
+        with open(filename, "wb") as f:
+            pickle.dump(data_dict, f)
+
+
+    def load(self, filename):
+        # load dict from pkl and assign
+        with open(filename, "rb") as f:
+            data_dict = pickle.load(f)
+        self.name = data_dict["name"]
+        self.transform = data_dict["transform"]
+        self.original = data_dict["original"]
+        self.clamp = data_dict["clamp"]
+        self.is_trainable = data_dict["is_trainable"]
+        self[:] = data_dict["data"]
+        self.clamp_()
+        return self
 
 
 

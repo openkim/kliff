@@ -7,7 +7,7 @@ import numpy as np
 
 from kliff.dataset.dataset import Configuration
 from kliff.models.parameter import Parameter
-from kliff.models.parameter_transform import LogTransform, ParameterTransform
+# from kliff.models.parameter_transform import LogTransform, ParameterTransform
 from kliff.utils import yaml_dump, yaml_load
 
 
@@ -197,21 +197,23 @@ class Model:
     def __init__(
         self,
         model_name: str = None,
-        params_transform: Optional[ParameterTransform] = None,
+        params_transform: Optional[callable] = None,
     ):
         self.model_name = model_name
-        self.params_transform = params_transform
+        # self.params_transform = params_transform
 
         self.model_params = self.init_model_params()
 
-        if self.params_transform is not None:
-            # make a copy since params_transform can make changes in place
-            transformed = copy.deepcopy(self.model_params)
-            self.model_params_transformed = self.params_transform(transformed)
-        else:
-            self.model_params_transformed = self.model_params
+        # if self.params_transform is not None:
+        #     # make a copy since params_transform can make changes in place
+        #     transformed = copy.deepcopy(self.model_params)
+        #     self.model_params_transformed = self.params_transform(transformed)
+        # else:
+        #     self.model_params_transformed = self.model_params
+        print(self.model_params)
+        self.model_params_transformed = self.model_params
 
-        self.opt_params = Parameter(self.model_params_transformed, is_trainable=True)
+        self.opt_params = None#Parameter(self.model_params_transformed, is_trainable=True)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
 
@@ -322,7 +324,7 @@ class Model:
 
         for name, p in params.items():
             s += f"name: {name}\n"
-            s += f"value: {p.value}\n"
+            s += f"value: {p}\n"
             s += f"size: {len(p)}\n\n"
 
         if filename is not None:
@@ -394,7 +396,8 @@ class Model:
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
 
-    def set_opt_params(self, **kwargs):
+    # def set_opt_params(self, **kwargs):
+    def set_opt_params(self, list_of_params):
         """
         Set the parameters that will be optimized.
 
@@ -409,9 +412,10 @@ class Model:
         Example:
            instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
         """
-        self.opt_params.set(**kwargs)
-        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
-
+        # self.opt_params.set(**kwargs)
+        # self.model_params = self._inverse_transform_params(self.opt_params.model_params)
+        for param in list_of_params:
+            self.model_params_transformed[param].is_trainable = True
         # reset influence distance in case it depends on parameters and changes
         self.init_influence_distance()
 
@@ -442,7 +446,12 @@ class Model:
         """
         Echo the optimizing parameter to a file.
         """
-        return self.opt_params.echo_opt_params(filename)
+        for param_key in self.model_params_transformed:
+            # print(param_key, param_val)
+            if self.model_params_transformed[param_key].is_trainable:
+                print(f"Parameter:{param_key} : {self.model_params_transformed[param_key]}")
+
+        # return self.opt_params.echo_opt_params(filename)
 
     def get_num_opt_params(self) -> int:
         """
@@ -537,7 +546,7 @@ class Model:
 #             name=d["name"],
 #             index=d["index"],
 
-        self.opt_params = Parameter(d["opt_params"]["value"],
+        self.opt_params = Parameter(d["opt_params"]["value"])
 
 
         # Set model_params to opt_params.model_params since they should share the
