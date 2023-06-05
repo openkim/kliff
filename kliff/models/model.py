@@ -515,7 +515,7 @@ class Model:
         """
         Whether bounds are set for some parameters.
         """
-        return self.opt_params.has_opt_params_bounds()
+        return False#self.opt_params.has_opt_params_bounds()
 
     def save(self, filename: Path = "trained_model.yaml"):
         """

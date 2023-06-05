@@ -94,6 +94,7 @@ class Calculator:
         infl_dist = self.model.get_influence_distance()
 
         ca_class = self.model.get_compute_argument_class()
+        print(ca_class)
 
         self.compute_arguments = []
         for conf, e, f, s in zip(configs, use_energy, use_forces, use_stress):
@@ -104,7 +105,7 @@ class Calculator:
                 ca = ca_class(conf, supported_species, infl_dist, e, f, s)
             self.compute_arguments.append(ca)
 
-        logger.info(f"Create calculator for {len(configs)} configurations.")
+        print(f"Create calculator for {len(configs)} configurations.")
         return self.compute_arguments
 
     def get_compute_arguments(self) -> List[Any]:
