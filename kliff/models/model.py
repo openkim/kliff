@@ -474,7 +474,13 @@ class Model:
         Returns:
             opt_params: A 1D array of nested optimizing parameter values.
         """
-        return self.opt_params.get_opt_params()
+        opt_param = np.array([])
+        for param_key in self.model_params_transformed:
+            if self.model_params_transformed[param_key].is_trainable:
+                opt_param = np.append(
+                    opt_param, self.model_params_transformed[param_key]
+                )
+        return opt_param
 
     def update_model_params(self, params: Sequence[float]):
         """
@@ -488,10 +494,9 @@ class Model:
         Args:
             params: updated parameter values from the optimizer.
         """
-        self.model_params_transformed = self.opt_params.update_opt_params(params)
-        self.model_params = self._inverse_transform_params(
-            self.model_params_transformed
-        )
+        for i,param_key in enumerate(self.model_params_transformed):
+            if self.model_params_transformed[param_key].is_trainable:
+                self.model_params_transformed[param_key].copy_(params[i])
 
     def get_opt_param_name_value_and_indices(
         self, index: int

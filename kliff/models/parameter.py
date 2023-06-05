@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 import numpy as np
 import pickle
 
+
 class Parameter(np.ndarray):
     """
     Torch like parameters, but with numpy. Methods ending with _ modify the object in place.
@@ -64,10 +65,17 @@ class Parameter(np.ndarray):
         self.clamp_()
 
     def copy_(self, arr):
-        arr = self.transform(arr)
+        if self.transform is not None:
+            arr = self.transform(arr)
         arr = arr.astype(self.dtype)
         self[:] = arr
         self.clamp_()
+
+    def numpy(self):
+        if self.transform is not None:
+            return self.transform.inverse(self)
+        else:
+            return self
 
     def copy_at_(self, arr, index):
         arr = self.transform(arr)

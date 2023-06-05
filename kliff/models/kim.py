@@ -617,6 +617,8 @@ class KIMModel(Model):
         # update from opt params to model params
         super().update_model_params(params)
 
+
+
         # only update optimizing params
         if self.params_transform is None:
             # update from model params to kim params
