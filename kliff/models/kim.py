@@ -617,37 +617,45 @@ class KIMModel(Model):
         # update from opt params to model params
         super().update_model_params(params)
 
-
-
-        # only update optimizing params
-        if self.params_transform is None:
-            # update from model params to kim params
-            n = self.get_num_opt_params()
-            for i in range(n):
-                _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
+        # update from model params to kim params
+        for name, param in self.model_params_transformed.items():
+            p_idx = param.index
+            for c_idx, v in enumerate(param.numpy()):
                 try:
-                    self.kim_model.set_parameter(p_idx, c_idx, value)
+                    self.kim_model.set_parameter(p_idx, c_idx, v)
                 except RuntimeError:
-                    raise kimpy.KimPyError(
-                        "Calling `kim_model.set_parameter()` failed."
-                    )
+                    raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
-        # When params_transform is set, a user can do whatever in it
-        # function, e.g. update a parameter that is not an optimizing parameter.
-        # In general, we do not know how parameters are modified in there,
-        # and therefore, we need to update all params in model_params to kim
-        # Note, `params_transform.inverse_transform()` is called in
-        # super().update_model_params(params)
-        else:
-            for name, params in self.model_params.items():
-                p_idx = params.index
-                for c_idx, value in enumerate(params.value):
-                    try:
-                        self.kim_model.set_parameter(p_idx, c_idx, value)
-                    except RuntimeError:
-                        raise kimpy.KimPyError(
-                            "Calling `kim_model.set_parameter()` failed."
-                        )
+
+        # # only update optimizing params
+        # if self.params_transform is None:
+        #     # update from model params to kim params
+        #     n = self.get_num_opt_params()
+        #     for i in range(n):
+        #         _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
+        #         try:
+        #             self.kim_model.set_parameter(p_idx, c_idx, value)
+        #         except RuntimeError:
+        #             raise kimpy.KimPyError(
+        #                 "Calling `kim_model.set_parameter()` failed."
+        #             )
+        #
+        # # When params_transform is set, a user can do whatever in it
+        # # function, e.g. update a parameter that is not an optimizing parameter.
+        # # In general, we do not know how parameters are modified in there,
+        # # and therefore, we need to update all params in model_params to kim
+        # # Note, `params_transform.inverse_transform()` is called in
+        # # super().update_model_params(params)
+        # else:
+        #     for name, params in self.model_params.items():
+        #         p_idx = params.index
+        #         for c_idx, value in enumerate(params.value):
+        #             try:
+        #                 self.kim_model.set_parameter(p_idx, c_idx, value)
+        #             except RuntimeError:
+        #                 raise kimpy.KimPyError(
+        #                     "Calling `kim_model.set_parameter()` failed."
+        #                 )
 
         # refresh model
         self.kim_model.clear_then_refresh()
