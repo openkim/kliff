@@ -139,6 +139,7 @@ class Parameter(np.ndarray):
             self.transform_()
             self.clamp_()
 
+
 # from monty.json import MSONable
 #
 #
