@@ -197,7 +197,7 @@ class Model:
     def __init__(
         self,
         model_name: str = None,
-        params_transform: Optional[callable] = None,
+        # params_transform: Optional[callable] = None,
     ):
         self.model_name = model_name
         # self.params_transform = params_transform
@@ -210,10 +210,10 @@ class Model:
         #     self.model_params_transformed = self.params_transform(transformed)
         # else:
         #     self.model_params_transformed = self.model_params
-        print(self.model_params)
+        # print(self.model_params)
         self.model_params_transformed = self.model_params
 
-        self.opt_params = None#Parameter(self.model_params_transformed, is_trainable=True)
+        # self.opt_params = None#Parameter(self.model_params_transformed, is_trainable=True)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
 
@@ -557,17 +557,27 @@ class Model:
         # Set model_params to opt_params.model_params since they should share the
         # underlying `Parameter` objects
         self.model_params = self.opt_params.model_params
+    #
+    # def _inverse_transform_params(self, model_params_transformed: Dict[str, Parameter]):
+    #     """
+    #     Inverse transform the parameters.
+    #     """
+    #     if self.params_transform is not None:
+    #         # make a copy since params_transform can make changes in place
+    #         transformed = copy.deepcopy(model_params_transformed)
+    #         return self.params_transform.inverse_transform(transformed)
+    #     else:
+    #         return model_params_transformed
 
-    def _inverse_transform_params(self, model_params_transformed: Dict[str, Parameter]):
+    def parameters(self):
         """
-        Inverse transform the parameters.
+        Get a dict of parameters that will be optimized.
         """
-        if self.params_transform is not None:
-            # make a copy since params_transform can make changes in place
-            transformed = copy.deepcopy(model_params_transformed)
-            return self.params_transform.inverse_transform(transformed)
-        else:
-            return model_params_transformed
+        param_opt_dict = {}
+        for param_key in self.model_params_transformed:
+            if self.model_params_transformed[param_key].is_trainable:
+                param_opt_dict[param_key] = self.model_params_transformed[param_key]
+        return param_opt_dict
 
 
 class ModelError(Exception):

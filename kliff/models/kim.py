@@ -391,14 +391,13 @@ class KIMModel(Model):
     def __init__(
         self,
         model_name: str,
-        params_transform: Optional[ParameterTransform] = None,
     ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
 
         self.kim_model = self._create_kim_model(model_name)
 
-        super(KIMModel, self).__init__(model_name, params_transform)
+        super(KIMModel, self).__init__(model_name)
 
     def init_model_params(self) -> Dict[str, Parameter]:
         return self.get_kim_model_params()
@@ -515,9 +514,9 @@ class KIMModel(Model):
                 else:  # should never reach here
                     KIMModelError(f"get unexpected parameter data type `{dtype}`")
 
-            print(f"values = {values}")
-            print(f"name = {name}")
-            print(f"index = {i}")
+            # print(f"values = {values}")
+            # print(f"name = {name}")
+            # print(f"index = {i}")
             params[name] = Parameter(values, name=name, index=i)
 
         return params

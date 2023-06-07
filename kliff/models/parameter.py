@@ -19,6 +19,7 @@ class Parameter(np.ndarray):
         obj.transform = transform
         obj.original = input_array
         obj.index = index
+        obj.is_transformed = False
         if isinstance(clamp, float) or isinstance(clamp, int):
             obj.clamp = (clamp, clamp)
         else:
@@ -34,20 +35,31 @@ class Parameter(np.ndarray):
         self.clamp = getattr(obj, 'clamp', None)
         self.is_trainable = getattr(obj, 'is_trainable', False)
         self.index = getattr(obj, 'index', None)
+        self.is_transformed = getattr(obj, 'is_transformed', False)
 
     def __repr__(self):
         return "Parameter {0}:".format(self.name) + np.ndarray.__repr__(self)
 
     def transform_(self):
-        if self.transform is not None:
-            for i in range(len(self)):
-                self[i] = self.transform(self[i])
-        self.clamp_()
+        if self.is_transformed:
+            warnings.warn("Parameter {0} has already been transformed.".format(self.name))
+            return
+        else:
+            self.is_transformed = True
+            if self.transform is not None:
+                for i in range(len(self)):
+                    self[i] = self.transform(self[i])
+            self.clamp_()
 
-    def inverse_transform_(self):
-        if self.transform is not None:
-            for i in range(len(self)):
-                self[i] = self.transform.inverse(self[i])
+    def inverse_(self):
+        if not self.is_transformed:
+            warnings.warn("Parameter {0} has not been transformed.".format(self.name))
+            return
+        else:
+            if self.transform is not None:
+                for i in range(len(self)):
+                    self[i] = self.transform.inverse(self[i])
+            self.is_transformed = False
 
     def reset_(self):
         self[:] = self.original
@@ -72,7 +84,7 @@ class Parameter(np.ndarray):
         self.clamp_()
 
     def numpy(self):
-        if self.transform is not None:
+        if (self.transform is not None) and self.is_transformed:
             return self.transform.inverse(self)
         else:
             return self
@@ -100,7 +112,6 @@ class Parameter(np.ndarray):
         with open(filename, "wb") as f:
             pickle.dump(data_dict, f)
 
-
     def load(self, filename):
         # load dict from pkl and assign
         with open(filename, "rb") as f:
@@ -114,7 +125,19 @@ class Parameter(np.ndarray):
         self.clamp_()
         return self
 
+    def add_transform_(self, transform):
+        self.transform = transform
 
+    def add_clamp_(self, clamp):
+        self.clamp = clamp
+
+    def finalize_(self):
+        if self.is_transformed:
+            warnings.warn("Parameter {0} has already been transformed.".format(self.name))
+            return
+        else:
+            self.transform_()
+            self.clamp_()
 
 # from monty.json import MSONable
 #
