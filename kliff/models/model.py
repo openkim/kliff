@@ -266,9 +266,11 @@ class Model:
         return opt_param
 
     def update_model_params(self, params: Sequence[float]):
-        for i,param_key in enumerate(self.model_params):
+        i = 0
+        for param_key in self.model_params:
             if self.model_params[param_key].is_trainable:
                 self.model_params[param_key].copy_(params[i])
+                i += 1
 
     def get_opt_param_name_value_and_indices(
         self, index: int
