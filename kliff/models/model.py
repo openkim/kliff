@@ -249,12 +249,16 @@ class Model:
         for param_key in self.model_params:
             # print(param_key, param_val)
             if self.model_params[param_key].is_trainable:
-                print(f"Parameter:{param_key} : {self.model_params[param_key]}")
+                print(f"Parameter:{param_key} : {self.model_params[param_key].numpy()}")
 
         # return self.opt_params.echo_opt_params(filename)
 
     def get_num_opt_params(self) -> int:
-        return self.opt_params.get_num_opt_params()
+        i = 0
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_trainable:
+                i += 1
+        return i
 
     def get_opt_params(self) -> np.ndarray:
         opt_param = np.array([])
