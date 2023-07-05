@@ -265,7 +265,7 @@ class Model:
         for param_key in self.model_params:
             if self.model_params[param_key].is_trainable:
                 opt_param = np.append(
-                    opt_param, self.model_params[param_key]
+                    opt_param, self.model_params[param_key].numpy_opt()
                 )
         return opt_param
 
@@ -285,13 +285,27 @@ class Model:
         """
         Get the lower and upper bounds of optimizing parameters.
         """
-        return self.opt_params.get_opt_params_bounds()
+        if self.has_opt_params_bounds():
+            bounds = []
+            for param_key in self.model_params:
+                if self.model_params[param_key].is_trainable:
+                    if self.model_params[param_key].bounds is None:
+                        bounds.append((None, None))
+                    else:
+                        for b in self.model_params[param_key].bounds:
+                            bounds.append(tuple(b))
+        return tuple(bounds)
 
     def has_opt_params_bounds(self) -> bool:
         """
         Whether bounds are set for some parameters.
         """
-        return False#self.opt_params.has_opt_params_bounds()
+        has_bounds = False
+        for param in self.model_params:
+            if self.model_params[param].bounds is not None:
+                has_bounds = True
+                break
+        return has_bounds
 
     def save(self, filename: Path = "trained_model.yaml"):
         """

@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
+from collections import OrderedDict
 
 import numpy as np
 from loguru import logger
@@ -462,7 +463,7 @@ class KIMModel(Model):
                 "Calling `kim_model.get_number_of_parameters()` failed."
             )
 
-        params = dict()
+        params = OrderedDict()
         for i in range(num_params):
             try:
                 (

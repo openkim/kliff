@@ -77,14 +77,14 @@ class ParameterTransform:
     def __init__(self):
         pass
 
-    def forward(self):
-        raise NotImplementedError("forward() is not implemented")
+    def transform(self):
+        raise NotImplementedError("transform() is not implemented")
 
     def inverse(self):
         raise NotImplementedError("inverse() is not implemented")
 
     def __call__(self, x):
-        return self.forward(x)
+        return self.transform(x)
 
 
 class LogTransform(ParameterTransform):
@@ -94,7 +94,7 @@ class LogTransform(ParameterTransform):
     def __init__(self, base=np.e):
         self.base = base
 
-    def forward(self, x):
+    def transform(self, x):
         return np.log(x) / np.log(self.base)
 
     def inverse(self, x):
