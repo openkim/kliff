@@ -84,8 +84,8 @@ class Parameter(np.ndarray):
         # self.clamp_()
 
     def copy_(self, arr):
-        if self.transform is not None:
-            arr = self.transform(arr)
+        # if self.transform is not None:
+        #     arr = self.transform(arr)
         try:
             arr = arr.astype(self.dtype)
         except AttributeError:
@@ -145,6 +145,11 @@ class Parameter(np.ndarray):
         self.transform = transform
 
     def add_bounds_(self, bounds):
+        """
+        Add bounds to the parameter. Must be in transformed space
+        :param bounds:
+        :return:
+        """
         if bounds.shape[1] != 2:
             raise ValueError("Bounds must have shape (n, 2).")
         self.bounds = bounds
@@ -179,6 +184,9 @@ class Parameter(np.ndarray):
 
     def has_opt_params_bounds(self):
         return self.bounds is not None
+
+    def get_inv_bounds(self):
+        return self.transform.inverse(self.bounds)
 
 # class _Index:
 #     """

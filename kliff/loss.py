@@ -359,7 +359,6 @@ class LossPhysicsMotivatedModel:
                 if calc.has_opt_params_bounds():
                     if method in ["L-BFGS-B", "TNC", "SLSQP"]:
                         bounds = self.calculator.get_opt_params_bounds()
-                        print("bounds", bounds)
                         kwargs["bounds"] = bounds
                     else:
                         raise LossError(f"Method `{method}` cannot handle bounds.")
@@ -453,7 +452,6 @@ class LossPhysicsMotivatedModel:
             elif method in self.scipy_minimize_methods:
                 minimize_fn = scipy.optimize.minimize
                 func = self._get_loss
-
             result = minimize_fn(func, x, method=method, **kwargs)
             return result
 
@@ -570,7 +568,6 @@ class LossPhysicsMotivatedModel:
     def _get_loss_MPI(self, x):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
-
         residual = self._get_residual_MPI(x)
         if rank == 0:
             loss = 0.5 * np.linalg.norm(residual) ** 2
@@ -609,6 +606,7 @@ class LossPhysicsMotivatedModel:
         ref = calculator.get_reference(ca)
 
         conf = ca.conf
+
         identifier = conf.identifier
         weight = conf.weight
         natoms = conf.get_num_atoms()

@@ -189,7 +189,6 @@ if ptemcee_avail:
             **kwargs,
         ):
             self.loss = loss
-
             # Dimensionality
             ndim = loss.calculator.get_num_opt_params()
             nwalkers = 2 * ndim if nwalkers is None else nwalkers

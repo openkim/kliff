@@ -265,7 +265,7 @@ class Model:
         for param_key in self.model_params:
             if self.model_params[param_key].is_trainable:
                 opt_param = np.append(
-                    opt_param, self.model_params[param_key].numpy_opt()
+                    opt_param, self.model_params[param_key]
                 )
         return opt_param
 
