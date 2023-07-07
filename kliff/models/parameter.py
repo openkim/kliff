@@ -87,6 +87,11 @@ class Parameter(np.ndarray):
         # if self.transform is not None:
         #     arr = self.transform(arr)
         try:
+            if self.opt_mask is not None:
+                tmp_arr = np.zeros_like(self)
+                tmp_arr[self.opt_mask] = arr
+                tmp_arr[~self.opt_mask] = self[~self.opt_mask]
+                arr = tmp_arr
             arr = arr.astype(self.dtype)
         except AttributeError:
             arr = np.array(arr).astype(self.dtype)
@@ -187,6 +192,12 @@ class Parameter(np.ndarray):
 
     def get_inv_bounds(self):
         return self.transform.inverse(self.bounds)
+
+    def opt(self):
+        if self.opt_mask is not None:
+            return self[self.opt_mask]
+        else:
+            return self
 
 # class _Index:
 #     """
