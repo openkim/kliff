@@ -1,4 +1,3 @@
-import copy
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
@@ -220,7 +219,7 @@ class Model:
 
         for name, p in params.items():
             s += f"name: {name}\n"
-            s += f"value: {p.numpy()}\n" # `.numpy()` converts any transform to original space
+            s += f"value: {p.get_numpy_array()}\n" # `.numpy()` converts any transform to original space
             s += f"size: {len(p)}\n\n"
 
         if filename is not None:
@@ -249,7 +248,7 @@ class Model:
         for param_key in self.model_params:
             # print(param_key, param_val)
             if self.model_params[param_key].is_trainable:
-                print(f"Parameter:{param_key} : {self.model_params[param_key].numpy()}")
+                print(f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array()}")
 
         # return self.opt_params.echo_opt_params(filename)
 
@@ -265,7 +264,7 @@ class Model:
         for param_key in self.model_params:
             if self.model_params[param_key].is_trainable:
                 opt_param = np.append(
-                    opt_param, self.model_params[param_key].opt()
+                    opt_param, self.model_params[param_key].get_numpy_opt_array()
                 )
         return opt_param
 
@@ -273,7 +272,7 @@ class Model:
         i = 0
         for param_key in self.model_params:
             if self.model_params[param_key].is_trainable:
-                self.model_params[param_key].copy_(params[i])
+                self.model_params[param_key].copy_to_param_(params[i])
                 i += 1
 
     def get_opt_param_name_value_and_indices(
@@ -281,19 +280,14 @@ class Model:
     ) -> Tuple[str, float, int, int]:
         return self.opt_params.get_opt_param_name_value_and_indices(index)
 
-    def get_opt_params_bounds(self) -> List[Tuple[int, int]]:
+    def get_formatted_param_bounds(self) -> List[Tuple[int, int]]:
         """
         Get the lower and upper bounds of optimizing parameters.
         """
-        if self.has_opt_params_bounds():
-            bounds = []
-            for param_key in self.model_params:
-                if self.model_params[param_key].is_trainable:
-                    if self.model_params[param_key].bounds is None:
-                        bounds.append((None, None))
-                    else:
-                        for b in self.model_params[param_key].bounds:
-                            bounds.append(tuple(b))
+        bounds = []
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_trainable:
+                bounds.extend(self.model_params[param_key].get_formatted_param_bounds())
         return tuple(bounds)
 
     def has_opt_params_bounds(self) -> bool:

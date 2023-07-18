@@ -11,7 +11,7 @@ from kliff.error import report_import_error
 from kliff.log import get_log_level
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
-from kliff.models.parameter_transform import ParameterTransform
+# from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import assemble_forces, assemble_stress
 
 try:
@@ -569,7 +569,7 @@ class KIMModel(Model):
         # update from model params to kim params
         for name, param in self.model_params.items():
             p_idx = param.index
-            for c_idx, v in enumerate(param.numpy()):
+            for c_idx, v in enumerate(param.get_numpy_array()):
                 try:
                     self.kim_model.set_parameter(p_idx, c_idx, v)
                 except RuntimeError:

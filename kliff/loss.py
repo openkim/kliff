@@ -358,7 +358,7 @@ class LossPhysicsMotivatedModel:
             for calc in calculators:
                 if calc.has_opt_params_bounds():
                     if method in ["L-BFGS-B", "TNC", "SLSQP"]:
-                        bounds = self.calculator.get_opt_params_bounds()
+                        bounds = self.calculator.get_formatted_param_bounds()
                         kwargs["bounds"] = bounds
                     else:
                         raise LossError(f"Method `{method}` cannot handle bounds.")

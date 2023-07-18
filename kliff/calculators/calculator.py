@@ -257,7 +257,7 @@ class Calculator:
         """
         return self.model.has_opt_params_bounds()
 
-    def get_opt_params_bounds(self):
+    def get_formatted_param_bounds(self):
         """
         Return the lower and upper bounds for the optimizing parameters.
 
@@ -266,7 +266,7 @@ class Calculator:
         :meth:`get_opt_params`. ``None`` for ``lower`` or ``upper`` means that no bound
         should be applied.
         """
-        return self.model.get_opt_params_bounds()
+        return self.model.get_formatted_param_bounds()
 
     def update_model_params(self, opt_params: List[float]):
         """
@@ -345,10 +345,10 @@ class _WrapperCalculator(object):
     def get_opt_params(self):
         return np.concatenate([calc.get_opt_params() for calc in self._calculators])
 
-    def get_opt_params_bounds(self):
+    def get_formatted_param_bounds(self):
         bounds = []
         for calc in self._calculators:
-            b = calc.get_opt_params_bounds()
+            b = calc.get_formatted_param_bounds()
             bounds.extend(b)
         return bounds
 
