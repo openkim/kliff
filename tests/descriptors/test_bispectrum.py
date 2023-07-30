@@ -183,9 +183,8 @@ dzeta_dr_minus_121 = [
 ]
 
 
-def test_desc():
-    test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
-    conf = Configuration.from_file(test_file_path.joinpath("Si.xyz"))
+def test_desc(test_data_dir):
+    conf = Configuration.from_file(test_data_dir / "configs" / "Si.xyz")
 
     cut_name = "cos"
     cut_dists = {"Si-Si": 5.0}

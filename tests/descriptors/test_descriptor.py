@@ -1,6 +1,5 @@
 import itertools
 import os
-from pathlib import Path
 
 import numpy as np
 
@@ -22,11 +21,6 @@ _stdev = np.std(_zeta, axis=0)
 _normalized_zeta = (_zeta - _mean) / _stdev
 _normalized_dzetadr_forces = _dzetadr_forces / np.atleast_3d(_stdev)
 _normalized_dzetadr_stress = _dzetadr_stress / np.atleast_3d(_stdev)
-
-
-def delete_file(fname):
-    if os.path.exists(fname):
-        os.remove(fname)
 
 
 def assert_mean_stdev(mean, stdev, target_mean, target_stdev):
@@ -81,9 +75,8 @@ class ExampleDescriptor(Descriptor):
         return num_desc
 
 
-def test_descriptor():
-    test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
-    fname = test_file_path.joinpath("Si.xyz")
+def test_descriptor(test_data_dir, tmp_dir):
+    fname = test_data_dir / "configs" / "Si.xyz"
     conf = Configuration.from_file(fname)
     conf.identifier = str(fname)
     configs = [conf, conf]
@@ -117,11 +110,6 @@ def test_descriptor():
     for normalize, fp_path, mean_std_path in itertools.product(
         [False, True], ["fp.pkl"], [None, "ms.pkl"]
     ):
-        delete_file("fingerprints.pkl")
-        delete_file("fingerprints_mean_and_stdev.pkl")
-        delete_file("fp.pkl")
-        delete_file("ms.pkl")
-
         desc = ExampleDescriptor(normalize)
 
         if normalize and mean_std_path is not None:

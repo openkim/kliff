@@ -1,6 +1,5 @@
 import os
 import warnings
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -107,7 +106,7 @@ def energy_forces_stress(
         assert np.allclose(ref[-6:], ref_stress)
 
 
-def test_lj():
+def test_lj(test_data_dir):
     model = LennardJones(species=["Mo", "S"])
 
     # set optimizing parameters
@@ -132,12 +131,9 @@ def test_lj():
         model.echo_model_params()
         model.echo_opt_params()
 
-    path = (
-        Path(__file__)
-        .parents[1]
-        .joinpath("configs_extxyz/MoS2/MoS2_energy_forces_stress.xyz")
+    config = Configuration.from_file(
+        test_data_dir / "configs/MoS2/MoS2_energy_forces_stress.xyz"
     )
-    config = Configuration.from_file(path)
 
     # TODO, enable the check of force
     # we get different LJ computed forces from Mac and GH CI, not sure why
