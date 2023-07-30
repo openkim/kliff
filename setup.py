@@ -101,6 +101,11 @@ setup(
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
+    # TODO, use numpy<1.20 because emcee can only work with that
+    # Clone and update emcee, and then remove the <1.20 requirement?
+    # This also prohibit the use of py3.10; most distribution channels (e.g. conda)
+    # do not have numpy<1.20 support anymore.
+    # support for
     extras_require={
         "test": ["pytest", "kimpy", "ptemcee", "emcee", "torch", "numpy<1.20"],
         "docs": [
