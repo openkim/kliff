@@ -25,7 +25,7 @@ model.set_opt_params(A=[["default"]])
 
 # training set
 FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
-path = FILE_DIR.parent.joinpath("configs_extxyz/Si_4")
+path = FILE_DIR.parent.joinpath("test_data/configs/Si_4")
 data = Dataset(path)
 configs = data.get_configs()
 

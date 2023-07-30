@@ -1,4 +1,3 @@
-"""Test symmetry functions values."""
 import itertools
 from collections import OrderedDict
 

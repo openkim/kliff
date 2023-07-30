@@ -66,7 +66,7 @@ def test_neigh(test_data_dir):
 
 def test_1D():
     """
-    Simple test of a dimer, nonperiodic.
+    Simple test of a dimer, non-periodic.
     """
 
     cell = np.asarray([[200.0, 0.0, 0.0], [0.0, 200.0, 0.0], [0.0, 0.0, 200.0]])

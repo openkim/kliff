@@ -14,14 +14,14 @@ try:
     from kliff.uq.mcmc import PtemceeSampler
 
     ptemcee_avail = True
-except ModuleNotFoundError:
+except ImportError:
     ptemcee_avail = False
 
 try:
     from kliff.uq.mcmc import EmceeSampler
 
     emcee_avail = True
-except ModuleNotFoundError:
+except ImportError:
     emcee_avail = False
 
 
@@ -95,71 +95,69 @@ def test_T0():
     """
     # Using internal function
     T0_internal = get_T0(loss)
+
     # Compute manually
     xopt = calc.get_opt_params()
     T0_manual = 2 * loss._get_loss(xopt) / len(xopt)
     assert T0_internal == T0_manual, "Internal function to compute T0 doesn't work"
 
 
-def test_MCMC_wrapper():
+@pytest.mark.skipif(not ptemcee_avail, reason="ptemcee is not found")
+def test_MCMC_wrapper1():
     """Test if the MCMC wrapper class returns the correct sampler instance."""
-    if ptemcee_avail:
-        assert (
-            type(ptsampler) == PtemceeSampler
-        ), "MCMC should return ``PtemceeSampler`` instance"
-    if emcee_avail:
-        assert (
-            type(sampler) == EmceeSampler
-        ), "MCMC should return ``EmceeSampler`` instance"
+    assert (
+        type(ptsampler) == PtemceeSampler
+    ), "MCMC should return ``PtemceeSampler`` instance"
 
 
-def test_dimensionality():
+@pytest.mark.skipif(not emcee_avail, reason="emcee is not found")
+def test_MCMC_wrapper2():
+    assert type(sampler) == EmceeSampler, "MCMC should return ``EmceeSampler`` instance"
+
+
+@pytest.mark.skipif(not ptemcee_avail, reason="ptemcee is not found")
+def test_dimensionality1():
     """Test the number of temperatures, walkers, steps, and parameters. This is done by
     comparing the shape of the resulting MCMC chains and the variables used to set these
     dimensions.
     """
 
     # Test for ptemcee wrapper
-    if ptemcee_avail:
-        p0 = np.random.uniform(0, 10, (ntemps, nwalkers, ndim))
-        ptsampler.run_mcmc(p0=p0, iterations=nsteps)
-        assert ptsampler.chain.shape == (
-            ntemps,
-            nwalkers,
-            nsteps,
-            ndim,
-        ), "Dimensionality from the ptemcee wrapper is not right"
-    else:
-        print("Skip testing ptemcee; ptemcee is not found")
+    p0 = np.random.uniform(0, 10, (ntemps, nwalkers, ndim))
+    ptsampler.run_mcmc(p0=p0, iterations=nsteps)
+    assert ptsampler.chain.shape == (
+        ntemps,
+        nwalkers,
+        nsteps,
+        ndim,
+    ), "Dimensionality from the ptemcee wrapper is not right"
 
+
+@pytest.mark.skipif(not emcee_avail, reason="emcee is not found")
+def test_dimensionality2():
     # Test for emcee wrapper
-    if emcee_avail:
-        p0 = np.random.uniform(0, 10, (nwalkers, ndim))
-        sampler.run_mcmc(initial_state=p0, nsteps=nsteps)
-        assert sampler.get_chain().shape == (
-            nsteps,
-            nwalkers,
-            ndim,
-        ), "Dimensionality from the emcee wrapper is not right"
-    else:
-        print("Skip testing emcee; emcee is not found")
+    p0 = np.random.uniform(0, 10, (nwalkers, ndim))
+    sampler.run_mcmc(initial_state=p0, nsteps=nsteps)
+    assert sampler.get_chain().shape == (
+        nsteps,
+        nwalkers,
+        ndim,
+    ), "Dimensionality from the emcee wrapper is not right"
 
 
+@pytest.mark.skipif(not ptemcee_avail, reason="ptemcee is not found")
 def test_pool_exception():
     """Test if an exception is raised when declaring the pool prior to instantiating
     ``kliff.uq.MCMC``.
     """
-    if ptemcee_avail:
-        with pytest.raises(ValueError):
-            _ = MCMC(
-                loss,
-                ntemps=ntemps,
-                nwalkers=nwalkers,
-                logprior_args=(prior_bounds,),
-                pool=Pool(1),
-            )
-    else:
-        print("Skip the test; ptemcee is not found")
+    with pytest.raises(ValueError):
+        _ = MCMC(
+            loss,
+            ntemps=ntemps,
+            nwalkers=nwalkers,
+            logprior_args=(prior_bounds,),
+            pool=Pool(1),
+        )
 
 
 def test_sampler_exception():
