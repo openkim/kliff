@@ -14,14 +14,14 @@ try:
     from kliff.uq.mcmc import PtemceeSampler
 
     ptemcee_avail = True
-except ImportError:
+except ModuleNotFoundError:
     ptemcee_avail = False
 
 try:
     from kliff.uq.mcmc import EmceeSampler
 
     emcee_avail = True
-except ImportError:
+except ModuleNotFoundError:
     emcee_avail = False
 
 
@@ -34,7 +34,7 @@ model = KIMModel(modelname)
 model.set_opt_params(A=[["default"]])
 
 # training set
-path = Path(__file__).absolute().parents[1].joinpath("configs_extxyz/Si_4")
+path = Path(__file__).absolute().parents[1].joinpath("test_data/configs/Si_4")
 data = Dataset(path)
 configs = data.get_configs()
 
@@ -67,6 +67,26 @@ if emcee_avail:
     sampler = MCMC(
         loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), sampler="emcee"
     )
+
+
+@pytest.fixture(scope="session")
+def ptemcee_avail():
+    try:
+        from kliff.uq.mcmc import PtemceeSampler
+
+        return True
+    except ModuleNotFoundError:
+        return False
+
+
+@pytest.fixture(scope="session")
+def emcee_avail():
+    try:
+        from kliff.uq.mcmc import EmceeSampler
+
+        return True
+    except ModuleNotFoundError:
+        return False
 
 
 def test_T0():
@@ -154,10 +174,3 @@ def test_sampler_exception():
             logprior_args=(prior_bounds,),
             sampler="dummy",
         )
-
-
-if __name__ == "__main__":
-    test_T0()
-    test_MCMC_wrapper()
-    test_dimensionality()
-    test_pool_exception()

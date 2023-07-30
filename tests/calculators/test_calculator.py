@@ -34,52 +34,50 @@ ref_forces = [
 ]
 
 
-class TestCalculator:
-    def test_compute(self):
-        test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
-        tset = Dataset(test_file_path.joinpath("Si_4"))
-        configs = tset.get_configs()
+def test_compute(test_data_dir):
+    test_file_dir = test_data_dir.joinpath("configs/Si_4")
+    tset = Dataset(test_file_dir)
+    configs = tset.get_configs()
 
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-        model = KIMModel(modelname)
+    modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
+    model = KIMModel(modelname)
 
-        # calculator
-        calc = Calculator(model)
-        compute_arguments = calc.create(configs)
+    # calculator
+    calc = Calculator(model)
+    compute_arguments = calc.create(configs)
 
-        for i, ca in enumerate(compute_arguments):
-            calc.compute(ca)
-            energy = calc.get_energy(ca)
-            forces = calc.get_forces(ca)[:3]
+    for i, ca in enumerate(compute_arguments):
+        calc.compute(ca)
+        energy = calc.get_energy(ca)
+        forces = calc.get_forces(ca)[:3]
 
-            assert energy == pytest.approx(ref_energies[i], 1e-6)
-            assert np.allclose(forces, ref_forces[i])
+        assert energy == pytest.approx(ref_energies[i], 1e-6)
+        assert np.allclose(forces, ref_forces[i])
 
-    def test_parameter(self):
-        modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-        model = KIMModel(modelname)
 
-        # parameters
-        params = model.get_model_params()
-        sigma = params["sigma"][0]
-        A = params["A"][0]
+def test_parameter():
+    modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
+    model = KIMModel(modelname)
 
-        # optimizing parameters
-        # B will not be optimized, only providing initial guess
-        model.set_opt_params(
-            sigma=[["default"]], B=[["default", "fix"]], A=[["default"]]
-        )
+    # parameters
+    params = model.get_model_params()
+    sigma = params["sigma"][0]
+    A = params["A"][0]
 
-        calc = Calculator(model)
+    # optimizing parameters
+    # B will not be optimized, only providing initial guess
+    model.set_opt_params(sigma=[["default"]], B=[["default", "fix"]], A=[["default"]])
 
-        x0 = calc.get_opt_params()
-        assert x0[0] == sigma
-        assert x0[1] == A
-        assert len(x0) == 2
-        assert model.get_num_opt_params() == 2
+    calc = Calculator(model)
 
-        x1 = [i + 0.1 for i in x0]
-        calc.update_model_params(x1)
+    x0 = calc.get_opt_params()
+    assert x0[0] == sigma
+    assert x0[1] == A
+    assert len(x0) == 2
+    assert model.get_num_opt_params() == 2
 
-        assert params["sigma"][0] == sigma + 0.1
-        assert params["A"][0] == A + 0.1
+    x1 = [i + 0.1 for i in x0]
+    calc.update_model_params(x1)
+
+    assert params["sigma"][0] == sigma + 0.1
+    assert params["A"][0] == A + 0.1

@@ -186,15 +186,3 @@ def test_multi_calc_cas_generator():
     assert (
         len(bootstrap_cas[0][0]) + len(bootstrap_cas[0][1]) == ncas_energy + ncas_forces
     ), "For each sample, generator should generate the same number of cas in total as the original"
-
-
-if __name__ == "__main__":
-    test_wrapper()
-    test_error()
-    test_bootstrap_cas_generator()
-    test_callback()
-    test_run()
-    test_appending_cas()
-    test_save_load_cas()
-    test_reset()
-    test_multi_calc_cas_generator()

@@ -101,9 +101,3 @@ def test_run():
         shape == exp_shape
     ), f"Samples doesn't have the right shape; expected {exp_shape}, got {shape}"
     assert BS._nsamples_done == nsamples
-
-
-if __name__ == "__main__":
-    test_model()
-    test_original_state()
-    test_run()

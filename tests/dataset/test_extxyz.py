@@ -1,18 +1,28 @@
-from pathlib import Path
-
 import numpy as np
+import pytest
 
 from kliff.dataset.dataset import Configuration, Dataset
 
 
-def test_configuration(e=True, f=False, s=False, order=False):
-    path = Path(__file__).parents[1].joinpath("configs_extxyz/MoS2")
+@pytest.mark.parametrize(
+    "f,s,order",
+    (
+        [False, False, False],
+        [True, False, False],
+        [True, True, False],
+        [True, True, True],
+    ),
+)
+def test_configuration(test_data_dir, f, s, order, e=True):
+    path = test_data_dir.joinpath("configs/MoS2")
+
     if e:
-        fname = path.joinpath("MoS2_energy.xyz")
+        fname = path / "MoS2_energy.xyz"
     if f:
-        fname = path.joinpath("MoS2_energy_forces.xyz")
+        fname = path / "MoS2_energy_forces.xyz"
     if s:
-        fname = path.joinpath("MoS2_energy_forces_stress.xyz")
+        fname = path / "MoS2_energy_forces_stress.xyz"
+
     fname = fname.as_posix()
 
     config = Configuration.from_file(fname, file_format="xyz")
@@ -71,15 +81,7 @@ def test_configuration(e=True, f=False, s=False, order=False):
     assert natoms_by_species["S"] == 192
 
 
-def test_config():
-    test_configuration(True, False, False)
-    test_configuration(True, True, False)
-    test_configuration(True, True, True)
-    test_configuration(True, True, True, order=True)
-
-
-def test_dataset():
-    directory = Path(__file__).parents[1].joinpath("configs_extxyz/MoS2").as_posix()
-    tset = Dataset(directory)
+def test_dataset(test_data_dir):
+    tset = Dataset(test_data_dir / "configs/MoS2")
     configs = tset.get_configs()
     assert len(configs) == 3
