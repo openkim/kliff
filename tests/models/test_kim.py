@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -34,14 +32,13 @@ ref_forces = [
 ]
 
 
-def test_compute():
+def test_compute(test_data_dir):
     # model
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
     model = KIMModel(modelname)
 
     # training set
-    path = Path(__file__).parents[1].joinpath("configs_extxyz/Si_4")
-    data = Dataset(path)
+    data = Dataset(test_data_dir / "configs/Si_4")
     configs = data.get_configs()
 
     # compute arguments

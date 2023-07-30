@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 
 from kliff.dataset import Dataset
@@ -23,7 +21,7 @@ def test_base_weight():
     assert weight.stress_weight == sw
 
 
-def test_magnitude_inverse_weight():
+def test_magnitude_inverse_weight(test_data_dir):
     # Inverse magnitude weight
     # Pick random weight parameters
     c1_e, c2_e = np.random.uniform(low=0.0, high=1.0, size=2)
@@ -40,8 +38,7 @@ def test_magnitude_inverse_weight():
 
     # Load the dataset and set the weight
     # We choose the following data set because it has energy, forces, and stress data
-    dataset_path = Path(__file__).parents[1].joinpath("configs_extxyz/Si.xyz")
-    tset = Dataset(dataset_path, weight=weight)
+    tset = Dataset(test_data_dir / "configs/Si.xyz", weight=weight)
     configs = tset.get_configs()
 
     # Check if my implementation works. I do this by comparing it with my manual

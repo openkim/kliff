@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 
 from kliff.dataset.dataset import Configuration
@@ -36,11 +34,10 @@ all_indices = [[6, 1, 8], [0, 10, 12], [7, 3, 9], [2, 11, 13]]
 all_numneigh = [len(i) for i in all_indices]
 
 
-def test_neigh():
-    path = Path(__file__).parent
-    path = path.joinpath("configs_extxyz/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz")
-
-    conf = Configuration.from_file(path)
+def test_neigh(test_data_dir):
+    conf = Configuration.from_file(
+        test_data_dir / "configs/bilayer_graphene/bilayer_sep3.36_i0_j0.xyz"
+    )
     conf.species[0] = "O"
 
     neigh = NeighborList(conf, infl_dist=2, padding_need_neigh=False)
@@ -69,7 +66,7 @@ def test_neigh():
 
 def test_1D():
     """
-    Simple test of a dimer, nonperiodic.
+    Simple test of a dimer, non-periodic.
     """
 
     cell = np.asarray([[200.0, 0.0, 0.0], [0.0, 200.0, 0.0], [0.0, 0.0, 200.0]])

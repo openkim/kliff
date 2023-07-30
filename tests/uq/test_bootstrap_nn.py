@@ -40,7 +40,7 @@ model.add_layers(
 
 # training set
 FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
-path = FILE_DIR.parent.joinpath("configs_extxyz/Si_4")
+path = FILE_DIR.parent.joinpath("test_data/configs/Si_4")
 data = Dataset(path)
 configs = data.get_configs()
 
@@ -146,14 +146,3 @@ def test_reset():
     # Check reset bootstrap samples
     assert BS._nsamples_prepared == 0, "Reset bootstrap cas failed"
     assert BS._nsamples_done == 0, "Reset ensembles failed"
-
-
-if __name__ == "__main__":
-    test_wrapper()
-    test_error()
-    test_original_state()
-    test_bootstrap_cas_generator()
-    test_run()
-    test_appending_cas()
-    test_save_load_cas()
-    test_reset()
