@@ -110,7 +110,7 @@ setup(
         "docs": [
             "sphinx",
             "furo",
-            "sphinx-gallery",
+            "myst-nb",
             "sphinx-autodoc-typehints",
             "matplotlib",
         ],

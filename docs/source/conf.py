@@ -21,7 +21,7 @@ import sys
 # NOTE, do not use sys.path.insert, especially true when you have a C extension.
 # Because if you use `pip install .` or `python setup install` to build your
 # extension and install the package, the C extension will not be placed in the
-# sorce directory, but will be placed to your virtual environment. Then if you use
+# source directory, but will be placed to your virtual environment. Then if you use
 # sys.path.insert to insert your source directory to be the first place to look for
 # your package, it will fail to find the C extension.
 # Here, we add it for sphinx to find the package source package, in case we do not
@@ -32,7 +32,7 @@ sys.path.append(os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 
 project = "KLIFF"
-copyright = "2021, Mingjian Wen"
+copyright = "2021-2023, OpenKIM"
 author = "Mingjian Wen"
 
 # The short X.Y version
@@ -58,9 +58,10 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
+    "myst_nb",
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
-    "sphinx_gallery.gen_gallery",
+    # "sphinx_gallery.gen_gallery",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,8 +70,11 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
+}
 
 # The master toctree document.
 master_doc = "index"
@@ -80,7 +84,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -115,7 +119,7 @@ html_logo = "./img/logo.jpg"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -215,7 +219,6 @@ autodoc_mock_imports = [
     "yaml",
     "ase",
     "torch",
-    "tensorflow",
 ]
 
 # do not sort member functions of a class
@@ -226,11 +229,5 @@ autodoc_member_order = "bysource"
 imgmath_image_format = "svg"
 imgmath_latex_preamble = "\\usepackage{bm} \\usepackage{amsmath}"
 
-
-# -- sphinx-galley setup ------------------------------------------------------
-sphinx_gallery_conf = {
-    "examples_dirs": "../../examples",  # path to your example scripts
-    "gallery_dirs": "auto_examples",  # path where to save gallery generated examples
-    "filename_pattern": "/example_",  # include files with names 'example_'; '/' matches the directory name separator
-    "ignore_pattern": "^((?!/example_).)*$",  # exclude files without name '/example_'
-}
+# -- myst-nb -----------------------------------------------------------------
+nb_execution_timeout = 120
