@@ -41,25 +41,6 @@ Docs
 Below is Mingjian's personal notes on how to generate API docs. Typically, you
 will not need it.
 
-To generate the API docs for a specific module, do:
-
-.. code-block:: bash
-
-    sphinx-apidoc -f -o <TARGET> <SOURCE>
-
-where `<TARGET>` should be a directory where you want to place the generated `.rst`
-file, and `<SOURCE>` is path to your Python modules (should also be a directory).
-For example, to generate docs for all the modules in `kliff`, you can run (from
-the `kliff/docs` directory)
-
-.. code-block:: bash
-
-    sphinx-apidoc -f -o tmp ../kliff
-
-
-After generating the docs for a module, make necessary modifications and then move
-the `.rst` files in `tmp` to `kliff/docs/apidoc`.
-
 
 Tutorials
 ---------
