@@ -10,6 +10,10 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
-   tutorials/kim_SW_Si.ipynb
-   tutorials/linear_regression.ipynb
-   tutorials/lennard_jones.ipynb
+   tutorials/kim_SW_Si
+   tutorials/nn_Si
+   tutorials/nn_SiC
+   tutorials/parameter_transform
+   tutorials/uq_mcmc
+   tutorials/lennard_jones
+   tutorials/linear_regression

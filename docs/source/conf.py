@@ -10,13 +10,12 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
 import os
 import sys
 
 # sys.path.insert(0, os.path.abspath('.'))
 
-# this should be the path to the package, not the source
+# This should be the path to the package, not the source of the doc
 # e.g. ~/Applications/kliff
 # NOTE, do not use sys.path.insert, especially true when you have a C extension.
 # Because if you use `pip install .` or `python setup install` to build your
@@ -110,7 +109,9 @@ html_theme = "furo"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {"logo_only": True}  # shows only the logo with no title text
+html_theme_options = {
+    "sidebar_hide_name": True,  # only show the logo
+}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

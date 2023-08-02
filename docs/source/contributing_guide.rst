@@ -17,9 +17,6 @@ Code style
 Docs
 ----
 
-- We use sphinx-gallery_ to generate the tutorials. The source file should be
-  placed in `kliff/examples` and the file name should start with ``example_``.
-
 - To generate the docs (including the tutorials), do:
 
   .. code-block:: bash
@@ -64,10 +61,16 @@ After generating the docs for a module, make necessary modifications and then mo
 the `.rst` files in `tmp` to `kliff/docs/apidoc`.
 
 
+Tutorials
+---------
+If you have great tutorials, please write it in Jupyter notebook and place them in the `kliff/docs/tutorials` directory. Then update the `kliff/docs/tutorials.rst` file to include the new tutorials. After this, the tutorials will be automatically built and included in the docs.
+
+
 .. note::
     The `kliff/docs/apidoc/kliff.rst` is referenced in `index.rst`, serving as the entry
     for all docs.
 
 .. _googledoc: https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
 .. _black: https://black.readthedocs.io/en/stable/
+.. _isort: https://pycqa.github.io/isort/
 .. _sphinx-gallery: https://sphinx-gallery.github.io
