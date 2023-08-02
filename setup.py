@@ -112,6 +112,7 @@ setup(
             "furo",
             "myst-nb",
             "sphinx-autodoc-typehints",
+            "sphinx-copybutton",
             "matplotlib",
         ],
     },

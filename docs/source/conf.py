@@ -61,9 +61,9 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     "myst_nb",
+    "sphinx_copybutton",
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
-    # "sphinx_gallery.gen_gallery",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

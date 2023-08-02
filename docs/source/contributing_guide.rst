@@ -21,8 +21,8 @@ Docs
 
   .. code-block:: bash
 
-    $ cd kliff/docs
-    $ make html
+    cd kliff/docs
+    make html
 
   The generated docs will be at ``kliff/docs/build/html/index.html``.
 
@@ -32,8 +32,8 @@ Docs
 
   .. code-block:: bash
 
-    $ cd kliff/docs
-    $ make html-notutorial
+    cd kliff/docs
+    make html-notutorial
 
   This will not run the code in the tutorials.
 
