@@ -10,18 +10,20 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
 import os
 import sys
+import subprocess
+from pathlib import Path
+
 
 # sys.path.insert(0, os.path.abspath('.'))
 
-# this should be the path to the package, not the source
+# This should be the path to the package, not the source of the doc
 # e.g. ~/Applications/kliff
 # NOTE, do not use sys.path.insert, especially true when you have a C extension.
 # Because if you use `pip install .` or `python setup install` to build your
 # extension and install the package, the C extension will not be placed in the
-# sorce directory, but will be placed to your virtual environment. Then if you use
+# source directory, but will be placed to your virtual environment. Then if you use
 # sys.path.insert to insert your source directory to be the first place to look for
 # your package, it will fail to find the C extension.
 # Here, we add it for sphinx to find the package source package, in case we do not
@@ -32,7 +34,7 @@ sys.path.append(os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 
 project = "KLIFF"
-copyright = "2021, Mingjian Wen"
+copyright = "2021-2023, OpenKIM"
 author = "Mingjian Wen"
 
 # The short X.Y version
@@ -58,9 +60,10 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
+    "myst_nb",
+    "sphinx_copybutton",
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
-    "sphinx_gallery.gen_gallery",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,8 +72,11 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
+}
 
 # The master toctree document.
 master_doc = "index"
@@ -80,7 +86,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -106,7 +112,9 @@ html_theme = "furo"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {"logo_only": True}  # shows only the logo with no title text
+html_theme_options = {
+    "sidebar_hide_name": True,  # only show the logo
+}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -115,7 +123,7 @@ html_logo = "./img/logo.jpg"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -215,7 +223,6 @@ autodoc_mock_imports = [
     "yaml",
     "ase",
     "torch",
-    "tensorflow",
 ]
 
 # do not sort member functions of a class
@@ -226,11 +233,109 @@ autodoc_member_order = "bysource"
 imgmath_image_format = "svg"
 imgmath_latex_preamble = "\\usepackage{bm} \\usepackage{amsmath}"
 
+# -- myst-nb -----------------------------------------------------------------
+nb_execution_timeout = 120
 
-# -- sphinx-galley setup ------------------------------------------------------
-sphinx_gallery_conf = {
-    "examples_dirs": "../../examples",  # path to your example scripts
-    "gallery_dirs": "auto_examples",  # path where to save gallery generated examples
-    "filename_pattern": "/example_",  # include files with names 'example_'; '/' matches the directory name separator
-    "ignore_pattern": "^((?!/example_).)*$",  # exclude files without name '/example_'
-}
+# -- generate api doc ----------------------------------------------------------
+
+
+def get_all_modules(source: Path = "./kliff") -> list[str]:
+    """
+    Get all modules of the package.
+
+    Note, this only get the first-level modules like `kliff.module_a`, not modules
+    (in subpackages) like `kliff.subpackage_a.module_b`. subpackage is considered
+    as a module.
+
+    This takes advantage of
+        $ sphinx-apidoc -f -e -o <outdir> <sourcedir>
+    Return a list of modules names.
+    """
+    results = subprocess.run(
+        ["sphinx-apidoc", "-f", "-e", "-o", "/tmp/kliff_apidoc", source],
+        capture_output=True,
+    )
+    results = results.stdout.decode("utf-8")
+
+    modules = []
+    for line in results.split("\n"):
+        if "Creating" in line:
+            name = line.split("/")[-1].split(".")
+            if len(name) >= 4:
+                mod = name[1]
+                if mod not in modules:
+                    modules.append(mod)
+    return modules
+
+
+def autodoc_package(path: Path, modules: list[str]):
+    """
+    Create a package reference page.
+
+    Args:
+        path: directory to place the file
+        modules: list of API modules
+    """
+    path = Path(path).resolve()
+    if not path.exists():
+        path.mkdir(parents=True)
+
+    with open(path / "kliff.rst", "w") as f:
+        f.write(".. _reference:\n\n")
+        f.write("Package Reference\n")
+        f.write("=================\n\n")
+        f.write(".. toctree::\n")
+        for m in modules:
+            f.write("    kliff." + m + "\n")
+
+
+def autodoc_module(path: Path, module: str):
+    """
+    Create a module reference page.
+
+    Args:
+        path: directory to place the file
+        module: name of the module
+    """
+    path = Path(path).resolve()
+    if not path.exists():
+        path.mkdir(parents=True)
+
+    module_name = "kliff." + module
+    fname = path.joinpath(module_name + ".rst")
+    with open(fname, "w") as f:
+        f.write(f"{module_name}\n")
+        f.write("-" * len(module_name) + "\n\n")
+        f.write(f".. automodule:: {module_name}\n")
+        f.write("    :members:\n")
+        f.write("    :undoc-members:\n")
+        # f.write("    :show-inheritance:\n")
+        f.write("    :inherited-members:\n")
+
+
+def create_apidoc(directory: Path = "./apidoc"):
+    """
+    Create API documentation, a separate page for each module.
+
+    Args:
+        directory:
+
+    Returns:
+
+    """
+
+    # modules with the below names will not be excluded
+    excludes = ["cmdline"]
+
+    package_path = Path(__file__).parents[2] / "kliff"
+    modules = get_all_modules(package_path)
+    for exc in excludes:
+        modules.remove(exc)
+    modules = sorted(modules)
+
+    autodoc_package(directory, modules)
+    for mod in modules:
+        autodoc_module(directory, mod)
+
+
+create_apidoc(directory="./apidoc")
