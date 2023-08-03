@@ -45,7 +45,7 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
     :caption: Extra Information
     :maxdepth: 1
 
-    changelog
+    ../../kliff/changelog
     faq
     apidoc/kliff
     GitHub Repository <https://github.com/openkim/kliff>
