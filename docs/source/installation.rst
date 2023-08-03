@@ -18,7 +18,7 @@ The easiest way to install KLIFF is using a package manager, do either
 
 .. code-block:: bash
 
-   $ conda intall -c conda-forge kliff
+   $ conda install -c conda-forge kliff
 
 or
 
