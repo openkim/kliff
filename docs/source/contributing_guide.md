@@ -35,10 +35,17 @@ After `pre-commit install` the checks will be run automatically before each comm
 
 ## Build the docs locally
 
-To generate the docs (including the tutorials) locally on your machine, do
+You can generate the docs (including the tutorials) locally. First, install the dependencies for building the docs:
 
 ```shell
-cd kliff/docs
+cd kliff
+pip install -e ".[docs]"
+```
+
+Then you can build the docs:
+
+```shell
+cd docs
 make html
 ```
 
