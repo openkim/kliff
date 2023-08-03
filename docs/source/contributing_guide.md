@@ -77,7 +77,7 @@ make html
 
 The generated docs will be at `kliff/docs/build/html/index.html`, and you can open it in a browser.
 
-##Tutorials
+## Tutorials
 
 If you have great tutorials, please write it in Jupyter notebook and place them in the `kliff/docs/tutorials` directory. Then update the `kliff/docs/tutorials.rst` file to include the new tutorials. After this, the tutorials will be automatically built and included in the docs.
 
