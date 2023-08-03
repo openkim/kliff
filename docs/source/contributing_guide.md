@@ -1,5 +1,7 @@
 # Contributing guide
 
+We welcome all kinds of contributions to KLIFF -- typo fix, bug reports, feature requests, and documentation improvements. If you are interested in contributing to KLIFF, please read this guide. If you have any questions, please feel free to open an issue or contact us.
+
 ## Code style
 
 KLIFF adopts the [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for docstrings in Python code.
@@ -31,6 +33,30 @@ This will run all the checks on all files. If there are warnings and errors repo
 
 ```{note}
 After `pre-commit install` the checks will be run automatically before each commit. You can do `pre-commit uninstall` to disable the checks.
+```
+
+## Testing
+
+If you are contributing new codes, please add tests for them. All the tests are placed in the `kliff/tests` directory. We use [pytest](https://docs.pytest.org/en/stable/) for testing. After adding a new test, you can run it locally to make sure it passes.
+
+First install the dependencies for testing:
+
+```shell
+cd kliff
+pip install -e ".[tests]"
+``
+```
+
+Then run the tests:
+
+```shell
+pytest
+```
+
+This will run all the tests. If you want to run a specific test, you can do
+
+```shell
+pytest path/to/your/awesome/test.py
 ```
 
 ## Build the docs locally
