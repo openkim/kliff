@@ -6,7 +6,6 @@ import numpy as np
 
 from kliff.dataset.dataset import Configuration
 from kliff.models.parameter import Parameter
-# from kliff.models.parameter_transform import LogTransform, ParameterTransform
 from kliff.utils import yaml_dump, yaml_load
 
 
@@ -178,6 +177,7 @@ class Model:
         self.model_params = self.init_model_params()
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
+        self.mutable_param_list = []
 
     def init_model_params(self, *args, **kwargs) -> Dict[str, Parameter]:
         raise NotImplementedError("`init_model_params` not implemented.")
@@ -219,7 +219,7 @@ class Model:
 
         for name, p in params.items():
             s += f"name: {name}\n"
-            s += f"value: {p.get_numpy_array()}\n" # `.numpy()` converts any transform to original space
+            s += f"value: {p.get_numpy_array()}\n"  # `.numpy()` converts any transform to original space
             s += f"size: {len(p)}\n\n"
 
         if filename is not None:
@@ -234,8 +234,7 @@ class Model:
     def read_opt_params(self, filename: Path):
         pass
 
-    # def set_opt_params(self, **kwargs):
-    def set_opt_params(self, list_of_params):
+    def set_opt_params(self, **kwargs):
         pass
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
@@ -248,11 +247,17 @@ class Model:
         for param_key in self.model_params:
             # print(param_key, param_val)
             if self.model_params[param_key].is_trainable:
-                print(f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array()}")
+                print(
+                    f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array()}"
+                )
 
         # return self.opt_params.echo_opt_params(filename)
 
     def get_num_opt_params(self) -> int:
+        """
+        Count and return number of optimizable parameters.
+        Utilizes `Parameter` class.
+        """
         i = 0
         for param_key in self.model_params:
             if self.model_params[param_key].is_trainable:
@@ -260,32 +265,47 @@ class Model:
         return i
 
     def get_opt_params(self) -> np.ndarray:
+        """
+        Get optimizable parameters, concatenated as a single numpy array. Obtained numpy array is the state for
+        the optimizer to optimize.
+        Utilizes `Parameter` class.
+        """
         opt_param = np.array([])
-        for param_key in self.model_params:
-            if self.model_params[param_key].is_trainable:
+        for param_key in self.mutable_param_list:
+            if self.model_params[param_key].is_trainable: # additional check
                 opt_param = np.append(
                     opt_param, self.model_params[param_key].get_numpy_opt_array()
                 )
+            else:
+                # This should not happen
+                raise AttributeError(f"Parameter {param_key}, is not optimizable. Please report this error")
         return opt_param
 
-    def update_model_params(self, params: Sequence[float]):
+    def update_model_params(self, params: np.ndarray):
+        """
+        Copy and update the Parameter from incoming params key.
+        Utilizes `Parameter` class.
+        """
         i = 0
-        for param_key in self.model_params:
+        for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_trainable:
                 self.model_params[param_key].copy_to_param_(params[i])
                 i += 1
+            else:
+                raise AttributeError(f"Parameter {param_key}, is not optimizable. Please report this error")
 
     def get_opt_param_name_value_and_indices(
         self, index: int
     ) -> Tuple[str, float, int, int]:
         return self.opt_params.get_opt_param_name_value_and_indices(index)
 
-    def get_formatted_param_bounds(self) -> List[Tuple[int, int]]:
+    def get_formatted_param_bounds(self) -> Tuple[Tuple[int, int]]:
         """
         Get the lower and upper bounds of optimizing parameters.
+        Utilizes `Parameter` class.
         """
         bounds = []
-        for param_key in self.model_params:
+        for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_trainable:
                 bounds.extend(self.model_params[param_key].get_formatted_param_bounds())
         return tuple(bounds)
@@ -293,6 +313,7 @@ class Model:
     def has_opt_params_bounds(self) -> bool:
         """
         Whether bounds are set for some parameters.
+        Utilizes `Parameter` class.
         """
         has_bounds = False
         for param in self.model_params:
@@ -329,6 +350,7 @@ class Model:
     def parameters(self):
         """
         Get a dict of parameters that will be optimized.
+        Utilizes `Parameter` class.
         """
         param_opt_dict = {}
         for param_key in self.model_params:

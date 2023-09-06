@@ -1,7 +1,7 @@
 import os
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
 from collections import OrderedDict
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 from loguru import logger
@@ -11,7 +11,6 @@ from kliff.error import report_import_error
 from kliff.log import get_log_level
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
-# from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import assemble_forces, assemble_stress
 
 try:
@@ -500,7 +499,7 @@ class KIMModel(Model):
                 else:  # should never reach here
                     KIMModelError(f"get unexpected parameter data type `{dtype}`")
 
-            params[name] = Parameter(values, name=name, index=i)
+            params[name] = Parameter(np.asarray(values), name=name, index=i)
         return params
 
     def create_a_kim_compute_argument(self):
@@ -516,12 +515,23 @@ class KIMModel(Model):
 
         return kim_ca
 
-    def set_opt_params(self, list_of_params):
+    def set_params_mutable(self, list_of_params: List[str]):
+        """
+        Set all the optimizable parameters from list of names of parameters
+        Args:
+            list_of_params: List of string names of parameters
+        Example:
+            model.set_opt_params(["A", "B", "sigma"])
+        """
         for param in list_of_params:
             self.model_params[param].is_trainable = True
-
+        self.mutable_param_list = list_of_params
         # reset influence distance in case it changes
         self.init_influence_distance()
+
+    def set_opt_params(self, **kwargs):
+        for name, setting in kwargs.items():
+            self.set_one_opt_param(name, setting)
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """
@@ -532,19 +542,53 @@ class KIMModel(Model):
 
         Args:
             name: name of a fitting parameter
-            settings: initial value, flag to fix a parameter, lower and upper bounds of a
+            settings: List initial value, flag to fix a parameter, lower and upper bounds of a
                 parameter.
 
         Example:
-            name = 'param_A'
+            name = 'A'
             settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
             instance.set_one(name, settings)
         """
-        self.opt_params.set_one(name, settings)
+        # Keeping this API intact for now, no improvement comes to mind
+        # self.opt_params.set_one(name, settings)
+        param = self.model_params[name]
+        # check the val kind
+        supplied_value = settings[0][0]
+        if supplied_value == "default":
+            supplied_value = param.get_transformed_numpy_array()
+        elif isinstance(supplied_value, (int, float)):
+            supplied_value = np.array([supplied_value])
+        elif isinstance(supplied_value, Parameter):
+            supplied_value = supplied_value.get_transformed_numpy_array()
+        else:
+            raise ValueError("Settings array is not properly formatted")
+        # When model is operating with transformed parameters
+        # input is expected in transformed space
+        param.copy_to_param_(supplied_value)
+
+        # replace "inf" with np.inf
+        if len(settings[0]) > 1:
+            setting_ = [val if val != "inf" else np.inf for val in settings[0]]
+            if len(setting_) == 3:
+                bounds = [setting_[1], setting_[2]]
+            elif setting_[1] == "fix":
+                bounds = [setting_[0], setting_[0]] # fix to same value
+            else:
+                raise ValueError("Settings array is not properly formatted")
+            if bounds:
+                bounds = np.array([bounds])
+                param.add_bounds(bounds)
 
         # update kim internal model param (note, set_one will update model_params)
-        p_idx = self.model_params[name].index
-        for c_idx, v in enumerate(self.model_params[name].value):
+        p_idx = param.index
+        value_arr = param.get_numpy_array()
+        # This is now not needed as with Matlab 0D array == scalar
+        # That check is performed above
+        # if type(value_arr) != np.ndarray:
+        #     value_arr = np.array([value_arr]) # if float make it iterable
+
+        for c_idx, v in enumerate(value_arr):
             try:
                 self.kim_model.set_parameter(p_idx, c_idx, v)
             except RuntimeError:
@@ -558,7 +602,7 @@ class KIMModel(Model):
         # reset influence distance in case it changes
         self.init_influence_distance()
 
-    def update_model_params(self, params: Sequence[float]):
+    def update_model_params(self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]):
         """
         Update optimizing parameters (a sequence used by the optimizer) to the kim model.
         """
@@ -569,11 +613,15 @@ class KIMModel(Model):
         # update from model params to kim params
         for name, param in self.model_params.items():
             p_idx = param.index
+            # Note: only use `get_numpy_array` here, as model
+            # always uses non-transformed values
             for c_idx, v in enumerate(param.get_numpy_array()):
                 try:
                     self.kim_model.set_parameter(p_idx, c_idx, v)
                 except RuntimeError:
-                    raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
+                    raise kimpy.KimPyError(
+                        "Calling `kim_model.set_parameter()` failed."
+                    )
 
         self.kim_model.clear_then_refresh()
 

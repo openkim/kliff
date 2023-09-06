@@ -1,17 +1,20 @@
+import pickle
 import warnings
+
 # from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
-from kliff.transforms import ParameterTransform
+
 import numpy as np
-import pickle
+
+from kliff.transforms.parameter_transforms import ParameterTransform
 
 
 # This file uses MyST format
 class Parameter(np.ndarray):
     """Parameter class for containing physics-based model parameters.
 
-    Modeled on `torch.nn.Parameters`, it inherits from `numpy.ndarray`. It is a numpy array with additional attributes such as name, transform, etc. Functions with
-    "_" suffix modifies the value that the parameter holds.
+    Modeled on `torch.nn.Parameters`, it inherits from `numpy.ndarray`. It is a numpy array with additional attributes
+    such as name, transform, etc. Functions with "_" suffix modifies the value that the parameter holds.
     For maintaining compatibility, use `get_numpy_array` (for
     getting a numpy array of parameters) and `get_numpy_opt_array`(transformed numpy array but with only the optimizable
     values).
@@ -26,7 +29,16 @@ class Parameter(np.ndarray):
 
     """
 
-    def __new__(cls, input_array: np.ndarray, name: str = None, transform:ParameterTransform = None, bounds:np.ndarray = None, is_trainable:bool = False, index:int = None, opt_mask:np.ndarray = None):
+    def __new__(
+        cls,
+        input_array: np.ndarray,
+        name: str = None,
+        transform: ParameterTransform = None,
+        bounds: np.ndarray = None,
+        is_trainable: bool = False,
+        index: int = None,
+        opt_mask: np.ndarray = None,
+    ):
         """Initializes and returns a new instance of Parameter.
 
         Args:
@@ -52,25 +64,26 @@ class Parameter(np.ndarray):
         if opt_mask:
             obj.opt_mask = opt_mask
         else:
-            obj.opt_mask = np.ones_like(obj,dtype=bool)
+            obj.opt_mask = np.ones_like(obj, dtype=bool)
         obj._bounds_transformed = False
         return obj
 
     def __array_finalize__(self, obj):
         """Finalizes a parameter, needed for numpy object cleanup."""
-        if obj is None: return
-        self.name = getattr(obj, 'name', None)
-        self.transform = getattr(obj, 'transform_fn', None)
-        self.original = getattr(obj, 'original', None)
-        self.bounds = getattr(obj, 'bounds', None)
-        self.is_trainable = getattr(obj, 'is_trainable', False)
-        self.index = getattr(obj, 'index', None)
-        self._is_transformed = getattr(obj, '_is_transformed', False)
-        self.opt_mask = getattr(obj, 'opt_mask', None)
-        self._bounds_transformed = getattr(obj, '_bounds_transformed', False)
+        if obj is None:
+            return
+        self.name = getattr(obj, "name", None)
+        self.transform = getattr(obj, "transform_fn", None)
+        self.original = getattr(obj, "original", None)
+        self.bounds = getattr(obj, "bounds", None)
+        self.is_trainable = getattr(obj, "is_trainable", False)
+        self.index = getattr(obj, "index", None)
+        self._is_transformed = getattr(obj, "_is_transformed", False)
+        self.opt_mask = getattr(obj, "opt_mask", None)
+        self._bounds_transformed = getattr(obj, "_bounds_transformed", False)
 
     def __repr__(self):
-        return "Parameter {0}:".format(self.name) + np.ndarray.__repr__(self)
+        return "New Parameter {0}:".format(self.name) + np.ndarray.__repr__(self)
 
     def transform_(self):
         """Apply the transform to the parameter.
@@ -97,27 +110,30 @@ class Parameter(np.ndarray):
             if self.transform is not None:
                 for i in range(len(self)):
                     self[i] = self.transform.inverse(self[i])
-            self._is_transformed = False # Raises style warning, but is lot simpler and cleaner.
+            self._is_transformed = (
+                False  # Raises style warning, but is lot simpler and cleaner.
+            )
 
     def reset_(self):
         """Reset the parameter to its original value."""
         self[:] = self._original
 
-    def get_transformed_array(self):
-        """Applies the transform to the parameter, and returns the transformed array."""
-        return self.transform(self)
-
-    def copy_to_param_(self, arr):
-        """Copy array to self in the original space.
+    def copy_to_param_(self, arr: np.ndarray):
+        """Copy array to self in the current space.
 
         Array can be a numpy array or a Parameter object.
         This method assumes that the array is of the same type and shape as self,
-        compensated for opt_mask. If not, it will raise an error. This method assumes that the incoming array
-        is in the original space.
+        compensated for opt_mask. If not, it will raise an error.
+        This method also assumes that the incoming array is in the same space,
+        transformed or otherwise, as the parameter.
 
         Args:
             arr: Array to copy to self.
         """
+        # convert to numpy array
+        if (not isinstance(arr, (np.ndarray, Parameter))) and isinstance(arr, (float, int)):
+            arr = np.asarray(arr)
+
         try:
             if self.opt_mask is not None:
                 tmp_arr = np.zeros_like(self)
@@ -129,7 +145,7 @@ class Parameter(np.ndarray):
             arr = np.array(arr).astype(self.dtype)
         self[:] = arr
 
-    def copy_to_param_transformed_(self, arr):
+    def transform_and_copy_to_param_(self, arr: np.array):
         """Copy arr to transformed self.
 
         Array can be a numpy array or a Parameter object. This method assumes that the incoming array is in the transformed space.
@@ -144,8 +160,8 @@ class Parameter(np.ndarray):
             self.transform_()
         self.copy_to_param_(arr)
 
-    def get_numpy_array(self):
-        """ Get a numpy array of parameters in the original space.
+    def get_numpy_array(self) -> np.ndarray:
+        """Get a numpy array of parameters in the original space.
 
         This method should be uses for getting the numpy array of parameters where the ``Parameters`` class might not work.
         Biggest example of it is passing to the optimizer as the optimizer might overwrite or destroy the parameters.
@@ -156,19 +172,25 @@ class Parameter(np.ndarray):
         if (self.transform is not None) and self._is_transformed:
             return self.transform.inverse(self)
         else:
-            return self
+            return np.asarray(self)
 
-    def get_numpy_opt_array(self):
-        """Get a masked numpy array of parameters in the original space.
+    def get_transformed_numpy_array(self):
+        """Applies the transform to the parameter, and returns the transformed array."""
+        self.transform_()
+        return np.asarray(self)
 
-        This method is same as ``get_numpy_array`` but additionally does apply the opt_mask. This ensures the correctness
-        of the array for optimization/other applications. This should be the defacto method for getting the numpy array
-        of parameters.
+    def get_numpy_opt_array(self) -> np.ndarray:
+        """Get a masked numpy array of parameters in the default space.
+
+        This method is similar to ``get_numpy_array`` but additionally does apply the
+        opt_mask, and returns the array. This ensures the correctness of the array for
+        optimization/other applications. This should be the defacto method for getting
+        the numpy array of parameters.
 
         Returns:
             A numpy array of parameters in the original space.
         """
-        np_arr = self.get_numpy_array()
+        np_arr = self.get_transformed_numpy_array() # in transformed space
         if self.opt_mask is not None:
             np_arr = np_arr[self.opt_mask]
         return np_arr
@@ -214,7 +236,7 @@ class Parameter(np.ndarray):
         if self.bounds is not None and not self._bounds_transformed:
             self.bounds = self.transform(self.bounds)
 
-    def add_bounds(self, bounds:np.ndarray):
+    def add_bounds(self, bounds: np.ndarray):
         """Add bounds to the parameter.
         Must be in original space. The bounds will be transformed if the parameter is transformed.
         Args:
@@ -252,9 +274,8 @@ class Parameter(np.ndarray):
             raise ValueError("Mask must have shape {0}.".format(self.shape))
         self.opt_mask = mask
 
-    def get_formatted_param_bounds(self):
-        """Returns bounds array that is used by scipy optimizer.
-        """
+    def get_formatted_param_bounds(self) -> List[Tuple[int, int]]:
+        """Returns bounds array that is used by scipy optimizer."""
         arr = self.get_numpy_opt_array()
         bounds = []
         if self.bounds is not None:
@@ -268,8 +289,7 @@ class Parameter(np.ndarray):
         return bounds
 
     def has_opt_params_bounds(self):
-        """Check if bounds are set for optimizing quantities
-        """
+        """Check if bounds are set for optimizing quantities"""
         return self.bounds is not None
 
     def get_inverse_bounds(self):

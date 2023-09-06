@@ -1,6 +1,7 @@
 from kliff.models.kim import KIMModel
 from kliff.models.lennard_jones import LennardJones
 from kliff.models.model import ComputeArguments, Model
+
 # from kliff.models.parameter import OptimizingParameters, Parameter
 from kliff.models.parameter import Parameter
 from kliff.utils import torch_available

@@ -1,11 +1,12 @@
 from pathlib import Path
+from copy import deepcopy
 
 import numpy as np
 import pytest
 
 from kliff.dataset import Dataset
 from kliff.models.kim import KIMComputeArguments, KIMModel
-from kliff.models.parameter_transform import LogParameterTransform
+from kliff.transforms.parameter_transforms import LogParameterTransform
 
 ref_energies = [-277.409737571, -275.597759276, -276.528342759, -275.482988187]
 
@@ -73,11 +74,12 @@ def test_set_one_param():
     params = model.get_model_params()
 
     # keep the original copy
-    sigma = params["sigma"][0]
+    sigma = deepcopy(params["sigma"])
 
     model.set_one_opt_param(name="sigma", settings=[[sigma + 0.1]])
+    params = model.get_model_params()
 
-    assert params["sigma"][0] == sigma + 0.1
+    assert params["sigma"] == sigma + 0.1
 
     # internal kim params
     kim_params = model.get_kim_model_params()
@@ -90,18 +92,19 @@ def test_set_opt_params():
 
     # parameters
     params = model.get_model_params()
-    sigma = params["sigma"][0]
-    A = params["A"][0]
+    sigma = deepcopy(params["sigma"])
+    A = deepcopy(params["A"])
 
     model.set_opt_params(sigma=[[sigma + 0.1]], A=[[A + 0.1]])
+    params = model.get_model_params()
 
-    assert params["sigma"][0] == sigma + 0.1
-    assert params["A"][0] == A + 0.1
+    assert params["sigma"] == sigma + 0.1
+    assert params["A"] == A + 0.1
 
     # internal kim params
     kim_params = model.get_kim_model_params()
-    assert kim_params["sigma"][0] == sigma + 0.1
-    assert kim_params["A"][0] == A + 0.1
+    assert kim_params["sigma"] == sigma + 0.1
+    assert kim_params["A"] == A + 0.1
 
 
 def test_get_update_params():
@@ -111,11 +114,12 @@ def test_get_update_params():
 
     # parameters
     params = model.get_model_params()
-    sigma = params["sigma"][0]
-    A = params["A"][0]
+    sigma = deepcopy(params["sigma"])
+    A = deepcopy(params["A"])
 
     # optimizing parameters
     # B will not be optimized, only providing initial guess
+    model.set_params_mutable(["sigma", "A"])
     model.set_opt_params(sigma=[["default"]], B=[["default", "fix"]], A=[["default"]])
 
     x0 = model.get_opt_params()
@@ -138,25 +142,32 @@ def test_get_update_params():
 
 def test_params_transform():
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-    model = KIMModel(
-        modelname, params_transform=LogParameterTransform(param_names=["sigma", "A"])
-    )
+    model = KIMModel(modelname)
 
     # reference values in KIM model
     sigma = 2.0951
-    A = 15.2848479197914
+    A = 15.284847919791398
     B = 0.6022245584
 
+    model.set_params_mutable(["sigma", "A", "B"])
+    params = model.parameters()
+    transform = LogParameterTransform()
+
+    params["sigma"].add_transform_(transform)
+    params["A"].add_transform_(transform)
+    # None for B
+
     # Check forward transform (all in original space)
-    assert model.model_params["sigma"][0] == sigma
-    assert model.model_params["A"][0] == A
-    assert model.model_params["B"][0] == B
+    assert params["sigma"].get_numpy_array() == sigma
+    assert params["A"].get_numpy_array() == A
+    assert params["B"].get_numpy_array() == B
 
     # Transformed params in log space
+    # By default the params are in transformed space,
     # No log for B since it is not asked to transform
-    assert model.model_params_transformed["sigma"][0] == np.log(sigma)
-    assert model.model_params_transformed["A"][0] == np.log(A)
-    assert model.model_params_transformed["B"][0] == B
+    assert params["sigma"] == np.log(sigma)
+    assert params["A"] == np.log(A)
+    assert params["B"] == B
 
     # optimizing parameters, provided in log space
     # B will not be optimized, only providing initial guess
@@ -164,16 +175,25 @@ def test_params_transform():
     v2 = 3.0
     model.set_opt_params(sigma=[[v1]], B=[[B, "fix"]], A=[[v2]])
 
-    assert model.model_params_transformed["sigma"][0] == v1
-    assert model.model_params_transformed["A"][0] == v2
-    assert model.model_params_transformed["B"][0] == B
+    transformed_params = model.parameters()
 
-    assert np.allclose(model.get_opt_params(), [v1, v2])
+    # Model no longer maintains two separate set of parameters for transforms
+    # rather Parameter class provides correct vector when asked for
+    assert transformed_params["sigma"][0] == v1
+    assert transformed_params["A"][0] == v2
+    assert transformed_params["B"][0] == B
 
-    model.update_model_params([v1, v2])
+    # BREAKING CHANGE: B has been marked as mutable, whether it is
+    # optimized or not, get opt params will return the value.
+    # If "fix" just means that its bounds are same
+    # TODO: Cleaner solution to handle this, probably switch off mutable for "fix"
+    assert np.allclose(model.get_opt_params(), [v1, v2, B])
+
+    model.update_model_params([v1, v2, B])
 
     # Check inverse transform
     kim_params = model.get_kim_model_params()
-    assert kim_params["sigma"].value[0] == np.exp(v1)
-    assert kim_params["A"].value[0] == np.exp(v2)
-    assert kim_params["B"].value[0] == B
+    # Parameters do not have separate "value". They are numpy arrays themselves
+    assert kim_params["sigma"] == np.exp(v1)
+    assert kim_params["A"] == np.exp(v2)
+    assert kim_params["B"] == B

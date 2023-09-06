@@ -1,4 +1,4 @@
-from math import log, exp
+from numpy import exp, log
 
 
 class ParameterTransform:
@@ -11,7 +11,7 @@ class ParameterTransform:
     """
 
     def __init__(self, name):
-        super().__init__(name)
+        self.name = name
 
     def transform(self, model_params):
         raise NotImplementedError
@@ -27,9 +27,9 @@ class LogParameterTransform(ParameterTransform):
     """Natural log transformation.
     This is an example implementation of Parameter Transform.
     """
+
     def __init__(self):
-        self.name = "log"
-        super().__init__(self.name)
+        super().__init__("log")
 
     def transform(self, model_params):
         return log(model_params)
