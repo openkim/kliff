@@ -41,7 +41,7 @@ def test_compute():
     model = KIMModel(modelname)
 
     # training set
-    path = Path(__file__).parents[1].joinpath("configs_extxyz/Si_4")
+    path = Path(__file__).parents[1].joinpath("test_data/configs/Si_4")
     data = Dataset(path)
     configs = data.get_configs()
 

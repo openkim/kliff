@@ -7,7 +7,7 @@ def func(x, y, z=1):
     return x + y + z
 
 
-def test_main():
+def test_parmap():
     X = range(3)
     Y = range(3)
     Xp2 = [x + 2 for x in X]

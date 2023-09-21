@@ -36,7 +36,7 @@ ref_forces = [
 
 class TestCalculator:
     def test_compute(self):
-        test_file_path = Path(__file__).parents[1].joinpath("configs_extxyz")
+        test_file_path = Path(__file__).parents[1].joinpath("test_data/configs")
         tset = Dataset(test_file_path.joinpath("Si_4"))
         configs = tset.get_configs()
 

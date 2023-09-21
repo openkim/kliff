@@ -2,6 +2,13 @@
 Tutorials
 =========
 
+TODO, .py files in this directory can be deleted, since they are moved to the
+`docs/tutorials` directory.
+
+But, the data set files in this directory are used by the tutorials, so they should be
+kept.
+
+
 To learn how to use KLIFF, begin with the tutorials.
 
 :ref:`tut_kim_sw`: a good entry point to see the basics of training a physics-motivated
