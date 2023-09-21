@@ -286,13 +286,15 @@ class Model:
         """
         opt_param = np.array([])
         for param_key in self.mutable_param_list:
-            if self.model_params[param_key].is_mutable: # additional check
+            if self.model_params[param_key].is_mutable:  # additional check
                 opt_param = np.append(
                     opt_param, self.model_params[param_key].get_numpy_opt_array()
                 )
             else:
                 # This should not happen
-                raise AttributeError(f"Parameter {param_key}, is not optimizable. Please report this error")
+                raise AttributeError(
+                    f"Parameter {param_key}, is not optimizable. Please report this error"
+                )
         return opt_param
 
     def update_model_params(self, params: np.ndarray):
@@ -306,7 +308,9 @@ class Model:
                 self.model_params[param_key].copy_to_param_(params[i])
                 i += 1
             else:
-                raise AttributeError(f"Parameter {param_key}, is not optimizable. Please report this error")
+                raise AttributeError(
+                    f"Parameter {param_key}, is not optimizable. Please report this error"
+                )
 
     def get_opt_param_name_value_and_indices(
         self, index: int

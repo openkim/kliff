@@ -32,7 +32,7 @@ class Parameter(np.ndarray):
 
     def __new__(
         cls,
-        input_array: Union[np.ndarray,float,int],
+        input_array: Union[np.ndarray, float, int],
         name: str = None,
         transform: ParameterTransform = None,
         bounds: np.ndarray = None,
@@ -126,7 +126,9 @@ class Parameter(np.ndarray):
             arr: Array to copy to self.
         """
         # convert to numpy array
-        if (not isinstance(arr, (np.ndarray, Parameter))) and isinstance(arr, (float, int)):
+        if (not isinstance(arr, (np.ndarray, Parameter))) and isinstance(
+            arr, (float, int)
+        ):
             arr = np.asarray(arr)
 
         try:
@@ -185,7 +187,7 @@ class Parameter(np.ndarray):
         Returns:
             A numpy array of parameters in the original space.
         """
-        np_arr = self.get_transformed_numpy_array() # in transformed space
+        np_arr = self.get_transformed_numpy_array()  # in transformed space
         if self.opt_mask is not None:
             np_arr = np_arr[self.opt_mask]
         return np_arr

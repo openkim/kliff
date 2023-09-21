@@ -569,7 +569,7 @@ class KIMModel(Model):
             if len(setting_) == 3:
                 bounds = [setting_[1], setting_[2]]
             elif setting_[1] == "fix":
-                bounds = None # do nothing if values are fixes
+                bounds = None  # do nothing if values are fixes
                 # bounds = [setting_[0], setting_[0]] # fix to same value?
             else:
                 raise ValueError("Settings array is not properly formatted")
@@ -599,7 +599,9 @@ class KIMModel(Model):
         # reset influence distance in case it changes
         self.init_influence_distance()
 
-    def update_model_params(self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]):
+    def update_model_params(
+        self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]
+    ):
         """
         Update optimizing parameters (a sequence used by the optimizer) to the kim model.
         """

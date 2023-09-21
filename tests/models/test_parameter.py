@@ -1,8 +1,8 @@
 import warnings
+from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
-from collections import OrderedDict
 
 from kliff.models.parameter import Parameter, ParameterError
 from kliff.transforms.parameter_transforms import LogParameterTransform
@@ -64,20 +64,20 @@ def test_parameter():
     d = {
         "@module": p.__class__.__module__,
         "@class": p.__class__.__name__,
-        '@value': [4.4, 3.3], # internal container value for safekeeping state
-        'name': None,
-        'transform': None,
-        'bounds': np.array([[1.1, None],
-                            [5.5, None]], dtype=object),
-        'is_mutable': False,
-        'index': 0,
-        '_is_transformed': False,
-        'opt_mask': np.array([True,  True]),
-        '_bounds_transformed': False,
+        "@value": [4.4, 3.3],  # internal container value for safekeeping state
+        "name": None,
+        "transform": None,
+        "bounds": np.array([[1.1, None], [5.5, None]], dtype=object),
+        "is_mutable": False,
+        "index": 0,
+        "_is_transformed": False,
+        "opt_mask": np.array([True, True]),
+        "_bounds_transformed": False,
     }
 
-    for items_p, items_d in zip(OrderedDict(sorted(p.as_dict().items())),
-                                OrderedDict(sorted(d.items()))):
+    for items_p, items_d in zip(
+        OrderedDict(sorted(p.as_dict().items())), OrderedDict(sorted(d.items()))
+    ):
         if type(items_d) == np.ndarray:
             assert np.allclose(items_p, items_d)
         assert items_p == items_d
