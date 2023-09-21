@@ -569,7 +569,8 @@ class KIMModel(Model):
             if len(setting_) == 3:
                 bounds = [setting_[1], setting_[2]]
             elif setting_[1] == "fix":
-                bounds = [setting_[0], setting_[0]] # fix to same value
+                bounds = None # do nothing if values are fixes
+                # bounds = [setting_[0], setting_[0]] # fix to same value?
             else:
                 raise ValueError("Settings array is not properly formatted")
             if bounds:

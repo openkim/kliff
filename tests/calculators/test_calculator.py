@@ -66,6 +66,7 @@ class TestCalculator:
 
         # optimizing parameters
         # B will not be optimized, only providing initial guess
+        model.set_params_mutable(["sigma", "B", "A"])
         model.set_opt_params(
             sigma=[["default"]], B=[["default", "fix"]], A=[["default"]]
         )
@@ -73,10 +74,11 @@ class TestCalculator:
         calc = Calculator(model)
 
         x0 = calc.get_opt_params()
+        print(x0)
         assert x0[0] == sigma
-        assert x0[1] == A
-        assert len(x0) == 2
-        assert model.get_num_opt_params() == 2
+        assert x0[2] == A
+        assert len(x0) == 3
+        assert model.get_num_opt_params() == 3
 
         x1 = [i + 0.1 for i in x0]
         calc.update_model_params(x1)

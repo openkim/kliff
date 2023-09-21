@@ -18,10 +18,12 @@ def init():
 
     # Cannot set them all by calling this function only once, because the assertion
     # depends on order
+    model.set_params_mutable(["A", "B", "gamma"])
     model.set_opt_params(A=[[5.0]])
     model.set_opt_params(B=[["default"]])
     model.set_opt_params(sigma=[[2.0951, "fix"]])
     model.set_opt_params(gamma=[[1.5]])
+    print(model.get_opt_params())
 
     path = Path(__file__).parent.joinpath("configs_extxyz/Si_4")
     tset = Dataset(path)
