@@ -1,5 +1,6 @@
 import pickle
 import warnings
+from copy import deepcopy
 
 # from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
@@ -31,11 +32,11 @@ class Parameter(np.ndarray):
 
     def __new__(
         cls,
-        input_array: np.ndarray,
+        input_array: Union[np.ndarray,float,int],
         name: str = None,
         transform: ParameterTransform = None,
         bounds: np.ndarray = None,
-        is_trainable: bool = False,
+        is_mutable: bool = False,
         index: int = None,
         opt_mask: np.ndarray = None,
     ):
@@ -46,7 +47,7 @@ class Parameter(np.ndarray):
             name: Name of the parameter
             transform: Instance of  ``ParameterTransform`` object to be applied to the parameter.
             bounds: n x 2 array of lower and upper bounds for the parameter. If None, no bounds are applied
-            is_trainable: boolean if the parameter is trainable, and will be passed to scipy optimizer.
+            is_mutable: boolean if the parameter is trainable, and will be passed to scipy optimizer.
             index: Index of the parameter in the parameter vector. Used for setting the parameter in the KIMPY.
             opt_mask: Boolean array of the same shape as the parameter. The values marked ``True`` are optimized, and ``False`` are not optimized.
 
@@ -56,15 +57,14 @@ class Parameter(np.ndarray):
         obj = np.asarray(input_array).view(cls)
         obj.name = name
         obj.transform = transform
-        obj._original = input_array
         obj.index = index
         obj._is_transformed = False
         obj.bounds = bounds
-        obj.is_trainable = is_trainable
-        if opt_mask:
+        obj.is_mutable = is_mutable
+        if opt_mask is not None:
             obj.opt_mask = opt_mask
         else:
-            obj.opt_mask = np.ones_like(obj, dtype=bool)
+            obj.opt_mask = np.ones(obj.shape, dtype=bool)
         obj._bounds_transformed = False
         return obj
 
@@ -74,16 +74,15 @@ class Parameter(np.ndarray):
             return
         self.name = getattr(obj, "name", None)
         self.transform = getattr(obj, "transform_fn", None)
-        self.original = getattr(obj, "original", None)
         self.bounds = getattr(obj, "bounds", None)
-        self.is_trainable = getattr(obj, "is_trainable", False)
+        self.is_mutable = getattr(obj, "is_mutable", False)
         self.index = getattr(obj, "index", None)
         self._is_transformed = getattr(obj, "_is_transformed", False)
         self.opt_mask = getattr(obj, "opt_mask", None)
         self._bounds_transformed = getattr(obj, "_bounds_transformed", False)
 
     def __repr__(self):
-        return "New Parameter {0}:".format(self.name) + np.ndarray.__repr__(self)
+        return "Parameter {0}:".format(self.name) + np.ndarray.__repr__(self)
 
     def transform_(self):
         """Apply the transform to the parameter.
@@ -113,10 +112,6 @@ class Parameter(np.ndarray):
             self._is_transformed = (
                 False  # Raises style warning, but is lot simpler and cleaner.
             )
-
-    def reset_(self):
-        """Reset the parameter to its original value."""
-        self[:] = self._original
 
     def copy_to_param_(self, arr: np.ndarray):
         """Copy array to self in the current space.
@@ -195,7 +190,7 @@ class Parameter(np.ndarray):
             np_arr = np_arr[self.opt_mask]
         return np_arr
 
-    def copy_at_(self, arr, index):
+    def copy_at_(self, index, arr):
         """Copy raw values at a particular index or indices."""
         if isinstance(index, int):
             index = [index]
@@ -203,30 +198,6 @@ class Parameter(np.ndarray):
         arr = arr.astype(self.dtype)
         for i, j in zip(index, arr):
             self[i] = j
-
-    def save(self, filename):
-        """Saves the parameter as a pickled dict to a file."""
-        data_dict = self.__dict__.copy()
-        # save pkl
-        with open(filename, "wb") as f:
-            pickle.dump(data_dict, f)
-
-    def load(self, filename):
-        """Loads the parameter from a pickled dict to a file."""
-        # load dict from pkl and assign
-        with open(filename, "rb") as f:
-            data_dict = pickle.load(f)
-        self.name = data_dict["name"]
-        self.transform = data_dict["transform"]
-        self.original = data_dict["original"]
-        self.clamp = data_dict["clamp"]
-        self.is_trainable = data_dict["is_trainable"]
-        self[:] = data_dict["data"]
-        self.index = data_dict["index"]
-        self._is_transformed = data_dict["_is_transformed"]
-        self.opt_mask = data_dict["opt_mask"]
-        # self.clamp_()
-        return self
 
     def add_transform_(self, transform: ParameterTransform):
         """Save a transform object with the parameter."""
@@ -243,7 +214,7 @@ class Parameter(np.ndarray):
             bounds: numpy array of shape (n, 2)
         """
         if bounds.shape[1] != 2:
-            raise ValueError("Bounds must have shape (n, 2).")
+            raise ParameterError("Bounds must have shape (n, 2).")
         if self.transform is not None:
             self.bounds = self.transform(bounds)
             self._bounds_transformed = True
@@ -257,7 +228,7 @@ class Parameter(np.ndarray):
             bounds: numpy array of shape (n, 2)
         """
         if bounds.shape[1] != 2:
-            raise ValueError("Bounds must have shape (n, 2).")
+            raise ParameterError("Bounds must have shape (n, 2).")
         self.bounds = bounds
         self._bounds_transformed = True
 
@@ -271,7 +242,7 @@ class Parameter(np.ndarray):
             mask: boolean array of same shape as the vector quantity to be optimized
         """
         if mask.shape != self.shape:
-            raise ValueError("Mask must have shape {0}.".format(self.shape))
+            raise ParameterError("Mask must have shape {0}.".format(self.shape))
         self.opt_mask = mask
 
     def get_formatted_param_bounds(self) -> List[Tuple[int, int]]:
@@ -294,6 +265,49 @@ class Parameter(np.ndarray):
 
     def get_inverse_bounds(self):
         return self.transform.inverse(self.bounds)
+
+    def as_dict(self):
+        state_dict = self.__dict__.copy()
+        # Original dict will not have values
+        state_dict["@value"] = self.get_numpy_array().tolist()
+        state_dict["@module"] = self.__class__.__module__
+        state_dict["@class"] = self.__class__.__name__
+        return state_dict
+
+    def save(self, filename):
+        state_dict = self.to_dict()
+        with open(filename, "wb") as f:
+            pickle.dump(state_dict, f)
+
+    @classmethod
+    def from_dict(cls, state_dict):
+        """Update the object's attributes based on the provided state dictionary.
+        Args:
+            state_dict (dict): The dictionary containing the state of the object.
+                               This dictionary should include the "value" key.
+        """
+
+        # Extract the value from the state dictionary
+        value = state_dict.pop("@value")
+        class_name = state_dict.pop("@class")
+        module_name = state_dict.pop("@module")
+        is_transformed = state_dict.pop("_is_transformed")
+        bounds_transformed = state_dict.pop("_bounds_transformed")
+        # Update the object's attributes with the remaining key-value pairs
+        # Copy the extracted value to a parameter
+        obj = cls(value, **state_dict)
+        obj._is_transformed = is_transformed
+        obj._bounds_transformed = bounds_transformed
+        return obj
+
+    @classmethod
+    def load(cls, filename):
+        """Load a parameter from disk.
+        TODO: non classmethod version
+        """
+        with open(filename, "rb") as f:
+            state_dict = pickle.load(f)
+        return cls.from_dict(state_dict)
 
 
 class ParameterError(Exception):

@@ -521,17 +521,13 @@ class KIMModel(Model):
         Args:
             list_of_params: List of string names of parameters
         Example:
-            model.set_opt_params(["A", "B", "sigma"])
+            model.set_params_mutable(["A", "B", "sigma"])
         """
         for param in list_of_params:
-            self.model_params[param].is_trainable = True
+            self.model_params[param].is_mutable = True
         self.mutable_param_list = list_of_params
         # reset influence distance in case it changes
         self.init_influence_distance()
-
-    def set_opt_params(self, **kwargs):
-        for name, setting in kwargs.items():
-            self.set_one_opt_param(name, setting)
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """

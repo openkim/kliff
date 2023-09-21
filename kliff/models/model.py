@@ -235,10 +235,24 @@ class Model:
         pass
 
     def set_opt_params(self, **kwargs):
-        pass
+        for name, setting in kwargs.items():
+            self.set_one_opt_param(name, setting)
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
-        pass
+        param = self.model_params[name]
+        # check the val kind
+        supplied_value = settings[0][0]
+        if supplied_value == "default":
+            supplied_value = param.get_transformed_numpy_array()
+        elif isinstance(supplied_value, (int, float)):
+            supplied_value = np.array([supplied_value])
+        elif isinstance(supplied_value, Parameter):
+            supplied_value = supplied_value.get_transformed_numpy_array()
+        else:
+            raise ValueError("Settings array is not properly formatted")
+        # When model is operating with transformed parameters
+        # input is expected in transformed space
+        param.copy_to_param_(supplied_value)
 
     def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
@@ -246,7 +260,7 @@ class Model:
         """
         for param_key in self.model_params:
             # print(param_key, param_val)
-            if self.model_params[param_key].is_trainable:
+            if self.model_params[param_key].is_mutable:
                 print(
                     f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array()}"
                 )
@@ -260,7 +274,7 @@ class Model:
         """
         i = 0
         for param_key in self.model_params:
-            if self.model_params[param_key].is_trainable:
+            if self.model_params[param_key].is_mutable:
                 i += 1
         return i
 
@@ -272,7 +286,7 @@ class Model:
         """
         opt_param = np.array([])
         for param_key in self.mutable_param_list:
-            if self.model_params[param_key].is_trainable: # additional check
+            if self.model_params[param_key].is_mutable: # additional check
                 opt_param = np.append(
                     opt_param, self.model_params[param_key].get_numpy_opt_array()
                 )
@@ -288,7 +302,7 @@ class Model:
         """
         i = 0
         for param_key in self.mutable_param_list:
-            if self.model_params[param_key].is_trainable:
+            if self.model_params[param_key].is_mutable:
                 self.model_params[param_key].copy_to_param_(params[i])
                 i += 1
             else:
@@ -306,7 +320,7 @@ class Model:
         """
         bounds = []
         for param_key in self.mutable_param_list:
-            if self.model_params[param_key].is_trainable:
+            if self.model_params[param_key].is_mutable:
                 bounds.extend(self.model_params[param_key].get_formatted_param_bounds())
         return tuple(bounds)
 
@@ -354,7 +368,7 @@ class Model:
         """
         param_opt_dict = {}
         for param_key in self.model_params:
-            if self.model_params[param_key].is_trainable:
+            if self.model_params[param_key].is_mutable:
                 param_opt_dict[param_key] = self.model_params[param_key]
         return param_opt_dict
 

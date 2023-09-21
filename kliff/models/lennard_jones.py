@@ -184,19 +184,18 @@ class LennardJones(Model):
         self,
         model_name: str = "LJ6-12",
         species: List[str] = None,
-        params_transform: Optional[ParameterTransform] = None,
     ):
         self.species = species
 
-        super(LennardJones, self).__init__(model_name, params_transform)
+        super(LennardJones, self).__init__(model_name)
 
     def init_model_params(self):
         n = self._get_num_params()
 
         model_params = {
-            "epsilon": Parameter(value=[1.0 for _ in range(n)]),
-            "sigma": Parameter(value=[2.0 for _ in range(n)]),
-            "cutoff": Parameter(value=[5.0 for _ in range(n)]),
+            "epsilon": Parameter(np.array([1.0 for _ in range(n)])),
+            "sigma": Parameter(np.array([2.0 for _ in range(n)])),
+            "cutoff": Parameter(np.array([5.0 for _ in range(n)])),
         }
 
         return model_params
