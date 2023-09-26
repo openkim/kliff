@@ -1,7 +1,7 @@
 import copy
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -12,11 +12,9 @@ from kliff.utils import to_path
 
 # For type checking
 if TYPE_CHECKING:
-    from colabfit.tools.database import MongoDatabase
-    from colabfit.tools.configuration import (
-        Configuration as ColabfitConfiguration,
-    )
     from ase import Atoms
+    from colabfit.tools.configuration import Configuration as ColabfitConfiguration
+    from colabfit.tools.database import MongoDatabase
 
 # check if colabfit-tools is installed
 try:
@@ -114,9 +112,7 @@ class Configuration:
         """
 
         if file_format == "xyz":
-            cell, species, coords, PBC, energy, forces, stress = read_extxyz(
-                filename
-            )
+            cell, species, coords, PBC, energy, forces, stress = read_extxyz(filename)
         else:
             raise ConfigurationError(
                 f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
@@ -177,7 +173,7 @@ class Configuration:
         cls,
         database_client: "MongoDatabase",
         configuration_id: str,
-        property_ids: Optional[List[str], str] = None,
+        property_ids: Optional[Union[List[str], str]] = None,
         weight: Optional[Weight] = None,
     ):
         """
@@ -214,7 +210,6 @@ class Configuration:
         PBC = fetched_configuration.pbc
 
         # get energy, forces, stresses from the property ids
-        # if property_ids is a list, then we will try an
         energy = Configuration._get_colabfit_property(
             database_client, property_ids, "energy", "potential-energy"
         )
@@ -447,9 +442,7 @@ class Configuration:
             self._forces = np.asarray(forces)
         else:
             species, coords = zip(
-                *sorted(
-                    zip(self.species, self.coords), key=lambda pair: pair[0]
-                )
+                *sorted(zip(self.species, self.coords), key=lambda pair: pair[0])
             )
             self._species = np.asarray(species)
             self._coords = np.asarray(coords)
@@ -503,6 +496,7 @@ class Dataset:
         parser: str = None,
         energy_key: str = None,
         forces_key: str = "force",
+        slices: str = ":",
     ):
         self.file_format = file_format
 
@@ -514,6 +508,7 @@ class Dataset:
                 parser=parser,
                 energy_key=energy_key,
                 forces_key=forces_key,
+                slices=slices,
             )
 
         elif colabfit_database is not None:
@@ -550,6 +545,7 @@ class Dataset:
         parser: str = None,
         energy_key: str = None,
         forces_key: str = "force",
+        slices: str = ":",
     ):
         """
         Read configurations from filename and added them to the existing set of
@@ -566,6 +562,7 @@ class Dataset:
             parser:
             energy_key:
             forces_key:
+            slices:
         """
         if colabfit_database is not None:
             if colabfit_installed:
@@ -575,9 +572,7 @@ class Dataset:
                     raise DatasetError(
                         f"Could not connect to colabfit database {colabfit_database}."
                     )
-                configs = self._read_colabfit(
-                    colabfit_database, colabfit_dataset
-                )
+                configs = self._read_colabfit(colabfit_database, colabfit_dataset)
             else:
                 logger.error(f"colabfit tools not installed.")
                 raise DatasetError(
@@ -593,6 +588,7 @@ class Dataset:
                 parser=parser,
                 energy_key=energy_key,
                 forces_key=forces_key,
+                slices=slices,
             )
         self.configs.extend(configs)
 
@@ -616,6 +612,7 @@ class Dataset:
         parser=None,
         energy_key=None,
         forces_key="force",
+        slices=":",
     ):
         """
         Read atomic configurations from path.
@@ -649,7 +646,7 @@ class Dataset:
             ]
         elif parser == "ase":
             if len(all_files) == 1:  # single xyz file with multiple configs
-                all_configs = ase.io.read(all_files[0], ":")
+                all_configs = ase.io.read(all_files[0], index=slices)
                 configs = [
                     Configuration.from_ase_atoms(
                         config,
@@ -697,9 +694,7 @@ class Dataset:
         )
         if not dataset_dos:
             logger.error(f"{dataset_id} is either empty or does not exist")
-            raise DatasetError(
-                f"{dataset_id} is either empty or does not exist"
-            )
+            raise DatasetError(f"{dataset_id} is either empty or does not exist")
 
         configs = []
         for do in dataset_dos:
@@ -713,9 +708,7 @@ class Dataset:
             pi_ids = [i["colabfit-id"] for i in pi_doc]
 
             configs.append(
-                Configuration.from_colabfit_dataobjects(
-                    database_client, co_id, pi_ids
-                )
+                Configuration.from_colabfit_dataobjects(database_client, co_id, pi_ids)
             )
             # TODO: reduce number of queries to database. Current: 4 per configuration
 
