@@ -7,12 +7,13 @@ from loguru import logger
 from kliff.dataset import Configuration
 from kliff.neighbor import NeighborList
 
+from .configuration_transform import ConfigurationTransform
+
 # stubs for type hinting
-if TYPE_CHECKING:
-    from ase import Atoms
 
 try:
     import libdescriptor as lds
+
     libdescriptor_available = True
 except ImportError:
     libdescriptor_available = False
@@ -40,11 +41,27 @@ class AvailableDescriptors:
                 setattr(self, desc_type.name, desc_type)
 
 
-class Descriptor:
+def show_available_descriptors():
+    """
+    Show all the available descriptors in libdescriptor.
+    """
+    if not libdescriptor_available:
+        raise DescriptorsError("Libdescriptor not available.")
+    print("-" * 80)
+    print(
+        "Descriptors below are currently available, select them by `descriptor: str` attribute:"
+    )
+    print("-" * 80)
+    _instance = AvailableDescriptors()
+    for key in _instance.__dict__.keys():
+        print(f"{key}")
+
+
+class Descriptor(ConfigurationTransform):
     """
     Descriptor class, which is a wrapper of libdescriptor. It provides a unified interface to all the
     descriptors in libdescriptor. The descriptor is initialized with a cutoff radius, a list of species,
-     a descriptor type and an ordered list of hyperparameters. The descriptor type is a string, which can
+    a descriptor type and an ordered list of hyperparameters. The descriptor type is a string, which can
         be obtained by `AvailableDescriptors.show_available_descriptors()`. The hyperparameters are a list
         of dictionaries, some sane default values are provided by `get_set51()` and `get_set30()` for Symmetry
         Functions, and `get_default_bispectrum()` for Bispectrum. This class also provides a methods to compute
@@ -54,22 +71,6 @@ class Descriptor:
     """
 
     @staticmethod
-    def show_available_descriptors():
-        """
-        Show all the available descriptors in libdescriptor.
-        """
-        if not libdescriptor_available:
-            raise DescriptorsError("Libdescriptor not available.")
-
-        print("-" * 80)
-        print(
-            "Descriptors below are currently available, select them by `descriptor: str` attribute:"
-        )
-        print("-" * 80)
-        _instance = AvailableDescriptors()
-        for key in _instance.__dict__.keys():
-            print(f"{key}")
-
     def __init__(
         self,
         cutoff: float,
@@ -78,6 +79,7 @@ class Descriptor:
         hyperparameters: Union[Dict, str],
         cutoff_function: str = "cos",
         nl_ctx: NeighborList = None,
+        implicit_fingerprint_copying: bool = False,
     ):
         """
         :param cutoff: Cutoff radius.
@@ -87,6 +89,7 @@ class Descriptor:
         :param cutoff_function: Cut-off function, currently only "cos" is supported.
         :param nl_ctx: function to compute neighbor list, if not provided, will be computed internally.
         """
+        super().__init__(implicit_fingerprint_copying)
         if not libdescriptor_available:
             raise DescriptorsError("Libdescriptor not available.")
         self.cutoff = cutoff
@@ -124,7 +127,9 @@ class Descriptor:
         elif isinstance(hyperparameters, OrderedDict):
             return hyperparameters
         else:
-            raise DescriptorsError("Hyperparameters must be either a string or an OrderedDict")
+            raise DescriptorsError(
+                "Hyperparameters must be either a string or an OrderedDict"
+            )
 
     def _init_descriptor_from_kind(self):
         """
@@ -234,7 +239,7 @@ class Descriptor:
     def _map_species_to_int(self, species):
         return [self.species.index(s) for s in species]
 
-    def forward(self, configuration: Union[Configuration, "Atoms"]):
+    def forward(self, configuration: Configuration):
         """
         Compute the descriptors for a given configuration, by calling the C++ implementation,
         :py:func:`libdescriptor.compute_single_atom`. Takes in either a KLIFF Configuration or ASE Atoms object.
@@ -259,9 +264,7 @@ class Descriptor:
             )
         return descriptors
 
-    def backward(
-        self, configuration: Union[Configuration, "Atoms"], dE_dZeta: np.ndarray
-    ):
+    def backward(self, configuration: Configuration, dE_dZeta: np.ndarray):
         """
         Compute the gradients of the descriptors with respect to the atomic coordinates. It takes in an array of
         shape (n_atoms, width) and the configuration, and performs the vector-Jacobian product (revrse mode
@@ -298,14 +301,6 @@ class Descriptor:
             derivatives[atom, :] += derivatives_unrolled[i, :]
 
         return derivatives
-
-    def transform(self, configuration: Union[Configuration, "Atoms"]):
-        return self.forward(configuration)
-
-    def inverse(self, *args, **kargs):
-        DescriptorsError("Do you mean `backward`?\n"
-                         "Any of the implemented descriptors do not support inverse mapping.\n"
-                         "For computing jacobian-vector product use `backward` function.")
 
     def write_kim_params(self, path, fname="descriptor.params"):
         """

@@ -72,7 +72,7 @@ neighlist = Extension(
 )
 
 graph = Extension(
-    "kliff.transforms.configuration_transforms.graph_module",
+    "kliff.transforms.configuration_transforms.graphs.graph_module",
     sources=[
         "kliff/transforms/configuration_transforms/graphs/graph_generator_python_bindings.cpp",
         "kliff/transforms/configuration_transforms/graphs/neighbor_list.cpp",

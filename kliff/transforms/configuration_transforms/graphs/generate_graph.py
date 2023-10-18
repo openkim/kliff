@@ -7,14 +7,15 @@ if torch_available():
 
 from typing import TYPE_CHECKING
 
-import kliff.transforms.configuration_transforms.graph_module as graph_module
+import kliff.transforms.configuration_transforms.graphs.graph_module as graph_module
+
+from ..configuration_transform import ConfigurationTransform
 
 if TYPE_CHECKING:
     from kliff.dataset import Configuration
 
 if torch_geometric_available():
     from torch_geometric.data import Data
-
 
     class KLIFFTorchGraph(Data):
         """
@@ -54,7 +55,7 @@ if torch_geometric_available():
                 return 0
 
 
-class KLIFFTorchGraphGenerator:
+class KLIFFTorchGraphGenerator(ConfigurationTransform):
     """
     Generate a graph representation of a configuration. This generator will also save the required parameters
     for porting the model over to KIM-API using TorchMLModelDriver. The configuration file saved here will generate
@@ -67,7 +68,15 @@ class KLIFFTorchGraphGenerator:
         as_torch_geometric_data (bool): If True, the graph will be returned as a Pytorch Geometric Data object.
     """
 
-    def __init__(self, species, cutoff, n_layers, as_torch_geometric_data=False):
+    def __init__(
+        self,
+        species,
+        cutoff,
+        n_layers,
+        as_torch_geometric_data=False,
+        implicit_fingerprint_copying=False,
+    ):
+        super().__init__(implicit_fingerprint_copying=implicit_fingerprint_copying)
         self.species = species
         self.cutoff = cutoff
         self.n_layers = n_layers
@@ -77,7 +86,7 @@ class KLIFFTorchGraphGenerator:
             raise ImportError("Torch geometric is not available")
         self.as_torch_geometric_data = as_torch_geometric_data
 
-    def generate_graph(self, configuration: "Configuration"):
+    def forward(self, configuration: "Configuration"):
         """
         Generate a graph representation of a configuration.
         :param configuration:
@@ -98,14 +107,6 @@ class KLIFFTorchGraphGenerator:
             if self.as_torch_geometric_data:
                 return self._to_py_graph(graph)
         return graph
-
-    def __call__(self, configuration: "Configuration"):
-        """
-        Function wrapper over `generate_graph` for convenience and consistency.
-        :param configuration:
-        :return: Custom graph object or Pytorch Geometric Data object.
-        """
-        return self.generate_graph(configuration)
 
     @staticmethod
     def _to_py_graph(graph):
@@ -139,12 +140,12 @@ class KLIFFTorchGraphGenerator:
         """
         graph_list = []
         for conf in config_list:
-            graph = self.generate_graph(conf)
+            graph = self.forward(conf)
             graph_list.append(graph)
         return graph_list
 
     def collate_fn_single_conf(self, config_list):
-        graph = self.generate_graph(config_list[0])
+        graph = self.forward(config_list[0])
         return graph
 
     def save_for_kim_model(self, path: str, model: str):

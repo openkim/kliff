@@ -4,6 +4,7 @@ from collections import OrderedDict
 import numpy as np
 
 from kliff.dataset import Configuration
+
 # from kliff.legacy.descriptors import SymmetryFunction
 from kliff.transforms.configuration_transforms import Descriptor
 
@@ -287,8 +288,13 @@ def get_descriptor():
         {"zeta": 2, "lambda": 1, "eta": 0.003},
     ]
 
-    desc = Descriptor(cutoff=4.5, cutoff_function=cutfunc, hyperparameters=desc_params,
-                      descriptor="SymmetryFunctions", species=["Si"])
+    desc = Descriptor(
+        cutoff=4.5,
+        cutoff_function=cutfunc,
+        hyperparameters=desc_params,
+        descriptor="SymmetryFunctions",
+        species=["Si"],
+    )
 
     return desc
 

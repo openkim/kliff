@@ -87,6 +87,7 @@ class Configuration:
         self.colabfit_dataclient = database_client
         self.property_id = property_id
         self.configuration_id = configuration_id
+        self._fingerprint = None
 
         self._identifier = identifier
         self._path = None
@@ -190,7 +191,7 @@ class Configuration:
              weight:
         """
         try:
-            fetched_configuration: ColabfitConfiguration = (
+            fetched_configuration: "ColabfitConfiguration" = (
                 database_client.get_configuration(configuration_id)
             )
         except:
@@ -375,6 +376,14 @@ class Configuration:
         Set the identifier of the configuration.
         """
         self._identifier = identifier
+
+    @property
+    def fingerprint(self):
+        return self._fingerprint
+
+    @fingerprint.setter
+    def fingerprint(self, fingerprint):
+        self._fingerprint = fingerprint
 
     @property
     def path(self) -> Union[Path, None]:

@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
 
-if TYPE_CHECKING:
-    from kliff.dataset import Configuration, Dataset
+# if TYPE_CHECKING:
+from kliff.dataset import Configuration, Dataset
 
 
 class PropertyTransform:
@@ -25,7 +25,7 @@ class PropertyTransform:
         dataset: Union[List["Configuration"], "Dataset"]
     ) -> List["Configuration"]:
         configuration_list = []
-        if isinstance(dataset, "Dataset"):
+        if isinstance(dataset, Dataset):
             configuration_list = dataset.get_configs()
         elif isinstance(dataset, List):
             configuration_list = dataset
