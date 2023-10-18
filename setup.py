@@ -71,6 +71,16 @@ neighlist = Extension(
     language="c++",
 )
 
+graph = Extension(
+    "kliff.transforms.configuration_transforms.graph_module",
+    sources=[
+        "kliff/transforms/configuration_transforms/graphs/graph_generator_python_bindings.cpp",
+        "kliff/transforms/configuration_transforms/graphs/neighbor_list.cpp",
+    ],
+    include_dirs=get_includes(),
+    extra_compile_args=get_extra_compile_args(),
+    language="c++",
+)
 
 def get_version():
     fname = Path(__file__).parent.joinpath("kliff", "__init__.py")
@@ -99,7 +109,7 @@ setup(
     name="kliff",
     version=get_version(),
     packages=find_packages(),
-    ext_modules=[sym_fn, bispectrum, neighlist],
+    ext_modules=[sym_fn, bispectrum, neighlist, graph],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     # TODO, use numpy<1.20 because ptemcee (or emcee) can only work with that.
     # Should we fork and fix it, and then remove the <1.20 requirement?
