@@ -82,6 +82,7 @@ graph = Extension(
     language="c++",
 )
 
+
 def get_version():
     fname = Path(__file__).parent.joinpath("kliff", "__init__.py")
     with open(fname) as f:

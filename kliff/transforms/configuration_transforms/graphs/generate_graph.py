@@ -1,17 +1,20 @@
 from loguru import logger
+
 from kliff.utils import torch_available
 
 if torch_available():
     import torch
 
+from typing import TYPE_CHECKING
+
 import kliff.transforms.configuration_transforms.graph_module as graph_module
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from kliff.dataset import Configuration
 
 try:
     from torch_geometric.data import Data
+
     pyg_available = True
 
     class KLIFFTorchGraph(Data):
@@ -20,9 +23,12 @@ try:
         class:`torch_geometric.data.DataLoader` the graphs of type KIMTorchGraph will be automatically collated and
          batched.
         """
+
         def __init__(self):
             super(KLIFFTorchGraph, self).__init__()
-            self.num_nodes = None  # Simplify sizes and frees up pos key word, coords is cleaner
+            self.num_nodes = (
+                None  # Simplify sizes and frees up pos key word, coords is cleaner
+            )
             self.energy = None
             self.forces = None
             self.n_layers = None
@@ -33,20 +39,21 @@ try:
             self.contributions = None
 
         def __inc__(self, key, value, *args, **kwargs):
-            if 'index' in key or 'face' in key:
+            if "index" in key or "face" in key:
                 return self.num_nodes
-            elif 'contributions' in key:
+            elif "contributions" in key:
                 return 2
-            elif 'images' in key:
+            elif "images" in key:
                 return torch.max(value) + 1
             else:
                 return 0
 
         def __cat_dim__(self, key, value, *args, **kwargs):
-            if 'index' in key or 'face' in key:
+            if "index" in key or "face" in key:
                 return 1
             else:
                 return 0
+
 except ImportError:
     pyg_available = False
     logger.warning("Torch geometric is not available")
@@ -64,6 +71,7 @@ class KLIFFTorchGraphGenerator:
         n_layers (int): Number of convolution layers.
         as_torch_geometric_data (bool): If True, the graph will be returned as a Pytorch Geometric Data object.
     """
+
     def __init__(self, species, cutoff, n_layers, as_torch_geometric_data=False):
         self.species = species
         self.cutoff = cutoff
@@ -86,7 +94,7 @@ class KLIFFTorchGraphGenerator:
             configuration.species,
             configuration.coords,
             configuration.cell,
-            configuration.PBC
+            configuration.PBC,
         )
 
         graph.energy = configuration.energy
@@ -122,7 +130,9 @@ class KLIFFTorchGraphGenerator:
         torch_geom_graph.contributions = torch.as_tensor(graph.contributions)
         torch_geom_graph.num_nodes = torch.as_tensor(graph.n_nodes)
         for i in range(graph.n_layers):
-            torch_geom_graph.__setattr__(f"edge_index{i}", torch.as_tensor(graph.edge_index[i]))
+            torch_geom_graph.__setattr__(
+                f"edge_index{i}", torch.as_tensor(graph.edge_index[i])
+            )
         torch_geom_graph.coords.requires_grad_(True)
         return torch_geom_graph
 

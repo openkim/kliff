@@ -1,29 +1,35 @@
 import os
 from collections import OrderedDict
-from typing import List, Dict, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
 
-from loguru import logger
-from kliff.neighbor import NeighborList
 import numpy as np
+from loguru import logger
+
 from kliff.dataset import Configuration
+from kliff.neighbor import NeighborList
 
 # stubs for type hinting
 if TYPE_CHECKING:
     from ase import Atoms
+
     # LOG warning
 
 try:
     import libdescriptor as lds
 except ImportError:
-    logger.error("Descriptors module depends on libdescriptor, "
-                 "which is not found. Please install it first.")
+    logger.error(
+        "Descriptors module depends on libdescriptor, "
+        "which is not found. Please install it first."
+    )
 
 from .default_hyperparams import *
+
 
 class AvailableDescriptors:
     """
     This class lists all the available descriptors in libdescriptor as enums.
     """
+
     def __init__(self):
         i = 0
         while True:
@@ -33,6 +39,7 @@ class AvailableDescriptors:
                 break
             else:
                 setattr(self, desc_type.name, desc_type)
+
 
 class Descriptor:
     """
@@ -46,20 +53,30 @@ class Descriptor:
         their derivatives are implemented as `forward()` and `backward()`, respectively, to match the PyTorch
         nomeclature.
     """
+
     @staticmethod
     def show_available_descriptors():
         """
         Show all the available descriptors in libdescriptor.
         """
-        print("-"*80)
-        print("Descriptors below are currently available, select them by `descriptor: str` attribute:")
-        print("-"*80)
+        print("-" * 80)
+        print(
+            "Descriptors below are currently available, select them by `descriptor: str` attribute:"
+        )
+        print("-" * 80)
         _instance = AvailableDescriptors()
         for key in _instance.__dict__.keys():
             print(f"{key}")
 
-    def __init__(self, cutoff: float, species: List[str], descriptor: str, hyperparameters: Union[Dict, str],
-                 cutoff_function: str = "cos", nl_ctx: NeighborList = None):
+    def __init__(
+        self,
+        cutoff: float,
+        species: List[str],
+        descriptor: str,
+        hyperparameters: Union[Dict, str],
+        cutoff_function: str = "cos",
+        nl_ctx: NeighborList = None,
+    ):
         """
         :param cutoff: Cutoff radius.
         :param species: List of strings, each string is a species (atomic symbols).
@@ -154,41 +171,61 @@ class Descriptor:
             symmetry_function_param = np.zeros((param_num_elem,), dtype=np.double)
             k = 0
             for i in range(len(symmetry_function_types)):
-                symmetry_function_param[k: k + symmetry_function_sizes[2 * i] * symmetry_function_sizes[2 * i + 1]] = \
-                    symmetry_function_param_matrices[i].reshape(1, -1)
+                symmetry_function_param[
+                    k : k
+                    + symmetry_function_sizes[2 * i]
+                    * symmetry_function_sizes[2 * i + 1]
+                ] = symmetry_function_param_matrices[i].reshape(1, -1)
                 k += symmetry_function_sizes[2 * i] * symmetry_function_sizes[2 * i + 1]
 
-            return lds.DescriptorKind.init_descriptor(self.descriptor_kind, self.species, self.cutoff_function,
-                                                      cutoff_array,
-                                                      symmetry_function_types, symmetry_function_sizes,
-                                                      symmetry_function_param), width
+            return (
+                lds.DescriptorKind.init_descriptor(
+                    self.descriptor_kind,
+                    self.species,
+                    self.cutoff_function,
+                    cutoff_array,
+                    symmetry_function_types,
+                    symmetry_function_sizes,
+                    symmetry_function_param,
+                ),
+                width,
+            )
         elif self.descriptor_kind == lds.AvailableDescriptors(1):
             if self.hyperparameters["weights"] is None:
                 weights = np.ones(len(self.species))
             else:
                 weights = self.hyperparameters["weights"]
 
-            return lds.DescriptorKind.init_descriptor(self.descriptor_kind, self.hyperparameters["rfac0"],
-                                                      2 * self.hyperparameters["jmax"],
-                                                      self.hyperparameters["diagonalstyle"],
-                                                      1 if self.hyperparameters["use_shared_array"] else 0,
-                                                      self.hyperparameters["rmin0"],
-                                                      self.hyperparameters["switch_flag"],
-                                                      self.hyperparameters["bzero_flag"],
-                                                      cutoff_array,
-                                                      self.species,
-                                                      weights), \
-                get_bs_size(int(2 * self.hyperparameters["jmax"]), self.hyperparameters["diagonalstyle"])
+            return lds.DescriptorKind.init_descriptor(
+                self.descriptor_kind,
+                self.hyperparameters["rfac0"],
+                2 * self.hyperparameters["jmax"],
+                self.hyperparameters["diagonalstyle"],
+                1 if self.hyperparameters["use_shared_array"] else 0,
+                self.hyperparameters["rmin0"],
+                self.hyperparameters["switch_flag"],
+                self.hyperparameters["bzero_flag"],
+                cutoff_array,
+                self.species,
+                weights,
+            ), get_bs_size(
+                int(2 * self.hyperparameters["jmax"]),
+                self.hyperparameters["diagonalstyle"],
+            )
         elif self.descriptor_kind == lds.AvailableDescriptors(2):
-            return lds.DescriptorKind.init_descriptor(self.descriptor_kind,
-                                                      self.hyperparameters["n_max"],
-                                                      self.hyperparameters["l_max"],
-                                                      self.hyperparameters["cutoff"],
-                                                      self.species,
-                                                      self.hyperparameters["radial_basis"],
-                                                      self.hyperparameters["eta"])
+            return lds.DescriptorKind.init_descriptor(
+                self.descriptor_kind,
+                self.hyperparameters["n_max"],
+                self.hyperparameters["l_max"],
+                self.hyperparameters["cutoff"],
+                self.species,
+                self.hyperparameters["radial_basis"],
+                self.hyperparameters["eta"],
+            )
         else:
-            raise ValueError(f"Descriptor kind: {self.descriptor_kind} not supported yet")
+            raise ValueError(
+                f"Descriptor kind: {self.descriptor_kind} not supported yet"
+            )
 
     def _map_species_to_int(self, species):
         return [self.species.index(s) for s in species]
@@ -209,11 +246,18 @@ class Descriptor:
         for i in range(n_atoms):
             neigh_list, _, _ = self.nl_ctx.get_neigh(i)
             # TODO Implement and use compute function for faster evaluation. Move this loop to C++.
-            descriptors[i, :] = lds.compute_single_atom(self._cdesc, i, species, np.array(neigh_list, dtype=np.intc),
-                                                        self.nl_ctx.coords)
+            descriptors[i, :] = lds.compute_single_atom(
+                self._cdesc,
+                i,
+                species,
+                np.array(neigh_list, dtype=np.intc),
+                self.nl_ctx.coords,
+            )
         return descriptors
 
-    def backward(self, configuration: Union[Configuration, Atoms], dE_dZeta: np.ndarray):
+    def backward(
+        self, configuration: Union[Configuration, Atoms], dE_dZeta: np.ndarray
+    ):
         """
         Compute the gradients of the descriptors with respect to the atomic coordinates. It takes in an array of
         shape (n_atoms, width) and the configuration, and performs the vector-Jacobian product (revrse mode
@@ -233,9 +277,15 @@ class Descriptor:
 
         for i in range(n_atoms):
             neigh_list, _, _ = self.nl_ctx.get_neigh(i)
-            descriptors_derivative = lds.gradient_single_atom(self._cdesc, i, species,
-                                                              np.array(neigh_list, dtype=np.intc), self.nl_ctx.coords,
-                                                              descriptor, dE_dZeta[i, :])
+            descriptors_derivative = lds.gradient_single_atom(
+                self._cdesc,
+                i,
+                species,
+                np.array(neigh_list, dtype=np.intc),
+                self.nl_ctx.coords,
+                descriptor,
+                dE_dZeta[i, :],
+            )
             derivatives_unrolled += descriptors_derivative.reshape(-1, 3)
 
         derivatives = np.zeros(configuration.coords.shape)
@@ -278,7 +328,9 @@ class Descriptor:
                 fout.write("#" + "=" * 80 + "\n\n")
 
                 num_sym_func = len(self.hyperparameters.keys())
-                fout.write("{}  # number of symmetry functions types\n\n".format(num_sym_func))
+                fout.write(
+                    "{}  # number of symmetry functions types\n\n".format(num_sym_func)
+                )
 
                 # descriptor values
                 fout.write("# sym_function    rows    cols\n")
@@ -341,23 +393,27 @@ class Descriptor:
             elif self.descriptor_kind == lds.AvailableDescriptors(1):
                 fout.write(f"# jmax\n{self.hyperparameters['jmax']}\n\n")
                 fout.write(f"# rfac0\n{self.hyperparameters['rfac0']}\n\n")
-                fout.write(f"# diagonalstyle\n{self.hyperparameters['diagonalstyle']}\n\n")
+                fout.write(
+                    f"# diagonalstyle\n{self.hyperparameters['diagonalstyle']}\n\n"
+                )
                 fout.write(f"# rmin0\n{self.hyperparameters['rmin0']}\n\n")
                 fout.write(f"# switch_flag\n{self.hyperparameters['switch_flag']}\n\n")
                 fout.write(f"# bzero_flag\n{self.hyperparameters['bzero_flag']}\n\n")
                 fout.write("# weights\n")
-                if self.hyperparameters['weights'] is None:
+                if self.hyperparameters["weights"] is None:
                     for i in range(len(self.species)):
                         fout.write("1.0    ")
                 else:
-                    for i in self.hyperparameters['weights']:
+                    for i in self.hyperparameters["weights"]:
                         fout.write(f"{i}    ")
                 fout.write("\n\n")
             elif self.descriptor_kind == lds.AvailableDescriptors(2):
                 fout.write(f"# n_max\n{self.hyperparameters['n_max']}\n\n")
                 fout.write(f"# l_max\n{self.hyperparameters['l_max']}\n\n")
                 fout.write(f"# cutoff\n{self.hyperparameters['cutoff']}\n\n")
-                fout.write(f"# radial_basis\n{self.hyperparameters['radial_basis']}\n\n")
+                fout.write(
+                    f"# radial_basis\n{self.hyperparameters['radial_basis']}\n\n"
+                )
                 fout.write(f"# eta\n{self.hyperparameters['eta']}\n\n")
 
     def save_for_kim_model(self, path: str, model: str):
@@ -388,4 +444,3 @@ class Descriptor:
 
             f.write("# Any descriptors?\n")
             f.write(f"{self.descriptor_name}\n")
-
