@@ -142,7 +142,7 @@ class KLIFFTorchGraphGenerator:
         graph = self.generate_graph(config_list[0])
         return graph
 
-    def save_kliff_graph(self, path: str, model: str):
+    def save_for_kim_model(self, path: str, model: str):
         """
         Save a KIM model parameter file. This is used to load the model into KIM-API.
         :param path: Path to save the parameter file.
