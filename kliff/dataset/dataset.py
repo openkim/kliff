@@ -322,6 +322,10 @@ class Configuration:
             raise ConfigurationError("Configuration does not contain energy.")
         return self._energy
 
+    @energy.setter
+    def energy(self, energy: Union[float, None]) -> None:
+        self.energy = energy
+
     @property
     def forces(self) -> np.ndarray:
         """
