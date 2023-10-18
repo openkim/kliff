@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
@@ -12,11 +11,11 @@ from kliff.neighbor import NeighborList
 if TYPE_CHECKING:
     from ase import Atoms
 
-    # LOG warning
-
 try:
     import libdescriptor as lds
+    libdescriptor_available = True
 except ImportError:
+    libdescriptor_available = False
     logger.error(
         "Descriptors module depends on libdescriptor, "
         "which is not found. Please install it first."
@@ -59,6 +58,9 @@ class Descriptor:
         """
         Show all the available descriptors in libdescriptor.
         """
+        if not libdescriptor_available:
+            raise DescriptorsError("Libdescriptor not available.")
+
         print("-" * 80)
         print(
             "Descriptors below are currently available, select them by `descriptor: str` attribute:"
@@ -85,6 +87,8 @@ class Descriptor:
         :param cutoff_function: Cut-off function, currently only "cos" is supported.
         :param nl_ctx: function to compute neighbor list, if not provided, will be computed internally.
         """
+        if not libdescriptor_available:
+            raise DescriptorsError("Libdescriptor not available.")
         self.cutoff = cutoff
         self.species = species
         _available_descriptors = AvailableDescriptors()
@@ -116,11 +120,11 @@ class Descriptor:
             elif hyperparameters == "soap_defaults":
                 return get_default_soap()
             else:
-                raise ValueError("Hyperparameter set not found")
+                raise DescriptorsError("Hyperparameter set not found")
         elif isinstance(hyperparameters, OrderedDict):
             return hyperparameters
         else:
-            raise TypeError("Hyperparameters must be either a string or an OrderedDict")
+            raise DescriptorsError("Hyperparameters must be either a string or an OrderedDict")
 
     def _init_descriptor_from_kind(self):
         """
@@ -137,7 +141,7 @@ class Descriptor:
             width = 0
             for function in symmetry_function_types:
                 if function.lower() not in ["g1", "g2", "g3", "g4", "g5"]:
-                    ValueError("Symmetry Function provided, not supported")
+                    DescriptorsError("Symmetry Function provided, not supported")
 
                 if function.lower() == "g1":
                     rows = 1
@@ -223,7 +227,7 @@ class Descriptor:
                 self.hyperparameters["eta"],
             )
         else:
-            raise ValueError(
+            raise DescriptorsError(
                 f"Descriptor kind: {self.descriptor_kind} not supported yet"
             )
 
@@ -444,3 +448,9 @@ class Descriptor:
 
             f.write("# Any descriptors?\n")
             f.write(f"{self.descriptor_name}\n")
+
+
+class DescriptorsError(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+        self.msg = msg
