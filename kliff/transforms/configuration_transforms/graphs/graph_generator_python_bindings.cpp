@@ -247,7 +247,7 @@ GraphData get_complete_graph(
 }
 
 
-PYBIND11_MODULE(tg, m)
+PYBIND11_MODULE(graph_module, m)
 {
     py::class_<GraphData>(m, "GraphData")
         .def(py::init<>())

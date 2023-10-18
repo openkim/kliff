@@ -77,7 +77,7 @@ class KLIFFTorchGraphGenerator:
             raise ImportError("Torch geometric is not available")
         self.as_torch_geometric_data = as_torch_geometric_data
 
-    def generate_graph(self, configuration: Configuration):
+    def generate_graph(self, configuration: "Configuration"):
         """
         Generate a graph representation of a configuration.
         :param configuration:
@@ -99,7 +99,7 @@ class KLIFFTorchGraphGenerator:
                 return self._to_py_graph(graph)
         return graph
 
-    def __call__(self, configuration: Configuration):
+    def __call__(self, configuration: "Configuration"):
         """
         Function wrapper over `generate_graph` for convenience and consistency.
         :param configuration:

@@ -2,7 +2,8 @@ from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
 
-from kliff.dataset import Configuration, Dataset
+if TYPE_CHECKING:
+    from kliff.dataset import Configuration, Dataset
 
 
 class PropertyTransform:
@@ -10,21 +11,21 @@ class PropertyTransform:
         self.original_property_value_map = None
         self.property_key = "energy"
 
-    def transform(self, dataset: Union[List[Configuration], Dataset]):
+    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
         raise PropertyTransformError("This method is not implemented.")
 
-    def inverse(self, dataset: Union[List[Configuration], Dataset]):
+    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
         raise PropertyTransformError("This method is not implemented.")
 
-    def __call__(self, dataset: Union[List[Configuration], Dataset]):
+    def __call__(self, dataset: Union[List["Configuration"], "Dataset"]):
         self.transform(dataset)
 
     @staticmethod
     def get_configuration_list(
-        dataset: Union[List[Configuration], Dataset]
-    ) -> List[Configuration]:
+        dataset: Union[List["Configuration"], "Dataset"]
+    ) -> List["Configuration"]:
         configuration_list = []
-        if isinstance(dataset, Dataset):
+        if isinstance(dataset, "Dataset"):
             configuration_list = dataset.get_configs()
         elif isinstance(dataset, List):
             configuration_list = dataset
@@ -41,7 +42,7 @@ class NormalizedPropertyTransform(PropertyTransform):
         self.mean = 0.0
         self.std = 1.0
 
-    def transform(self, dataset: Union[List[Configuration], Dataset]):
+    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
         n_configs = len(configuration_list)
         original_property_values = list(
@@ -58,7 +59,7 @@ class NormalizedPropertyTransform(PropertyTransform):
             property_to_transform /= self.std
             setattr(configuration, self.property_key, property_to_transform)
 
-    def inverse(self, dataset: Union[List[Configuration], Dataset]):
+    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
         n_configs = len(configuration_list)
         for configuration in configuration_list:
@@ -75,7 +76,7 @@ class RMSNormalizePropertyTransform(PropertyTransform):
         self.keep_original = keep_original
         self.rms_mean = 0.0
 
-    def transform(self, dataset: Union[List[Configuration], Dataset]):
+    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
         n_configs = len(configuration_list)
         original_property_values = list(
@@ -90,7 +91,7 @@ class RMSNormalizePropertyTransform(PropertyTransform):
             property_to_transform /= self.rms_mean
             setattr(configuration, self.property_key, property_to_transform)
 
-    def inverse(self, dataset: Union[List[Configuration], Dataset]):
+    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
         n_configs = len(configuration_list)
         for configuration in configuration_list:
@@ -106,7 +107,7 @@ class RMSMagnitudeNormalizePropertyTransform(PropertyTransform):
         self.keep_original = keep_original
         self.rms_mean_magnitude = 0.0
 
-    def transform(self, dataset: Union[List[Configuration], Dataset]):
+    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
         n_configs = len(configuration_list)
         original_property_values = list(
@@ -123,7 +124,7 @@ class RMSMagnitudeNormalizePropertyTransform(PropertyTransform):
             property_to_transform /= self.rms_mean_magnitude
             setattr(configuration, self.property_key, property_to_transform)
 
-    def inverse(self, dataset: Union[List[Configuration], Dataset]):
+    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
         n_configs = len(configuration_list)
         for configuration in configuration_list:

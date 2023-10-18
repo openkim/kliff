@@ -234,7 +234,7 @@ class Descriptor:
     def _map_species_to_int(self, species):
         return [self.species.index(s) for s in species]
 
-    def forward(self, configuration: Union[Configuration, Atoms]):
+    def forward(self, configuration: Union[Configuration, "Atoms"]):
         """
         Compute the descriptors for a given configuration, by calling the C++ implementation,
         :py:func:`libdescriptor.compute_single_atom`. Takes in either a KLIFF Configuration or ASE Atoms object.
@@ -260,7 +260,7 @@ class Descriptor:
         return descriptors
 
     def backward(
-        self, configuration: Union[Configuration, Atoms], dE_dZeta: np.ndarray
+        self, configuration: Union[Configuration, "Atoms"], dE_dZeta: np.ndarray
     ):
         """
         Compute the gradients of the descriptors with respect to the atomic coordinates. It takes in an array of
@@ -299,7 +299,7 @@ class Descriptor:
 
         return derivatives
 
-    def transform(self, configuration: Union[Configuration, Atoms]):
+    def transform(self, configuration: Union[Configuration, "Atoms"]):
         return self.forward(configuration)
 
     def inverse(self, *args, **kargs):
