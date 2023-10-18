@@ -1,6 +1,6 @@
 from loguru import logger
 
-from kliff.utils import torch_available
+from kliff.utils import torch_available, torch_geometric_available
 
 if torch_available():
     import torch
@@ -12,15 +12,14 @@ import kliff.transforms.configuration_transforms.graph_module as graph_module
 if TYPE_CHECKING:
     from kliff.dataset import Configuration
 
-try:
+if torch_geometric_available():
     from torch_geometric.data import Data
 
-    pyg_available = True
 
     class KLIFFTorchGraph(Data):
         """
         A Pytorch Geometric compatible graph representation of a configuration. When loaded into a
-        class:`torch_geometric.data.DataLoader` the graphs of type KIMTorchGraph will be automatically collated and
+        class:`torch_geometric.data.DataLoader` the graphs of type KLIFFTorchGraph will be automatically collated and
          batched.
         """
 
@@ -54,10 +53,6 @@ try:
             else:
                 return 0
 
-except ImportError:
-    pyg_available = False
-    logger.warning("Torch geometric is not available")
-
 
 class KLIFFTorchGraphGenerator:
     """
@@ -78,7 +73,7 @@ class KLIFFTorchGraphGenerator:
         self.n_layers = n_layers
         self.infl_dist = n_layers * cutoff
         self._tg = graph_module
-        if as_torch_geometric_data and not pyg_available:
+        if as_torch_geometric_data and not torch_geometric_available():
             raise ImportError("Torch geometric is not available")
         self.as_torch_geometric_data = as_torch_geometric_data
 
@@ -117,7 +112,7 @@ class KLIFFTorchGraphGenerator:
         """
         Convert a C++ graph object to a Pytorch Geometric Data object.
         :param graph: C++ graph object.
-        :return: KIMTorchGraph object.
+        :return: KLIFFTorchGraph object.
         """
         torch_geom_graph = KLIFFTorchGraph()
         torch_geom_graph.energy = torch.as_tensor(graph.energy)

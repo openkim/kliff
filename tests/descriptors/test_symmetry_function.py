@@ -4,7 +4,7 @@ from collections import OrderedDict
 import numpy as np
 
 from kliff.dataset import Configuration
-from kliff.descriptors import SymmetryFunction
+from kliff.legacy.descriptors import SymmetryFunction
 
 zeta_ref = [
     [

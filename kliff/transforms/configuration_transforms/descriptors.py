@@ -299,6 +299,14 @@ class Descriptor:
 
         return derivatives
 
+    def transform(self, configuration: Union[Configuration, Atoms]):
+        return self.forward(configuration)
+
+    def inverse(self, *args, **kargs):
+        DescriptorsError("Do you mean `backward`?\n"
+                         "Any of the implemented descriptors do not support inverse mapping.\n"
+                         "For computing jacobian-vector product use `backward` function.")
+
     def write_kim_params(self, path, fname="descriptor.params"):
         """
         Write the descriptor parameters to a file, which can be used by KIM-API. This is the additional

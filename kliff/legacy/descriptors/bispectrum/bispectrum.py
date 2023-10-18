@@ -1,8 +1,8 @@
 import numpy as np
 from loguru import logger
 
-from kliff.descriptors.bispectrum import bs  # C extension
-from kliff.descriptors.descriptor import (
+from kliff.legacy.descriptors.bispectrum import bs  # C extension
+from kliff.legacy.descriptors.descriptor import (
     Descriptor,
     generate_full_cutoff,
     generate_species_code,

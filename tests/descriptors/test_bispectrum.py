@@ -1,7 +1,7 @@
 import numpy as np
 
 from kliff.dataset import Configuration
-from kliff.descriptors import Bispectrum
+from kliff.legacy.descriptors import Bispectrum
 
 zeta_ref = [
     [

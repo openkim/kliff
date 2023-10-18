@@ -37,6 +37,8 @@ install:
   # kimpy
   - pip install kimpy
 
+  # ase
+  - pip install ase
 
 script:
   - cd $KLIFF_DIR
