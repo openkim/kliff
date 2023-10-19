@@ -385,6 +385,9 @@ class Configuration:
     def fingerprint(self, fingerprint):
         self._fingerprint = fingerprint
 
+    def set_fingerprint(self, fingerprint):
+        self._fingerprint = fingerprint
+
     @property
     def path(self) -> Union[Path, None]:
         """

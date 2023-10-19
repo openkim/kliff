@@ -70,7 +70,6 @@ class Descriptor(ConfigurationTransform):
         nomeclature.
     """
 
-    @staticmethod
     def __init__(
         self,
         cutoff: float,

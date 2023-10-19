@@ -14,7 +14,7 @@ class ConfigurationTransform:
     def __call__(self, configuration: "Configuration"):
         fingerprint = self.forward(configuration)
         if self.implicit_fingerprint_copying:
-            configuration.fingerprint(fingerprint)
+            configuration.set_fingerprint(fingerprint)
         else:
             return fingerprint
 
@@ -27,3 +27,6 @@ class ConfigurationTransform:
 
     def transform(self, configuration: "Configuration"):
         return self.__call__(configuration)
+
+    def set_implicit_fingerprinting(self, value: bool):
+        self.implicit_fingerprint_copying = value

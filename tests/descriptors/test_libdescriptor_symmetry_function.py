@@ -307,6 +307,19 @@ def test_desc(test_data_dir):
     for fit_forces, fit_stress in itertools.product([False, True], [False, True]):
         zeta = desc.forward(config)
         assert np.allclose(zeta, zeta_ref)
+        zeta = desc(config)
+        assert np.allclose(zeta, zeta_ref)
+        zeta = desc.transform(config)
+        assert np.allclose(zeta, zeta_ref)
+
+        # inplace transform
+        desc.set_implicit_fingerprinting(True)
+        desc.transform(config)
+        zeta = config.fingerprint
+        assert np.allclose(zeta, zeta_ref)
+        desc.set_implicit_fingerprinting(False)
+
+        # TODO Forces and vector jacobian products
         # if fit_forces:
         #     assert np.allclose(dzetadr_forces[0], dzetadr_forces_ref)
         # if fit_stress:
