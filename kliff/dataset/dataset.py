@@ -325,7 +325,7 @@ class Configuration:
 
     @energy.setter
     def energy(self, energy: Union[float, None]) -> None:
-        self.energy = energy
+        self._energy = energy
 
     @property
     def forces(self) -> np.ndarray:
@@ -335,6 +335,10 @@ class Configuration:
         if self._forces is None:
             raise ConfigurationError("Configuration does not contain forces.")
         return self._forces
+
+    @forces.setter
+    def forces(self, forces: np.ndarray):
+        self._forces = forces
 
     @property
     def stress(self) -> List[float]:

@@ -4,8 +4,8 @@ language: python
 dist: xenial
 
 python:
-  - "3.7"
-  - "3.8"
+  #  - "3.7" # TODO: Add 3.7 support after libdescriptor is packaged
+  #  - "3.8" # TODO: Add 3.8 support after libdescriptor is packaged
   - "3.9"
 
 
@@ -39,6 +39,9 @@ install:
 
   # ase
   - pip install ase
+
+  # libdescriptor
+  - pip install libdescriptor
 
 script:
   - cd $KLIFF_DIR
