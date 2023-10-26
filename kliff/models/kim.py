@@ -672,6 +672,32 @@ class KIMModel(Model):
 
         logger.info(f"KLIFF trained model write to `{path}`")
 
+    def __call__(self, configuration: "Configuration",compute_energy: bool = True,compute_forces: bool = True, compute_stress: bool = False,
+):
+        """
+        Compute energy and forces for a configuration.
+
+        Args:
+            configuration: atomic configuration
+            :param compute_energy:
+            :param compute_forces:
+            :param compute_stress:
+        """
+        supported_species = self.get_supported_species()
+        influence_dist = self.get_influence_distance()
+        kim_ca = self.create_a_kim_compute_argument()
+        kim_ca_instance = KIMComputeArguments(
+            kim_ca=kim_ca,
+            config=configuration,
+            supported_species=supported_species,
+            influence_distance=influence_dist,
+            compute_energy=compute_energy,
+            compute_forces=compute_forces,
+            compute_stress=compute_stress,
+        )
+        kim_ca_instance.compute(self.kim_model)
+        return kim_ca_instance.results
+
 
 class KIMModelError(Exception):
     def __init__(self, msg):

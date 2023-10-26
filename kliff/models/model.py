@@ -234,7 +234,13 @@ class Model:
     def read_opt_params(self, filename: Path):
         pass
 
+    def set_params_mutable(self, opt_params: List[str]):
+        pass
+
     def set_opt_params(self, **kwargs):
+        # list of keys
+        keys = list(kwargs.keys())
+        self.set_params_mutable(keys)
         for name, setting in kwargs.items():
             self.set_one_opt_param(name, setting)
 

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from loguru import logger
 
-from kliff.descriptors.descriptor import Descriptor
+from kliff.legacy.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
 
 
