@@ -356,7 +356,7 @@ class Model:
         d = {
             "@module": self.__class__.__module__,
             "@class": self.__class__.__name__,
-            "opt_params": self.opt_params.as_dict(),
+            "opt_params": self.parameters()
         }
         yaml_dump(d, filename)
 

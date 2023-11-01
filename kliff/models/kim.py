@@ -672,8 +672,13 @@ class KIMModel(Model):
 
         logger.info(f"KLIFF trained model write to `{path}`")
 
-    def __call__(self, configuration: "Configuration",compute_energy: bool = True,compute_forces: bool = True, compute_stress: bool = False,
-):
+    def __call__(
+        self,
+        configuration: "Configuration",
+        compute_energy: bool = True,
+        compute_forces: bool = True,
+        compute_stress: bool = False,
+    ):
         """
         Compute energy and forces for a configuration.
 

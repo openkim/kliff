@@ -1,12 +1,12 @@
+import os
+from datetime import datetime, timedelta
 from enum import Enum
+from glob import glob
 from pathlib import Path
 
 import numpy as np
-from loguru import logger
 import yaml
-import os
-from datetime import datetime, timedelta
-from glob import glob
+from loguru import logger
 
 
 class ModelTypes(Enum):
@@ -18,9 +18,11 @@ class ModelTypes(Enum):
     def get_model_type(input_str: str):
         if input_str.lower() == "kim":
             return ModelTypes.KIM
-        elif input_str.lower() == "torch" or \
-             input_str.lower() == "pt" or \
-             input_str.lower() == "pth":
+        elif (
+            input_str.lower() == "torch"
+            or input_str.lower() == "pt"
+            or input_str.lower() == "pth"
+        ):
             return ModelTypes.TORCH
         elif input_str.lower() == "tar":
             return ModelTypes.TAR
@@ -107,13 +109,18 @@ class Trainer:
         self.model_source = None
         self.model = None
         self.optimizer = None
-        logger.info(f"Starting training. Time: {self.start_time.strftime('%Y-%m-%d-%H-%M-%S')}")
+        logger.info(
+            f"Starting training. Time: {self.start_time.strftime('%Y-%m-%d-%H-%M-%S')}"
+        )
 
         self.configuration = self.parse_dict(configuration)
 
         # set computation limits
-        max_walltime = timedelta(seconds=configuration["max_walltime"])
-        self.end_time = self.start_time + max_walltime
+        logger.info(f"Starting trainer. {self.configuration['optimizer_provider']}")
+        if self.configuration["optimizer_provider"] == OptimizerProvider.TORCH:
+            # Cant interject SCIPY optimizer with walltime
+            max_walltime = timedelta(seconds=configuration["max_walltime"])
+            self.end_time = self.start_time + max_walltime
 
         self.root_dir = configuration["root_dir"]
         self.current_run_title = configuration["run_title"]
@@ -125,6 +132,7 @@ class Trainer:
         self.model_name = configuration["model_name"]
         self.model_source = configuration["model_source"]
         self.dataset_type = configuration["dataset_type"]
+        self.dataset_path = configuration["dataset_path"]
         if self.dataset_type == DataTypes.COLABFIT:
             self.dataset_name = configuration["dataset_name"]
             self.database_name = configuration["database_name"]
@@ -150,7 +158,10 @@ class Trainer:
         if "append" not in configuration:
             configuration["append"] = False
 
-        current_run_dir, resume = self.workdir(f"{configuration['root_dir']}/{configuration['run_title']}", configuration['append'])
+        resume, current_run_dir = self.workdir(
+            f"{configuration['root_dir']}/{configuration['run_title']}",
+            configuration["append"],
+        )
         configuration["current_run_dir"] = current_run_dir
         configuration["resume"] = resume
 
@@ -163,22 +174,34 @@ class Trainer:
         if "model_source" not in configuration:
             TrainerError("model_source not provided.")
         else:
-            configuration["model_source"] = ModelTypes.get_model_type(configuration["model_source"])
+            configuration["model_source"] = ModelTypes.get_model_type(
+                configuration["model_source"]
+            )
 
         if "dataset_type" not in configuration:
-            configuration["dataset_type"] = DataTypes.get_data_type(configuration["dataset_type"])
+            TrainerError("dataset_type not provided.")
+        else:
+            configuration["dataset_type"] = DataTypes.get_data_type(
+                configuration["dataset_type"]
+            )
 
         if configuration["dataset_type"] == DataTypes.COLABFIT:
-            if "dataset_name" not in configuration or \
-                    "database_name" not in configuration:
+            if (
+                "dataset_name" not in configuration
+                or "database_name" not in configuration
+            ):
                 raise TrainerError("colabfit_name not provided.")
-        elif configuration["dataset_type"] == DataTypes.ASE or\
-                configuration["dataset_type"] == DataTypes.KLIFF:
+        elif (
+            configuration["dataset_type"] == DataTypes.ASE
+            or configuration["dataset_type"] == DataTypes.KLIFF
+        ):
             if "dataset_path" not in configuration:
                 raise TrainerError("dataset_name not provided.")
 
         # optimizer parameters
-        configuration["optimizer_provider"] = OptimizerProvider.get_optimizer_provider(configuration["optimizer_provider"])
+        configuration["optimizer_provider"] = OptimizerProvider.get_optimizer_provider(
+            configuration["optimizer_provider"]
+        )
 
         if configuration["optimizer_provider"] == OptimizerProvider.TORCH:
             if "n_train" not in configuration:
@@ -190,10 +213,16 @@ class Trainer:
             if "max_epoch" not in configuration:
                 configuration["max_epoch"] = 10000
             if "max_walltime" not in configuration:
-                configuration["max_walltime"] = 48*60*60 # max in NYU Greene
+                configuration["max_walltime"] = 48 * 60 * 60  # max in NYU Greene
 
         if "optimizer" not in configuration:
-            configuration["optimizer"] = "adam" if configuration["optimizer_provider"] == OptimizerProvider.TORCH else "l-bfgs-b"
+            configuration["optimizer"] = (
+                "adam"
+                if configuration["optimizer_provider"] == OptimizerProvider.TORCH
+                else "l-bfgs-b"
+            )
+
+        # defaults
 
         if "optimizer_kwargs" not in configuration:
             configuration["optimizer_kwargs"] = {}
@@ -202,7 +231,7 @@ class Trainer:
             # to be populated later
             configuration["indices_file"] = {"train": None, "val": None}
 
-        if "checkpoint_freq" not in  configuration:
+        if "checkpoint_freq" not in configuration:
             configuration["checkpoint_freq"] = 100
 
         if "device" not in configuration:
@@ -214,25 +243,43 @@ class Trainer:
         if "cpu_workers" not in configuration:
             configuration["cpu_workers"] = 1
 
+        if "max_epoch" not in configuration:
+            configuration["max_epoch"] = None
+
+        if "max_walltime" not in configuration:
+            configuration["max_walltime"] = None
+
         return configuration
 
     def get_dict(self):
-        self.configuration["model_source"] = ModelTypes.get_model_config(self.configuration["model_source"])
-        self.configuration["dataset_type"] = DataTypes.get_data_config(self.configuration["dataset_type"])
-        self.configuration["optimizer_provider"] = OptimizerProvider.get_optimizer_config(self.configuration["optimizer_provider"])
+        self.configuration["model_source"] = ModelTypes.get_model_config(
+            self.configuration["model_source"]
+        )
+        self.configuration["dataset_type"] = DataTypes.get_data_config(
+            self.configuration["dataset_type"]
+        )
+        self.configuration[
+            "optimizer_provider"
+        ] = OptimizerProvider.get_optimizer_config(
+            self.configuration["optimizer_provider"]
+        )
         return self.configuration
 
     def get_indices(self, size_of_dataset: int):
         if self.configuration["indices_file"]["train"] is None:
             all_indices = np.arange(size_of_dataset)
             np.random.shuffle(all_indices)
-            self.train_indices = all_indices[:self.configuration["n_train"]]
-            self.val_indices = all_indices[-self.configuration["n_val"]:]
+            self.train_indices = all_indices[: self.configuration["n_train"]]
+            self.val_indices = all_indices[-self.configuration["n_val"] :]
         else:
             self.train_indices = np.load(self.configuration["indices_file"]["train"])
             self.val_indices = np.load(self.configuration["indices_file"]["val"])
 
-    def workdir(self, current_run_dir, append,):
+    def workdir(
+        self,
+        current_run_dir,
+        append,
+    ):
         """
         Check all the existing runs in the root directory and see if it finished the run
         :param current_run_dir:
@@ -245,14 +292,18 @@ class Trainer:
             return resume, current_run_dir
         elif not append:
             resume = False
-            current_run_dir = f"{current_run_dir}_{self.start_time.strftime('%Y-%m-%d-%H-%M-%S')}"
+            current_run_dir = (
+                f"{current_run_dir}_{self.start_time.strftime('%Y-%m-%d-%H-%M-%S')}"
+            )
             return resume, current_run_dir
         else:
             last_dir = dir_list[-1]
             was_it_finished = os.path.exists(f"{last_dir}/.finished")
             if was_it_finished:
                 resume = False
-                current_run_dir = f"{current_run_dir}_{self.start_time.strftime('%Y-%m-%d-%H-%M-%S')}"
+                current_run_dir = (
+                    f"{current_run_dir}_{self.start_time.strftime('%Y-%m-%d-%H-%M-%S')}"
+                )
                 return resume, current_run_dir
 
         # incomplete run encountered
@@ -268,7 +319,6 @@ class Trainer:
         # when can we resume vs new run?
         return True, dir_list[-1]
 
-
     @classmethod
     def from_file(cls, filename: Path):
         with open(filename, "r") as f:
@@ -278,11 +328,18 @@ class Trainer:
 
     def to_file(self, filename):
         configuration = self.get_dict()
-        if self.indices_file is None:
-            configuration["indices_file"]["train"] = filename.split("/")[-1] + "train_indices.txt"
-            configuration["indices_file"]["val"] = filename.split("/")[-1] + "val_indices.txt"
-        np.savetxt(configuration["indices_file"]["train"], self.train_indices)
-        np.savetxt(configuration["indices_file"]["val"], self.val_indices)
+        try:
+            if self.indices_file is None:
+                configuration["indices_file"]["train"] = (
+                    filename.split("/")[-1] + "train_indices.txt"
+                )
+                configuration["indices_file"]["val"] = (
+                    filename.split("/")[-1] + "val_indices.txt"
+                )
+                np.savetxt(configuration["indices_file"]["train"], self.train_indices)
+                np.savetxt(configuration["indices_file"]["val"], self.val_indices)
+        except ValueError:
+            logger.warning("Indices file not saved. It is normal for KIM models.")
 
         with open(filename, "w") as f:
             yaml.dump(configuration, f, default_flow_style=False)
@@ -302,7 +359,7 @@ class Trainer:
     def get_optimizer(self):
         TrainerError("get_optimizer not implemented.")
 
-    def get_dataset(self): # Specific to trainer
+    def get_dataset(self):  # Specific to trainer
         TrainerError("get_dataset not implemented.")
 
     def train(self):
