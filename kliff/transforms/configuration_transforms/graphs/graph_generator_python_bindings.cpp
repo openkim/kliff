@@ -204,6 +204,7 @@ GraphData get_complete_graph(
     auto species_code_64 = std::vector<int64_t>(species_code.begin(), species_code.end());
     gs.z = py::array_t<int64_t>(species_code_64.size(), species_code_64.data());
 
+
     // species map to increasing index, from 0 to n_species
     // Count number of unique elements in species_code, and assign them 0 to n numbers
     std::set<int64_t> unique_species(species_code.begin(), species_code.end());
@@ -219,6 +220,7 @@ GraphData get_complete_graph(
     for (auto species_ : species_code){
         species_code_mapped.push_back(species_map[species_]);
     }
+
     gs.species = py::array_t<int64_t>(species_code_mapped.size(), species_code_mapped.data());
 
     // Full Image vector for easier post processing (torch scatter sum)
@@ -259,7 +261,7 @@ PYBIND11_MODULE(graph_module, m)
         .def_readwrite("forces", &GraphData::forces)
         .def_readwrite("images", &GraphData::images)
         .def_readwrite("species", &GraphData::species)
-        .def_readwrite("z", &GraphData::species)
+        .def_readwrite("z", &GraphData::z)
         .def_readwrite("contributions", &GraphData::contributions);
     m.def("get_complete_graph", &get_complete_graph, "gets complete graphs");
 }

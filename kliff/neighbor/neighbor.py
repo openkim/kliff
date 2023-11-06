@@ -256,6 +256,22 @@ class NeighborList:
         """
         return self.padding_image.copy()
 
+    def get_species_indexes(self):
+        """
+        Return an array that maps species to indexes.
+
+        Returns:
+            A dictionary that maps species to indexes. The index of a species is the
+            order of its first appearance in the configuration.
+        """
+        species = set(self.species)
+        species = sorted(list(species))
+        sorted_species_keys = {s: i for i, s in enumerate(species)}
+        species_indexes = np.array(
+            [sorted_species_keys[s] for s in self.species], dtype=np.intc
+        )
+        return species_indexes
+
 
 def assemble_forces(forces: np.array, n: int, padding_image: np.array) -> np.array:
     """

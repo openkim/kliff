@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from datetime import datetime, timedelta
 from enum import Enum
 from glob import glob
@@ -73,6 +74,31 @@ class DataTypes(Enum):
         else:
             raise TrainerError(f"Data type {input_type} not supported.")
 
+
+class ConfigurationTransformationTypes(Enum):
+    GRAPH = 0
+    DESCRIPTORS = 1
+    NEIGHBORS = 2
+
+    @staticmethod
+    def get_config_transformation_type(input_str: str):
+        if input_str.lower() == "graph":
+            return ConfigurationTransformationTypes.GRAPH
+        elif input_str.lower() == "descriptors":
+            return ConfigurationTransformationTypes.DESCRIPTORS
+        elif input_str.lower() == "neighbors" or input_str.lower() == "none":
+            return ConfigurationTransformationTypes.NEIGHBORS
+        else:
+            raise TrainerError(f"Configuration transformation type {input_str} not supported.")
+
+    @staticmethod
+    def get_config_transformation_config(input_type):
+        if input_type == ConfigurationTransformationTypes.GRAPH:
+            return "GRAPH"
+        elif input_type == ConfigurationTransformationTypes.DESCRIPTORS:
+            return "DESCRIPTORS"
+        else:
+            raise TrainerError(f"Configuration transformation type {input_type} not supported.")
 
 class OptimizerProvider(Enum):
     TORCH = 0
@@ -252,18 +278,19 @@ class Trainer:
         return configuration
 
     def get_dict(self):
-        self.configuration["model_source"] = ModelTypes.get_model_config(
-            self.configuration["model_source"]
+        configuration_dict = deepcopy(self.configuration)
+        configuration_dict["model_source"] = ModelTypes.get_model_config(
+            configuration_dict["model_source"]
         )
-        self.configuration["dataset_type"] = DataTypes.get_data_config(
-            self.configuration["dataset_type"]
+        configuration_dict["dataset_type"] = DataTypes.get_data_config(
+            configuration_dict["dataset_type"]
         )
-        self.configuration[
+        configuration_dict[
             "optimizer_provider"
         ] = OptimizerProvider.get_optimizer_config(
-            self.configuration["optimizer_provider"]
+            configuration_dict["optimizer_provider"]
         )
-        return self.configuration
+        return configuration_dict
 
     def get_indices(self, size_of_dataset: int):
         if self.configuration["indices_file"]["train"] is None:

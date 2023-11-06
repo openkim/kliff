@@ -100,7 +100,6 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
             configuration.cell,
             configuration.PBC,
         )
-
         graph.energy = configuration.energy
         graph.forces = configuration.forces
         if torch_available:
@@ -129,20 +128,8 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
             torch_geom_graph.__setattr__(
                 f"edge_index{i}", torch.as_tensor(graph.edge_index[i])
             )
-        torch_geom_graph.coords.requires_grad_(True)
+        # torch_geom_graph.coords.requires_grad_(True)
         return torch_geom_graph
-
-    def collate_fn(self, config_list):
-        """
-        Collate function for use with a Pytorch DataLoader.
-        :param config_list:
-        :return: list of graphs.
-        """
-        graph_list = []
-        for conf in config_list:
-            graph = self.forward(conf)
-            graph_list.append(graph)
-        return graph_list
 
     def collate_fn_single_conf(self, config_list):
         graph = self.forward(config_list[0])

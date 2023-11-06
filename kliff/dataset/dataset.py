@@ -650,7 +650,7 @@ class Dataset:
         if path.is_dir():
             parent = path
             all_files = []
-            for root, dirs, files in os.walk(parent):
+            for root, dirs, files in os.walk(parent, followlinks=True):
                 for f in files:
                     if f.endswith(extension):
                         all_files.append(to_path(root).joinpath(f))

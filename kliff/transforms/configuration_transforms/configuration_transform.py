@@ -30,3 +30,18 @@ class ConfigurationTransform:
 
     def set_implicit_fingerprinting(self, value: bool):
         self.implicit_fingerprint_copying = value
+
+    def collate_fn(self, config_list):
+        """
+        Collate function for use with a Pytorch DataLoader.
+        :param config_list:
+        :return: transforms
+        """
+        transforms_list = []
+        for conf in config_list:
+            transform = self.forward(conf)
+            transforms_list.append(transform)
+        return transforms_list
+
+
+# TODO: should neighbor lists be a transform? It fits the defination as graph.
