@@ -319,100 +319,83 @@ class TorchTrainer(Trainer):
                 )
             return True
 
-    def get_model_inputs(self, batch):
-        """ As per supported models, the model input can be
-        1. KLIFFTorchGraphBatch: GNN, model(species, coords, graph1, graph2,..., contributing)
-        2. Torch Tensor: Descriptor based models, model(descriptor)
-        3. NeighborList: Free-reign models, model(species, coords, n_neigh, nlist, contributing)
+    # def get_model_inputs(self, batch):
+    #     """ As per supported models, the model input can be
+    #     1. KLIFFTorchGraphBatch: GNN, model(species, coords, graph1, graph2,..., contributing)
+    #     2. Torch Tensor: Descriptor based models, model(descriptor)
+    #     3. NeighborList: Free-reign models, model(species, coords, n_neigh, nlist, contributing)
+    #
+    #     """
+    #     batch_type = type(batch).__name__ # This was the simplest way,
+    #     # Pytorch Geometric graphs are bit weired, they are of type "GlobalStorage" and "KLIFFTorchGraphBatch"
+    #     # depending on how you get the batch name. So best to convert it to string and check.
+    #     # also save additional dependency at import time
+    #     if batch_type == "KLIFFTorchGraphBatch":
+    #         n_layers = self.configuration["configuration_transformation"]["kwargs"]["n_layers"]
+    #         layer_names = [f"edge_index{i}" for i in range(n_layers)]
+    #         input_fields = ["species", "coords", *layer_names, "batch"]
+    #         input_dict = {key: batch[key] for key in input_fields}
+    #         input_dict["coords"].requires_grad_(True)
+    #         return input_dict
+    #     elif batch_type == "Tensor":
+    #         return batch
+    #     elif batch_type == "list":
+    #         batch_list = []
+    #         for config in batch:
+    #             nl = NeighborList(config, infl_dist=self.configuration["configuration_transformation"]["kwargs"]["cutoff"])
+    #             n_neigh, neigh_list = nl.get_numneigh_and_neighlist_1D()
+    #             coords = nl.get_coords()
+    #             species = nl.get_species_indexes()
+    #             contributing = np.ones(coords.shape[0])
+    #             contributing[0:config.get_num_atoms()] = 0
+    #             batch_list.append({
+    #                 "species": torch.tensor(species),
+    #                 "coords": torch.tensor(coords, requires_grad=True),
+    #                 "n_neigh": torch.tensor(n_neigh),
+    #                 "neigh_list": torch.tensor(neigh_list),
+    #                 "contributing": torch.tensor(contributing, dtype=torch.int)
+    #             })
+    #         return batch_list
+    #     else:
+    #         raise TrainerError("Invalid model input type.")
 
-        """
-        batch_type = type(batch).__name__ # This was the simplest way,
-        # Pytorch Geometric graphs are bit weired, they are of type "GlobalStorage" and "KLIFFTorchGraphBatch"
-        # depending on how you get the batch name. So best to convert it to string and check.
-        # also save additional dependency at import time
-        if batch_type == "KLIFFTorchGraphBatch":
-            n_layers = self.configuration["configuration_transformation"]["kwargs"]["n_layers"]
-            layer_names = [f"edge_index{i}" for i in range(n_layers)]
-            input_fields = ["species", "coords", *layer_names, "batch"]
-            input_dict = {key: batch[key] for key in input_fields}
-            input_dict["coords"].requires_grad_(True)
-            return input_dict
-        elif batch_type == "Tensor":
-            return batch
-        elif batch_type == "list":
-            batch_list = []
-            for config in batch:
-                nl = NeighborList(config, infl_dist=self.configuration["configuration_transformation"]["kwargs"]["cutoff"])
-                n_neigh, neigh_list = nl.get_numneigh_and_neighlist_1D()
-                coords = nl.get_coords()
-                species = nl.get_species_indexes()
-                contributing = np.ones(coords.shape[0])
-                contributing[0:config.get_num_atoms()] = 0
-                batch_list.append({
-                    "species": torch.tensor(species),
-                    "coords": torch.tensor(coords, requires_grad=True),
-                    "n_neigh": torch.tensor(n_neigh),
-                    "neigh_list": torch.tensor(neigh_list),
-                    "contributing": torch.tensor(contributing, dtype=torch.int)
-                })
-            return batch_list
-        else:
-            raise TrainerError("Invalid model input type.")
+    # def train_step(self, batch):
+    #     model_inputs = self.get_model_inputs(batch)
+    #     self.model.train()
+    #     self.optimizer.zero_grad()
+    #     energy_prediction, forces_prediction = self.model(**model_inputs)
+    #     forces_prediction = self.sum_forces(forces_prediction, batch)
+    #     loss = self.loss(
+    #         energy_prediction, batch.energy, forces_prediction, batch.forces
+    #     )
+    #     loss.backward()
+    #     self.optimizer_step()
+    #     self.current_train_loss += loss.item()
 
-    def train_step(self, batch):
-        model_inputs = self.get_model_inputs(batch)
-        self.model.train()
-        self.optimizer.zero_grad()
-        energy_prediction, forces_prediction = self.model(**model_inputs)
-        forces_prediction = self.sum_forces(forces_prediction, batch)
-        loss = self.loss(
-            energy_prediction, batch.energy, forces_prediction, batch.forces
-        )
-        loss.backward()
-        self.optimizer_step()
-        self.current_train_loss += loss.item()
+    # def validation_step(self, batch):
+    #     model_inputs = self.get_model_inputs(batch)
+    #     # self.model.eval()
+    #     # with torch.no_grad():
+    #     energy_prediction, forces_prediction = self.model(**model_inputs)
+    #     forces_prediction = self.sum_forces(forces_prediction, batch)
+    #     self.current_val_loss += self.loss(
+    #         energy_prediction, batch.energy, forces_prediction, batch.forces
+    #     ).item()
+    #     self.current_val_predictions = np.append(
+    #         self.current_val_predictions,
+    #         energy_prediction.squeeze().detach().numpy(),
+    #     )
+    #
+    # def sum_forces(self, forces, batch):
+    #     if self.configuration["configuration_transformation"]["transform"].lower() == "graph":
+    #         forces_summed = scatter_add(forces, batch.images, 0)
+    #         return forces_summed
+    #     else:
+    #         pass
+    #     # elif self.configuration_transform == ConfigurationTransformationTypes.NEIGHBORS:
+    #     #     return 0
 
-    def validation_step(self, batch):
-        model_inputs = self.get_model_inputs(batch)
-        # self.model.eval()
-        # with torch.no_grad():
-        energy_prediction, forces_prediction = self.model(**model_inputs)
-        forces_prediction = self.sum_forces(forces_prediction, batch)
-        self.current_val_loss += self.loss(
-            energy_prediction, batch.energy, forces_prediction, batch.forces
-        ).item()
-        self.current_val_predictions = np.append(
-            self.current_val_predictions,
-            energy_prediction.squeeze().detach().numpy(),
-        )
-
-    def sum_forces(self, forces, batch):
-        if self.configuration["configuration_transformation"]["transform"].lower() == "graph":
-            forces_summed = scatter_add(forces, batch.images, 0)
-            return forces_summed
-        else:
-            pass
-        # elif self.configuration_transform == ConfigurationTransformationTypes.NEIGHBORS:
-        #     return 0
-
-    def train(self):
-        self.current_train_loss = 0
-        for batch in self.train_dataloader:
-            self.train_step(batch)
-            self.optimizer_step()
-        self.history["train_loss"].append(
-            self.current_train_loss / self.train_batch_count
-        )
-
-        self.current_val_predictions = np.array([])
-        self.current_val_loss = 0
-        for batch in self.val_dataloader:
-            self.validation_step(batch)
-        self.history["val_loss"].append(self.current_val_loss / self.val_batch_count)
-
-        # clear out accumulated gradients in validation
-        self.optimizer.zero_grad()
-
+    def post_validation(self):
         if self.lr_scheduler is not None:
             self.lr_scheduler.step(self.history["val_loss"][-1])
 
@@ -423,5 +406,200 @@ class TorchTrainer(Trainer):
             logger.info("Exiting training loop, one of the exit conditions reached.")
             return True
         else:
-            logger.info(f"Epoch {self.current_epoch} completed.")
+            logger.info(f"Epoch {self.current_epoch} completed. Validation Loss: {self.history['val_loss'][-1]}")
             self.train()
+
+    @staticmethod
+    def sum_forces(forces, images):
+        forces_summed = scatter_add(forces, images, 0)
+        return forces_summed
+
+    def train(self):
+        if ConfigurationTransformationTypes.get_config_transformation_type(self.configuration["configuration_transformation"]["transform"]) == ConfigurationTransformationTypes.GRAPH:
+            self._kliff_gnn_model_training_loop()
+        elif ConfigurationTransformationTypes.get_config_transformation_type(self.configuration["configuration_transformation"]["transform"]) == ConfigurationTransformationTypes.DESCRIPTORS:
+            self._kliff_descriptor_model_training_loop()
+        elif ConfigurationTransformationTypes.get_config_transformation_type(self.configuration["configuration_transformation"]["transform"]) == ConfigurationTransformationTypes.NEIGHBORS:
+            self._kliff_general_model_training_loop()
+        else:
+            raise TrainerError("Unknown input configuration information.")
+
+    ####################################################################################
+    # All the functions above are generic to all the models, but keeping them unified
+    # like that is generating lot more complicated flow. So better to keep them separate
+    # for each model type. This will also help in future when we want to add more models
+    # to the trainer.
+    ####################################################################################
+    # -------------------------------------------------------------------------------- #
+    # ------------------------- GNN specific training loop --------------------------- #
+
+    def _kliff_gnn_model_training_loop(self): # based on configuration transforms
+        self.current_train_loss = 0
+        for batch in self.train_dataloader:
+            self._train_step_gnn(batch)
+            self.optimizer_step()
+        self.history["train_loss"].append(
+            self.current_train_loss / self.train_batch_count
+        )
+
+        self.current_val_predictions = np.array([])
+        self.current_val_loss = 0
+        for batch in self.val_dataloader:
+            self._validation_step_gnn(batch)
+        self.history["val_loss"].append(self.current_val_loss / self.val_batch_count)
+
+        # clear out accumulated gradients in validation
+        self.optimizer.zero_grad()
+        self.post_validation()
+
+    def _train_step_gnn(self, batch):
+        model_inputs = self._get_gnn_model_inputs(batch)
+        self.model.train()
+        self.optimizer.zero_grad()
+        energy_prediction, forces_prediction = self.model(**model_inputs)
+        forces_prediction = self.sum_forces(forces_prediction, batch.images)
+        loss = self.loss(
+            energy_prediction, batch.energy, forces_prediction, batch.forces
+        )
+        loss.backward()
+        self.optimizer_step()
+        self.current_train_loss += loss.item()
+
+    def _validation_step_gnn(self, batch):
+        model_inputs = self._get_gnn_model_inputs(batch)
+        energy_prediction, forces_prediction = self.model(**model_inputs)
+        forces_prediction = self.sum_forces(forces_prediction, batch.images)
+        self.current_val_loss += self.loss(
+            energy_prediction, batch.energy, forces_prediction, batch.forces
+        ).item()
+        self.current_val_predictions = np.append(
+            self.current_val_predictions,
+            energy_prediction.squeeze().detach().numpy(),
+        )
+
+    def _get_gnn_model_inputs(self, batch):
+        n_layers = self.configuration["configuration_transformation"]["kwargs"]["n_layers"]
+        layer_names = [f"edge_index{i}" for i in range(n_layers)]
+        input_fields = ["species", "coords", *layer_names, "batch"]
+        input_dict = {key: batch[key] for key in input_fields}
+        input_dict["coords"].requires_grad_(True)
+        return input_dict
+
+    # -------------------------------------------------------------------------------- #
+    # ---------------------- Descriptor specific training loop ----------------------- #
+    def _kliff_descriptor_model_training_loop(self):
+        self.current_train_loss = 0
+        for batch in self.train_dataloader:
+            self._train_step_descriptor(batch)
+            self.optimizer_step()
+        self.history["train_loss"].append(
+            self.current_train_loss / self.train_batch_count
+        )
+
+        self.current_val_predictions = np.array([])
+        self.current_val_loss = 0
+        for batch in self.val_dataloader:
+            self._validation_step_descriptor(batch)
+        self.history["val_loss"].append(self.current_val_loss / self.val_batch_count)
+
+        # clear out accumulated gradients in validation
+        self.optimizer.zero_grad()
+        self.post_validation()
+
+    def _train_step_descriptor(self, batch):
+        self.model.train()
+        self.optimizer.zero_grad()
+        energy_prediction, forces_prediction = self.model(batch.descriptors)
+        # forces_prediction = self.sum_forces(forces_prediction, batch.images)
+        loss = self.loss(
+            energy_prediction, batch.energy, forces_prediction, batch.forces
+        )
+        loss.backward()
+        self.optimizer_step()
+        self.current_train_loss += loss.item()
+
+    def _validation_step_descriptor(self, batch):
+        energy_prediction, forces_prediction = self.model(batch.descriptors)
+        # forces_prediction = self.sum_forces(forces_prediction, batch.images)
+        self.current_val_loss += self.loss(
+            energy_prediction, batch.energy, forces_prediction, batch.forces
+        ).item()
+        self.current_val_predictions = np.append(
+            self.current_val_predictions,
+            energy_prediction.squeeze().detach().numpy(),
+        )
+
+    # TODO: 1. either wrap the descriptor based models in custom descriptor calls
+    #       2. or make libdescriptor calls native pytorch like torch_scatter
+
+    # -------------------------------------------------------------------------------- #
+    # ---------------------- General model training loop ----------------------------- #
+
+    def _kliff_general_model_training_loop(self):
+        self.current_train_loss = 0
+        for batch in self.train_dataloader:
+            self._train_step_general(batch)
+            self.optimizer_step()
+        self.history["train_loss"].append(
+            self.current_train_loss / self.train_batch_count
+        )
+
+        self.current_val_predictions = np.array([])
+        self.current_val_loss = 0
+        for batch in self.val_dataloader:
+            self._validation_step_general(batch)
+        self.history["val_loss"].append(self.current_val_loss / self.val_batch_count)
+
+        # clear out accumulated gradients in validation
+        self.optimizer.zero_grad()
+        self.post_validation()
+
+    def _train_step_general(self, batch):
+        self.model.train()
+        self.optimizer.zero_grad()
+        model_inputs, images = self._get_general_model_inputs(batch)
+        energy_prediction, forces_prediction = self.model(**model_inputs)
+        forces_prediction = self.sum_forces(forces_prediction, images)
+        loss = self.loss(
+            energy_prediction, batch.energy, forces_prediction, batch.forces
+        )
+        loss.backward()
+        self.optimizer_step()
+        self.current_train_loss += loss.item()
+
+    def _validation_step_general(self, batch):
+        model_inputs, images = self._get_general_model_inputs(batch)
+        energy_prediction, forces_prediction = self.model(*model_inputs)
+        forces_prediction = self.sum_forces(forces_prediction, images)
+        self.current_val_loss += self.loss(
+            energy_prediction, batch.energy, forces_prediction, batch.forces
+        ).item()
+        self.current_val_predictions = np.append(
+            self.current_val_predictions,
+            energy_prediction.squeeze().detach().numpy(),
+        )
+
+    def _get_general_model_inputs(self, batch):
+        batch_list = []
+        images_list = []
+        for config in batch:
+            nl = NeighborList(config, infl_dist=self.configuration["configuration_transformation"]["kwargs"]["cutoff"])
+            n_neigh, neigh_list = nl.get_numneigh_and_neighlist_1D()
+            coords = nl.get_coords()
+            species = nl.get_species_indexes()
+            contributing = np.ones(coords.shape[0])
+            contributing[0:config.get_num_atoms()] = 0
+            batch_list.append({
+                "species": torch.tensor(species),
+                "coords": torch.tensor(coords, requires_grad=True),
+                "n_neigh": torch.tensor(n_neigh),
+                "neigh_list": torch.tensor(neigh_list),
+                "contributing": torch.tensor(contributing, dtype=torch.int)
+            })
+            images_list.append(torch.tensor(nl.get_image(), dtype=torch.int))
+        return batch_list, images_list
+
+    # TODO: 1. either wrap the general based models in traningwheel like wrapper
+    #       2. or make map calls for the model
+
+    # -------------------------------------------------------------------------------- #
