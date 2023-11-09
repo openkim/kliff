@@ -1,7 +1,7 @@
 import copy
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -10,8 +10,31 @@ from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
 from kliff.utils import to_path
 
+# For type checking
+if TYPE_CHECKING:
+    from ase import Atoms
+    from colabfit.tools.configuration import Configuration as ColabfitConfiguration
+    from colabfit.tools.database import MongoDatabase
+
+# check if colabfit-tools is installed
+try:
+    from colabfit.tools.database import MongoDatabase
+
+    colabfit_installed = True
+except ImportError:
+    colabfit_installed = False
+
+# check is ase is installed
+try:
+    import ase.io
+
+    ase_installed = True
+except ImportError:
+    ase_installed = False
+
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
+SUPPORTED_PARSERS = ["ase"]
 
 
 class Configuration:
@@ -50,6 +73,9 @@ class Configuration:
         stress: Optional[List[float]] = None,
         weight: Optional[Weight] = None,
         identifier: Optional[Union[str, Path]] = None,
+        database_client: Optional[Union["MongoDatabase"]] = None,
+        property_id: Optional[str] = None,
+        configuration_id: Optional[str] = None,
     ):
         self._cell = cell
         self._species = species
@@ -58,12 +84,17 @@ class Configuration:
         self._energy = energy
         self._forces = forces
         self._stress = stress
+        self.colabfit_dataclient = database_client
+        self.property_id = property_id
+        self.configuration_id = configuration_id
+        self._fingerprint = None
 
         self._identifier = identifier
         self._path = None
 
         self._weight = Weight() if weight is None else weight
         self._weight.compute_weight(self)  # Compute the weight
+        # TODO: Dynamic loading from colabfit-tools dataset. Is it needed?
 
     # TODO enable config weight read in from file
     @classmethod
@@ -138,6 +169,122 @@ class Configuration:
                 f"got: {file_format}."
             )
 
+    @classmethod
+    def from_colabfit_dataobjects(
+        cls,
+        database_client: "MongoDatabase",
+        configuration_id: str,
+        property_ids: Optional[Union[List[str], str]] = None,
+        weight: Optional[Weight] = None,
+    ):
+        """
+        Read configuration from colabfit database .
+
+        Args:
+            database_client: Instance of connected MongoDatabase client, which can be used to
+            fetch database from colabfit-tools dataset.
+            configuration_id: ID of the configuration instance to be collected from the collection
+            "configuration" in colabfit-tools.
+            property_ids: ID of the property instance to be associated with current configuration.
+            Usually properties would be trained against. Each associated property "field" will be
+            matched against provided list of aux_property_fields.
+             weight:
+        """
+        try:
+            fetched_configuration: "ColabfitConfiguration" = (
+                database_client.get_configuration(configuration_id)
+            )
+        except:
+            raise ConfigurationError(
+                "Looks like Mongo database did not return appropriate response. "
+                f"Please run db.configurations.find('_id':{configuration_id}) to verify response. "
+                f"Or try running the following in separate Python terminal:\n"
+                "from colabfit.tools.database import MongoDatabase\n"
+                f"client = MongoDatabase({database_client.database_name})\n"
+                f"client.get_configuration({configuration_id})\n"
+                " \n"
+                "Above shall return a Configuration object with ASE Atoms format.",
+            )
+        coords = fetched_configuration.arrays["positions"]
+        species = fetched_configuration.get_chemical_symbols()
+        cell = np.array(fetched_configuration.cell.todict()["array"])
+        PBC = fetched_configuration.pbc
+
+        # get energy, forces, stresses from the property ids
+        energy = Configuration._get_colabfit_property(
+            database_client, property_ids, "energy", "potential-energy"
+        )
+        forces = Configuration._get_colabfit_property(
+            database_client, property_ids, "forces", "atomic-forces"
+        )
+        stress = Configuration._get_colabfit_property(
+            database_client, property_ids, "stress", "cauchy-stress"
+        )
+
+        self = cls(
+            cell,
+            species,
+            coords,
+            PBC,
+            energy,
+            forces,
+            stress,
+            identifier=configuration_id,
+            database_client=database_client,
+            property_id=property_ids,
+            configuration_id=configuration_id,
+            weight=weight,
+        )
+
+        return self
+
+    @classmethod
+    def from_ase_atoms(
+        cls,
+        atoms: "Atoms",
+        weight: Optional[Weight] = None,
+        energy_key: str = "energy",
+        forces_key: str = "forces",
+    ):
+        """
+        Read configuration from ase.Atoms object.
+
+        Args:
+            atoms: ase.Atoms object.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+            forces_key:
+            energy_key:
+        """
+        cell = atoms.get_cell()
+        species = atoms.get_chemical_symbols()
+        coords = atoms.get_positions()
+        PBC = atoms.get_pbc()
+        energy = atoms.info[energy_key]
+        try:
+            forces = atoms.arrays[forces_key]
+        except KeyError:
+            forces = None
+
+        try:
+            stress = atoms.get_stress(voigt=True)
+        except RuntimeError:
+            stress = None
+
+        weight = weight
+
+        self = cls(
+            cell,
+            species,
+            coords,
+            PBC,
+            energy,
+            forces,
+            stress,
+            weight,
+        )
+        return self
+
     @property
     def cell(self) -> np.ndarray:
         """
@@ -176,6 +323,10 @@ class Configuration:
             raise ConfigurationError("Configuration does not contain energy.")
         return self._energy
 
+    @energy.setter
+    def energy(self, energy: Union[float, None]) -> None:
+        self._energy = energy
+
     @property
     def forces(self) -> np.ndarray:
         """
@@ -184,6 +335,10 @@ class Configuration:
         if self._forces is None:
             raise ConfigurationError("Configuration does not contain forces.")
         return self._forces
+
+    @forces.setter
+    def forces(self, forces: np.ndarray):
+        self._forces = forces
 
     @property
     def stress(self) -> List[float]:
@@ -225,6 +380,17 @@ class Configuration:
         Set the identifier of the configuration.
         """
         self._identifier = identifier
+
+    @property
+    def fingerprint(self):
+        return self._fingerprint
+
+    @fingerprint.setter
+    def fingerprint(self, fingerprint):
+        self._fingerprint = fingerprint
+
+    def set_fingerprint(self, fingerprint):
+        self._fingerprint = fingerprint
 
     @property
     def path(self) -> Union[Path, None]:
@@ -301,6 +467,30 @@ class Configuration:
             self._species = np.asarray(species)
             self._coords = np.asarray(coords)
 
+    @staticmethod
+    def _get_colabfit_property(
+        database_client: Union["MongoDatabase"],
+        property_id: Union[List[str], str],
+        property_name: str,
+        property_type: str,
+    ):
+        """
+        Returns colabfit-property. workaround till we get proper working get_property routine
+        Args:
+            property_name: subfield of the property to fetch
+            property_type: type of property to fetch
+
+        Returns: fetched value, None if query comes empty
+
+        """
+        pi_doc = database_client.property_instances.find_one(
+            {"colabfit-id": {"$in": property_id}, "type": property_type}
+        )
+        if pi_doc:
+            return pi_doc[property_type][property_name]["source-value"]
+        else:
+            return None
+
 
 class Dataset:
     """
@@ -320,17 +510,63 @@ class Dataset:
         self,
         path: Optional[Path] = None,
         weight: Optional[Weight] = None,
-        file_format="xyz",
+        file_format: str = "xyz",
+        colabfit_database: str = None,
+        colabfit_dataset: str = None,
+        parser: str = None,
+        energy_key: str = None,
+        forces_key: str = "force",
+        slices: str = ":",
     ):
         self.file_format = file_format
 
         if path is not None:
-            self.configs = self._read(path, weight, file_format)
+            self.configs = self._read(
+                path,
+                weight,
+                file_format,
+                parser=parser,
+                energy_key=energy_key,
+                forces_key=forces_key,
+                slices=slices,
+            )
+
+        elif colabfit_database is not None:
+            if colabfit_dataset is not None:
+                # open link to the mongo
+                if colabfit_installed:
+                    self.mongo_client = MongoDatabase(colabfit_database)
+                    self.colabfit_dataset = colabfit_dataset
+                    self.configs = self._read_colabfit(
+                        self.mongo_client, colabfit_dataset
+                    )
+                else:
+                    logger.error(f"colabfit tools not installed.")
+                    raise DatasetError(
+                        f"You are trying to read configuration from colabfit dataset"
+                        " but colabfit-tools module is not installed."
+                        " Please do `pip install colabfit` first"
+                    )
+            else:
+                logger.error(
+                    f"colabfit database provided ({colabfit_database}) but not dataset."
+                )
+                raise DatasetError(f"No dataset ID given.")
 
         else:
             self.configs = []
 
-    def add_configs(self, path: Path, weight: Optional[Weight] = None):
+    def add_configs(
+        self,
+        path: Path,
+        weight: Optional[Weight] = None,
+        colabfit_database: str = None,
+        colabfit_dataset: str = None,
+        parser: str = None,
+        energy_key: str = None,
+        forces_key: str = "force",
+        slices: str = ":",
+    ):
         """
         Read configurations from filename and added them to the existing set of
         configurations.
@@ -341,9 +577,39 @@ class Dataset:
             path: Path the directory (or filename) storing the configurations.
             weight: an instance that computes the weight of the configuration in the loss
                 function.
+            colabfit_database:
+            colabfit_dataset:
+            parser:
+            energy_key:
+            forces_key:
+            slices:
         """
-
-        configs = self._read(path, weight, self.file_format)
+        if colabfit_database is not None:
+            if colabfit_installed:
+                try:
+                    colabfit_database = MongoDatabase(colabfit_database)
+                except:
+                    raise DatasetError(
+                        f"Could not connect to colabfit database {colabfit_database}."
+                    )
+                configs = self._read_colabfit(colabfit_database, colabfit_dataset)
+            else:
+                logger.error(f"colabfit tools not installed.")
+                raise DatasetError(
+                    f"You are trying to read configuration from colabfit dataset"
+                    " but colabfit-tools module is not installed."
+                    " Please do `pip install colabfit` first"
+                )
+        else:
+            configs = self._read(
+                path,
+                weight=weight,
+                file_format=self.file_format,
+                parser=parser,
+                energy_key=energy_key,
+                forces_key=forces_key,
+                slices=slices,
+            )
         self.configs.extend(configs)
 
     def get_configs(self) -> List[Configuration]:
@@ -359,7 +625,15 @@ class Dataset:
         return len(self.configs)
 
     @staticmethod
-    def _read(path: Path, weight: Optional[Weight] = None, file_format: str = "xyz"):
+    def _read(
+        path: Path,
+        weight: Optional[Weight] = None,
+        file_format: str = "xyz",
+        parser=None,
+        energy_key=None,
+        forces_key="force",
+        slices=":",
+    ):
         """
         Read atomic configurations from path.
         """
@@ -376,7 +650,7 @@ class Dataset:
         if path.is_dir():
             parent = path
             all_files = []
-            for root, dirs, files in os.walk(parent):
+            for root, dirs, files in os.walk(parent, followlinks=True):
                 for f in files:
                     if f.endswith(extension):
                         all_files.append(to_path(root).joinpath(f))
@@ -385,10 +659,37 @@ class Dataset:
             parent = path.parent
             all_files = [path]
 
-        configs = [
-            Configuration.from_file(f, copy.copy(weight), file_format)
-            for f in all_files
-        ]
+        if parser is None:
+            configs = [
+                Configuration.from_file(f, copy.copy(weight), file_format)
+                for f in all_files
+            ]
+        elif parser == "ase":
+            if len(all_files) == 1:  # single xyz file with multiple configs
+                all_configs = ase.io.read(all_files[0], index=slices)
+                configs = [
+                    Configuration.from_ase_atoms(
+                        config,
+                        weight=copy.copy(weight),
+                        energy_key=energy_key,
+                        forces_key=forces_key,
+                    )
+                    for config in all_configs
+                ]
+            else:
+                configs = [
+                    Configuration.from_ase_atoms(
+                        ase.io.read(f),
+                        weight=copy.copy(weight),
+                        energy_key=energy_key,
+                        forces_key=forces_key,
+                    )
+                    for f in all_files
+                ]
+        else:
+            DatasetError(
+                f"Parser {parser} not supported. Supported parsers are {SUPPORTED_PARSERS}"
+            )
 
         if len(configs) <= 0:
             raise DatasetError(
@@ -398,6 +699,51 @@ class Dataset:
         logger.info(f"{len(configs)} configurations read from {path}")
 
         return configs
+
+    @staticmethod
+    def _read_colabfit(database_client: "MongoDatabase", dataset_id: str):
+        """
+        Read atomic configurations from path.
+        """
+
+        # get configuration and property ID and send it to load configuration-first get Data Objects
+        dataset_dos = database_client.get_data(
+            "data_objects",
+            fields=["colabfit-id"],
+            query={"relationships.datasets": {"$in": [dataset_id]}},
+        )
+        if not dataset_dos:
+            logger.error(f"{dataset_id} is either empty or does not exist")
+            raise DatasetError(f"{dataset_id} is either empty or does not exist")
+
+        configs = []
+        for do in dataset_dos:
+            co_doc = database_client.configurations.find_one(
+                {"relationships.data_objects": {"$in": [do]}}
+            )
+            pi_doc = database_client.property_instances.find(
+                {"relationships.data_objects": {"$in": [do]}}
+            )
+            co_id = co_doc["colabfit-id"]
+            pi_ids = [i["colabfit-id"] for i in pi_doc]
+
+            configs.append(
+                Configuration.from_colabfit_dataobjects(database_client, co_id, pi_ids)
+            )
+            # TODO: reduce number of queries to database. Current: 4 per configuration
+
+        if len(configs) <= 0:
+            raise DatasetError(f"No dataset file with in {dataset_id} dataset.")
+
+        logger.info(f"{len(configs)} configurations read from {dataset_id}")
+
+        return configs
+
+    def __len__(self) -> int:
+        return len(self.configs)
+
+    def __getitem__(self, idx):
+        return self.configs[idx]
 
 
 class ConfigurationError(Exception):
