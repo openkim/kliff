@@ -12,9 +12,7 @@ from kliff.utils import to_path
 
 # For type checking
 if TYPE_CHECKING:
-    from colabfit.tools.configuration import (
-        Configuration as ColabfitConfiguration,
-    )
+    from colabfit.tools.configuration import Configuration as ColabfitConfiguration
     from colabfit.tools.database import MongoDatabase
 
 # check if colabfit-tools is installed
@@ -104,9 +102,7 @@ class Configuration:
         """
 
         if file_format == "xyz":
-            cell, species, coords, PBC, energy, forces, stress = read_extxyz(
-                filename
-            )
+            cell, species, coords, PBC, energy, forces, stress = read_extxyz(filename)
         else:
             raise ConfigurationError(
                 f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
@@ -498,9 +494,7 @@ class Configuration:
             self._forces = np.asarray(forces)
         else:
             species, coords = zip(
-                *sorted(
-                    zip(self.species, self.coords), key=lambda pair: pair[0]
-                )
+                *sorted(zip(self.species, self.coords), key=lambda pair: pair[0])
             )
             self._species = np.asarray(species)
             self._coords = np.asarray(coords)
@@ -514,6 +508,7 @@ class Configuration:
     ):
         """
         Returns colabfit-property. workaround till we get proper working get_property routine
+
         Args:
             database_client: Instance of connected MongoDatabase client, which can be used to
                 fetch database from colabfit-tools dataset.
@@ -522,8 +517,8 @@ class Configuration:
             property_name: subfield of the property to fetch
             property_type: type of property to fetch
 
-        Returns: fetched value, None if query comes empty
-
+        Returns:
+            Property: fetched value, None if query comes empty
         """
         pi_doc = database_client.property_instances.find_one(
             {"colabfit-id": {"$in": property_id}, "type": property_type}
@@ -578,7 +573,9 @@ class Dataset:
         return instance
 
     @staticmethod
-    def _read_from_colabfit(database_client, colabfit_dataset, weight) -> List[Configuration]:
+    def _read_from_colabfit(
+        database_client, colabfit_dataset, weight
+    ) -> List[Configuration]:
         """
         Read configurations from colabfit database.
 
@@ -599,12 +596,8 @@ class Dataset:
             query={"relationships.datasets": {"$in": [colabfit_dataset]}},
         )
         if not dataset_dos:
-            logger.error(
-                f"{colabfit_dataset} is either empty or does not exist"
-            )
-            raise DatasetError(
-                f"{colabfit_dataset} is either empty or does not exist"
-            )
+            logger.error(f"{colabfit_dataset} is either empty or does not exist")
+            raise DatasetError(f"{colabfit_dataset} is either empty or does not exist")
 
         configs = []
         for do in dataset_dos:
@@ -618,20 +611,14 @@ class Dataset:
             pi_ids = [i["colabfit-id"] for i in pi_doc]
 
             configs.append(
-                Configuration.from_colabfit(
-                    database_client, co_id, pi_ids, weight
-                )
+                Configuration.from_colabfit(database_client, co_id, pi_ids, weight)
             )
             # TODO: reduce number of queries to database. Current: 4 per configuration
 
         if len(configs) <= 0:
-            raise DatasetError(
-                f"No dataset file with in {colabfit_dataset} dataset."
-            )
+            raise DatasetError(f"No dataset file with in {colabfit_dataset} dataset.")
 
-        logger.info(
-            f"{len(configs)} configurations read from {colabfit_dataset}"
-        )
+        logger.info(f"{len(configs)} configurations read from {colabfit_dataset}")
 
         return configs
 
@@ -774,7 +761,7 @@ class Dataset:
         energy_key: str = "energy",
         forces_key: str = "forces",
         slices: str = ":",
-        file_format: str = "xyz"
+        file_format: str = "xyz",
     ) -> "Dataset":
         """
         Read configurations from ase.Atoms object and initialize a dataset. If the
@@ -941,6 +928,7 @@ class Dataset:
         """
         Get length of the dataset. It is needed to make dataset directly compatible
         with various dataloaders.
+
         Returns:
             Number of configurations in the dataset.
         """
@@ -949,8 +937,10 @@ class Dataset:
     def __getitem__(self, idx) -> Configuration:
         """
         Get the configuration at index `idx`.
+
         Args:
          idx: Index of the configuration to get.
+
         Returns:
             The configuration at index `idx`.
         """
