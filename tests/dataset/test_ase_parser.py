@@ -11,7 +11,7 @@ def test_ase_parser():
 
     # training set
     filename = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
-    data = Dataset(filename, parser="ase", energy_key="Energy", forces_key="force")
+    data = Dataset.from_ase(filename, energy_key="Energy", forces_key="force")
     configs = data.get_configs()
 
     # ASE is bit weird for stress. It expects stress to be a 3x3 matrix but returns a 6x1 vector
@@ -25,8 +25,8 @@ def test_ase_parser():
     assert configs[1].forces.shape == (8, 3)
 
     # test slicing, get config 1 and 4
-    data = Dataset(
-        filename, parser="ase", energy_key="Energy", forces_key="force", slices="::3"
+    data = Dataset.from_ase(
+        filename, energy_key="Energy", forces_key="force", slices="::3"
     )
     configs = data.get_configs()
     assert len(configs) == 2

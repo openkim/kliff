@@ -12,8 +12,9 @@ from kliff.utils import to_path
 
 # For type checking
 if TYPE_CHECKING:
-    from ase import Atoms
-    from colabfit.tools.configuration import Configuration as ColabfitConfiguration
+    from colabfit.tools.configuration import (
+        Configuration as ColabfitConfiguration,
+    )
     from colabfit.tools.database import MongoDatabase
 
 # check if colabfit-tools is installed
@@ -24,13 +25,7 @@ try:
 except ImportError:
     colabfit_installed = False
 
-# check is ase is installed
-try:
-    import ase.io
-
-    ase_installed = True
-except ImportError:
-    ase_installed = False
+import ase.io
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
@@ -73,9 +68,6 @@ class Configuration:
         stress: Optional[List[float]] = None,
         weight: Optional[Weight] = None,
         identifier: Optional[Union[str, Path]] = None,
-        database_client: Optional[Union["MongoDatabase"]] = None,
-        property_id: Optional[str] = None,
-        configuration_id: Optional[str] = None,
     ):
         self._cell = cell
         self._species = species
@@ -84,13 +76,12 @@ class Configuration:
         self._energy = energy
         self._forces = forces
         self._stress = stress
-        self.colabfit_dataclient = database_client
-        self.property_id = property_id
-        self.configuration_id = configuration_id
         self._fingerprint = None
 
         self._identifier = identifier
         self._path = None
+
+        self._metadata: dict = {}
 
         self._weight = Weight() if weight is None else weight
         self._weight.compute_weight(self)  # Compute the weight
@@ -113,7 +104,9 @@ class Configuration:
         """
 
         if file_format == "xyz":
-            cell, species, coords, PBC, energy, forces, stress = read_extxyz(filename)
+            cell, species, coords, PBC, energy, forces, stress = read_extxyz(
+                filename
+            )
         else:
             raise ConfigurationError(
                 f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
@@ -170,7 +163,7 @@ class Configuration:
             )
 
     @classmethod
-    def from_colabfit_dataobjects(
+    def from_colabfit(
         cls,
         database_client: "MongoDatabase",
         configuration_id: str,
@@ -182,13 +175,14 @@ class Configuration:
 
         Args:
             database_client: Instance of connected MongoDatabase client, which can be used to
-            fetch database from colabfit-tools dataset.
+                fetch database from colabfit-tools dataset.
             configuration_id: ID of the configuration instance to be collected from the collection
-            "configuration" in colabfit-tools.
+                "configuration" in colabfit-tools.
             property_ids: ID of the property instance to be associated with current configuration.
-            Usually properties would be trained against. Each associated property "field" will be
-            matched against provided list of aux_property_fields.
-             weight:
+                Usually properties would be trained against. Each associated property "field" will be
+                matched against provided list of aux_property_fields.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
         """
         try:
             fetched_configuration: "ColabfitConfiguration" = (
@@ -211,13 +205,13 @@ class Configuration:
         PBC = fetched_configuration.pbc
 
         # get energy, forces, stresses from the property ids
-        energy = Configuration._get_colabfit_property(
+        energy = cls._get_colabfit_property(
             database_client, property_ids, "energy", "potential-energy"
         )
-        forces = Configuration._get_colabfit_property(
+        forces = cls._get_colabfit_property(
             database_client, property_ids, "forces", "atomic-forces"
         )
-        stress = Configuration._get_colabfit_property(
+        stress = cls._get_colabfit_property(
             database_client, property_ids, "stress", "cauchy-stress"
         )
 
@@ -230,18 +224,20 @@ class Configuration:
             forces,
             stress,
             identifier=configuration_id,
-            database_client=database_client,
-            property_id=property_ids,
-            configuration_id=configuration_id,
             weight=weight,
         )
+        self.metadata = {
+            "database_client": database_client,
+            "property_id": property_ids,
+            "configuration_id": configuration_id,
+        }
 
         return self
 
     @classmethod
     def from_ase_atoms(
         cls,
-        atoms: "Atoms",
+        atoms: ase.Atoms,
         weight: Optional[Weight] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
@@ -253,8 +249,8 @@ class Configuration:
             atoms: ase.Atoms object.
             weight: an instance that computes the weight of the configuration in the loss
                 function.
-            forces_key:
-            energy_key:
+            energy_key: Name of the field in extxyz that stores the energy.
+            forces_key: Name of the field in extxyz that stores the forces.
         """
         cell = atoms.get_cell()
         species = atoms.get_chemical_symbols()
@@ -325,6 +321,11 @@ class Configuration:
 
     @energy.setter
     def energy(self, energy: Union[float, None]) -> None:
+        """
+        Set the energy of the configuration.
+        Args:
+            energy: Potential energy of the configuration.
+        """
         self._energy = energy
 
     @property
@@ -338,6 +339,11 @@ class Configuration:
 
     @forces.setter
     def forces(self, forces: np.ndarray):
+        """
+        Set the forces of the configuration.
+        Args:
+            forces: Numpy array containing the forces.
+        """
         self._forces = forces
 
     @property
@@ -351,6 +357,17 @@ class Configuration:
         if self._stress is None:
             raise ConfigurationError("Configuration does not contain stress.")
         return self._stress
+
+    @stress.setter
+    def stress(self, stress: Union[List[float], np.ndarray]):
+        """
+        Set the stress of the configuration. The stress is given in Voigt notation i.e
+        :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
+        \sigma_{xy}]`.
+        Args:
+            stress: List containing the stress.
+        """
+        self._stress = stress
 
     @property
     def weight(self):
@@ -383,13 +400,18 @@ class Configuration:
 
     @property
     def fingerprint(self):
+        """
+        Return the stored fingerprint of the configuration.
+        """
         return self._fingerprint
 
     @fingerprint.setter
     def fingerprint(self, fingerprint):
-        self._fingerprint = fingerprint
-
-    def set_fingerprint(self, fingerprint):
+        """
+        Set the fingerprint of the configuration.
+        Args:
+         fingerprint: Numpy array which is the fingerprint of the configuration.
+        """
         self._fingerprint = fingerprint
 
     @property
@@ -399,6 +421,20 @@ class Configuration:
         is not read from a file, return None.
         """
         return self._path
+
+    @property
+    def metadata(self) -> dict:
+        """
+        Return the metadata of the configuration.
+        """
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, metadata: dict):
+        """
+        Set the metadata of the configuration.
+        """
+        self._metadata = metadata
 
     def get_num_atoms(self) -> int:
         """
@@ -462,14 +498,16 @@ class Configuration:
             self._forces = np.asarray(forces)
         else:
             species, coords = zip(
-                *sorted(zip(self.species, self.coords), key=lambda pair: pair[0])
+                *sorted(
+                    zip(self.species, self.coords), key=lambda pair: pair[0]
+                )
             )
             self._species = np.asarray(species)
             self._coords = np.asarray(coords)
 
     @staticmethod
     def _get_colabfit_property(
-        database_client: Union["MongoDatabase"],
+        database_client: "MongoDatabase",
         property_id: Union[List[str], str],
         property_name: str,
         property_type: str,
@@ -477,6 +515,10 @@ class Configuration:
         """
         Returns colabfit-property. workaround till we get proper working get_property routine
         Args:
+            database_client: Instance of connected MongoDatabase client, which can be used to
+                fetch database from colabfit-tools dataset.
+            property_id: colabfit ID of the property instance to be associated with
+                current configuration.
             property_name: subfield of the property to fetch
             property_type: type of property to fetch
 
@@ -497,49 +539,128 @@ class Dataset:
     A dataset of multiple configurations (:class:`~kliff.dataset.Configuration`).
 
     Args:
-        path: Path of a file storing a configuration or filename to a directory containing
-            multiple files. If given a directory, all the files in this directory and its
-            subdirectories with the extension corresponding to the specified file_format
-            will be read.
-        weight: an instance that computes the weight of the configuration in the loss
-            function.
-        file_format: Format of the file that stores the configuration, e.g. `xyz`.
+        configurations: A list of :class:`~kliff.dataset.Configuration` objects.
     """
 
-    def __init__(
-        self,
-        path: Optional[Path] = None,
-        weight: Optional[Weight] = None,
-        file_format: str = "xyz",
-        colabfit_database: str = None,
-        colabfit_dataset: str = None,
-        parser: str = None,
-        energy_key: str = None,
-        forces_key: str = "force",
-        slices: str = ":",
-    ):
-        self.file_format = file_format
-
-        if path is not None:
-            self.configs = self._read(
-                path,
-                weight,
-                file_format,
-                parser=parser,
-                energy_key=energy_key,
-                forces_key=forces_key,
-                slices=slices,
+    def __init__(self, configurations: List[Configuration] = None):
+        if configurations is None:
+            self.configs = []
+        elif isinstance(
+            configurations, list
+        ):  # Check if each element is a Configuration object?
+            self.configs = configurations
+        else:
+            raise DatasetError(
+                "configurations must be a list of Configuration objects."
             )
 
-        elif colabfit_database is not None:
+    @classmethod
+    def from_colabfit(
+        cls,
+        colabfit_database: str = None,
+        colabfit_dataset: str = None,
+        weight: Optional[Weight] = None,
+    ) -> "Dataset":
+        """
+        Read configurations from colabfit database and initialize a dataset.
+
+        Args:
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+            colabfit_database: Name of the colabfit Mongo database to read from.
+            colabfit_dataset: Name of the colabfit dataset instance to read from.
+
+        Returns:
+            A dataset of configurations.
+        """
+        instance = cls()
+        instance.add_from_colabfit(colabfit_database, colabfit_dataset, weight)
+        return instance
+
+    @staticmethod
+    def _read_from_colabfit(database_client, colabfit_dataset, weight) -> List[Configuration]:
+        """
+        Read configurations from colabfit database.
+
+        Args:
+            database_client: Instance of connected MongoDatabase client, which can be used to
+                fetch database from colabfit-tools dataset.
+            colabfit_dataset: Name of the colabfit dataset instance to read from.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+
+        Returns:
+            A list of configurations.
+        """
+        # get configuration and property ID and send it to load configuration-first get Data Objects
+        dataset_dos = database_client.get_data(
+            "data_objects",
+            fields=["colabfit-id"],
+            query={"relationships.datasets": {"$in": [colabfit_dataset]}},
+        )
+        if not dataset_dos:
+            logger.error(
+                f"{colabfit_dataset} is either empty or does not exist"
+            )
+            raise DatasetError(
+                f"{colabfit_dataset} is either empty or does not exist"
+            )
+
+        configs = []
+        for do in dataset_dos:
+            co_doc = database_client.configurations.find_one(
+                {"relationships.data_objects": {"$in": [do]}}
+            )
+            pi_doc = database_client.property_instances.find(
+                {"relationships.data_objects": {"$in": [do]}}
+            )
+            co_id = co_doc["colabfit-id"]
+            pi_ids = [i["colabfit-id"] for i in pi_doc]
+
+            configs.append(
+                Configuration.from_colabfit(
+                    database_client, co_id, pi_ids, weight
+                )
+            )
+            # TODO: reduce number of queries to database. Current: 4 per configuration
+
+        if len(configs) <= 0:
+            raise DatasetError(
+                f"No dataset file with in {colabfit_dataset} dataset."
+            )
+
+        logger.info(
+            f"{len(configs)} configurations read from {colabfit_dataset}"
+        )
+
+        return configs
+
+    def add_from_colabfit(
+        self,
+        colabfit_database: str = None,
+        colabfit_dataset: str = None,
+        weight: Optional[Weight] = None,
+    ):
+        """
+        Read configurations from colabfit database and add them to the dataset.
+
+        Args:
+            colabfit_database: Name of the colabfit Mongo database to read from.
+            colabfit_dataset: Name of the colabfit dataset instance to read from.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+
+        """
+        if colabfit_database is not None:
             if colabfit_dataset is not None:
                 # open link to the mongo
                 if colabfit_installed:
-                    self.mongo_client = MongoDatabase(colabfit_database)
-                    self.colabfit_dataset = colabfit_dataset
-                    self.configs = self._read_colabfit(
-                        self.mongo_client, colabfit_dataset
+                    mongo_client = MongoDatabase(colabfit_database)
+                    colabfit_dataset = colabfit_dataset
+                    configs = Dataset._read_from_colabfit(
+                        mongo_client, colabfit_dataset, weight
                     )
+                    self.configs.extend(configs)
                 else:
                     logger.error(f"colabfit tools not installed.")
                     raise DatasetError(
@@ -553,89 +674,45 @@ class Dataset:
                 )
                 raise DatasetError(f"No dataset ID given.")
 
-        else:
-            self.configs = []
-
-    def add_configs(
-        self,
-        path: Path,
+    @classmethod
+    def from_path(
+        cls,
+        path: Optional[Path] = None,
         weight: Optional[Weight] = None,
-        colabfit_database: str = None,
-        colabfit_dataset: str = None,
-        parser: str = None,
-        energy_key: str = None,
-        forces_key: str = "force",
-        slices: str = ":",
-    ):
+        file_format: str = "xyz",
+    ) -> "Dataset":
         """
-        Read configurations from filename and added them to the existing set of
-        configurations.
-        This is a convenience function to read configurations from different directory
-        on disk.
+        Read configurations from path and initialize a dataset using KLIFF's own parser.
 
         Args:
             path: Path the directory (or filename) storing the configurations.
             weight: an instance that computes the weight of the configuration in the loss
                 function.
-            colabfit_database:
-            colabfit_dataset:
-            parser:
-            energy_key:
-            forces_key:
-            slices:
-        """
-        if colabfit_database is not None:
-            if colabfit_installed:
-                try:
-                    colabfit_database = MongoDatabase(colabfit_database)
-                except:
-                    raise DatasetError(
-                        f"Could not connect to colabfit database {colabfit_database}."
-                    )
-                configs = self._read_colabfit(colabfit_database, colabfit_dataset)
-            else:
-                logger.error(f"colabfit tools not installed.")
-                raise DatasetError(
-                    f"You are trying to read configuration from colabfit dataset"
-                    " but colabfit-tools module is not installed."
-                    " Please do `pip install colabfit` first"
-                )
-        else:
-            configs = self._read(
-                path,
-                weight=weight,
-                file_format=self.file_format,
-                parser=parser,
-                energy_key=energy_key,
-                forces_key=forces_key,
-                slices=slices,
-            )
-        self.configs.extend(configs)
+            file_format: Format of the file that stores the configuration, e.g. `xyz`.
 
-    def get_configs(self) -> List[Configuration]:
+        Returns:
+            A dataset of configurations.
         """
-        Get the configurations.
-        """
-        return self.configs
-
-    def get_num_configs(self) -> int:
-        """
-        Return the number of configurations in the dataset.
-        """
-        return len(self.configs)
+        instance = cls()
+        instance.add_from_path(path, weight, file_format)
+        return instance
 
     @staticmethod
-    def _read(
-        path: Path,
-        weight: Optional[Weight] = None,
-        file_format: str = "xyz",
-        parser=None,
-        energy_key=None,
-        forces_key="force",
-        slices=":",
-    ):
+    def _read_from_path(
+        path: Path, weight: Optional[Weight] = None, file_format: str = "xyz"
+    ) -> List[Configuration]:
         """
-        Read atomic configurations from path.
+        Read configurations from path.
+
+        Args:
+            path: Path of the directory storing the configurations in individual files.
+                For single file with multiple configurations, use `_read_from_ase()` instead.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+            file_format: Format of the file that stores the configuration, e.g. `xyz`.
+
+        Returns:
+            A list of configurations.
         """
         try:
             extension = SUPPORTED_FORMAT[file_format]
@@ -659,12 +736,137 @@ class Dataset:
             parent = path.parent
             all_files = [path]
 
-        if parser is None:
+        configs = [
+            Configuration.from_file(f, copy.copy(weight), file_format)
+            for f in all_files
+        ]
+
+        if len(configs) <= 0:
+            raise DatasetError(
+                f"No dataset file with file format `{file_format}` found at {parent}."
+            )
+        return configs
+
+    def add_from_path(
+        self,
+        path: Path,
+        weight: Optional[Weight] = None,
+        file_format: str = "xyz",
+    ):
+        """
+        Read configurations from path and append them to dataset.
+
+        Args:
+            path: Path the directory (or filename) storing the configurations.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+            file_format: Format of the file that stores the configuration, e.g. `xyz`.
+        """
+        configs = self._read_from_path(path, weight, file_format)
+        self.configs.extend(configs)
+
+    @classmethod
+    def from_ase(
+        cls,
+        path: Path = None,
+        ase_atoms_list: List[ase.Atoms] = None,
+        weight: Optional[Weight] = None,
+        energy_key: str = "energy",
+        forces_key: str = "forces",
+        slices: str = ":",
+        file_format: str = "xyz"
+    ) -> "Dataset":
+        """
+        Read configurations from ase.Atoms object and initialize a dataset. If the
+        configurations are in a file, or a directory, it would use ~ase.io.read() to
+        read the configurations.
+
+        Args:
+            path: Path the directory (or filename) storing the configurations.
+            ase_atoms_list: A list of ase.Atoms objects.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+            energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
+            forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
+            slices: Slice of the configurations to read. It is used only when `path` is
+                a file.
+            file_format: Format of the file that stores the configuration, e.g. `xyz`.
+
+        Returns:
+            A dataset of configurations.
+        """
+        instance = cls()
+        instance.add_from_ase(
+            ase_atoms_list, path, weight, energy_key, forces_key, slices, file_format
+        )
+        return instance
+
+    @staticmethod
+    def _read_from_ase(
+        path: Path = None,
+        ase_atoms_list: List[ase.Atoms] = None,
+        weight: Optional[Weight] = None,
+        energy_key: str = "energy",
+        forces_key: str = "forces",
+        slices: str = ":",
+        file_format: str = "xyz",
+    ) -> List[Configuration]:
+        """
+        Read configurations from ase.Atoms object. If the configurations are in a file,
+        or a directory, it would use ~ase.io.read() to read the configurations.
+
+        Args:
+            path: Path the directory (or filename) storing the configurations.
+            ase_atoms_list: A list of ase.Atoms objects.
+            weight: an instance that computes the weight of the configuration in the loss
+                function.
+            energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
+            forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
+            slices: Slice of the configurations to read. It is used only when `path` is
+                a file.
+            file_format: Format of the file that stores the configuration, e.g. `xyz`.
+
+        Returns:
+            A list of configurations.
+        """
+        if ase_atoms_list is None and path is None:
+            raise DatasetError(
+                "Either list of ase.Atoms objects or a path must be provided."
+            )
+
+        if ase_atoms_list:
             configs = [
-                Configuration.from_file(f, copy.copy(weight), file_format)
-                for f in all_files
+                Configuration.from_ase_atoms(
+                    config,
+                    weight=copy.copy(weight),
+                    energy_key=energy_key,
+                    forces_key=forces_key,
+                )
+                for config in ase_atoms_list
             ]
-        elif parser == "ase":
+        else:
+            try:
+                extension = SUPPORTED_FORMAT[file_format]
+            except KeyError:
+                raise DatasetError(
+                    f"Expect data file_format to be one of {list(SUPPORTED_FORMAT.keys())}, "
+                    f"got: {file_format}."
+                )
+
+            path = to_path(path)
+
+            if path.is_dir():
+                parent = path
+                all_files = []
+                for root, dirs, files in os.walk(parent, followlinks=True):
+                    for f in files:
+                        if f.endswith(extension):
+                            all_files.append(to_path(root).joinpath(f))
+                all_files = sorted(all_files)
+            else:
+                parent = path.parent
+                all_files = [path]
+
             if len(all_files) == 1:  # single xyz file with multiple configs
                 all_configs = ase.io.read(all_files[0], index=slices)
                 configs = [
@@ -686,63 +888,72 @@ class Dataset:
                     )
                     for f in all_files
                 ]
-        else:
-            DatasetError(
-                f"Parser {parser} not supported. Supported parsers are {SUPPORTED_PARSERS}"
-            )
 
         if len(configs) <= 0:
             raise DatasetError(
                 f"No dataset file with file format `{file_format}` found at {parent}."
             )
 
-        logger.info(f"{len(configs)} configurations read from {path}")
-
+        logger.info(f"{len(configs)} configurations loaded using ASE.")
         return configs
 
-    @staticmethod
-    def _read_colabfit(database_client: "MongoDatabase", dataset_id: str):
+    def add_from_ase(
+        self,
+        path: Path = None,
+        ase_atoms_list: List[ase.Atoms] = None,
+        weight: Optional[Weight] = None,
+        energy_key: str = "energy",
+        forces_key: str = "forces",
+        slices: str = ":",
+        file_format: str = "xyz",
+    ):
         """
-        Read atomic configurations from path.
-        """
+        Read configurations from ase.Atoms object and append them to dataset.
 
-        # get configuration and property ID and send it to load configuration-first get Data Objects
-        dataset_dos = database_client.get_data(
-            "data_objects",
-            fields=["colabfit-id"],
-            query={"relationships.datasets": {"$in": [dataset_id]}},
+        Args:
+            path: Path the directory (or filename) storing the configurations.
+            ase_atoms_list: A list of ase.Atoms objects.
+            weight: an instance that computes the weight of the configuration in the loss
+            energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
+            forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
+            slices: Slice of the configurations to read. It is used only when `path` is
+                a file.
+            file_format: Format of the file that stores the configuration, e.g. `xyz`.
+        """
+        configs = self._read_from_ase(
+            ase_atoms_list, path, weight, energy_key, forces_key, slices
         )
-        if not dataset_dos:
-            logger.error(f"{dataset_id} is either empty or does not exist")
-            raise DatasetError(f"{dataset_id} is either empty or does not exist")
+        self.configs.extend(configs)
 
-        configs = []
-        for do in dataset_dos:
-            co_doc = database_client.configurations.find_one(
-                {"relationships.data_objects": {"$in": [do]}}
-            )
-            pi_doc = database_client.property_instances.find(
-                {"relationships.data_objects": {"$in": [do]}}
-            )
-            co_id = co_doc["colabfit-id"]
-            pi_ids = [i["colabfit-id"] for i in pi_doc]
+    def get_configs(self) -> List[Configuration]:
+        """
+        Get the configurations.
+        """
+        return self.configs
 
-            configs.append(
-                Configuration.from_colabfit_dataobjects(database_client, co_id, pi_ids)
-            )
-            # TODO: reduce number of queries to database. Current: 4 per configuration
-
-        if len(configs) <= 0:
-            raise DatasetError(f"No dataset file with in {dataset_id} dataset.")
-
-        logger.info(f"{len(configs)} configurations read from {dataset_id}")
-
-        return configs
-
-    def __len__(self) -> int:
+    def get_num_configs(self) -> int:
+        """
+        Return the number of configurations in the dataset.
+        """
         return len(self.configs)
 
-    def __getitem__(self, idx):
+    def __len__(self) -> int:
+        """
+        Get length of the dataset. It is needed to make dataset directly compatible
+        with various dataloaders.
+        Returns:
+            Number of configurations in the dataset.
+        """
+        return len(self.configs)
+
+    def __getitem__(self, idx) -> Configuration:
+        """
+        Get the configuration at index `idx`.
+        Args:
+         idx: Index of the configuration to get.
+        Returns:
+            The configuration at index `idx`.
+        """
         return self.configs[idx]
 
 

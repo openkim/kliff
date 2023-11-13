@@ -36,7 +36,7 @@ ref_forces = [
 
 def test_compute(test_data_dir):
     test_file_dir = test_data_dir.joinpath("configs/Si_4")
-    tset = Dataset(test_file_dir)
+    tset = Dataset.from_path(test_file_dir)
     configs = tset.get_configs()
 
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
