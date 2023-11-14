@@ -42,7 +42,7 @@ def calc(test_data_dir, N1, N2):
     )
 
     # training set
-    data = Dataset(test_data_dir / "configs" / "Si_4")
+    data = Dataset.from_path(test_data_dir / "configs" / "Si_4")
     configs = data.get_configs()
 
     # calculator

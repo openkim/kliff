@@ -35,7 +35,7 @@ model.set_opt_params(A=[["default"]])
 
 # training set
 path = Path(__file__).absolute().parents[1].joinpath("test_data/configs/Si_4")
-data = Dataset(path)
+data = Dataset.from_path(path)
 configs = data.get_configs()
 
 # calculator

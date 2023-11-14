@@ -38,7 +38,7 @@ def test_compute(test_data_dir):
     model = KIMModel(modelname)
 
     # training set
-    data = Dataset(test_data_dir / "configs/Si_4")
+    data = Dataset.from_path(test_data_dir / "configs/Si_4")
     configs = data.get_configs()
 
     # compute arguments
