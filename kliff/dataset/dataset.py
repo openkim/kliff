@@ -1,16 +1,16 @@
 import copy
 import os
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
-from collections.abc import Iterable
 
 import numpy as np
 from loguru import logger
+from monty.dev import requires
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
-from kliff.utils import to_path, stress_to_voigt
-from monty.dev import requires
+from kliff.utils import stress_to_voigt, to_path
 
 # For type checking
 if TYPE_CHECKING:
@@ -541,9 +541,7 @@ class Dataset:
     def __init__(self, configurations: Iterable = None):
         if configurations is None:
             self.configs = []
-        elif isinstance(
-            configurations, Iterable
-        ):
+        elif isinstance(configurations, Iterable):
             self.configs = list(configurations)
         else:
             raise DatasetError(
@@ -643,9 +641,7 @@ class Dataset:
         # open link to the mongo
         mongo_client = MongoDatabase(colabfit_database)
         colabfit_dataset = colabfit_dataset
-        configs = Dataset._read_from_colabfit(
-            mongo_client, colabfit_dataset, weight
-        )
+        configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, weight)
         self.configs.extend(configs)
 
     @classmethod
