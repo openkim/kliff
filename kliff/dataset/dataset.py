@@ -2,13 +2,15 @@ import copy
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from collections.abc import Iterable
 
 import numpy as np
 from loguru import logger
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
-from kliff.utils import to_path
+from kliff.utils import to_path, stress_to_voigt
+from monty.dev import requires
 
 # For type checking
 if TYPE_CHECKING:
@@ -18,10 +20,8 @@ if TYPE_CHECKING:
 # check if colabfit-tools is installed
 try:
     from colabfit.tools.database import MongoDatabase
-
-    colabfit_installed = True
 except ImportError:
-    colabfit_installed = False
+    MongoDatabase = None
 
 import ase.io
 
@@ -210,6 +210,7 @@ class Configuration:
         stress = cls._get_colabfit_property(
             database_client, property_ids, "stress", "cauchy-stress"
         )
+        stress = stress_to_voigt(stress)
 
         self = cls(
             cell,
@@ -537,23 +538,23 @@ class Dataset:
         configurations: A list of :class:`~kliff.dataset.Configuration` objects.
     """
 
-    def __init__(self, configurations: List[Configuration] = None):
+    def __init__(self, configurations: Iterable = None):
         if configurations is None:
             self.configs = []
         elif isinstance(
-            configurations, list
-        ):  # Check if each element is a Configuration object?
-            self.configs = configurations
+            configurations, Iterable
+        ):
+            self.configs = list(configurations)
         else:
             raise DatasetError(
-                "configurations must be a list of Configuration objects."
+                "configurations must be a iterable of Configuration objects."
             )
 
     @classmethod
     def from_colabfit(
         cls,
-        colabfit_database: str = None,
-        colabfit_dataset: str = None,
+        colabfit_database: str,
+        colabfit_dataset: str,
         weight: Optional[Weight] = None,
     ) -> "Dataset":
         """
@@ -622,10 +623,11 @@ class Dataset:
 
         return configs
 
+    @requires(MongoDatabase is not None, "colabfit-tools is not installed")
     def add_from_colabfit(
         self,
-        colabfit_database: str = None,
-        colabfit_dataset: str = None,
+        colabfit_database: str,
+        colabfit_dataset: str,
         weight: Optional[Weight] = None,
     ):
         """
@@ -638,33 +640,18 @@ class Dataset:
                 function.
 
         """
-        if colabfit_database is not None:
-            if colabfit_dataset is not None:
-                # open link to the mongo
-                if colabfit_installed:
-                    mongo_client = MongoDatabase(colabfit_database)
-                    colabfit_dataset = colabfit_dataset
-                    configs = Dataset._read_from_colabfit(
-                        mongo_client, colabfit_dataset, weight
-                    )
-                    self.configs.extend(configs)
-                else:
-                    logger.error(f"colabfit tools not installed.")
-                    raise DatasetError(
-                        f"You are trying to read configuration from colabfit dataset"
-                        " but colabfit-tools module is not installed."
-                        " Please do `pip install colabfit` first"
-                    )
-            else:
-                logger.error(
-                    f"colabfit database provided ({colabfit_database}) but not dataset."
-                )
-                raise DatasetError(f"No dataset ID given.")
+        # open link to the mongo
+        mongo_client = MongoDatabase(colabfit_database)
+        colabfit_dataset = colabfit_dataset
+        configs = Dataset._read_from_colabfit(
+            mongo_client, colabfit_dataset, weight
+        )
+        self.configs.extend(configs)
 
     @classmethod
     def from_path(
         cls,
-        path: Optional[Path] = None,
+        path: Union[Path, str],
         weight: Optional[Weight] = None,
         file_format: str = "xyz",
     ) -> "Dataset":
@@ -736,7 +723,7 @@ class Dataset:
 
     def add_from_path(
         self,
-        path: Path,
+        path: Union[Path, str],
         weight: Optional[Weight] = None,
         file_format: str = "xyz",
     ):
@@ -749,13 +736,15 @@ class Dataset:
                 function.
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
         """
+        if isinstance(path, str):
+            path = Path(path)
         configs = self._read_from_path(path, weight, file_format)
         self.configs.extend(configs)
 
     @classmethod
     def from_ase(
         cls,
-        path: Path = None,
+        path: Union[Path, str] = None,
         ase_atoms_list: List[ase.Atoms] = None,
         weight: Optional[Weight] = None,
         energy_key: str = "energy",
@@ -764,9 +753,19 @@ class Dataset:
         file_format: str = "xyz",
     ) -> "Dataset":
         """
-        Read configurations from ase.Atoms object and initialize a dataset. If the
-        configurations are in a file, or a directory, it would use ~ase.io.read() to
-        read the configurations.
+        Read configurations from ase.Atoms object and initialize a dataset. The expected
+        inputs are either a pre-initialized list of ase.Atoms, or a path from which
+        the dataset can be read from (usually an extxyz file). If the configurations
+        are in a file, or a directory, it would use ~ase.io.read() to read the
+        configurations. Therefore, it is expected that the file format is supported by
+        ASE.
+
+        Example:
+            >>> from ase.build import bulk
+            >>> from kliff.dataset import Dataset
+            >>> ase_configs = [bulk("Al"), bulk("Al", cubic=True)]
+            >>> dataset_from_list = Dataset.from_ase(ase_atoms_list=ase_configs)
+            >>> dataset_from_file = Dataset.from_ase(path="configs.xyz", energy_key="Energy")
 
         Args:
             path: Path the directory (or filename) storing the configurations.
@@ -878,7 +877,7 @@ class Dataset:
 
         if len(configs) <= 0:
             raise DatasetError(
-                f"No dataset file with file format `{file_format}` found at {parent}."
+                f"No dataset file with file format `{file_format}` found at {path}."
             )
 
         logger.info(f"{len(configs)} configurations loaded using ASE.")
@@ -886,7 +885,7 @@ class Dataset:
 
     def add_from_ase(
         self,
-        path: Path = None,
+        path: Union[Path, str] = None,
         ase_atoms_list: List[ase.Atoms] = None,
         weight: Optional[Weight] = None,
         energy_key: str = "energy",
@@ -895,7 +894,20 @@ class Dataset:
         file_format: str = "xyz",
     ):
         """
-        Read configurations from ase.Atoms object and append them to dataset.
+        Read configurations from ase.Atoms object and append to a dataset. The expected
+        inputs are either a pre-initialized list of ase.Atoms, or a path from which
+        the dataset can be read from (usually an extxyz file). If the configurations
+        are in a file, or a directory, it would use ~ase.io.read() to read the
+        configurations. Therefore, it is expected that the file format is supported by
+        ASE.
+
+        Example:
+            >>> from ase.build import bulk
+            >>> from kliff.dataset import Dataset
+            >>> ase_configs = [bulk("Al"), bulk("Al", cubic=True)]
+            >>> dataset = Dataset()
+            >>> dataset.add_from_ase(ase_atoms_list=ase_configs)
+            >>> dataset.add_from_ase(path="configs.xyz", energy_key="Energy")
 
         Args:
             path: Path the directory (or filename) storing the configurations.
@@ -907,6 +919,8 @@ class Dataset:
                 a file.
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
         """
+        if isinstance(path, str):
+            path = Path(path)
         configs = self._read_from_ase(
             ase_atoms_list, path, weight, energy_key, forces_key, slices
         )
@@ -914,15 +928,9 @@ class Dataset:
 
     def get_configs(self) -> List[Configuration]:
         """
-        Get the configurations.
+        Get shallow copy of the configurations.
         """
-        return self.configs
-
-    def get_num_configs(self) -> int:
-        """
-        Return the number of configurations in the dataset.
-        """
-        return len(self.configs)
+        return self.configs[:]
 
     def __len__(self) -> int:
         """
