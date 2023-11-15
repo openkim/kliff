@@ -106,7 +106,14 @@ setup(
     # This also prohibits the use of py3.10; most distribution channels (e.g. conda)
     # do not have numpy<1.20 support anymore.
     extras_require={
-        "test": ["pytest", "kimpy", "ptemcee", "emcee", "torch", "numpy<1.20"],
+        "test": [
+            "pytest",
+            "kimpy",
+            "emcee",
+            "git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
+            "torch",
+            "numpy",
+        ],
         "docs": [
             "sphinx",
             "furo",
