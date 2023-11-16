@@ -109,6 +109,7 @@ setup(
             "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
             "torch",
             "numpy",
+            "ase",
         ],
         "docs": [
             "sphinx",
