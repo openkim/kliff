@@ -110,7 +110,7 @@ setup(
             "pytest",
             "kimpy",
             "emcee",
-            "git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
+            "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
             "torch",
             "numpy",
         ],
