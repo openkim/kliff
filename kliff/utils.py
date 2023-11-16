@@ -166,3 +166,29 @@ def pickle_load(filename: Union[Path, str]):
         data = pickle.load(f)
 
     return data
+
+
+def stress_to_voigt(input_stress: np.ndarray) -> list:
+    """
+    Convert stress from 3x3 tensor notation to 6x1 Voigt notation.
+    :math:`\sigma_{ij} = [\sigma_{11}, \sigma_{22}, \sigma_{33}, \sigma_{23}, \sigma_{13}, \sigma_{12}]`
+
+    Args:
+        input_stress: Stress tensor in Voigt notation or tensor notation.
+
+    Returns:
+        stress: Stress tensor Voigt notation.
+    """
+    stress = [0.0] * 6
+    if input_stress.ndim == 2:
+        # tensor -> Voigt
+        stress[0] = input_stress[0, 0]
+        stress[1] = input_stress[1, 1]
+        stress[2] = input_stress[2, 2]
+        stress[3] = input_stress[0, 1]
+        stress[4] = input_stress[0, 2]
+        stress[5] = input_stress[1, 2]
+    else:
+        raise ValueError("input_stress must be a 2D array")
+
+    return stress

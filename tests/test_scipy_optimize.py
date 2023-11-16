@@ -21,7 +21,7 @@ def init(path):
     model.set_opt_params(sigma=[[2.0951, "fix"]])
     model.set_opt_params(gamma=[[1.5]])
 
-    tset = Dataset(path / "configs" / "Si_4")
+    tset = Dataset.from_path(path / "configs" / "Si_4")
     configs = tset.get_configs()
 
     calc = Calculator(model)

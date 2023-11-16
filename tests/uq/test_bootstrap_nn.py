@@ -41,7 +41,7 @@ model.add_layers(
 # training set
 FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
 path = FILE_DIR.parent.joinpath("test_data/configs/Si_4")
-data = Dataset(path)
+data = Dataset.from_path(path)
 configs = data.get_configs()
 
 # calculators

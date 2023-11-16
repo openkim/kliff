@@ -38,7 +38,7 @@ def test_magnitude_inverse_weight(test_data_dir):
 
     # Load the dataset and set the weight
     # We choose the following data set because it has energy, forces, and stress data
-    tset = Dataset(test_data_dir / "configs/Si.xyz", weight=weight)
+    tset = Dataset.from_path(test_data_dir / "configs/Si.xyz", weight=weight)
     configs = tset.get_configs()
 
     # Check if my implementation works. I do this by comparing it with my manual
