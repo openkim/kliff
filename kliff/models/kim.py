@@ -561,7 +561,7 @@ class KIMModel(Model):
             raise ValueError("Settings array is not properly formatted")
         # When model is operating with transformed parameters
         # input is expected in transformed space
-        param.copy_to_param_(supplied_value)
+        param.copy_to_param(supplied_value)
 
         # replace "inf" with np.inf
         if len(settings[0]) > 1:
@@ -708,6 +708,7 @@ class KIMModel(Model):
             compute_stress=compute_stress,
         )
         kim_ca_instance.compute(self.kim_model)
+
         return kim_ca_instance.results
 
 

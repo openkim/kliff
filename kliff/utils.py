@@ -192,3 +192,23 @@ def stress_to_voigt(input_stress: np.ndarray) -> list:
         raise ValueError("input_stress must be a 2D array")
 
     return stress
+
+def stress_to_tensor(input_stress: list) -> np.ndarray:
+    """
+    Convert stress from 6x1 Voigt notation to 3x3 tensor notation.
+
+    Args:
+        input_stress: Stress tensor in Voigt notation.
+
+    Returns:
+        stress: Stress tensor tensor notation.
+    """
+    stress = np.zeros((3, 3))
+    stress[0, 0] = input_stress[0]
+    stress[1, 1] = input_stress[1]
+    stress[2, 2] = input_stress[2]
+    stress[0, 1] = stress[1, 0] = input_stress[3]
+    stress[0, 2] = stress[0, 2] = input_stress[4]
+    stress[1, 2] = stress[2, 1] = input_stress[5]
+
+    return stress

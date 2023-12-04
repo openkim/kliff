@@ -240,7 +240,18 @@ class Model:
     def set_opt_params(self, **kwargs):
 
         keys = list(kwargs.keys())
-        self.set_params_mutable(keys)
+        optimizable_keys = []
+        for key in keys:
+            if len(kwargs[key][0]) == 2:
+                try:
+                    if kwargs[key][0][1] == "fix":
+                        continue
+                except IndexError:
+                    optimizable_keys.append(key)
+            else:
+                optimizable_keys.append(key)
+
+        self.set_params_mutable(optimizable_keys)
         for name, setting in kwargs.items():
             self.set_one_opt_param(name, setting)
 
@@ -258,7 +269,7 @@ class Model:
             raise ValueError("Settings array is not properly formatted")
         # When model is operating with transformed parameters
         # input is expected in transformed space
-        param.copy_to_param_(supplied_value)
+        param.copy_to_param(supplied_value)
 
     def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
@@ -294,7 +305,7 @@ class Model:
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:  # additional check
                 opt_param = np.append(
-                    opt_param, self.model_params[param_key].get_numpy_opt_array()
+                    opt_param, self.model_params[param_key].get_opt_numpy_array()
                 )
             else:
                 # This should not happen
@@ -314,7 +325,7 @@ class Model:
         i = 0
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:
-                self.model_params[param_key].copy_to_param_(params[i])
+                self.model_params[param_key].copy_to_param(params[i])
                 i += 1
             else:
                 raise AttributeError(
@@ -323,8 +334,12 @@ class Model:
 
     def get_opt_param_name_value_and_indices(
         self, index: int
-    ) -> Tuple[str, float, int, int]:
-        return self.opt_params.get_opt_param_name_value_and_indices(index)
+    ) -> Tuple[str, Union[float, np.ndarray], int]:
+    # ) -> Tuple[str, float, int, int]:
+        for param_key in self.mutable_param_list:
+            if self.model_params[param_key].is_mutable:
+                if index == self.model_params[param_key].index:
+                    return self.model_params[param_key].get_opt_param_name_value_and_indices()
 
     def get_formatted_param_bounds(self) -> Tuple[Tuple[int, int]]:
         """
@@ -361,14 +376,18 @@ class Model:
         Args:
             filename: Path where to store the model.
         """
+        opt_params = {}
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                opt_params[param_key] = self.model_params[param_key].as_dict()
         d = {
             "@module": self.__class__.__module__,
             "@class": self.__class__.__name__,
-            "opt_params": self.parameters()
+            "opt_params": opt_params
         }
         yaml_dump(d, filename)
 
-    def load(self, filename: Path = "trained_model.yaml"):
+    def load(self, filename: Path = "trained_  model.yaml"):
         """
         Load a model on disk into memory.
 
@@ -376,8 +395,8 @@ class Model:
             filename: Path where the model is stored.
         """
         d = yaml_load(filename)
-        self.opt_params = Parameter(d["opt_params"]["value"])
-        self.model_params = self.opt_params.model_params
+        for param in d["opt_params"]:
+            self.model_params[param].from_dict(d["opt_params"][param])
 
     def parameters(self):
         """

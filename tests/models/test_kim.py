@@ -1,9 +1,11 @@
+from copy import deepcopy
+
 import numpy as np
 import pytest
 
 from kliff.dataset import Dataset
 from kliff.models.kim import KIMComputeArguments, KIMModel
-from kliff.models.parameter_transform import LogParameterTransform
+from kliff.transforms.parameter_transforms import LogParameterTransform
 
 ref_energies = [-277.409737571, -275.597759276, -276.528342759, -275.482988187]
 
@@ -62,6 +64,24 @@ def test_compute(test_data_dir):
         assert np.allclose(forces, ref_forces[i])
 
 
+def test_functional_call(test_data_dir):
+    # model
+    modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
+    model = KIMModel(modelname)
+
+    # training set
+    data = Dataset.from_path(test_data_dir / "configs/Si_4")
+    configs = data.get_configs()
+
+    for i, conf in enumerate(configs):
+        output_dict = model(conf)
+        energy = output_dict["energy"]
+        forces = output_dict["forces"][:3]
+
+        assert energy == pytest.approx(ref_energies[i], 1e-6)
+        assert np.allclose(forces, ref_forces[i])
+
+
 def test_set_one_param():
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
     model = KIMModel(modelname)
@@ -70,11 +90,12 @@ def test_set_one_param():
     params = model.get_model_params()
 
     # keep the original copy
-    sigma = params["sigma"][0]
+    sigma = deepcopy(params["sigma"])
 
     model.set_one_opt_param(name="sigma", settings=[[sigma + 0.1]])
+    params = model.get_model_params()
 
-    assert params["sigma"][0] == sigma + 0.1
+    assert params["sigma"] == sigma + 0.1
 
     # internal kim params
     kim_params = model.get_kim_model_params()
@@ -108,8 +129,9 @@ def test_get_update_params():
 
     # parameters
     params = model.get_model_params()
-    sigma = params["sigma"][0]
-    A = params["A"][0]
+    print(params)
+    sigma = deepcopy(params["sigma"])
+    A = deepcopy(params["A"])
 
     # optimizing parameters
     # B will not be optimized, only providing initial guess
@@ -135,9 +157,7 @@ def test_get_update_params():
 
 def test_params_transform():
     modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-    model = KIMModel(
-        modelname, params_transform=LogParameterTransform(param_names=["sigma", "A"])
-    )
+    model = KIMModel(modelname)
 
     # reference values in KIM model
     sigma = 2.0951
@@ -145,25 +165,33 @@ def test_params_transform():
     B = 0.6022245584
 
     # Check forward transform (all in original space)
-    assert model.model_params["sigma"][0] == sigma
-    assert model.model_params["A"][0] == A
-    assert model.model_params["B"][0] == B
+    assert model.model_params["sigma"] == sigma
+    assert model.model_params["A"] == A
+    assert model.model_params["B"] == B
 
     # Transformed params in log space
     # No log for B since it is not asked to transform
-    assert model.model_params_transformed["sigma"][0] == np.log(sigma)
-    assert model.model_params_transformed["A"][0] == np.log(A)
-    assert model.model_params_transformed["B"][0] == B
+    transform = LogParameterTransform()
+    model.set_params_mutable(["sigma", "A", "B"])
+    params = model.parameters()
+    params["sigma"].add_transform(transform)
+    params["A"].add_transform(transform)
+    # none for B
+
+    assert params["sigma"] == np.log(sigma)
+    assert params["A"] == np.log(A)
+    assert params["B"] == B
 
     # optimizing parameters, provided in log space
     # B will not be optimized, only providing initial guess
     v1 = 2.0
     v2 = 3.0
     model.set_opt_params(sigma=[[v1]], B=[[B, "fix"]], A=[[v2]])
+    transformed_params = model.parameters()
 
-    assert model.model_params_transformed["sigma"][0] == v1
-    assert model.model_params_transformed["A"][0] == v2
-    assert model.model_params_transformed["B"][0] == B
+    assert params["sigma"] == v1
+    assert params["A"] == v2
+    assert params["B"] == B
 
     assert np.allclose(model.get_opt_params(), [v1, v2])
 
@@ -171,6 +199,6 @@ def test_params_transform():
 
     # Check inverse transform
     kim_params = model.get_kim_model_params()
-    assert kim_params["sigma"].value[0] == np.exp(v1)
-    assert kim_params["A"].value[0] == np.exp(v2)
-    assert kim_params["B"].value[0] == B
+    assert kim_params["sigma"] == np.exp(v1)
+    assert kim_params["A"] == np.exp(v2)
+    assert kim_params["B"] == B
