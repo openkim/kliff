@@ -1,10 +1,11 @@
 import warnings
+from collections import OrderedDict
 
 import numpy as np
 
-from collections import OrderedDict
 from kliff.models.parameter import Parameter, ParameterError
 from kliff.transforms.parameter_transforms import LogParameterTransform
+
 
 def test_parameter():
     # scalar
@@ -44,7 +45,6 @@ def test_parameter():
     p.add_bounds(np.array([[1.1, None], [5.5, None]]))
     assert p.bounds[0].tolist() == [1.1, None]
     assert p.bounds[1].tolist() == [5.5, None]
-
 
     # as dict and from dict
     # d = {

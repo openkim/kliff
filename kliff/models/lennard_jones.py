@@ -5,8 +5,8 @@ import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
-from kliff.transforms.parameter_transforms import ParameterTransform
 from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
+from kliff.transforms.parameter_transforms import ParameterTransform
 
 
 class LJComputeArguments(ComputeArguments):

@@ -3,12 +3,13 @@ import warnings
 from copy import deepcopy
 
 # from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 import numpy as np
 
 if TYPE_CHECKING:
     from kliff.transforms.parameter_transforms import ParameterTransform
+
 from loguru import logger
 
 
@@ -34,6 +35,7 @@ class Parameter(np.ndarray):
         parameter is optimized. If False, the parameter is not optimized.
 
     """
+
     name: str
     transform: "ParameterTransform"
     index: int
@@ -126,8 +128,8 @@ class Parameter(np.ndarray):
     def inverse_transform_(self):
         """Apply the inverse transform to the parameter.
 
-         Simply applies the function :kliff.transforms.ParameterTransform.inverse_transform()
-         in place, to the parameters."""
+        Simply applies the function :kliff.transforms.ParameterTransform.inverse_transform()
+        in place, to the parameters."""
         if not self._is_transformed:
             warnings.warn(f"Parameter {self.name} has not been transformed.")
             return
@@ -217,7 +219,7 @@ class Parameter(np.ndarray):
             np_arr = np_arr[self.opt_mask]
         return np_arr
 
-    def copy_at(self, index: Union[int,List[int]], arr: Union[int, float, np.ndarray]):
+    def copy_at(self, index: Union[int, List[int]], arr: Union[int, float, np.ndarray]):
         """Copy raw values at a particular index or indices.
 
         Args:
@@ -362,7 +364,9 @@ class Parameter(np.ndarray):
             state_dict = pickle.load(f)
         return cls.from_dict(state_dict)
 
-    def get_opt_param_name_value_and_indices(self) -> Tuple[str, Union[float,np.ndarray], int]:
+    def get_opt_param_name_value_and_indices(
+        self,
+    ) -> Tuple[str, Union[float, np.ndarray], int]:
         """Get the name, value, and indices of the optimizable parameters.
 
         Returns:

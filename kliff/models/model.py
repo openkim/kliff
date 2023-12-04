@@ -238,7 +238,6 @@ class Model:
         pass
 
     def set_opt_params(self, **kwargs):
-
         keys = list(kwargs.keys())
         optimizable_keys = []
         for key in keys:
@@ -335,11 +334,13 @@ class Model:
     def get_opt_param_name_value_and_indices(
         self, index: int
     ) -> Tuple[str, Union[float, np.ndarray], int]:
-    # ) -> Tuple[str, float, int, int]:
+        # ) -> Tuple[str, float, int, int]:
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:
                 if index == self.model_params[param_key].index:
-                    return self.model_params[param_key].get_opt_param_name_value_and_indices()
+                    return self.model_params[
+                        param_key
+                    ].get_opt_param_name_value_and_indices()
 
     def get_formatted_param_bounds(self) -> Tuple[Tuple[int, int]]:
         """
@@ -383,7 +384,7 @@ class Model:
         d = {
             "@module": self.__class__.__module__,
             "@class": self.__class__.__name__,
-            "opt_params": opt_params
+            "opt_params": opt_params,
         }
         yaml_dump(d, filename)
 

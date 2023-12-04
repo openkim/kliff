@@ -193,6 +193,7 @@ def stress_to_voigt(input_stress: np.ndarray) -> list:
 
     return stress
 
+
 def stress_to_tensor(input_stress: list) -> np.ndarray:
     """
     Convert stress from 6x1 Voigt notation to 3x3 tensor notation.

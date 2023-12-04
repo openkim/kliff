@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 
@@ -18,13 +18,19 @@ class ParameterTransform:
     def __init__(self, name):
         self.name = name
 
-    def transform(self, model_param: Union["Parameter", np.ndarray]) -> Union["Parameter", np.ndarray]:
+    def transform(
+        self, model_param: Union["Parameter", np.ndarray]
+    ) -> Union["Parameter", np.ndarray]:
         raise NotImplementedError
 
-    def inverse_transform(self, model_param: Union["Parameter", np.ndarray]) -> Union["Parameter", np.ndarray]:
+    def inverse_transform(
+        self, model_param: Union["Parameter", np.ndarray]
+    ) -> Union["Parameter", np.ndarray]:
         raise NotImplementedError
 
-    def __call__(self, model_param: Union["Parameter", np.ndarray]) -> Union["Parameter", np.ndarray]:
+    def __call__(
+        self, model_param: Union["Parameter", np.ndarray]
+    ) -> Union["Parameter", np.ndarray]:
         return self.transform(model_param)
 
 
@@ -40,13 +46,17 @@ class LogParameterTransform(ParameterTransform):
     def __init__(self):
         super().__init__("log")
 
-    def transform(self, model_params: Union["Parameter", np.ndarray]) -> Union["Parameter", np.ndarray]:
+    def transform(
+        self, model_params: Union["Parameter", np.ndarray]
+    ) -> Union["Parameter", np.ndarray]:
         return np.log(model_params)
 
     def inverse_transform(
-        self, model_params: Union["Parameter", np.ndarray]) -> Union["Parameter", np.ndarray]:
+        self, model_params: Union["Parameter", np.ndarray]
+    ) -> Union["Parameter", np.ndarray]:
         return np.exp(model_params)
 
-    def __call__(self, model_params: Union["Parameter", np.ndarray]) -> Union["Parameter", np.ndarray]:
+    def __call__(
+        self, model_params: Union["Parameter", np.ndarray]
+    ) -> Union["Parameter", np.ndarray]:
         return self.transform(model_params)
-
