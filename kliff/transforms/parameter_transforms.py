@@ -15,7 +15,7 @@ class ParameterTransform:
         - inverse
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
 
     def transform(
@@ -43,18 +43,19 @@ class LogParameterTransform(ParameterTransform):
             subset of all the parameters.
     """
 
-    def __init__(self):
+    def __init__(self, base: float = np.e):
         super().__init__("log")
+        self.base = base
 
     def transform(
         self, model_params: Union["Parameter", np.ndarray]
     ) -> Union["Parameter", np.ndarray]:
-        return np.log(model_params)
+        return np.log(model_params) / np.log(self.base)
 
     def inverse_transform(
         self, model_params: Union["Parameter", np.ndarray]
     ) -> Union["Parameter", np.ndarray]:
-        return np.exp(model_params)
+        return self.base ** model_params
 
     def __call__(
         self, model_params: Union["Parameter", np.ndarray]

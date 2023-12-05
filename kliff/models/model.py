@@ -207,11 +207,9 @@ class Model:
         self,
         filename: Union[Path, TextIO, None] = sys.stdout,
     ) -> str:
-        # if params_space == "original":
         params = self.model_params
         s = "#" + "=" * 80 + "\n"
         s += "# Available parameters to optimize.\n"
-        # s += f"# Parameters in `{params_space}` space.\n"
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
@@ -269,6 +267,7 @@ class Model:
         # When model is operating with transformed parameters
         # input is expected in transformed space
         param.copy_to_param(supplied_value)
+        self.influence_distance = self.init_influence_distance()
 
     def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
@@ -315,8 +314,8 @@ class Model:
 
     def update_model_params(self, params: np.ndarray):
         """
-        Copy and update the parameter from incoming params key. This method utilizes the
-        parameters internal function to transform/inverse transform the parameter.
+        Copy and update the parameter from incoming params array. This method utilizes the
+        parameters internal function to copy the parameter in a consistent manner.
 
         Args:
             params: numpy array with the shape of optimized parameter concatenated array.
@@ -324,8 +323,9 @@ class Model:
         i = 0
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:
-                self.model_params[param_key].copy_to_param(params[i])
-                i += 1
+                param_size = self.model_params[param_key].get_opt_numpy_array().shape[0]
+                self.model_params[param_key].copy_to_param(params[i: i + param_size])
+                i += param_size
             else:
                 raise AttributeError(
                     f"Parameter {param_key}, is not optimizable. Please report this error"
@@ -388,7 +388,7 @@ class Model:
         }
         yaml_dump(d, filename)
 
-    def load(self, filename: Path = "trained_  model.yaml"):
+    def load(self, filename: Path = "trained_model.yaml"):
         """
         Load a model on disk into memory.
 
@@ -399,7 +399,7 @@ class Model:
         for param in d["opt_params"]:
             self.model_params[param].from_dict(d["opt_params"][param])
 
-    def parameters(self):
+    def named_parameters(self):
         """
         Get a dict of parameters that are marked as mutable, and hence can be optimized.
         The parameter values are subjected to change as per the transformations applied.
@@ -413,6 +413,19 @@ class Model:
                 param_opt_dict[param_key] = self.model_params[param_key]
         return param_opt_dict
 
+    def parameters(self):
+        param_opt_list = []
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                param_opt_list.append(self.model_params[param_key])
+        return param_opt_list
+    #
+    # def parameters(self):
+    #     param_opt_list = []
+    #     for param_key in self.model_params:
+    #         if self.model_params[param_key].is_mutable:
+    #             yield self.model_params[param_key]
+    #
 
 class ModelError(Exception):
     def __init__(self, msg):

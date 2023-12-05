@@ -2,8 +2,7 @@ import pickle
 import warnings
 from copy import deepcopy
 
-# from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 import numpy as np
 
@@ -122,7 +121,8 @@ class Parameter(np.ndarray):
         else:
             if self.transform is not None:
                 for i in range(len(self)):
-                    self[i] = self.transform(self[i])
+                    transformed_array = self.transform(self[i])
+                    self[i] = transformed_array
             self._is_transformed = True
 
     def inverse_transform_(self):
@@ -135,8 +135,8 @@ class Parameter(np.ndarray):
             return
         else:
             if self.transform is not None:
-                for i in range(len(self)):
-                    self[i] = self.transform.inverse_transform(self[i])
+                inv_transformed_array = self.transform.inverse_transform(self)
+                self[:] = inv_transformed_array
             self._is_transformed = False
 
     def copy_to_param(self, arr: np.ndarray):
@@ -178,8 +178,7 @@ class Parameter(np.ndarray):
         Args:
             arr: Array to copy to self.
         """
-        # transform the array and ensure that the parameter is transformed
-        arr = self.transform(arr)
+        # ensure that the parameter is transformed
         if not self._is_transformed:
             self.transform_()
         self.copy_to_param(arr)
@@ -187,8 +186,8 @@ class Parameter(np.ndarray):
     def get_numpy_array(self) -> np.ndarray:
         """Get a numpy array of parameters in the original space.
 
-        This method should be uses for getting the numpy array of parameters where the ``Parameters`` class might not work.
-        Biggest example of it is passing to the optimizer as the optimizer might overwrite or destroy the parameters.
+        This method should be uses for getting the numpy array of parameters where the
+        ``Parameters`` class might not work.
 
         Returns:
             A numpy array of parameters in the original space.
@@ -204,7 +203,7 @@ class Parameter(np.ndarray):
         return np.asarray(self)
 
     def get_opt_numpy_array(self) -> np.ndarray:
-        """Get a masked numpy array of parameters in the default space.
+        """Get a masked numpy array of parameters in the transformed space.
 
         This method is similar to :get_numpy_array but additionally does apply the
         opt_mask, and returns the array. This ensures the correctness of the array for
