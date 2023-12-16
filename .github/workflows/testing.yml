@@ -73,7 +73,7 @@ jobs:
           environment-name: test-env
           cache-environment: true
           create-args: >-
-            python=3.10
+            python=${{ matrix.python-version }}
             kim-api=2.3.0
 
       - name: Install KIM model
