@@ -76,13 +76,19 @@ jobs:
             python=3.10
             kim-api=2.3.0
 
+      - name: Install KIM model
+        shell: bash -el {0}
+        run: |
+          kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
+
       - name: Install
+        shell: bash -el {0}
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[test]
-        shell: bash -el {0}
 
       - name: Run tests
-        run: |
-          pytest
         shell: bash -el {0}
+        run: |
+          cd tests
+          pytest
