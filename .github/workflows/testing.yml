@@ -78,9 +78,11 @@ jobs:
 
       - name: Install
         run: |
-          shell: bash -el {0}
           python -m pip install --upgrade pip
           python -m pip install .[test]
+        shell: bash -el {0}
 
       - name: Run tests
-        run: pytest
+        run: |
+          pytest
+        shell: bash -el {0}
