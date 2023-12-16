@@ -65,7 +65,7 @@ jobs:
       #          python-version: ${{ matrix.python-version }}
 
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up micromamba
         uses: mamba-org/setup-micromamba@v1.7.3
         with:
           # the create command looks like this:
@@ -74,10 +74,7 @@ jobs:
           cache-environment: true
           create-args: >-
             python=3.10
-
-      - name: Install dependencies
-        run: |
-          micromamba install -c conda-forge kim-api=2.3.0
+            kim-api=2.3.0
 
       - name: Install
         run: |
