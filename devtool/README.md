@@ -4,16 +4,18 @@
   and then `$ python update_version.py`
 
 - Format code
-   ```shell
-   $ mamba update -c conda-forge black
-   $ python format_sources.py
-   ````
 
-- Update `kliff/docs/source/changelog.rst`
+  ```shell
+  $ mamba update -c conda-forge black
+  $ python format_sources.py
+  ```
+
+- Update `CHANGELOG.md`
 
 - Update docs at `kliff/docs/source` as necessary
 
 - Generate docs by running `$ make html` in the `kliff/docs` directory
+
   - Note, check the generated tutorial notebooks -- sometimes sphinx-galley will
     not correctly capture the stdout and embed it in the file. In this case,
     delete hte .md5 file and return `make html`. (Also, do it one be one.)
