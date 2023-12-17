@@ -55,7 +55,7 @@ jobs:
           python -m pip install .[test]
 
           # TODO, here, we install ptemcee from Yonatan's fork. See setup.py for details.
-          python -m pip uninstall ptemcee
+          python -m pip uninstall --yes ptemcee
           python -m pip install git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0
 
       - name: Run tests
