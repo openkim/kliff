@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.4.2 (2023/12/17)
+
+- Fix installing ptemcee
+
 ## v0.4.2 (2023/12/16)
 
 ### Enhancements 🛠

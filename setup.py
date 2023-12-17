@@ -106,7 +106,13 @@ setup(
             "pytest",
             "kimpy",
             "emcee",
-            "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
+            "ptemcee",
+            # TODO: ptemcee is too old to be compatible with latest numpy, so Yonatan
+            #  forked it and fixed it (in the below link). However, the forked version
+            #  is not on PyPI, can PyPI does not accept use non PyPI package as
+            #  dependency.
+            #  Solution: create a new PyPI package for ptemcee.
+            # "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
             "torch",
             "numpy",
         ],
