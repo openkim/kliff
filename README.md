@@ -7,16 +7,14 @@
 
 ### Documentation at: <https://kliff.readthedocs.io>
 
-KLIFF is an interatomic potential fitting package that can be used to fit
-physics-motivated (PM) potentials, as well as machine learning potentials such
-as the neural network (NN) models.
+KLIFF is an interatomic potential fitting package that can be used to fit physics-motivated (PM) potentials, as well as machine learning potentials such as the neural network (NN) models.
 
 ## Installation
 
 ### Using conda
 
 ```sh
-conda intall -c conda-forge kliff
+conda intall -c conda-forge kim-api kimpy kliff
 ```
 
 ### Using pip
@@ -32,8 +30,7 @@ git clone https://github.com/openkim/kliff
 pip install ./kliff
 ```
 
-To train a KIM model, `kim-api` and `kimpy` are needed; to train a machine learning
-model, `PyTorch` is needed. For more information on installing these packages, see
+To train a KIM model, `kim-api` and `kimpy` are needed; to train a machine learning model, `PyTorch` is needed. For more information on installing these packages, see
 [Installation](https://kliff.readthedocs.io/en/latest/installation.html).
 
 ## A quick example to train a neural network potential
@@ -87,13 +84,11 @@ result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 model.write_kim_model()
 ```
 
-Detailed explanation and more tutorial examples can be found in the
-[documentation](https://kliff.readthedocs.io/en/latest/tutorials.html).
+Detailed explanation and more tutorial examples can be found in the [documentation](https://kliff.readthedocs.io/en/latest/tutorials.html).
 
 ## Why you want to use KLIFF (or not use it)
 
-- Interacting seamlessly with[ KIM](https://openkim.org), the fitted model can
-  be readily used in simulation codes such as LAMMPS and ASE via the `KIM API`
+- Interacting seamlessly with[ KIM](https://openkim.org), the fitted model can be readily used in simulation codes such as LAMMPS and ASE via the `KIM API`
 - Creating mixed PM and NN models
 - High level API, fitting with a few lines of codes
 - Low level API for creating complex NN models
