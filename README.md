@@ -11,10 +11,20 @@ KLIFF is an interatomic potential fitting package that can be used to fit physic
 
 ## Installation
 
+### Prerequisites
+
+KLIFF requires [kim-api](https://openkim.org/kim-api/) and [kimpy](https://github.com/openkim/kimpy) to be installed.
+The recommended way to install these packages is via [conda](https://docs.conda.io/en/latest/) (see below).
+Alternatively, they can be installed from source or via [pip](https://pip.pypa.io/en/stable/).
+See [Installation](https://kliff.readthedocs.io/en/latest/installation.html) for more information.
+
+In addition, [PyTorch](https://pytorch.org) is needed if you want to train machine learning models. See the official [PyTorch website](https://pytorch.org/get-started/locally/) for installation instructions.
+
 ### Using conda
 
 ```sh
-conda intall -c conda-forge kim-api kimpy kliff
+conda intall -c conda-forge kim-api kimpy
+conda install -c conda-forge kliff
 ```
 
 ### Using pip
@@ -29,9 +39,6 @@ pip install kliff
 git clone https://github.com/openkim/kliff
 pip install ./kliff
 ```
-
-To train a KIM model, `kim-api` and `kimpy` are needed; to train a machine learning model, `PyTorch` is needed. For more information on installing these packages, see
-[Installation](https://kliff.readthedocs.io/en/latest/installation.html).
 
 ## A quick example to train a neural network potential
 
