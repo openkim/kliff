@@ -23,5 +23,5 @@ def test_log_transform():
     assert np.allclose(params["b"], np.log(b_val))
 
     # inverse = transformer.inverse_transform(forward)
-    assert np.allclose(params["a"].get_numpy_array(), a_val)
-    assert np.allclose(params["b"].get_numpy_array(), b_val)
+    assert np.allclose(params["a"].get_numpy_array_model_space(), a_val)
+    assert np.allclose(params["b"].get_numpy_array_model_space(), b_val)

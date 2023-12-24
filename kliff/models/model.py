@@ -207,11 +207,9 @@ class Model:
         self,
         filename: Union[Path, TextIO, None] = sys.stdout,
     ) -> str:
-        # if params_space == "original":
         params = self.model_params
         s = "#" + "=" * 80 + "\n"
         s += "# Available parameters to optimize.\n"
-        # s += f"# Parameters in `{params_space}` space.\n"
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
@@ -219,7 +217,7 @@ class Model:
 
         for name, p in params.items():
             s += f"name: {name}\n"
-            s += f"value: {p.get_numpy_array()}\n"  # `.numpy()` converts any transform to original space
+            s += f"value: {p.get_numpy_array_model_space()}\n"  # `.numpy()` converts any transform to original space
             s += f"size: {len(p)}\n\n"
 
         if filename is not None:
@@ -257,28 +255,32 @@ class Model:
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         param = self.model_params[name]
         # check the val kind
-        supplied_value = settings[0][0]
-        if supplied_value == "default":
-            supplied_value = param.get_transformed_numpy_array()
-        elif isinstance(supplied_value, (int, float)):
-            supplied_value = np.array([supplied_value])
-        elif isinstance(supplied_value, Parameter):
-            supplied_value = supplied_value.get_transformed_numpy_array()
-        else:
-            raise ValueError("Settings array is not properly formatted")
+        param_old = param.get_numpy_array_param_space()
+        for i in range(param_old.shape[0]):
+            supplied_value = settings[i][0]
+            if supplied_value == "default":
+                param_old[i] = param.get_numpy_array_param_space()[i]
+            elif isinstance(supplied_value, (int, float)):
+                param_old[i] = supplied_value
+            elif isinstance(supplied_value, np.ndarray) or isinstance(
+                supplied_value, Parameter
+            ):
+                param_old[i] = supplied_value[0]
+            else:
+                raise ValueError("Settings array is not properly formatted")
         # When model is operating with transformed parameters
         # input is expected in transformed space
-        param.copy_to_param(supplied_value)
+        param.copy_from_param_space(param_old)
+        self.influence_distance = self.init_influence_distance()
 
     def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
         Echo the optimizing parameter to a file.
         """
         for param_key in self.model_params:
-            # print(param_key, param_val)
             if self.model_params[param_key].is_mutable:
                 print(
-                    f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array()}"
+                    f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array_model_space()}"
                 )
 
         # return self.opt_params.echo_opt_params(filename)
@@ -304,7 +306,8 @@ class Model:
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:  # additional check
                 opt_param = np.append(
-                    opt_param, self.model_params[param_key].get_opt_numpy_array()
+                    opt_param,
+                    self.model_params[param_key].get_opt_numpy_array_param_space(),
                 )
             else:
                 # This should not happen
@@ -315,8 +318,8 @@ class Model:
 
     def update_model_params(self, params: np.ndarray):
         """
-        Copy and update the parameter from incoming params key. This method utilizes the
-        parameters internal function to transform/inverse transform the parameter.
+        Copy and update the parameter from incoming params array. This method utilizes the
+        parameters internal function to copy the parameter in a consistent manner.
 
         Args:
             params: numpy array with the shape of optimized parameter concatenated array.
@@ -324,8 +327,15 @@ class Model:
         i = 0
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:
-                self.model_params[param_key].copy_to_param(params[i])
-                i += 1
+                param_size = (
+                    self.model_params[param_key]
+                    .get_opt_numpy_array_param_space()
+                    .shape[0]
+                )
+                self.model_params[param_key].copy_from_param_space(
+                    params[i : i + param_size]
+                )
+                i += param_size
             else:
                 raise AttributeError(
                     f"Parameter {param_key}, is not optimizable. Please report this error"
@@ -353,7 +363,7 @@ class Model:
         bounds = []
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:
-                bounds.extend(self.model_params[param_key].get_formatted_param_bounds())
+                bounds.extend(self.model_params[param_key].get_bounds_param_space())
         return tuple(bounds)
 
     def opt_params_has_bounds(self) -> bool:
@@ -388,7 +398,7 @@ class Model:
         }
         yaml_dump(d, filename)
 
-    def load(self, filename: Path = "trained_  model.yaml"):
+    def load(self, filename: Path = "trained_model.yaml"):
         """
         Load a model on disk into memory.
 
@@ -399,7 +409,7 @@ class Model:
         for param in d["opt_params"]:
             self.model_params[param].from_dict(d["opt_params"][param])
 
-    def parameters(self):
+    def named_parameters(self):
         """
         Get a dict of parameters that are marked as mutable, and hence can be optimized.
         The parameter values are subjected to change as per the transformations applied.
@@ -412,6 +422,32 @@ class Model:
             if self.model_params[param_key].is_mutable:
                 param_opt_dict[param_key] = self.model_params[param_key]
         return param_opt_dict
+
+    def parameters(self):
+        """
+        Get a list of parameters that are marked as mutable, and hence can be optimized.
+
+        Returns:
+            List of parameters (~kliff.models.parameters.Parameter)
+        """
+        param_opt_list = []
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                param_opt_list.append(self.model_params[param_key])
+        return param_opt_list
+
+    # def parameters(self):
+    #     """
+    #     Get an iterator of parameters that are marked as mutable, and hence can be optimized.
+    #
+    #     Returns:
+    #         Iterator of parameters (~kliff.models.parameters.Parameter)
+    #     """
+    #     param_opt_list = []
+    #     for param_key in self.model_params:
+    #         if self.model_params[param_key].is_mutable:
+    #             yield self.model_params[param_key]
+    #
 
 
 class ModelError(Exception):

@@ -108,8 +108,8 @@ def test_set_opt_params():
 
     # parameters
     params = model.get_model_params()
-    sigma = params["sigma"][0]
-    A = params["A"][0]
+    sigma = deepcopy(params["sigma"][0])
+    A = deepcopy(params["A"][0])
 
     model.set_opt_params(sigma=[[sigma + 0.1]], A=[[A + 0.1]])
 
@@ -129,7 +129,6 @@ def test_get_update_params():
 
     # parameters
     params = model.get_model_params()
-    print(params)
     sigma = deepcopy(params["sigma"])
     A = deepcopy(params["A"])
 
@@ -138,6 +137,7 @@ def test_get_update_params():
     model.set_opt_params(sigma=[["default"]], B=[["default", "fix"]], A=[["default"]])
 
     x0 = model.get_opt_params()
+
     assert x0[0] == sigma
     assert x0[1] == A
     assert len(x0) == 2
@@ -173,7 +173,7 @@ def test_params_transform():
     # No log for B since it is not asked to transform
     transform = LogParameterTransform()
     model.set_params_mutable(["sigma", "A", "B"])
-    params = model.parameters()
+    params = model.named_parameters()
     params["sigma"].add_transform(transform)
     params["A"].add_transform(transform)
     # none for B
@@ -187,7 +187,7 @@ def test_params_transform():
     v1 = 2.0
     v2 = 3.0
     model.set_opt_params(sigma=[[v1]], B=[[B, "fix"]], A=[[v2]])
-    transformed_params = model.parameters()
+    transformed_params = model.named_parameters()
 
     assert params["sigma"] == v1
     assert params["A"] == v2
@@ -199,6 +199,8 @@ def test_params_transform():
 
     # Check inverse transform
     kim_params = model.get_kim_model_params()
-    assert kim_params["sigma"] == np.exp(v1)
-    assert kim_params["A"] == np.exp(v2)
-    assert kim_params["B"] == B
+
+    # temp fix to avoid ufunc numpy errors
+    assert np.abs(kim_params["sigma"] - np.exp(v1)) < 1e-12
+    assert np.abs(kim_params["A"] - np.exp(v2)) < 1e-12
+    assert np.abs(kim_params["B"] - B) < 1e-12
