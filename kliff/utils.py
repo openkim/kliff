@@ -202,7 +202,7 @@ def stress_to_tensor(input_stress: list) -> np.ndarray:
         input_stress: Stress tensor in Voigt notation.
 
     Returns:
-        stress: Stress tensor tensor notation.
+        stress: Stress tensor notation.
     """
     stress = np.zeros((3, 3))
     stress[0, 0] = input_stress[0]

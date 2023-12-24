@@ -22,7 +22,9 @@ def test_parameter():
     except ParameterError:
         pass
 
-    p = Parameter(np.asarray([2.2, 3.3]), index=0)
+    p = Parameter(np.asarray([2.2, 3.3]), index=0, opt_mask=np.array([True, True]))
+    # without the opt mask there is nothing to report bounds on,
+    # as bounds is same shape as masked opt params
     assert np.allclose(p, [2.2, 3.3])
     # TODO: appropriate tests for fixed, lower_bound, upper_bound
     # assert p.fixed == [False, False]
@@ -42,7 +44,7 @@ def test_parameter():
     # p.set_fixed(0, True)
     # assert p.fixed == [True, False]
     # not sure if this is necessary
-    p.add_bounds(np.array([[1.1, None], [5.5, None]]))
+    p.add_bounds_model_space(np.array([[1.1, None], [5.5, None]]))
     assert p.bounds[0].tolist() == [1.1, None]
     assert p.bounds[1].tolist() == [5.5, None]
 
@@ -62,9 +64,8 @@ def test_parameter():
         "@class": p.__class__.__name__,
         "@value": [4.4, 3.3],  # internal container value for safekeeping state
         "name": None,
-        "transform": None,
+        "transform_function": None,
         "bounds": np.array([[1.1, None], [5.5, None]], dtype=object),
-        "is_mutable": False,
         "index": 0,
         "_is_transformed": False,
         "opt_mask": np.array([True, True]),

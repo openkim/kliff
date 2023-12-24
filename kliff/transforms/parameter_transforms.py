@@ -55,7 +55,7 @@ class LogParameterTransform(ParameterTransform):
     def inverse_transform(
         self, model_params: Union["Parameter", np.ndarray]
     ) -> Union["Parameter", np.ndarray]:
-        return self.base ** model_params
+        return self.base**model_params
 
     def __call__(
         self, model_params: Union["Parameter", np.ndarray]

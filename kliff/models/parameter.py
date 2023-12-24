@@ -1,7 +1,6 @@
 import pickle
 import warnings
 from copy import deepcopy
-
 from typing import TYPE_CHECKING, List, Tuple, Union
 
 import numpy as np
@@ -15,42 +14,58 @@ from loguru import logger
 class Parameter(np.ndarray):
     """Parameter class for containing physics-based model parameters.
 
+    This class provides utilities for managing model parameters between the "model space"
+    and the "transformed space". See the glossary below for the definition of these spaces.
     Modeled on `torch.nn.Parameters`, it inherits from `numpy.ndarray`. It is a numpy
-    array with additional attributes such as name, transform, etc. Functions with "_"
-    suffix modifies the value that the parameter holds. For maintaining compatibility,
+    array with additional attributes such as name, transform, etc. For maintaining compatibility,
     use `get_numpy_array` (for getting a numpy array of parameters) and `get_opt_numpy_array`
-    (transformed numpy array but with only the optimizable values).
+    (transformed numpy array but with only the optimizable values). `get_numpy_array` array
+    also helps in getting an instance of the Parameter to mutate safely, and pass it  to
+    any impure function.
+
+    Glossary:
+        - Model space: The space in which the model expects the parameters to be in. Currently,
+            all models in OpenKIM expect the parameters to be in the affine cartesian space.
+        - Parameter space: Parameter space is the space in which you want to sample/optimize
+            the parameters. Most often parameters are transformed using bijective transformations
+            of the model inputs for ease of optimization/sampling. For example, the log
+            transform is used in searching for the optimal parameters of sloppy model parameters.
+            There can be cases where transformation functions are not bijective, e.g. ceiling function for
+            mapping continuous parameters to discrete values. Parameter space is mostly
+            used for optimization, and not the model itself. If no transform_function is
+            provided then parameter space and model space are same.
+
+        All functions that needs input/output in the model space, will use the suffix
+        `_model_space` and `_param_space` for the transformed parameter space.
 
     Attributes:
-    name : Name of the parameter.
-    transform : Instance of  ``ParameterTransform`` object to be applied to the parameter.
-    index : Index of the parameter in the parameter vector. used for setting the parameter
-        in the KIMPY.
-    bounds : Bounds for the parameter, must be numpy array of shape n x 2, with [n,0] as
+        name : Name of the parameter.
+        transform : Instance of  ``ParameterTransform`` object to be applied to the parameter.
+        index : Index of the parameter in the parameter vector. used for setting the parameter
+            in the KIMPY.
+        bounds : Bounds for the parameter, must be numpy array of shape n x 2, with [n,0] as
         lower bound, and [n,1] as the upper bound. If None, no bounds are applied.
-    is_trainable : If True, the parameter is trainable, and will be passed to scipy optimizer.
-        If False, the parameter is not trainable, and kept constant.
-    opt_mask : A boolean array of the same shape as the parameter. If True, the
-        parameter is optimized. If False, the parameter is not optimized.
-
+        opt_mask : A boolean or boolean array of the same shape as the parameter. For a
+            vector parameter ``opt_mask`` acts as a binary miask to determine which vector
+            components will be optimized, e.g. for a parameter with value [1., 2., 3.],
+            and opt_mask [True, False, True], only the first and third components will be
+            optimized, and second one will be presumed constant.
     """
 
     name: str
-    transform: "ParameterTransform"
+    transform_function: "ParameterTransform"
     index: int
     _is_transformed: bool
     bounds: np.ndarray
-    is_mutable: bool
-    opt_mask: np.ndarray
+    opt_mask: Union[np.ndarray, bool]
     _bounds_transformed: bool
 
     def __new__(
         cls,
         input_array: Union[np.ndarray, float, int],
         name: str = None,
-        transform: "ParameterTransform" = None,
+        transform_function: "ParameterTransform" = None,
         bounds: np.ndarray = None,
-        is_mutable: bool = False,
         index: int = None,
         opt_mask: np.ndarray = None,
     ):
@@ -59,11 +74,9 @@ class Parameter(np.ndarray):
         Args:
             input_array: Input numpy array to initialize the parameter with.
             name: Name of the parameter
-            transform: Instance of  ``ParameterTransform`` object to be applied to the parameter.
+            transform_function: Instance of  ``ParameterTransform`` object to be applied to the parameter.
             bounds: n x 2 array of lower and upper bounds for the parameter. If None, no
                 bounds are applied
-            is_mutable: boolean if the parameter is mutable. This implies that either
-                the parameter will be passed to the scipy optimizer, or the parameter values will be edited.
             index: Index of the parameter in the parameter vector. Used for setting the
              parameter in the KIMPY.
             opt_mask: Boolean array of the same shape as the parameter. The values
@@ -75,15 +88,14 @@ class Parameter(np.ndarray):
         array_in = deepcopy(np.asarray(input_array))
         obj = array_in.view(cls)
         obj.name = name
-        obj.transform = transform
+        obj.transform_function = transform_function
         obj.index = index
         obj._is_transformed = False
         obj.bounds = bounds
-        obj.is_mutable = is_mutable
         if opt_mask is not None:
             obj.opt_mask = opt_mask
         else:
-            obj.opt_mask = np.ones(obj.shape, dtype=bool)
+            obj.opt_mask = np.zeros(obj.shape, dtype=bool)
         obj._bounds_transformed = False
         return obj
 
@@ -94,9 +106,8 @@ class Parameter(np.ndarray):
         if obj is None:
             return
         self.name = getattr(obj, "name", None)
-        self.transform = getattr(obj, "transform", None)
+        self.transform_function = getattr(obj, "transform_function", None)
         self.bounds = getattr(obj, "bounds", None)
-        self.is_mutable = getattr(obj, "is_mutable", False)
         self.index = getattr(obj, "index", None)
         self._is_transformed = getattr(obj, "_is_transformed", False)
         self.opt_mask = getattr(obj, "opt_mask", None)
@@ -105,13 +116,11 @@ class Parameter(np.ndarray):
     def __repr__(self):
         return f"Parameter {self.name} {np.ndarray.__repr__(self)}."
 
-    def transform_(self):
+    def transform(self):
         """Apply the transform to the parameter.
 
         This method simple applies the function ~:kliff.transforms.ParameterTransform.__call__
         to the parameter (or equivalently, ~:kliff.transforms.ParameterTransform.transform).
-        Difference between :transform_ and :transform is that :transform_ does inplace
-        transformation, while :transform returns a new transformed parameter.
         """
         if self._is_transformed:
             # warnings.warn("Parameter {0} has already been transformed.".format(self.name))
@@ -119,13 +128,13 @@ class Parameter(np.ndarray):
             # TODO: figure out a better solution for this.
             return
         else:
-            if self.transform is not None:
+            if self.transform_function is not None:
                 for i in range(len(self)):
-                    transformed_array = self.transform(self[i])
+                    transformed_array = self.transform_function(self[i])
                     self[i] = transformed_array
             self._is_transformed = True
 
-    def inverse_transform_(self):
+    def inverse_transform(self):
         """Apply the inverse transform to the parameter.
 
         Simply applies the function :kliff.transforms.ParameterTransform.inverse_transform()
@@ -134,19 +143,19 @@ class Parameter(np.ndarray):
             warnings.warn(f"Parameter {self.name} has not been transformed.")
             return
         else:
-            if self.transform is not None:
-                inv_transformed_array = self.transform.inverse_transform(self)
+            if self.transform_function is not None:
+                inv_transformed_array = self.transform_function.inverse_transform(self)
                 self[:] = inv_transformed_array
             self._is_transformed = False
 
-    def copy_to_param(self, arr: np.ndarray):
-        """Copy array to self in the current space.
+    def copy_from_param_space(self, arr: np.ndarray):
+        """Copy array to self in the parameter space.
 
         Array can be a numpy array or a Parameter object.
         This method assumes that the array is of the same type and shape as self,
         compensated for opt_mask. If not, it will raise an error.
-        This method also assumes that the incoming array is in the same space,
-        transformed or otherwise, as the parameter.
+        This method also assumes that the incoming array is in the same space, as the parameter
+        currently (i.e. "Parameter space", see glossary above for detail).
 
         Args:
             arr: Array to copy to self.
@@ -168,58 +177,63 @@ class Parameter(np.ndarray):
             arr = np.array(arr).astype(self.dtype)
         self[:] = arr
 
-    def transform_and_copy_to_param(self, arr: np.array):
-        """Copy arr to transformed self.
+    def copy_from_model_space(self, arr: np.array):
+        """Copy arr from model space.
 
         Array can be a numpy array or a Parameter object. This method assumes that the
-        incoming array is in the transformed space. If the Parameter is not transformed,
-        this method will transform it first.
+        incoming array is in the model space and would need transformation to the parameter
+        space before copying. It is a safer method to use in most cases. If the parameter
+        is not transformed, it will transform it first for maintaining consistency.
 
         Args:
             arr: Array to copy to self.
         """
         # ensure that the parameter is transformed
         if not self._is_transformed:
-            self.transform_()
-        self.copy_to_param(arr)
+            self.transform()
+        self.copy_from_param_space(self.transform_function(arr))
 
-    def get_numpy_array(self) -> np.ndarray:
-        """Get a numpy array of parameters in the original space.
+    def get_numpy_array_model_space(self) -> np.ndarray:
+        """Get a numpy array of parameters in the model space.
 
         This method should be uses for getting the numpy array of parameters where the
-        ``Parameters`` class might not work.
+        ``Parameters`` class might not work, for feeding values to the model.
 
         Returns:
             A numpy array of parameters in the original space.
         """
-        if (self.transform is not None) and self._is_transformed:
-            return self.transform.inverse_transform(self)
+        if (self.transform_function is not None) and self._is_transformed:
+            return self.transform_function.inverse_transform(self)
         else:
             return np.asarray(self)
 
-    def get_transformed_numpy_array(self):
+    def get_numpy_array_param_space(self):
         """Applies the transform to the parameter, and returns the transformed array."""
-        self.transform_()
+        self.transform()
         return np.asarray(self)
 
-    def get_opt_numpy_array(self) -> np.ndarray:
+    def get_opt_numpy_array_param_space(self) -> np.ndarray:
         """Get a masked numpy array of parameters in the transformed space.
 
-        This method is similar to :get_numpy_array but additionally does apply the
+        This method is similar to :get_numpy_array_param_space but additionally does apply the
         opt_mask, and returns the array. This ensures the correctness of the array for
-        optimization/other applications. This should be the de-facto method for getting
-        the numpy array of parameters.
+        optimization/other applications. *This should be the de-facto method for getting
+        the numpy array of parameters.*
 
         Returns:
             A numpy array of parameters in the original space.
         """
-        np_arr = self.get_transformed_numpy_array()  # in transformed space
+        np_arr = self.get_numpy_array_param_space()  # in transformed space
         if self.opt_mask is not None:
             np_arr = np_arr[self.opt_mask]
         return np_arr
 
-    def copy_at(self, index: Union[int, List[int]], arr: Union[int, float, np.ndarray]):
-        """Copy raw values at a particular index or indices.
+    def copy_at_param_space(
+        self, arr: Union[int, float, np.ndarray], index: Union[int, List[int]]
+    ):
+        """Copy values at a particular index or indices in parameter space.
+
+        This method directly copies the provided data, and does not perform any checks.
 
         Args:
             index: Index or indices to copy the values at.
@@ -238,30 +252,34 @@ class Parameter(np.ndarray):
         Args:
             transform: Instance of  ``ParameterTransform`` object to be applied to the parameter.
         """
-        self.transform = transform
-        self.transform_()
+        self.transform_function = transform
+        self.transform()
         self._is_transformed = True
         if self.bounds is not None and not self._bounds_transformed:
-            self.bounds = self.transform(self.bounds)
+            self.bounds = self.transform_function(self.bounds)
 
-    def add_bounds(self, bounds: np.ndarray):
+    def add_bounds_model_space(self, bounds: np.ndarray):
         """Add bounds to the parameter.
-        Must be in original space. The bounds will be transformed if the parameter is transformed.
+
+        Bounds should be supplied in the model space. The bounds will be transformed if
+        the transform_function is provided to the parameter.
 
         Args:
             bounds: numpy array of shape (n, 2)
         """
         if bounds.shape[1] != 2:
             raise ParameterError("Bounds must have shape (n, 2).")
-        if self.transform is not None:
-            self.bounds = self.transform(bounds)
+        if self.transform_function is not None:
+            self.bounds = self.transform_function(bounds)
             self._bounds_transformed = True
         else:
             self.bounds = bounds
 
-    def add_transformed_bounds(self, bounds: np.ndarray):
-        """
-        Add bounds to the parameter. Must be in transformed space. Does not do any additional checks.
+    def add_bounds_param_space(self, bounds: np.ndarray):
+        """Add bounds to the parameter.
+
+        Add bounds to the parameter in parameter space. It does not do any additional checks
+        or perform any transformations.
 
         Args:
             bounds: numpy array of shape (n, 2)
@@ -274,8 +292,9 @@ class Parameter(np.ndarray):
     def add_opt_mask(self, mask: np.ndarray):
         """Set mask for optimizing vector quantities.
 
-        It expects an input array of shape (n,), where n is the dimension of the vector quantity to be optimized.
-        This array must contain n booleans indicating which properties to optimize.
+        It expects an input array of shape (n,), where n is the dimension of the vector
+        quantity to be optimized. This array must contain n booleans indicating which
+        properties to optimize.
 
         Args:
             mask: boolean array of same shape as the vector quantity to be optimized
@@ -284,13 +303,13 @@ class Parameter(np.ndarray):
             raise ParameterError("Mask must have shape {0}.".format(self.shape))
         self.opt_mask = mask
 
-    def get_formatted_param_bounds(self) -> List[Tuple[int, int]]:
+    def get_bounds_param_space(self) -> List[Tuple[int, int]]:
         """Returns bounds array that is used by scipy optimizer.
 
         Returns:
             A list of tuples of the form (lower_bound, upper_bound)
         """
-        arr = self.get_opt_numpy_array()
+        arr = self.get_opt_numpy_array_param_space()
         bounds = []
         if self.bounds is not None:
             if (self.bounds.shape[0] == arr.shape[0]) and (self.bounds.shape[1] == 2):
@@ -302,7 +321,15 @@ class Parameter(np.ndarray):
             bounds = [(None, None) for i in range(arr.shape[0])]
         return bounds
 
-    def has_opt_params_bounds(self) -> bool:
+    def get_bounds_model_space(self) -> np.ndarray:
+        """Get the bounds in the original space.
+
+        Returns:
+            A numpy array of bounds in the original space.
+        """
+        return self.transform_function.inverse_transform(self.bounds)
+
+    def has_bounds(self) -> bool:
         """Check if bounds are set for optimizing quantities
 
         Returns:
@@ -310,19 +337,11 @@ class Parameter(np.ndarray):
         """
         return self.bounds is not None
 
-    def get_inverse_bounds(self) -> np.ndarray:
-        """Get the bounds in the original space.
-
-        Returns:
-            A numpy array of bounds in the original space.
-        """
-        return self.transform.inverse_transform(self.bounds)
-
     def as_dict(self):
         """Return a dictionary containing the state of the object."""
         state_dict = self.__dict__.copy()
         # Original dict will not have values
-        state_dict["@value"] = self.get_numpy_array().tolist()
+        state_dict["@value"] = self.get_numpy_array_model_space()
         state_dict["@module"] = self.__class__.__module__
         state_dict["@class"] = self.__class__.__name__
         return state_dict
@@ -336,6 +355,7 @@ class Parameter(np.ndarray):
     @classmethod
     def from_dict(cls, state_dict):
         """Update the object's attributes based on the provided state dictionary.
+
         Args:
             state_dict (dict): The dictionary containing the state of the object.
                                This dictionary should include the "value" key.
@@ -371,19 +391,40 @@ class Parameter(np.ndarray):
         Returns:
             A tuple of lists of names, values, and indices of the optimizable parameters.
         """
-        return self.name, self.get_numpy_array(), self.index
+        return self.name, self.get_numpy_array_model_space(), self.index
 
     @property
     def lower_bound(self):
-        """Get the lower bounds of the parameter."""
-        bounds = self.get_formatted_param_bounds()
+        """Get the lower bounds of the parameter.
+
+        Always returns values in parameter space.
+
+        Returns:
+            A numpy array of lower bounds.
+        """
+        bounds = self.get_bounds_param_space()
         return np.array([b[0] for b in bounds])
 
     @property
     def upper_bound(self):
-        """Get the upper bounds of the parameter."""
-        bounds = self.get_formatted_param_bounds()
+        """Get the upper bounds of the parameter.
+
+        Always returns values in parameter space.
+
+        Returns:
+            A numpy array of upper bounds.
+        """
+        bounds = self.get_bounds_param_space()
         return np.array([b[1] for b in bounds])
+
+    @property
+    def is_mutable(self):
+        """Check if the parameter is mutable.
+
+        Returns:
+            True if the parameter is mutable, False otherwise.
+        """
+        return np.any(self.opt_mask)
 
 
 class ParameterError(Exception):

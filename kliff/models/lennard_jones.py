@@ -193,9 +193,9 @@ class LennardJones(Model):
         n = self._get_num_params()
 
         model_params = {
-            "epsilon": Parameter(np.ones(n)),
-            "sigma": Parameter(2 * np.ones(n)),
-            "cutoff": Parameter(5 * np.ones(n)),
+            "epsilon": Parameter(np.ones(n), opt_mask=np.array([True, True, True])),
+            "sigma": Parameter(2 * np.ones(n), opt_mask=np.array([True, True, True])),
+            "cutoff": Parameter(5 * np.ones(n), opt_mask=np.array([True, True, True])),
         }
 
         return model_params

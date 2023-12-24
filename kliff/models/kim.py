@@ -524,7 +524,9 @@ class KIMModel(Model):
             model.set_params_mutable(["A", "B", "sigma"])
         """
         for param in list_of_params:
-            self.model_params[param].is_mutable = True
+            self.model_params[param].opt_mask = np.ones_like(
+                self.model_params[param], dtype=bool
+            )
         self.mutable_param_list = list_of_params
         # reset influence distance in case it changes
         self.init_influence_distance()
@@ -552,16 +554,16 @@ class KIMModel(Model):
         # check the val kind
         supplied_value = settings[0][0]
         if supplied_value == "default":
-            supplied_value = param.get_transformed_numpy_array()
+            supplied_value = param.get_numpy_array_model_space()
         elif isinstance(supplied_value, (int, float)):
             supplied_value = np.array([supplied_value])
         elif isinstance(supplied_value, Parameter):
-            supplied_value = supplied_value.get_transformed_numpy_array()
+            supplied_value = supplied_value.get_numpy_array_model_space()
         else:
             raise ValueError("Settings array is not properly formatted")
         # When model is operating with transformed parameters
         # input is expected in transformed space
-        param.copy_to_param(supplied_value)
+        param.copy_from_param_space(supplied_value)
 
         # replace "inf" with np.inf
         if len(settings[0]) > 1:
@@ -575,11 +577,11 @@ class KIMModel(Model):
                 raise ValueError("Settings array is not properly formatted")
             if bounds:
                 bounds = np.array([bounds])
-                param.add_bounds(bounds)
+                param.add_bounds_param_space(bounds)
 
         # update kim internal model param (note, set_one will update model_params)
         p_idx = param.index
-        value_arr = param.get_numpy_array()
+        value_arr = param.get_numpy_array_model_space()
         # This is now not needed as with Matlab 0D array == scalar
         # That check is performed above
         # if type(value_arr) != np.ndarray:
@@ -587,7 +589,9 @@ class KIMModel(Model):
 
         for c_idx, v in enumerate(value_arr):
             try:
-                self.kim_model.set_parameter(p_idx, c_idx, v)
+                # Update the parameter in both kimpy model and model list
+                self.kim_model.set_parameter(p_idx, c_idx, supplied_value[c_idx])
+                self.model_params[name][c_idx] = supplied_value[c_idx]
             except RuntimeError:
                 raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
@@ -596,7 +600,7 @@ class KIMModel(Model):
         except RuntimeError:
             raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
-        # reset influence distance in case it changes
+        # reset influence distance in case it changes and get latest parameters
         self.init_influence_distance()
 
     def update_model_params(
@@ -614,7 +618,7 @@ class KIMModel(Model):
             p_idx = param.index
             # Note: only use `get_numpy_array` here, as model
             # always uses non-transformed values
-            for c_idx, v in enumerate(param.get_numpy_array()):
+            for c_idx, v in enumerate(param.get_numpy_array_model_space()):
                 try:
                     self.kim_model.set_parameter(p_idx, c_idx, v)
                 except RuntimeError:
