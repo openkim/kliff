@@ -7,8 +7,8 @@ Installation
 
 KLIFF can be installed via package managers (conda or pip) or from source.
 
-Conda
------
+Installing KLIFF
+================
 This recommended way to install KLIFF is via conda. You can install it by:
 
 .. code-block:: bash
