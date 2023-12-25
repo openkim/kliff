@@ -1,0 +1,7 @@
+sphinx
+furo
+sphinx-gallery
+sphinx-autodoc-typehints
+matplotlib
+myst-nb
+sphinx-copybutton

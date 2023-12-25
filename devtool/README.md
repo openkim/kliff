@@ -14,6 +14,8 @@
 
 - Update docs at `kliff/docs/source` as necessary
 
+- In docs, run `$ generate_api_docs.py` to generate API docs
+
 - Generate docs by running `$ make html` in the `kliff/docs` directory
 
   - Note, check the generated tutorial notebooks -- sometimes sphinx-galley will
