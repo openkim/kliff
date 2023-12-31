@@ -89,7 +89,9 @@ class ConfigurationTransformationTypes(Enum):
         elif input_str.lower() == "neighbors" or input_str.lower() == "none":
             return ConfigurationTransformationTypes.NEIGHBORS
         else:
-            raise TrainerError(f"Configuration transformation type {input_str} not supported.")
+            raise TrainerError(
+                f"Configuration transformation type {input_str} not supported."
+            )
 
     @staticmethod
     def get_config_transformation_config(input_type):
@@ -98,7 +100,10 @@ class ConfigurationTransformationTypes(Enum):
         elif input_type == ConfigurationTransformationTypes.DESCRIPTORS:
             return "DESCRIPTORS"
         else:
-            raise TrainerError(f"Configuration transformation type {input_type} not supported.")
+            raise TrainerError(
+                f"Configuration transformation type {input_type} not supported."
+            )
+
 
 class OptimizerProvider(Enum):
     TORCH = 0

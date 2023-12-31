@@ -221,8 +221,10 @@ class Model:
             s += f"size: {len(p)}\n\n"
 
         s += "#" + "=" * 80 + "\n"
-        s += "# Following parameters have transformation objects attached, \n" \
-             "# Parameter value in PARAM SPACE: \n"
+        s += (
+            "# Following parameters have transformation objects attached, \n"
+            "# Parameter value in PARAM SPACE: \n"
+        )
         for name, p in params.items():
             if p.transform_function is not None:
                 s += f"name: {name}\n"
@@ -252,7 +254,9 @@ class Model:
             model.set_params_mutable(["A", "B", "sigma"])
         """
         for param in list_of_params:
-            self.model_params[param].add_opt_mask(np.ones_like(self.model_params[param], dtype=bool))
+            self.model_params[param].add_opt_mask(
+                np.ones_like(self.model_params[param], dtype=bool)
+            )
         self.mutable_param_list = list_of_params
 
     def set_opt_params(self, **kwargs):
@@ -265,7 +269,9 @@ class Model:
         # check the val kind
         opt_mask = np.zeros_like(param, dtype=bool)
         param_old = param.get_numpy_array_param_space()
-        bounds = np.array([[None, None]] * param_old.shape[0]) # for consistent boolean matching
+        bounds = np.array(
+            [[None, None]] * param_old.shape[0]
+        )  # for consistent boolean matching
 
         for i in range(param_old.shape[0]):
             supplied_value = settings[i][0]
@@ -327,7 +333,11 @@ class Model:
         i = 0
         for param_key in self.model_params:
             if self.model_params[param_key].is_mutable:
-                i += self.model_params[param_key].get_opt_numpy_array_param_space().shape[0]
+                i += (
+                    self.model_params[param_key]
+                    .get_opt_numpy_array_param_space()
+                    .shape[0]
+                )
         return i
 
     def get_opt_params(self) -> np.ndarray:
@@ -350,7 +360,9 @@ class Model:
                 )
         return opt_param
 
-    def update_model_params(self, params:  Union[np.ndarray, List[Union[float, int, Parameter]]]):
+    def update_model_params(
+        self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]
+    ):
         """
         Copy and update the parameter from incoming params array. This method utilizes the
         parameters internal function to copy the parameter in a consistent manner.
