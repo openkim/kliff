@@ -209,7 +209,7 @@ class Model:
     ) -> str:
         params = self.model_params
         s = "#" + "=" * 80 + "\n"
-        s += "# Available parameters to optimize.\n"
+        s += "# Available parameters to optimize (In MODEL SPACE).\n"
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
@@ -217,8 +217,19 @@ class Model:
 
         for name, p in params.items():
             s += f"name: {name}\n"
-            s += f"value: {p.get_numpy_array_model_space()}\n"  # `.numpy()` converts any transform to original space
+            s += f"value: {p.get_numpy_array_model_space()}\n"
             s += f"size: {len(p)}\n\n"
+
+        s += "#" + "=" * 80 + "\n"
+        s += "# Following parameters have transformation objects attached, \n" \
+             "# Parameter value in PARAM SPACE: \n"
+        for name, p in params.items():
+            if p.transform_function is not None:
+                s += f"name: {name}\n"
+                s += f"value: {p.get_numpy_array_param_space()}\n"
+                s += f"size: {len(p)}\n\n"
+
+        s += "#" + "=" * 80 + "\n"
 
         if filename is not None:
             if isinstance(filename, (str, Path)):
@@ -289,7 +300,6 @@ class Model:
         param.add_opt_mask(opt_mask)
         for i in range(param_old.shape[0]):
             param.copy_at_param_space(param_old[i], i)
-        # param.copy_from_param_space(param_old)
 
         # update mutable param list
         if name not in self.mutable_param_list and param.is_mutable:
@@ -317,7 +327,7 @@ class Model:
         i = 0
         for param_key in self.model_params:
             if self.model_params[param_key].is_mutable:
-                i += 1
+                i += self.model_params[param_key].get_opt_numpy_array_param_space().shape[0]
         return i
 
     def get_opt_params(self) -> np.ndarray:
@@ -375,6 +385,7 @@ class Model:
                     return self.model_params[
                         param_key
                     ].get_opt_param_name_value_and_indices()
+        raise ModelError(f"Index {index} not found in mutable parameters.")
 
     def get_formatted_param_bounds(self) -> Tuple[Tuple[int, int]]:
         """
