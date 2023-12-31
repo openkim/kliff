@@ -205,12 +205,12 @@ class Parameter(np.ndarray):
         if (self.transform_function is not None) and self._is_transformed:
             return self.transform_function.inverse_transform(self)
         else:
-            return np.asarray(self)
+            return np.array(self)
 
     def get_numpy_array_param_space(self):
         """Applies the transform to the parameter, and returns the transformed array."""
         self.transform()
-        return np.asarray(self)
+        return np.array(self)
 
     def get_opt_numpy_array_param_space(self) -> np.ndarray:
         """Get a masked numpy array of parameters in the transformed space.

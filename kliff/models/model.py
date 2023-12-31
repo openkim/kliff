@@ -232,30 +232,30 @@ class Model:
     def read_opt_params(self, filename: Path):
         pass
 
-    def set_params_mutable(self, opt_params: List[str]):
-        pass
+    def set_params_mutable(self, list_of_params: List[str]):
+        """
+        Set all the optimizable parameters from list of names of parameters
+        Args:
+            list_of_params: List of string names of parameters
+        Example:
+            model.set_params_mutable(["A", "B", "sigma"])
+        """
+        for param in list_of_params:
+            self.model_params[param].add_opt_mask(np.ones_like(self.model_params[param], dtype=bool))
+        self.mutable_param_list = list_of_params
 
     def set_opt_params(self, **kwargs):
         keys = list(kwargs.keys())
-        optimizable_keys = []
-        for key in keys:
-            if len(kwargs[key][0]) == 2:
-                try:
-                    if kwargs[key][0][1] == "fix":
-                        continue
-                except IndexError:
-                    optimizable_keys.append(key)
-            else:
-                optimizable_keys.append(key)
-
-        self.set_params_mutable(optimizable_keys)
         for name, setting in kwargs.items():
             self.set_one_opt_param(name, setting)
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         param = self.model_params[name]
         # check the val kind
+        opt_mask = np.zeros_like(param, dtype=bool)
         param_old = param.get_numpy_array_param_space()
+        bounds = np.array([[None, None]] * param_old.shape[0]) # for consistent boolean matching
+
         for i in range(param_old.shape[0]):
             supplied_value = settings[i][0]
             if supplied_value == "default":
@@ -268,10 +268,34 @@ class Model:
                 param_old[i] = supplied_value[0]
             else:
                 raise ValueError("Settings array is not properly formatted")
+
+            # bounds
+            # replace "inf" with np.inf
+            if len(settings[i]) > 1:
+                if len(settings[i]) == 3:
+                    bounds[i] = [settings[i][1], settings[i][2]]
+                    opt_mask[i] = True
+                elif settings[i][1] == "fix":
+                    opt_mask[i] = False
+                else:
+                    raise ValueError("Supplied value is not properly formatted")
+            else:
+                opt_mask[i] = True
+
+        if (bounds != np.array([[None, None]] * param_old.shape[0])).all():
+            param.add_bounds_param_space(bounds)
         # When model is operating with transformed parameters
         # input is expected in transformed space
-        param.copy_from_param_space(param_old)
-        self.influence_distance = self.init_influence_distance()
+        param.add_opt_mask(opt_mask)
+        for i in range(param_old.shape[0]):
+            param.copy_at_param_space(param_old[i], i)
+        # param.copy_from_param_space(param_old)
+
+        # update mutable param list
+        if name not in self.mutable_param_list and param.is_mutable:
+            self.mutable_param_list.append(name)
+        if name in self.mutable_param_list and not param.is_mutable:
+            self.mutable_param_list.remove(name)
 
     def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
@@ -316,7 +340,7 @@ class Model:
                 )
         return opt_param
 
-    def update_model_params(self, params: np.ndarray):
+    def update_model_params(self, params:  Union[np.ndarray, List[Union[float, int, Parameter]]]):
         """
         Copy and update the parameter from incoming params array. This method utilizes the
         parameters internal function to copy the parameter in a consistent manner.
