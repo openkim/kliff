@@ -116,9 +116,6 @@ def test_lj(test_data_dir):
         cutoff=[[4.0, "fix"], [4.0, "fix"], [4.0, "fix"]],
     )
 
-    model.echo_model_params()
-    model.echo_opt_params()
-
     with warnings.catch_warnings():  # context manager to ignore warning
         warnings.simplefilter("ignore")
 

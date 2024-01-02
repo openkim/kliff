@@ -1,6 +1,7 @@
 import os
+from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 from loguru import logger
@@ -10,7 +11,6 @@ from kliff.error import report_import_error
 from kliff.log import get_log_level
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
-from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import assemble_forces, assemble_stress
 
 try:
@@ -372,33 +372,18 @@ class KIMModel(Model):
         model_name: name of a KIM model. Available models can be found at:
             https://openkim.org.
             For example `SW_StillingerWeber_1985_Si__MO_405512056662_006`.
-        params_transform: optional transformation of parameters. Let's call the
-            parameters initialized in `init_model_params()` as original parameter
-            space. Sometimes, it's easier to work in another parameter (e.g.
-            optimizers can perform better in the log space). Then we can use this
-            parameter transformation class to transform between the original
-            parameter space and the new easy-to-work space. Typically, a model only
-            knows how to work in its original space to compute, e.g. energy and
-            forces, so we need to inverse transform parameters back to original space
-            (after an optimizer update its value in the log space).
-            A `params_transform` instance should implement both a `transform` and an
-            `inverse_transform` method to accomplish the above tasks.
-            Note, all the parameters of this (the `Model`) class
-            (e.g. `self.model_params`, and `self.opt_params`) are in the transformed
-            easy-to-work space.
     """
 
     def __init__(
         self,
         model_name: str,
-        params_transform: Optional[ParameterTransform] = None,
     ):
         if not kimpy_avail:
             report_import_error("kimpy", self.__class__.__name__)
 
         self.kim_model = self._create_kim_model(model_name)
 
-        super(KIMModel, self).__init__(model_name, params_transform)
+        super(KIMModel, self).__init__(model_name)
 
     def init_model_params(self) -> Dict[str, Parameter]:
         return self.get_kim_model_params()
@@ -463,7 +448,7 @@ class KIMModel(Model):
             KIMModelError("requested units not accepted in kimpy.model.create")
         return model
 
-    def get_kim_model_params(self) -> Dict[str, Parameter]:
+    def get_kim_model_params(self):
         """
         Inquire the KIM model to get all the parameters.
 
@@ -477,7 +462,7 @@ class KIMModel(Model):
                 "Calling `kim_model.get_number_of_parameters()` failed."
             )
 
-        params = dict()
+        params = OrderedDict()
         for i in range(num_params):
             try:
                 (
@@ -514,8 +499,7 @@ class KIMModel(Model):
                 else:  # should never reach here
                     KIMModelError(f"get unexpected parameter data type `{dtype}`")
 
-            params[name] = Parameter(value=values, name=name, index=i)
-
+            params[name] = Parameter(np.asarray(values), name=name, index=i)
         return params
 
     def create_a_kim_compute_argument(self):
@@ -531,39 +515,15 @@ class KIMModel(Model):
 
         return kim_ca
 
-    def set_opt_params(self, **kwargs):
+    def set_params_mutable(self, list_of_params: List[str]):
         """
-        Set the parameters that will be optimized.
-
-        One or more parameters can be set. Each argument is for one parameter, where the
-        argument name is the parameter name, the value of the argument is the
-        settings(including initial value, fix flag, lower bound, and upper bound).
-
-        The value of the argument should be a list of list, where each inner list is for
-        one component of the parameter, which can contain 1, 2, or 3 elements.
-         See `~kliff.model.model.Model.read_opt_params()` for the options of the elements.
-
+        Set all the optimizable parameters from list of names of parameters
+        Args:
+            list_of_params: List of string names of parameters
         Example:
-           instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
+            model.set_params_mutable(["A", "B", "sigma"])
         """
-        self.opt_params.set(**kwargs)
-
-        # update kim internal model param (note, set_one will update model_params)
-        for name, _ in kwargs.items():
-            p_idx = self.model_params[name].index
-            for c_idx, v in enumerate(self.model_params[name].value):
-                try:
-                    self.kim_model.set_parameter(p_idx, c_idx, v)
-                except RuntimeError:
-                    raise kimpy.KimPyError(
-                        "Calling `kim_model.set_parameter()` failed."
-                    )
-
-        try:
-            self.kim_model.clear_then_refresh()
-        except RuntimeError:
-            raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
-
+        super().set_params_mutable(list_of_params)
         # reset influence distance in case it changes
         self.init_influence_distance()
 
@@ -576,21 +536,30 @@ class KIMModel(Model):
 
         Args:
             name: name of a fitting parameter
-            settings: initial value, flag to fix a parameter, lower and upper bounds of a
+            settings: List initial value, flag to fix a parameter, lower and upper bounds of a
                 parameter.
 
         Example:
-            name = 'param_A'
+            name = 'A'
             settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
             instance.set_one(name, settings)
         """
-        self.opt_params.set_one(name, settings)
+        super().set_one_opt_param(name, settings)
+        self.init_influence_distance()
 
+        param = self.model_params[name]
         # update kim internal model param (note, set_one will update model_params)
-        p_idx = self.model_params[name].index
-        for c_idx, v in enumerate(self.model_params[name].value):
+        p_idx = param.index
+        value_arr = param.get_numpy_array_param_space()
+        # This is now not needed as with Matlab 0D array == scalar
+        # That check is performed above
+        # if type(value_arr) != np.ndarray:
+        #     value_arr = np.array([value_arr]) # if float make it iterable
+
+        for c_idx, v in enumerate(value_arr):
             try:
-                self.kim_model.set_parameter(p_idx, c_idx, v)
+                # Update the parameter in both kimpy model and model list
+                self.kim_model.set_parameter(p_idx, c_idx, value_arr[c_idx])
             except RuntimeError:
                 raise kimpy.KimPyError("Calling `kim_model.set_parameter()` failed.")
 
@@ -599,10 +568,12 @@ class KIMModel(Model):
         except RuntimeError:
             raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
-        # reset influence distance in case it changes
+        # reset influence distance in case it changes and get latest parameters
         self.init_influence_distance()
 
-    def update_model_params(self, params: Sequence[float]):
+    def update_model_params(
+        self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]
+    ):
         """
         Update optimizing parameters (a sequence used by the optimizer) to the kim model.
         """
@@ -610,37 +581,17 @@ class KIMModel(Model):
         # update from opt params to model params
         super().update_model_params(params)
 
-        # only update optimizing params
-        if self.params_transform is None:
-            # update from model params to kim params
-            n = self.get_num_opt_params()
-            for i in range(n):
-                _, value, p_idx, c_idx = self.get_opt_param_name_value_and_indices(i)
+        # update from model params to kim params
+        for name, param in self.model_params.items():
+            p_idx = param.index
+            for c_idx, v in enumerate(param.get_numpy_array_model_space()):
                 try:
-                    self.kim_model.set_parameter(p_idx, c_idx, value)
+                    self.kim_model.set_parameter(p_idx, c_idx, v)
                 except RuntimeError:
                     raise kimpy.KimPyError(
                         "Calling `kim_model.set_parameter()` failed."
                     )
 
-        # When params_transform is set, a user can do whatever in it
-        # function, e.g. update a parameter that is not an optimizing parameter.
-        # In general, we do not know how parameters are modified in there,
-        # and therefore, we need to update all params in model_params to kim
-        # Note, `params_transform.inverse_transform()` is called in
-        # super().update_model_params(params)
-        else:
-            for name, params in self.model_params.items():
-                p_idx = params.index
-                for c_idx, value in enumerate(params.value):
-                    try:
-                        self.kim_model.set_parameter(p_idx, c_idx, value)
-                    except RuntimeError:
-                        raise kimpy.KimPyError(
-                            "Calling `kim_model.set_parameter()` failed."
-                        )
-
-        # refresh model
         self.kim_model.clear_then_refresh()
 
         if get_log_level() == "DEBUG":
@@ -690,6 +641,45 @@ class KIMModel(Model):
         self.kim_model.write_parameterized_model(path, model_name)
 
         logger.info(f"KLIFF trained model write to `{path}`")
+
+    def __call__(
+        self,
+        configuration: "Configuration",
+        compute_energy: bool = True,
+        compute_forces: bool = True,
+        compute_stress: bool = False,
+    ):
+        """
+        Functional wrapper for the KIM models, this provides KIM models ability to be
+        used as in similar API as torch model. Expects a ~kliff.dataset.Configuration
+        object as input and returns energy, forces, and stress as requested. Key contains
+        value None for fields for which computation is not requested.
+
+        Args:
+            configuration: atomic configuration
+            compute_energy: whether to compute energy
+            compute_forces: whether to compute the forces
+            compute_stress: whether to compute the stress
+
+        Returns:
+            Dictionary containing "energy", "forces", and "stress" keys
+        """
+        supported_species = self.get_supported_species()
+        influence_dist = self.get_influence_distance()
+        # create a new kim_ca to avoid overwriting existing context.
+        kim_ca = self.create_a_kim_compute_argument()
+        kim_ca_instance = KIMComputeArguments(
+            kim_ca=kim_ca,
+            config=configuration,
+            supported_species=supported_species,
+            influence_distance=influence_dist,
+            compute_energy=compute_energy,
+            compute_forces=compute_forces,
+            compute_stress=compute_stress,
+        )
+        kim_ca_instance.compute(self.kim_model)
+
+        return kim_ca_instance.results
 
 
 class KIMModelError(Exception):

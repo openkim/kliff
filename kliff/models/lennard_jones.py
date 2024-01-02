@@ -5,8 +5,8 @@ import numpy as np
 from kliff.dataset.dataset import Configuration
 from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
-from kliff.models.parameter_transform import ParameterTransform
 from kliff.neighbor import NeighborList, assemble_forces, assemble_stress
+from kliff.transforms.parameter_transforms import ParameterTransform
 
 
 class LJComputeArguments(ComputeArguments):
@@ -184,19 +184,18 @@ class LennardJones(Model):
         self,
         model_name: str = "LJ6-12",
         species: List[str] = None,
-        params_transform: Optional[ParameterTransform] = None,
     ):
         self.species = species
 
-        super(LennardJones, self).__init__(model_name, params_transform)
+        super(LennardJones, self).__init__(model_name)
 
     def init_model_params(self):
         n = self._get_num_params()
 
         model_params = {
-            "epsilon": Parameter(value=[1.0 for _ in range(n)]),
-            "sigma": Parameter(value=[2.0 for _ in range(n)]),
-            "cutoff": Parameter(value=[5.0 for _ in range(n)]),
+            "epsilon": Parameter(np.ones(n)),
+            "sigma": Parameter(2 * np.ones(n)),
+            "cutoff": Parameter(5 * np.ones(n)),
         }
 
         return model_params
