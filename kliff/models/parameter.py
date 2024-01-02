@@ -80,7 +80,7 @@ class Parameter(np.ndarray):
         transform_function: "ParameterTransform" = None,
         bounds: np.ndarray = None,
         index: int = None,
-        opt_mask: np.ndarray = None,
+        opt_mask: [np.ndarray, bool] = None,
     ):
         """Initializes and returns a new instance of Parameter.
 
