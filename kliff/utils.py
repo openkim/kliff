@@ -30,6 +30,15 @@ def torch_available():
         return False
 
 
+def torch_geometric_available():
+    try:
+        import torch_geometric
+
+        return True
+    except ModuleNotFoundError:
+        return False
+
+
 def split_string(string: str, length=80, starter: str = None):
     r"""
     Insert `\n` into long string such that each line has size no more than `length`.

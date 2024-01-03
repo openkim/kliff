@@ -93,7 +93,9 @@ class Parameter(np.ndarray):
             index: Index of the parameter in the parameter vector. Used for setting the
              parameter in the KIMPY.
             opt_mask: Boolean array of the same shape as the parameter. The values
-                marked ``True`` are optimized, and ``False`` are not optimized.
+                marked ``True`` are optimized, and ``False`` are not optimized. Single
+                boolean value can also be provided, in which case it will be applied to
+                all the components of the parameter.
 
         Returns:
             A new instance of Parameter.
