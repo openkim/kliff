@@ -11,6 +11,7 @@ class ConfigurationTransform:
     or checks on the fingerprint is not imposed. For example, current configuration transforms
     include graph representations of the configuration,and descriptors.
     """
+
     def __init__(self, implicit_fingerprint_copying=False):
         self._implicit_fingerprint_copying = implicit_fingerprint_copying
 
@@ -80,4 +81,6 @@ class ConfigurationTransform:
             modelname: Name of the model to save.
         """
         raise NotImplementedError
+
+
 # TODO: should neighbor lists be a transform? It fits the definition as graph.

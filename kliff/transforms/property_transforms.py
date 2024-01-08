@@ -12,6 +12,7 @@ class PropertyTransform:
     transformed property. For example, current property transforms include normalization
     of the energy and forces.
     """
+
     def __int__(self):
         self.original_property_value_map = None
         self.property_key = "energy"

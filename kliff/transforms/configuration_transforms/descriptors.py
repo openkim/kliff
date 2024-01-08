@@ -8,7 +8,6 @@ from monty.dev import requires
 from kliff.dataset import Configuration
 from kliff.neighbor import NeighborList
 
-
 from .configuration_transform import ConfigurationTransform
 
 try:
@@ -174,13 +173,16 @@ class Descriptor(ConfigurationTransform):
             else:
                 weights = self.hyperparameters["weights"]
             input_args, width = initialize_bispectrum_functions(self.hyperparameters)
-            return lds.DescriptorKind.init_descriptor(
-                self.descriptor_kind,
-                *input_args,
-                cutoff_array,
-                self.species,
-                weights,
-            ), width
+            return (
+                lds.DescriptorKind.init_descriptor(
+                    self.descriptor_kind,
+                    *input_args,
+                    cutoff_array,
+                    self.species,
+                    weights,
+                ),
+                width,
+            )
 
         # SOAP
         # nothing to initialize here, just return the descriptor
@@ -193,15 +195,18 @@ class Descriptor(ConfigurationTransform):
                 * (self.hyperparameters["l_max"] + 1)
                 / 2
             )
-            return lds.DescriptorKind.init_descriptor(
-                self.descriptor_kind,
-                self.hyperparameters["n_max"],
-                self.hyperparameters["l_max"],
-                self.hyperparameters["cutoff"],
-                self.species,
-                self.hyperparameters["radial_basis"],
-                self.hyperparameters["eta"],
-            ), width
+            return (
+                lds.DescriptorKind.init_descriptor(
+                    self.descriptor_kind,
+                    self.hyperparameters["n_max"],
+                    self.hyperparameters["l_max"],
+                    self.hyperparameters["cutoff"],
+                    self.species,
+                    self.hyperparameters["radial_basis"],
+                    self.hyperparameters["eta"],
+                ),
+                width,
+            )
         else:
             raise DescriptorsError(
                 f"Descriptor kind: {self.descriptor_kind} not supported yet"

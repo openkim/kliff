@@ -260,6 +260,4 @@ def get_soap_size(nmax, lmax, n_species):
         lmax: Maximum angular momentum.
         n_species: Number of species.
     """
-    return int(
-        ((n_species + 1) * n_species) / 2 * (nmax * (nmax + 1)) * (lmax + 1) / 2
-    )
+    return int(((n_species + 1) * n_species) / 2 * (nmax * (nmax + 1)) * (lmax + 1) / 2)

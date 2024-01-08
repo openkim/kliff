@@ -27,6 +27,7 @@ class KLIFFTorchGraph(Data):
     will be automatically collated and batched.
 
     """
+
     def __init__(self):
         super(KLIFFTorchGraph, self).__init__()
         self.num_nodes = (

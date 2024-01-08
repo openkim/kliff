@@ -1,4 +1,4 @@
-# KIM-based Learning-Integrated Fitting Framework (KLIFF) version 1.0 
+# KIM-based Learning-Integrated Fitting Framework (KLIFF) version 1.0
 
 [//]: # ([![Build Status]&#40;https://travis-ci.com/openkim/kliff.svg?branch=master&#41;]&#40;https://travis-ci.com/openkim/kliff&#41;)
 
@@ -11,7 +11,7 @@
 [//]: # ([![PyPI]&#40;https://img.shields.io/pypi/v/kliff.svg&#41;]&#40;https://pypi.python.org/pypi/kliff&#41;)
 
 **This  branch contains the as-going development of KLIFF v1, which includes significant
-enhancements for ML models. Please note that this branch is in active development and is 
+enhancements for ML models. Please note that this branch is in active development and is
 not guaranteed to work at present**
 
 KLIFF is a framework to develop physics-based and machine learning interatomic potentials.
