@@ -7,6 +7,11 @@ from kliff.dataset import Configuration, Dataset
 
 
 class PropertyTransform:
+    """
+    A property transform is a function that maps a property of a configuration to a
+    transformed property. For example, current property transforms include normalization
+    of the energy and forces.
+    """
     def __int__(self):
         self.original_property_value_map = None
         self.property_key = "energy"

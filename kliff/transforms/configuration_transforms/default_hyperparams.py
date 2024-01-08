@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 
-def get_set51():
+def symmetry_functions_set51():
     r"""Hyperparameters for symmetry functions, as discussed in:
     Nongnuch Artrith and Jorg Behler. "High-dimensional neural network potentials for
     metal surfaces: A prototype study for copper." Physical Review B 85, no. 4 (2012):
@@ -74,7 +74,7 @@ def get_set51():
     )
 
 
-def get_set30():
+def symmetry_functions_set30():
     r"""Hyperparameters for symmetry functions, as discussed in:
     Artrith, N., Hiller, B. and Behler, J., 2013. Neural network potentials for metals and
     oxides–First applications to copper clusters at zinc oxide. physica status solidi (b),
@@ -126,7 +126,7 @@ def get_set30():
     )
 
 
-def get_default_bispectrum():
+def bispectrum_default():
     return OrderedDict(
         {
             "jmax": 4,
@@ -141,30 +141,7 @@ def get_default_bispectrum():
     )
 
 
-def get_bs_size(twojmax, diagonal):
-    """
-    Return the size of descriptor.
-    """
-    N = 0
-    for j1 in range(0, twojmax + 1):
-        if diagonal == 2:
-            N += 1
-        elif diagonal == 1:
-            for j in range(0, min(twojmax, 2 * j1) + 1, 2):
-                N += 1
-        elif diagonal == 0:
-            for j2 in range(0, j1 + 1):
-                for j in range(j1 - j2, min(twojmax, j1 + j2) + 1, 2):
-                    N += 1
-        elif diagonal == 3:
-            for j2 in range(0, j1 + 1):
-                for j in range(j1 - j2, min(twojmax, j1 + j2) + 1, 2):
-                    if j >= j1:
-                        N += 1
-    return N
-
-
-def get_default_soap():
+def soap_default():
     return OrderedDict(
         {
             "n_max": 4,

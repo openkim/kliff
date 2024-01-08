@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 from loguru import logger
+from monty.dev import requires
 
 from kliff.dataset import Configuration
 from kliff.neighbor import NeighborList
 
-from .configuration_transform import ConfigurationTransform
 
-# stubs for type hinting
+from .configuration_transform import ConfigurationTransform
 
 try:
     import libdescriptor as lds
@@ -18,16 +18,19 @@ try:
 except ImportError:
     libdescriptor_available = False
     logger.error(
-        "Descriptors module depends on libdescriptor, "
-        "which is not found. Please install it first."
+        "descriptors module depends on libdescriptor, "
+        "which is not found. please install it first."
     )
 
 from .default_hyperparams import *
+from .descriptor_initializers import *
 
 
+@requires(libdescriptor_available, "libdescriptor is needed for Descriptors")
 class AvailableDescriptors:
     """
-    This class lists all the available descriptors in libdescriptor as enums.
+    This class lists all the available descriptors in libdescriptor. Libdescriptor
+    provides that information as an Enum structure. This class is a wrapper of that.
     """
 
     def __init__(self):
@@ -41,6 +44,7 @@ class AvailableDescriptors:
                 setattr(self, desc_type.name, desc_type)
 
 
+@requires(libdescriptor_available, "libdescriptor is needed for Descriptors")
 def show_available_descriptors():
     """
     Show all the available descriptors in libdescriptor.
@@ -57,17 +61,20 @@ def show_available_descriptors():
         print(f"{key}")
 
 
+@requires(libdescriptor_available, "libdescriptor is needed for Descriptors")
 class Descriptor(ConfigurationTransform):
     """
-    Descriptor class, which is a wrapper of libdescriptor. It provides a unified interface to all the
-    descriptors in libdescriptor. The descriptor is initialized with a cutoff radius, a list of species,
-    a descriptor type and an ordered list of hyperparameters. The descriptor type is a string, which can
-        be obtained by `AvailableDescriptors.show_available_descriptors()`. The hyperparameters are a list
-        of dictionaries, some sane default values are provided by `get_set51()` and `get_set30()` for Symmetry
-        Functions, and `get_default_bispectrum()` for Bispectrum. This class also provides a methods to compute
-        derivatives of the descriptor with respect to atomic positions. The functions generating descriptors and
-        their derivatives are implemented as `forward()` and `backward()`, respectively, to match the PyTorch
-        nomeclature.
+    Descriptor class provides interface with the libdescriptor library. It provides a
+    unified interface to all the descriptors in libdescriptor, however all descriptors need
+    to have a corresponding initializer routine, to deal with hyperparameters. The descriptor
+    is initialized with a cutoff radius, a list of species,a descriptor type and an ordered
+    list of hyperparameters. The descriptor type is a string, which can be obtained by
+    `show_available_descriptors()` function. Some sane default values for the hyperparameters
+    are provided in ~:kliff.transforms.configuration_transforms.default_hyperparameters
+    module. This class methods to compute derivatives of the descriptor with respect to
+    atomic positions. The functions generating descriptors and their derivatives are
+    implemented as `forward()` and `backward()`, respectively, to match the PyTorch nomenclature.
+
     """
 
     def __init__(
@@ -81,16 +88,17 @@ class Descriptor(ConfigurationTransform):
         implicit_fingerprint_copying: bool = False,
     ):
         """
-        :param cutoff: Cutoff radius.
-        :param species: List of strings, each string is a species (atomic symbols).
-        :param descriptor: String of descriptor type, can be obtained by `show_available_descriptors()`.
-        :param hyperparameters: Ordered dictionary of hyperparameters, or a string of preset hyperparameters.
-        :param cutoff_function: Cut-off function, currently only "cos" is supported.
-        :param nl_ctx: function to compute neighbor list, if not provided, will be computed internally.
+        Args:
+            cutoff (float): Cutoff radius.
+            species (list): List of strings, each string is a species (atomic symbols).
+            descriptor (str): String of descriptor type, can be obtained by `show_available_descriptors()`.
+            hyperparameters (OrderedDict): Ordered dictionary of hyperparameters.
+            cutoff_function (str): Cut-off function, currently only "cos" is supported.
+            nl_ctx (NeighborList): function to compute neighbor list, if not provided, will be computed internally.
+            implicit_fingerprint_copying (bool): If True, the fingerprint will be copied to
+                the Configuration object's fingerprint attribute.
         """
         super().__init__(implicit_fingerprint_copying)
-        if not libdescriptor_available:
-            raise DescriptorsError("Libdescriptor not available.")
         self.cutoff = cutoff
         self.species = species
         _available_descriptors = AvailableDescriptors()
@@ -108,19 +116,24 @@ class Descriptor(ConfigurationTransform):
 
     def _set_hyperparams(self, hyperparameters):
         """
-        Set hyperparameters.
-        :param hyperparameters:
-        :return:
+        Set hyperparameters for the descriptor. If a string is provided, it will be used to select
+        a set of default hyperparameters. If an OrderedDict is provided, it will be used as is.
+
+        Args:
+            hyperparameters (str or OrderedDict): Hyperparameters for the descriptor.
+
+        Returns:
+            OrderedDict: Ordered dictionary of hyperparameters.
         """
         if isinstance(hyperparameters, str):
             if hyperparameters == "set51":
-                return get_set51()
+                return symmetry_functions_set51()
             elif hyperparameters == "set30":
-                return get_set30()
+                return symmetry_functions_set30()
             elif hyperparameters == "bs_defaults":
-                return get_default_bispectrum()
+                return bispectrum_default()
             elif hyperparameters == "soap_defaults":
-                return get_default_soap()
+                return soap_default()
             else:
                 raise DescriptorsError("Hyperparameter set not found")
         elif isinstance(hyperparameters, OrderedDict):
@@ -132,95 +145,54 @@ class Descriptor(ConfigurationTransform):
 
     def _init_descriptor_from_kind(self):
         """
-        Initialize descriptor from descriptor kind. Currently only Symmetry Functions and Bispectrum are supported.
-        :return:
+        Initialize descriptor from descriptor kind. Currently only Symmetry Functions,
+        Bispectrum, abd SOAP descriptors are supported.
+
+        Returns:
+            tuple: Tuple of descriptor object and width of the descriptor.
         """
         cutoff_array = np.ones((len(self.species), len(self.species))) * self.cutoff
+
+        # Symmetry Functions
         if self.descriptor_kind == lds.AvailableDescriptors(0):
-            symmetry_function_types = list(self.hyperparameters.keys())
-            symmetry_function_sizes = []
-
-            symmetry_function_param_matrices = []
-            param_num_elem = 0
-            width = 0
-            for function in symmetry_function_types:
-                if function.lower() not in ["g1", "g2", "g3", "g4", "g5"]:
-                    DescriptorsError("Symmetry Function provided, not supported")
-
-                if function.lower() == "g1":
-                    rows = 1
-                    cols = 1
-                    params_mat = np.zeros((1, 1), dtype=np.double)
-                else:
-                    params = self.hyperparameters[function]
-                    rows = len(params)
-                    cols = len(list(params[0].keys()))
-                    params_mat = np.zeros((rows, cols), dtype=np.double)
-
-                    for i in range(rows):
-                        if function.lower() == "g2":
-                            params_mat[i, 0] = params[i]["eta"]
-                            params_mat[i, 1] = params[i]["Rs"]
-                        elif function.lower() == "g3":
-                            params_mat[i, 0] = params[i]["kappa"]
-                        elif function.lower() == "g4":
-                            params_mat[i, 0] = params[i]["zeta"]
-                            params_mat[i, 1] = params[i]["lambda"]
-                            params_mat[i, 2] = params[i]["eta"]
-                        elif function.lower() == "g5":
-                            params_mat[i, 0] = params[i]["zeta"]
-                            params_mat[i, 1] = params[i]["lambda"]
-                            params_mat[i, 2] = params[i]["eta"]
-                symmetry_function_sizes.extend([rows, cols])
-                symmetry_function_param_matrices.append(params_mat)
-                param_num_elem += rows * cols
-                width += rows
-
-            symmetry_function_param = np.zeros((param_num_elem,), dtype=np.double)
-            k = 0
-            for i in range(len(symmetry_function_types)):
-                symmetry_function_param[
-                    k : k
-                    + symmetry_function_sizes[2 * i]
-                    * symmetry_function_sizes[2 * i + 1]
-                ] = symmetry_function_param_matrices[i].reshape(1, -1)
-                k += symmetry_function_sizes[2 * i] * symmetry_function_sizes[2 * i + 1]
-
+            input_args, width = initialize_symmetry_functions(self.hyperparameters)
             return (
                 lds.DescriptorKind.init_descriptor(
                     self.descriptor_kind,
                     self.species,
                     self.cutoff_function,
                     cutoff_array,
-                    symmetry_function_types,
-                    symmetry_function_sizes,
-                    symmetry_function_param,
+                    *input_args,
                 ),
                 width,
             )
+
+        # Bispectrum
         elif self.descriptor_kind == lds.AvailableDescriptors(1):
             if self.hyperparameters["weights"] is None:
                 weights = np.ones(len(self.species))
             else:
                 weights = self.hyperparameters["weights"]
-
+            input_args, width = initialize_bispectrum_functions(self.hyperparameters)
             return lds.DescriptorKind.init_descriptor(
                 self.descriptor_kind,
-                self.hyperparameters["rfac0"],
-                2 * self.hyperparameters["jmax"],
-                self.hyperparameters["diagonalstyle"],
-                1 if self.hyperparameters["use_shared_array"] else 0,
-                self.hyperparameters["rmin0"],
-                self.hyperparameters["switch_flag"],
-                self.hyperparameters["bzero_flag"],
+                *input_args,
                 cutoff_array,
                 self.species,
                 weights,
-            ), get_bs_size(
-                int(2 * self.hyperparameters["jmax"]),
-                self.hyperparameters["diagonalstyle"],
-            )
+            ), width
+
+        # SOAP
+        # nothing to initialize here, just return the descriptor
         elif self.descriptor_kind == lds.AvailableDescriptors(2):
+            # width = (((n_species + 1) * n_species) / 2 * (n_max * (n_max + 1)) * (l_max + 1)) / 2;
+            n_species = len(self.species)
+            width = int(
+                (((n_species + 1) * n_species) / 2)
+                * (self.hyperparameters["n_max"] * (self.hyperparameters["n_max"] + 1))
+                * (self.hyperparameters["l_max"] + 1)
+                / 2
+            )
             return lds.DescriptorKind.init_descriptor(
                 self.descriptor_kind,
                 self.hyperparameters["n_max"],
@@ -229,22 +201,45 @@ class Descriptor(ConfigurationTransform):
                 self.species,
                 self.hyperparameters["radial_basis"],
                 self.hyperparameters["eta"],
-            )
+            ), width
         else:
             raise DescriptorsError(
                 f"Descriptor kind: {self.descriptor_kind} not supported yet"
             )
 
     def _map_species_to_int(self, species):
+        """
+        Map species to integers, which is required by the C++ implementation of the descriptors.
+
+        TODO:
+            Unify all instances of species - > Z and Z -> species mapping functions. I
+            think currently there are 3 of them. Also sort the atomic numbers and species
+            codes conversions. Perhaps use the ASE function for this.
+
+        Args:
+            species (list): List of species.
+
+        Returns:
+            list: List of integers corresponding to the species.
+        """
         return [self.species.index(s) for s in species]
 
-    def forward(self, configuration: Configuration):
+    def forward(self, configuration: Configuration) -> np.ndarray:
         """
         Compute the descriptors for a given configuration, by calling the C++ implementation,
-        :py:func:`libdescriptor.compute_single_atom`. Takes in either a KLIFF Configuration or ASE Atoms object.
-        TODO: Use the :py:func:`libdescriptor.compute` function for faster evaluation. Which loops in C++.
-        :param configuration: :py:class:`kliff.dataset.Configuration` or :py:class:`ase.Atoms` object.
-        :return: :numpy:`ndarray` of shape (n_atoms, width)
+        :py:func:`libdescriptor.compute_single_atom`. This function accepts a
+        ~:class:`kliff.dataset.Configuration` object and returns a numpy array of shape
+        (n_atoms, width), where n_atoms is the number of atoms in the configuration and
+        width is the width of the descriptor.
+
+        TODO:
+            Use the :py:func:`libdescriptor.compute` function for faster evaluation. Which loops in C++.
+
+        Args:
+            configuration: :py:class:`kliff.dataset.Configuration` object to compute descriptors for.
+
+        Returns:
+            numpy.ndarray: Array of shape (n_atoms, width).
         """
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
@@ -253,7 +248,6 @@ class Descriptor(ConfigurationTransform):
         species = np.array(self._map_species_to_int(self.nl_ctx.species), np.intc)
         for i in range(n_atoms):
             neigh_list, _, _ = self.nl_ctx.get_neigh(i)
-            # TODO Implement and use compute function for faster evaluation. Move this loop to C++.
             descriptors[i, :] = lds.compute_single_atom(
                 self._cdesc,
                 i,
@@ -265,13 +259,19 @@ class Descriptor(ConfigurationTransform):
 
     def backward(self, configuration: Configuration, dE_dZeta: np.ndarray):
         """
-        Compute the gradients of the descriptors with respect to the atomic coordinates. It takes in an array of
-        shape (n_atoms, width) and the configuration, and performs the vector-Jacobian product (revrse mode
-        automatic differentiation). The output is an array of shape (n_atoms, 3) yielding the gradients of the
-        descriptors with respect to the atomic coordinates.
-        :param configuration: :py:class:`kliff.dataset.Configuration` or :py:class:`ase.Atoms` object.
-        :param dE_dZeta: :numpy:`ndarray` of shape (n_atoms, width)
-        :return: :numpy:`ndarray` of shape (n_atoms, 3)
+        Compute the gradients of the descriptors with respect to the atomic coordinates.
+        It takes in an array of shape (n_atoms, width) and the configuration, and performs
+        the vector-Jacobian product (reverse mode automatic differentiation).
+        The output is an array of shape (n_atoms, 3) yielding the gradients of the descriptors
+        with respect to the atomic coordinates.
+
+        Args:
+            configuration: :py:class:`kliff.dataset.Configuration` object to compute descriptors for.
+            dE_dZeta: :numpy:`ndarray` of shape (n_atoms, width), usually this is the gradient
+                of the ML model (hence input descriptors) with respect to the energy.
+
+        Returns:
+            :numpy:`ndarray` of shape (n_atoms, 3)
         """
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
@@ -301,14 +301,18 @@ class Descriptor(ConfigurationTransform):
 
         return derivatives
 
-    def write_kim_params(self, path, fname="descriptor.params"):
+    def save_descriptor_state(self, path, fname="descriptor.params"):
         """
-        Write the descriptor parameters to a file, which can be used by KIM-API. This is the additional
-        information besides the :py:function:`save_kim_model` function, which saves complete descriptor model.
-         Currently supports exporting Symmetry Functions and Bispectrum descriptors.
-        :param path: path to the directory where the file will be saved.
-        :param fname: name of the descriptor file.
-        :return:
+        Write the descriptor parameters to a file, which can be used by libdescritpor
+        to re-initialize the descriptor.
+
+        TODO:
+            Refactor this function to abstract ut all respective functions. That should
+            make this function easier to maintain. e.g. See _init_descriptor_from_kind().
+
+        Args:
+            path (str): Path to the directory where the file will be saved.
+            fname (str): Name of the descriptor file.
         """
         with open(os.path.join(path, fname), "w") as fout:
             # header
@@ -422,10 +426,12 @@ class Descriptor(ConfigurationTransform):
                 )
                 fout.write(f"# eta\n{self.hyperparameters['eta']}\n\n")
 
-    def save_for_kim_model(self, path: str, model: str):
-        """Saves the descriptor model in the KIM format.
-        :param path: path to the directory where the file will be saved.
-        :param model: name of the model.
+    def export_kim_model(self, path: str, model: str):
+        """Saves the descriptor model in the KIM format, for re-use in KIM model driver.
+
+        Args:
+            path (str): Path to the directory where the file will be saved.
+            model (str): Name of the model.
         """
         with open(f"{path}/kim_model.param", "w") as f:
             n_elements = len(self.species)
