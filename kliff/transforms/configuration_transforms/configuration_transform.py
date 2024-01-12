@@ -12,8 +12,8 @@ class ConfigurationTransform:
     include graph representations of the configuration,and descriptors.
     """
 
-    def __init__(self, implicit_fingerprint_copying=False):
-        self._implicit_fingerprint_copying = implicit_fingerprint_copying
+    def __init__(self, copy_to_config=False):
+        self._implicit_fingerprint_copying = copy_to_config
 
     def forward(self, configuration: "Configuration"):
         """
@@ -31,10 +31,9 @@ class ConfigurationTransform:
 
     def __call__(self, configuration: "Configuration"):
         fingerprint = self.forward(configuration)
-        if self.implicit_fingerprint_copying:
+        if self.copy_to_config:
             configuration.fingerprint(fingerprint)
-        else:
-            return fingerprint
+        return fingerprint
 
     def inverse(self, *args, **kargs):
         """
@@ -48,14 +47,14 @@ class ConfigurationTransform:
         )
 
     def transform(self, configuration: "Configuration"):
-        return self.__call__(configuration)
+        return self(configuration)
 
     @property
-    def implicit_fingerprint_copying(self):
+    def copy_to_config(self):
         return self._implicit_fingerprint_copying
 
-    @implicit_fingerprint_copying.setter
-    def implicit_fingerprint_copying(self, value: bool):
+    @copy_to_config.setter
+    def copy_to_config(self, value: bool):
         self._implicit_fingerprint_copying = value
 
     def collate_fn(self, config_list):
@@ -68,7 +67,7 @@ class ConfigurationTransform:
         """
         transforms_list = []
         for conf in config_list:
-            transform = self.forward(conf)
+            transform = self(conf)
             transforms_list.append(transform)
         return transforms_list
 

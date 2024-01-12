@@ -4,8 +4,6 @@ import numpy as np
 
 from kliff.utils import get_bs_size
 
-from .descriptors import DescriptorsError
-
 
 def initialize_symmetry_functions(hyperparameters: OrderedDict):
     symmetry_function_types = list(hyperparameters.keys())
@@ -15,7 +13,7 @@ def initialize_symmetry_functions(hyperparameters: OrderedDict):
     width = 0
     for function in symmetry_function_types:
         if function.lower() not in ["g1", "g2", "g3", "g4", "g5"]:
-            DescriptorsError("Symmetry Function provided, not supported")
+            raise ValueError("Symmetry Function provided, not supported")
 
         if function.lower() == "g1":
             rows = 1

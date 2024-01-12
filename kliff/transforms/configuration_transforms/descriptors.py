@@ -84,7 +84,7 @@ class Descriptor(ConfigurationTransform):
         hyperparameters: Union[Dict, str],
         cutoff_function: str = "cos",
         nl_ctx: NeighborList = None,
-        implicit_fingerprint_copying: bool = False,
+        copy_to_config: bool = False,
     ):
         """
         Args:
@@ -94,10 +94,10 @@ class Descriptor(ConfigurationTransform):
             hyperparameters (OrderedDict): Ordered dictionary of hyperparameters.
             cutoff_function (str): Cut-off function, currently only "cos" is supported.
             nl_ctx (NeighborList): function to compute neighbor list, if not provided, will be computed internally.
-            implicit_fingerprint_copying (bool): If True, the fingerprint will be copied to
+            copy_to_config (bool): If True, the fingerprint will be copied to
                 the Configuration object's fingerprint attribute.
         """
-        super().__init__(implicit_fingerprint_copying)
+        super().__init__(copy_to_config)
         self.cutoff = cutoff
         self.species = species
         _available_descriptors = AvailableDescriptors()

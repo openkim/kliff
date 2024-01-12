@@ -19,44 +19,51 @@ if torch_geometric_available():
     from torch_geometric.data import Data
 
 
-@requires(torch_geometric_available(), "torch_geometric is needed for KLIFFTorchGraph")
-class KLIFFTorchGraph(Data):
-    """
-    A Pytorch Geometric compatible graph representation of a configuration. When loaded
-    into a class:`torch_geometric.data.DataLoader` the graphs of type KLIFFTorchGraph
-    will be automatically collated and batched.
+if torch_geometric_available():
+    class KLIFFTorchGraph(Data):
+        """
+        A Pytorch Geometric compatible graph representation of a configuration. When loaded
+        into a class:`torch_geometric.data.DataLoader` the graphs of type KLIFFTorchGraph
+        will be automatically collated and batched.
 
-    """
+        """
 
-    def __init__(self):
-        super(KLIFFTorchGraph, self).__init__()
-        self.num_nodes = (
-            None  # Simplify sizes and frees up pos key word, coords is cleaner
-        )
-        self.energy = None
-        self.forces = None
-        self.n_layers = None
-        self.coords = None
-        self.images = None
-        self.species = None
-        self.z = None
-        self.contributions = None
+        def __init__(self):
+            super(KLIFFTorchGraph, self).__init__()
+            self.num_nodes = (
+                None  # Simplify sizes and frees up pos key word, coords is cleaner
+            )
+            self.energy = None
+            self.forces = None
+            self.n_layers = None
+            self.coords = None
+            self.images = None
+            self.species = None
+            self.z = None
+            self.contributions = None
 
-    def __inc__(self, key, value, *args, **kwargs):
-        if "index" in key or "face" in key:
-            return self.num_nodes
-        elif "contributions" in key:
-            return 2
-        elif "images" in key:
-            return torch.max(value) + 1
-        else:
-            return 0
+        def __inc__(self, key, value, *args, **kwargs):
+            if "index" in key or "face" in key:
+                return self.num_nodes
+            elif "contributions" in key:
+                return 2
+            elif "images" in key:
+                return torch.max(value) + 1
+            else:
+                return 0
 
-    def __cat_dim__(self, key, value, *args, **kwargs):
-        if "index" in key or "face" in key:
-            return 1
-        else:
-            return 0
+        def __cat_dim__(self, key, value, *args, **kwargs):
+            if "index" in key or "face" in key:
+                return 1
+            else:
+                return 0
+else:
+    class KLIFFTorchGraph:
+        """
+        A dummy class to satisfy imports when torch geometric is not available.
+        """
+        def __init__(self, *args, **kwargs):
+            raise ImportError("Torch geometric is not available, cannot use KLIFFTorchGraph")
 
 
 class KLIFFTorchGraphGenerator(ConfigurationTransform):
@@ -72,7 +79,7 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
         n_layers (int): Number of convolution layers.
         as_torch_geometric_data (bool): If True, the graph will be returned as a Pytorch
             Geometric Data object.
-        implicit_fingerprint_copying (bool): If True, the fingerprint will be copied to
+        copy_to_config (bool): If True, the fingerprint will be copied to
             the Configuration object's fingerprint attribute.
     """
 
@@ -82,9 +89,9 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
         cutoff,
         n_layers,
         as_torch_geometric_data=False,
-        implicit_fingerprint_copying=False,
+        copy_to_config=False,
     ):
-        super().__init__(implicit_fingerprint_copying=implicit_fingerprint_copying)
+        super().__init__(copy_to_config=copy_to_config)
         self.species = species
         self.cutoff = cutoff
         self.n_layers = n_layers
