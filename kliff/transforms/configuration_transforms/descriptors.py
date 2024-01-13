@@ -1,5 +1,6 @@
 import os
-from typing import TYPE_CHECKING, Dict, List, Union
+from pathlib import Path
+from typing import Dict, List, Union
 
 import numpy as np
 from loguru import logger
@@ -12,20 +13,26 @@ from .configuration_transform import ConfigurationTransform
 
 try:
     import libdescriptor as lds
-
-    libdescriptor_available = True
 except ImportError:
-    libdescriptor_available = False
+    lds = None
     logger.error(
         "descriptors module depends on libdescriptor, "
         "which is not found. please install it first."
     )
 
-from .default_hyperparams import *
-from .descriptor_initializers import *
+from .default_hyperparams import (
+    bispectrum_default,
+    soap_default,
+    symmetry_functions_set30,
+    symmetry_functions_set51,
+)
+from .descriptor_initializers import (
+    initialize_bispectrum_functions,
+    initialize_symmetry_functions,
+)
 
 
-@requires(libdescriptor_available, "libdescriptor is needed for Descriptors")
+@requires(lds, "libdescriptor is needed for Descriptors")
 class AvailableDescriptors:
     """
     This class lists all the available descriptors in libdescriptor. Libdescriptor
@@ -43,13 +50,11 @@ class AvailableDescriptors:
                 setattr(self, desc_type.name, desc_type)
 
 
-@requires(libdescriptor_available, "libdescriptor is needed for Descriptors")
+@requires(lds, "libdescriptor is needed for Descriptors")
 def show_available_descriptors():
     """
     Show all the available descriptors in libdescriptor.
     """
-    if not libdescriptor_available:
-        raise DescriptorsError("Libdescriptor not available.")
     print("-" * 80)
     print(
         "Descriptors below are currently available, select them by `descriptor: str` attribute:"
@@ -60,7 +65,7 @@ def show_available_descriptors():
         print(f"{key}")
 
 
-@requires(libdescriptor_available, "libdescriptor is needed for Descriptors")
+@requires(lds, "libdescriptor is needed for Descriptors")
 class Descriptor(ConfigurationTransform):
     """
     Descriptor class provides interface with the libdescriptor library. It provides a
@@ -91,7 +96,7 @@ class Descriptor(ConfigurationTransform):
             cutoff (float): Cutoff radius.
             species (list): List of strings, each string is a species (atomic symbols).
             descriptor (str): String of descriptor type, can be obtained by `show_available_descriptors()`.
-            hyperparameters (OrderedDict): Ordered dictionary of hyperparameters.
+            hyperparameters (Dict): Ordered dictionary of hyperparameters.
             cutoff_function (str): Cut-off function, currently only "cos" is supported.
             nl_ctx (NeighborList): function to compute neighbor list, if not provided, will be computed internally.
             copy_to_config (bool): If True, the fingerprint will be copied to
@@ -104,7 +109,7 @@ class Descriptor(ConfigurationTransform):
         self.descriptor_name = descriptor
         self.descriptor_kind = getattr(_available_descriptors, descriptor)
         self.width = -1
-        self.hyperparameters = self._set_hyperparams(hyperparameters)
+        self.hyperparameters = self.get_default_hyperparams(hyperparameters)
         self.cutoff_function = cutoff_function
         self._cdesc, self.width = self._init_descriptor_from_kind()
         if nl_ctx:
@@ -113,16 +118,17 @@ class Descriptor(ConfigurationTransform):
         else:
             self.external_nl_ctx = False
 
-    def _set_hyperparams(self, hyperparameters):
+    @staticmethod
+    def get_default_hyperparams(hyperparameters):
         """
         Set hyperparameters for the descriptor. If a string is provided, it will be used to select
-        a set of default hyperparameters. If an OrderedDict is provided, it will be used as is.
+        a set of default hyperparameters. If a dict is provided, it will be used as is.
 
         Args:
-            hyperparameters (str or OrderedDict): Hyperparameters for the descriptor.
+            hyperparameters (str or Dict): Hyperparameters for the descriptor.
 
         Returns:
-            OrderedDict: Ordered dictionary of hyperparameters.
+            Dict: dictionary of hyperparameters.
         """
         if isinstance(hyperparameters, str):
             if hyperparameters == "set51":
@@ -135,12 +141,10 @@ class Descriptor(ConfigurationTransform):
                 return soap_default()
             else:
                 raise DescriptorsError("Hyperparameter set not found")
-        elif isinstance(hyperparameters, OrderedDict):
+        elif isinstance(hyperparameters, dict):
             return hyperparameters
         else:
-            raise DescriptorsError(
-                "Hyperparameters must be either a string or an OrderedDict"
-            )
+            raise DescriptorsError("Hyperparameters must be either a string or an Dict")
 
     def _init_descriptor_from_kind(self):
         """
@@ -248,6 +252,8 @@ class Descriptor(ConfigurationTransform):
         """
         if not self.external_nl_ctx:
             self.nl_ctx = NeighborList(configuration, self.cutoff)
+            self.external_nl_ctx = True
+
         n_atoms = configuration.get_num_atoms()
         descriptors = np.zeros((n_atoms, self.width))
         species = np.array(self._map_species_to_int(self.nl_ctx.species), np.intc)
@@ -306,7 +312,9 @@ class Descriptor(ConfigurationTransform):
 
         return derivatives
 
-    def save_descriptor_state(self, path, fname="descriptor.params"):
+    def save_descriptor_state(
+        self, path: Union[str, Path], fname: str = "descriptor.params"
+    ):
         """
         Write the descriptor parameters to a file, which can be used by libdescritpor
         to re-initialize the descriptor.
@@ -319,7 +327,7 @@ class Descriptor(ConfigurationTransform):
             path (str): Path to the directory where the file will be saved.
             fname (str): Name of the descriptor file.
         """
-        with open(os.path.join(path, fname), "w") as fout:
+        with open(Path.joinpath(Path(path), fname), "w") as fout:
             # header
             fout.write("#" + "=" * 80 + "\n")
             fout.write("# Descriptor parameters file generated by KLIFF.\n")

@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
 
-# if TYPE_CHECKING:
 from kliff.dataset import Configuration, Dataset
 
 
@@ -20,10 +19,14 @@ class PropertyTransform:
         property_key: The key of the property to be transformed.
     """
 
-    def __int__(self, property_key="energy", keep_original=True):
-        self.keep_original = keep_original
+    def __init__(self, property_key="energy", keep_original=True):
+        self._keep_original = keep_original
         self.original_property_value_map = None
         self.property_key = "energy"
+
+    @property
+    def keep_original(self):
+        return self._keep_original
 
     def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
         """
@@ -76,20 +79,21 @@ class NormalizedPropertyTransform(PropertyTransform):
     """
     Normalize the property of a configuration to zero mean and unit variance.
     """
+
     def __init__(self, property_key="energy", keep_original=True):
+        super().__init__(property_key, keep_original)
         self.original_property_value_map = None
         self.property_key = property_key
-        self.keep_original = keep_original
+        self._keep_original = keep_original
         self.mean = 0.0
         self.std = 1.0
 
     def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
         configuration_list = self.get_configuration_list(dataset)
-        n_configs = len(configuration_list)
         original_property_values = list(
             map(lambda config: getattr(config, self.property_key), configuration_list)
         )
-        original_property_values = np.vstack(original_property_values)
+        original_property_values = np.asarray(original_property_values)
         if self.keep_original:
             self.original_property_value_map = original_property_values
         self.mean = original_property_values.mean()
@@ -115,10 +119,12 @@ class RMSNormalizePropertyTransform(PropertyTransform):
     Normalize the property of a configuration to zero mean and unit variance,
     using the root mean square of the property.
     """
+
     def __init__(self, property_key="forces", keep_original=False):
+        super().__init__(property_key, keep_original)
         self.original_property_value_map = None
         self.property_key = property_key
-        self.keep_original = keep_original
+        self._keep_original = keep_original
         self.rms_mean = 0.0
 
     def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
@@ -151,10 +157,12 @@ class RMSMagnitudeNormalizePropertyTransform(PropertyTransform):
     using the root mean square of the magnitude of the property. This method is
     useful for normalizing forces.
     """
+
     def __init__(self, property_key="forces", keep_original=False):
+        super().__init__(property_key, keep_original)
         self.original_property_value_map = None
         self.property_key = property_key
-        self.keep_original = keep_original
+        self._keep_original = keep_original
         self.rms_mean_magnitude = 0.0
 
     def transform(self, dataset: Union[List["Configuration"], "Dataset"]):

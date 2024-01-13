@@ -36,6 +36,8 @@ def get_extra_compile_args():
     return ["-std=c++11"]
 
 
+# TODO: explore -Ofast and -march=native
+
 sym_fn = Extension(
     "kliff.descriptors.symmetry_function.sf",
     sources=[
@@ -65,6 +67,21 @@ neighlist = Extension(
     sources=[
         "kliff/neighbor/neighbor_list.cpp",
         "kliff/neighbor/neighbor_list_bind.cpp",
+    ],
+    include_dirs=get_includes(),
+    extra_compile_args=get_extra_compile_args(),
+    language="c++",
+)
+
+graph_module = Extension(
+    "kliff.transforms.configuration_transforms.graphs.graph_module",
+    sources=[
+        "kliff/transforms/configuration_transforms/graphs/kim_driver_graph_data.cpp",
+        "kliff/transforms/configuration_transforms/graphs/periodic_table.cpp",
+        "kliff/neighbor/neighbor_list.cpp",
+        # header files as well
+        "kliff/neighbor/neighbor_list.h",
+        "kliff/neighbor/helper.hpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),

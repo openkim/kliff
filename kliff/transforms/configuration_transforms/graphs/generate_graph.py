@@ -8,7 +8,7 @@ if torch_available():
 
 from typing import TYPE_CHECKING
 
-import kliff.transforms.configuration_transforms.graphs.graph_module as graph_module
+from kliff.transforms.configuration_transforms.graphs import graph_module
 
 from ..configuration_transform import ConfigurationTransform
 
@@ -20,16 +20,17 @@ if torch_geometric_available():
 
 
 if torch_geometric_available():
-    class KLIFFTorchGraph(Data):
+
+    class PyGGraph(Data):
         """
         A Pytorch Geometric compatible graph representation of a configuration. When loaded
-        into a class:`torch_geometric.data.DataLoader` the graphs of type KLIFFTorchGraph
+        into a class:`torch_geometric.data.DataLoader` the graphs of type PyGGraph
         will be automatically collated and batched.
 
         """
 
         def __init__(self):
-            super(KLIFFTorchGraph, self).__init__()
+            super().__init__()
             self.num_nodes = (
                 None  # Simplify sizes and frees up pos key word, coords is cleaner
             )
@@ -57,16 +58,36 @@ if torch_geometric_available():
                 return 1
             else:
                 return 0
+
 else:
-    class KLIFFTorchGraph:
+
+    class PyGGraph:
         """
-        A dummy class to satisfy imports when torch geometric is not available.
+        A dummy class to when torch geometric is not available. It has same attributes
+        as PyGGraph class, but does not inherit from torch_geometric.data.Data.
         """
+
+        warning_logged = False
+
         def __init__(self, *args, **kwargs):
-            raise ImportError("Torch geometric is not available, cannot use KLIFFTorchGraph")
+            if not PyGGraph.warning_logged:
+                logger.warning(
+                    "Pytorch Geometric not available, using dummy PyGGraph."
+                    "Install torch geometric for better performance."
+                )
+                PyGGraph.warning_logged = True
+            self.num_nodes = None
+            self.energy = None
+            self.forces = None
+            self.n_layers = None
+            self.coords = None
+            self.images = None
+            self.species = None
+            self.z = None
+            self.contributions = None
 
 
-class KLIFFTorchGraphGenerator(ConfigurationTransform):
+class KIMDriverGraph(ConfigurationTransform):
     """
     Generate a graph representation of a configuration. This generator will also save the
     required parameters for porting the model over to KIM-API using TorchMLModelDriver.
@@ -77,8 +98,6 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
         species (list): List of species.
         cutoff (float): Cutoff distance.
         n_layers (int): Number of convolution layers.
-        as_torch_geometric_data (bool): If True, the graph will be returned as a Pytorch
-            Geometric Data object.
         copy_to_config (bool): If True, the fingerprint will be copied to
             the Configuration object's fingerprint attribute.
     """
@@ -88,7 +107,6 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
         species,
         cutoff,
         n_layers,
-        as_torch_geometric_data=False,
         copy_to_config=False,
     ):
         super().__init__(copy_to_config=copy_to_config)
@@ -97,9 +115,6 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
         self.n_layers = n_layers
         self.infl_dist = n_layers * cutoff
         self._tg = graph_module
-        if as_torch_geometric_data and not torch_geometric_available():
-            raise ImportError("Torch geometric is not available")
-        self.as_torch_geometric_data = as_torch_geometric_data
 
     def forward(self, configuration: "Configuration"):
         """
@@ -122,13 +137,10 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
         )
         graph.energy = configuration.energy
         graph.forces = configuration.forces
-        if torch_available:
-            if self.as_torch_geometric_data:
-                return self._to_py_graph(graph)
-        return graph
+        return self.to_py_graph(graph)
 
     @staticmethod
-    def _to_py_graph(graph):
+    def to_py_graph(graph):
         """
         Convert a C++ graph object to a KLIFF Geometric Graph Data object, ``GraphData``.
 
@@ -136,9 +148,9 @@ class KLIFFTorchGraphGenerator(ConfigurationTransform):
             graph: C++ graph object.
 
         Returns:
-            KLIFFTorchGraph object.
+            PyGGraph object.
         """
-        torch_geom_graph = KLIFFTorchGraph()
+        torch_geom_graph = PyGGraph()
         torch_geom_graph.energy = torch.as_tensor(graph.energy)
         torch_geom_graph.forces = torch.as_tensor(graph.forces)
         torch_geom_graph.n_layers = torch.as_tensor(graph.n_layers)

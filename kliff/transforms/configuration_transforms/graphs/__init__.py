@@ -1,10 +1,3 @@
-from kliff.utils import torch_geometric_available
+from .generate_graph import KIMDriverGraph, PyGGraph
 
-if torch_geometric_available():
-    from .generate_graph import KLIFFTorchGraph, KLIFFTorchGraphGenerator
-
-    __all__ = ["KLIFFTorchGraphGenerator", "KLIFFTorchGraph"]
-else:
-    from .generate_graph import KLIFFTorchGraphGenerator
-
-    __all__ = ["KLIFFTorchGraphGenerator"]
+__all__ = ["KIMDriverGraph", "PyGGraph"]
