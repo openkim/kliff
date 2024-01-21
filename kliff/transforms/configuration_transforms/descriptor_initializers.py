@@ -2,7 +2,7 @@ from typing import Dict, List
 
 import numpy as np
 
-from kliff.utils import get_bs_size
+from .utils import get_bs_size
 
 
 def initialize_symmetry_functions(hyperparameters: Dict):

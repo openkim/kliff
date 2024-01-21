@@ -29,7 +29,7 @@ class get_pybind11_includes:
 
 
 def get_includes():
-    return [get_pybind11_includes()]
+    return [get_pybind11_includes(), "kliff/neighbor"]
 
 
 def get_extra_compile_args():
@@ -77,11 +77,7 @@ graph_module = Extension(
     "kliff.transforms.configuration_transforms.graphs.graph_module",
     sources=[
         "kliff/transforms/configuration_transforms/graphs/kim_driver_graph_data.cpp",
-        "kliff/transforms/configuration_transforms/graphs/periodic_table.cpp",
         "kliff/neighbor/neighbor_list.cpp",
-        # header files as well
-        "kliff/neighbor/neighbor_list.h",
-        "kliff/neighbor/helper.hpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
@@ -116,7 +112,7 @@ setup(
     name="kliff",
     version=get_version(),
     packages=find_packages(),
-    ext_modules=[sym_fn, bispectrum, neighlist],
+    ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     # TODO, use numpy<1.20 because ptemcee (or emcee) can only work with that.
     # Should we fork and fix it, and then remove the <1.20 requirement?

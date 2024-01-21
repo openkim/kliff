@@ -112,11 +112,6 @@ class Descriptor(ConfigurationTransform):
         self.hyperparameters = self.get_default_hyperparams(hyperparameters)
         self.cutoff_function = cutoff_function
         self._cdesc, self.width = self._init_descriptor_from_kind()
-        if nl_ctx:
-            self.nl_ctx = nl_ctx
-            self.external_nl_ctx = True
-        else:
-            self.external_nl_ctx = False
 
     @staticmethod
     def get_default_hyperparams(hyperparameters):
@@ -250,21 +245,18 @@ class Descriptor(ConfigurationTransform):
         Returns:
             numpy.ndarray: Array of shape (n_atoms, width).
         """
-        if not self.external_nl_ctx:
-            self.nl_ctx = NeighborList(configuration, self.cutoff)
-            self.external_nl_ctx = True
-
+        nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
         descriptors = np.zeros((n_atoms, self.width))
-        species = np.array(self._map_species_to_int(self.nl_ctx.species), np.intc)
+        species = np.array(self._map_species_to_int(nl_ctx.species), np.intc)
         for i in range(n_atoms):
-            neigh_list, _, _ = self.nl_ctx.get_neigh(i)
+            neigh_list, _, _ = nl_ctx.get_neigh(i)
             descriptors[i, :] = lds.compute_single_atom(
                 self._cdesc,
                 i,
                 species,
                 np.array(neigh_list, dtype=np.intc),
-                self.nl_ctx.coords,
+                nl_ctx.coords,
             )
         return descriptors
 
@@ -284,29 +276,28 @@ class Descriptor(ConfigurationTransform):
         Returns:
             :numpy:`ndarray` of shape (n_atoms, 3)
         """
-        if not self.external_nl_ctx:
-            self.nl_ctx = NeighborList(configuration, self.cutoff)
+        nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
-        derivatives_unrolled = np.zeros(self.nl_ctx.coords.shape)
-        species = np.array(self._map_species_to_int(self.nl_ctx.species), dtype=np.intc)
+        derivatives_unrolled = np.zeros(nl_ctx.coords.shape)
+        species = np.array(self._map_species_to_int(nl_ctx.species), dtype=np.intc)
 
         descriptor = np.zeros(self.width)
 
         for i in range(n_atoms):
-            neigh_list, _, _ = self.nl_ctx.get_neigh(i)
+            neigh_list, _, _ = nl_ctx.get_neigh(i)
             descriptors_derivative = lds.gradient_single_atom(
                 self._cdesc,
                 i,
                 species,
                 np.array(neigh_list, dtype=np.intc),
-                self.nl_ctx.coords,
+                nl_ctx.coords,
                 descriptor,
                 dE_dZeta[i, :],
             )
             derivatives_unrolled += descriptors_derivative.reshape(-1, 3)
 
         derivatives = np.zeros(configuration.coords.shape)
-        neigh_images = self.nl_ctx.get_image()
+        neigh_images = nl_ctx.get_image()
         for i, atom in enumerate(neigh_images):
             derivatives[atom, :] += derivatives_unrolled[i, :]
 

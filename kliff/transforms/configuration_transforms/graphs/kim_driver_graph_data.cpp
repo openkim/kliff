@@ -1,9 +1,7 @@
 /*
  * Contains functions to generate complete graph from a given set of
  * coordinates and species. The generated graph uses the neighbor list
- * code from the kliff.nl module, but instead of linking against it, it
- * is copied here. This is done to avoid the need complicated build steps
- * and to make the graph module self sufficient.
+ * code from the kliff.nl module internally.
 
  * Author: Amit Gupta
  * Email: gupta839@umn.edu

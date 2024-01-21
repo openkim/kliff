@@ -98,7 +98,7 @@ class KIMDriverGraph(ConfigurationTransform):
         species (list): List of species.
         cutoff (float): Cutoff distance.
         n_layers (int): Number of convolution layers.
-        copy_to_config (bool): If True, the fingerprint will be copied to
+        copy_to_config (bool): If True, the graph will be copied to
             the Configuration object's fingerprint attribute.
     """
 
@@ -150,38 +150,22 @@ class KIMDriverGraph(ConfigurationTransform):
         Returns:
             PyGGraph object.
         """
-        torch_geom_graph = PyGGraph()
-        torch_geom_graph.energy = torch.as_tensor(graph.energy)
-        torch_geom_graph.forces = torch.as_tensor(graph.forces)
-        torch_geom_graph.n_layers = torch.as_tensor(graph.n_layers)
-        torch_geom_graph.coords = torch.as_tensor(graph.coords)
-        torch_geom_graph.images = torch.as_tensor(graph.images)
-        torch_geom_graph.species = torch.as_tensor(graph.species)
-        torch_geom_graph.z = torch.as_tensor(graph.z)
-        torch_geom_graph.contributions = torch.as_tensor(graph.contributions)
-        torch_geom_graph.num_nodes = torch.as_tensor(graph.n_nodes)
+        pyg_graph = PyGGraph()
+        pyg_graph.energy = torch.as_tensor(graph.energy)
+        pyg_graph.forces = torch.as_tensor(graph.forces)
+        pyg_graph.n_layers = torch.as_tensor(graph.n_layers)
+        pyg_graph.coords = torch.as_tensor(graph.coords)
+        pyg_graph.images = torch.as_tensor(graph.images)
+        pyg_graph.species = torch.as_tensor(graph.species)
+        pyg_graph.z = torch.as_tensor(graph.z)
+        pyg_graph.contributions = torch.as_tensor(graph.contributions)
+        pyg_graph.num_nodes = torch.as_tensor(graph.n_nodes)
         for i in range(graph.n_layers):
-            torch_geom_graph.__setattr__(
+            pyg_graph.__setattr__(
                 f"edge_index{i}", torch.as_tensor(graph.edge_index[i])
             )
-        # torch_geom_graph.coords.requires_grad_(True)
-        return torch_geom_graph
-
-    def collate_fn_single_conf(self, config_list):
-        """
-        Collate function for use with a Pytorch DataLoader. This function is used when
-        dataloader loads each configuration as a batch of size 1. This is useful when
-        the model is trained on a single configuration at a time.
-
-        Args:
-            config_list: List of configurations, as only first configuration is picked
-                from the list, it must be [Configuration] list with length 1.
-
-        Returns:
-            Graph object.
-        """
-        graph = self.forward(config_list[0])
-        return graph
+        # pyg_graph.coords.requires_grad_(True)
+        return pyg_graph
 
     def export_kim_model(self, path: str, model: str):
         """
