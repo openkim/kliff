@@ -1,4 +1,7 @@
-def symmetry_functions_set51() -> dict:
+from typing import Dict
+
+
+def symmetry_functions_set51() -> Dict:
     r"""Hyperparameters for symmetry functions, as discussed in:
     Nongnuch Artrith and Jorg Behler. "High-dimensional neural network potentials for
     metal surfaces: A prototype study for copper." Physical Review B 85, no. 4 (2012):
@@ -63,7 +66,7 @@ def symmetry_functions_set51() -> dict:
     }
 
 
-def symmetry_functions_set30() -> dict:
+def symmetry_functions_set30() -> Dict:
     r"""Hyperparameters for symmetry functions, as discussed in:
     Artrith, N., Hiller, B. and Behler, J., 2013. Neural network potentials for metals and
     oxides–First applications to copper clusters at zinc oxide. physica status solidi (b),
@@ -107,7 +110,7 @@ def symmetry_functions_set30() -> dict:
     }
 
 
-def bispectrum_default() -> dict:
+def bispectrum_default() -> Dict:
     return {
         "jmax": 4,
         "rfac0": 0.99363,
@@ -120,7 +123,7 @@ def bispectrum_default() -> dict:
     }
 
 
-def soap_default() -> dict:
+def soap_default() -> Dict:
     return {
         "n_max": 4,
         "l_max": 4,

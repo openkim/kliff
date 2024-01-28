@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from loguru import logger
@@ -114,7 +114,7 @@ class Descriptor(ConfigurationTransform):
         self._cdesc, self.width = self._init_descriptor_from_kind()
 
     @staticmethod
-    def get_default_hyperparams(hyperparameters):
+    def get_default_hyperparams(hyperparameters: Union[Dict, str]) -> Dict:
         """
         Set hyperparameters for the descriptor. If a string is provided, it will be used to select
         a set of default hyperparameters. If a dict is provided, it will be used as is.
@@ -141,7 +141,7 @@ class Descriptor(ConfigurationTransform):
         else:
             raise DescriptorsError("Hyperparameters must be either a string or an Dict")
 
-    def _init_descriptor_from_kind(self):
+    def _init_descriptor_from_kind(self) -> Tuple[lds.DescriptorKind, int]:
         """
         Initialize descriptor from descriptor kind. Currently only Symmetry Functions,
         Bispectrum, abd SOAP descriptors are supported.
@@ -211,12 +211,12 @@ class Descriptor(ConfigurationTransform):
                 f"Descriptor kind: {self.descriptor_kind} not supported yet"
             )
 
-    def _map_species_to_int(self, species):
+    def _map_species_to_int(self, species: List[str]) -> List[int]:
         """
         Map species to integers, which is required by the C++ implementation of the descriptors.
 
         TODO:
-            Unify all instances of species - > Z and Z -> species mapping functions. I
+            Unify all instances of species -> Z and Z -> species mapping functions. I
             think currently there are 3 of them. Also sort the atomic numbers and species
             codes conversions. Perhaps use the ASE function for this.
 
@@ -260,7 +260,9 @@ class Descriptor(ConfigurationTransform):
             )
         return descriptors
 
-    def backward(self, configuration: Configuration, dE_dZeta: np.ndarray):
+    def backward(
+        self, configuration: Configuration, dE_dZeta: np.ndarray
+    ) -> np.ndarray:
         """
         Compute the gradients of the descriptors with respect to the atomic coordinates.
         It takes in an array of shape (n_atoms, width) and the configuration, and performs

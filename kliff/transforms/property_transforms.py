@@ -74,7 +74,9 @@ class PropertyTransform:
             PropertyTransformError("Unknown format of dataset.")
         return configuration_list
 
-    def _get_property_values(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def _get_property_values(
+        self, dataset: Union[List["Configuration"], "Dataset"]
+    ) -> np.ndarray:
         """
         Get the property values from all the configurations in a dataset and return
         them as a numpy array.

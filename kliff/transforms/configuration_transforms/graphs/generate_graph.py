@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -88,7 +89,7 @@ class KIMDriverGraph(ConfigurationTransform):
         self.infl_dist = n_layers * cutoff
         self._tg = graph_module
 
-    def forward(self, configuration: "Configuration"):
+    def forward(self, configuration: "Configuration") -> PyGGraph:
         """
         Generate a graph representation of a configuration.
 
@@ -112,7 +113,7 @@ class KIMDriverGraph(ConfigurationTransform):
         return self.to_py_graph(graph)
 
     @staticmethod
-    def to_py_graph(graph):
+    def to_py_graph(graph) -> PyGGraph:
         """
         Convert a C++ graph object to a KLIFF Geometric Graph Data object, ``GraphData``.
 
@@ -139,7 +140,7 @@ class KIMDriverGraph(ConfigurationTransform):
         # pyg_graph.coords.requires_grad_(True)
         return pyg_graph
 
-    def export_kim_model(self, path: str, model: str):
+    def export_kim_model(self, path: Path, model: str):
         """
         Save the transform toa text file for reuse. This is currently used  to load the
         model into KIM-API for pre-processing. The model name is also required to correctly

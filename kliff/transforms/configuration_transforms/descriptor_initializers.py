@@ -1,11 +1,11 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 
 from .utils import get_bs_size
 
 
-def initialize_symmetry_functions(hyperparameters: Dict):
+def initialize_symmetry_functions(hyperparameters: Dict) -> Tuple[Tuple, int]:
     symmetry_function_types = list(hyperparameters.keys())
     symmetry_function_sizes = []
     symmetry_function_param_matrices = []
@@ -59,7 +59,7 @@ def initialize_symmetry_functions(hyperparameters: Dict):
     ), width
 
 
-def initialize_bispectrum_functions(hyperparameters: Dict):
+def initialize_bispectrum_functions(hyperparameters: Dict) -> Tuple[Tuple, int]:
     twojmax = 2 * hyperparameters["jmax"]
     use_shared_array = 1 if hyperparameters["use_shared_array"] else 0
     return (
