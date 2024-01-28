@@ -1,13 +1,11 @@
+from typing import TYPE_CHECKING
+
 from loguru import logger
 from monty.dev import requires
 
-from kliff.utils import torch_available, torch_geometric_available
-
-from typing import TYPE_CHECKING
-
-from kliff.transforms.configuration_transforms.graphs import graph_module
-
 from kliff.transforms.configuration_transforms import ConfigurationTransform
+from kliff.transforms.configuration_transforms.graphs import graph_module
+from kliff.utils import torch_available, torch_geometric_available
 
 if TYPE_CHECKING:
     from kliff.dataset import Configuration
@@ -19,13 +17,17 @@ if torch_geometric_available():
     from torch_geometric.data import Data
 
 
-@requires(torch_geometric_available(), "Pytorch Geometric is not available. It is required for PyGGraph.")
+@requires(
+    torch_geometric_available(),
+    "Pytorch Geometric is not available. It is required for PyGGraph.",
+)
 class PyGGraph(Data):
     """
     A Pytorch Geometric compatible graph representation of a configuration. When loaded
     into a class:`torch_geometric.data.DataLoader` the graphs of type PyGGraph
     will be automatically collated and batched.
     """
+
     def __init__(self):
         super().__init__()
         self.num_nodes = (
