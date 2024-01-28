@@ -3,88 +3,58 @@ from monty.dev import requires
 
 from kliff.utils import torch_available, torch_geometric_available
 
-if torch_available():
-    import torch
-
 from typing import TYPE_CHECKING
 
 from kliff.transforms.configuration_transforms.graphs import graph_module
 
-from ..configuration_transform import ConfigurationTransform
+from kliff.transforms.configuration_transforms import ConfigurationTransform
 
 if TYPE_CHECKING:
     from kliff.dataset import Configuration
+
+if torch_available():
+    import torch
 
 if torch_geometric_available():
     from torch_geometric.data import Data
 
 
-if torch_geometric_available():
+@requires(torch_geometric_available(), "Pytorch Geometric is not available. It is required for PyGGraph.")
+class PyGGraph(Data):
+    """
+    A Pytorch Geometric compatible graph representation of a configuration. When loaded
+    into a class:`torch_geometric.data.DataLoader` the graphs of type PyGGraph
+    will be automatically collated and batched.
+    """
+    def __init__(self):
+        super().__init__()
+        self.num_nodes = (
+            None  # Simplify sizes and frees up pos key word, coords is cleaner
+        )
+        self.energy = None
+        self.forces = None
+        self.n_layers = None
+        self.coords = None
+        self.images = None
+        self.species = None
+        self.z = None
+        self.contributions = None
 
-    class PyGGraph(Data):
-        """
-        A Pytorch Geometric compatible graph representation of a configuration. When loaded
-        into a class:`torch_geometric.data.DataLoader` the graphs of type PyGGraph
-        will be automatically collated and batched.
+    def __inc__(self, key, value, *args, **kwargs):
+        if "index" in key or "face" in key:
+            return self.num_nodes
+        elif "contributions" in key:
+            return 2
+        elif "images" in key:
+            return torch.max(value) + 1
+        else:
+            return 0
 
-        """
-
-        def __init__(self):
-            super().__init__()
-            self.num_nodes = (
-                None  # Simplify sizes and frees up pos key word, coords is cleaner
-            )
-            self.energy = None
-            self.forces = None
-            self.n_layers = None
-            self.coords = None
-            self.images = None
-            self.species = None
-            self.z = None
-            self.contributions = None
-
-        def __inc__(self, key, value, *args, **kwargs):
-            if "index" in key or "face" in key:
-                return self.num_nodes
-            elif "contributions" in key:
-                return 2
-            elif "images" in key:
-                return torch.max(value) + 1
-            else:
-                return 0
-
-        def __cat_dim__(self, key, value, *args, **kwargs):
-            if "index" in key or "face" in key:
-                return 1
-            else:
-                return 0
-
-else:
-
-    class PyGGraph:
-        """
-        A dummy class to when torch geometric is not available. It has same attributes
-        as PyGGraph class, but does not inherit from torch_geometric.data.Data.
-        """
-
-        warning_logged = False
-
-        def __init__(self, *args, **kwargs):
-            if not PyGGraph.warning_logged:
-                logger.warning(
-                    "Pytorch Geometric not available, using dummy PyGGraph."
-                    "Install torch geometric for better performance."
-                )
-                PyGGraph.warning_logged = True
-            self.num_nodes = None
-            self.energy = None
-            self.forces = None
-            self.n_layers = None
-            self.coords = None
-            self.images = None
-            self.species = None
-            self.z = None
-            self.contributions = None
+    def __cat_dim__(self, key, value, *args, **kwargs):
+        if "index" in key or "face" in key:
+            return 1
+        else:
+            return 0
 
 
 class KIMDriverGraph(ConfigurationTransform):
