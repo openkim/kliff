@@ -29,12 +29,14 @@ class get_pybind11_includes:
 
 
 def get_includes():
-    return [get_pybind11_includes()]
+    return [get_pybind11_includes(), "kliff/neighbor"]
 
 
 def get_extra_compile_args():
     return ["-std=c++11"]
 
+
+# TODO: explore -Ofast and -march=native
 
 sym_fn = Extension(
     "kliff.descriptors.symmetry_function.sf",
@@ -71,6 +73,17 @@ neighlist = Extension(
     language="c++",
 )
 
+graph_module = Extension(
+    "kliff.transforms.configuration_transforms.graphs.graph_module",
+    sources=[
+        "kliff/transforms/configuration_transforms/graphs/kim_driver_graph_data.cpp",
+        "kliff/neighbor/neighbor_list.cpp",
+    ],
+    include_dirs=get_includes(),
+    extra_compile_args=get_extra_compile_args(),
+    language="c++",
+)
+
 
 def get_version():
     fname = Path(__file__).parent.joinpath("kliff", "__init__.py")
@@ -99,7 +112,7 @@ setup(
     name="kliff",
     version=get_version(),
     packages=find_packages(),
-    ext_modules=[sym_fn, bispectrum, neighlist],
+    ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
     extras_require={
         "test": [
