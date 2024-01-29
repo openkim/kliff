@@ -5,7 +5,6 @@ See `A force-matching Stillinger-Weber potential for MoS2: Parameterization and 
 information theory based sensitivity analysis <https://doi.org/10.1063/1.5007842>`_
 """
 
-
 from kliff.analyzers import Fisher
 from kliff.calculators import Calculator
 from kliff.dataset import Dataset

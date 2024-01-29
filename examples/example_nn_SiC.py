@@ -9,7 +9,6 @@ species: Si and C. This is very similar to the training for systems containing a
 specie (take a look at :ref:`tut_nn` for Si if you haven't yet).
 """
 
-
 from kliff import nn
 from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.dataset import Dataset

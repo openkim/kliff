@@ -18,7 +18,6 @@ In this tutorial, we show how to apply parameter transformation to the SW potent
 silicon that is archived on OpenKIM_. Compare this with :ref:`tut_kim_sw`.
 """
 
-
 ##########################################################################################
 # To start, let's first install the SW model::
 #
