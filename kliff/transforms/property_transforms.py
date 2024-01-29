@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Iterable, List, Union
+from typing import List, Union
 
 import numpy as np
 
@@ -19,7 +19,7 @@ class PropertyTransform:
         property_key: The key of the property to be transformed.
     """
 
-    def __init__(self, property_key="energy", keep_original=False):
+    def __init__(self, property_key: str = "energy", keep_original: bool = False):
         self._keep_original = keep_original
         self.original_values = None
         self.property_key = property_key
@@ -28,7 +28,7 @@ class PropertyTransform:
     def keep_original(self):
         return self._keep_original
 
-    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def transform(self, dataset: Union[List[Configuration], Dataset]):
         """
         Transform the property of a configuration.
 
@@ -37,7 +37,7 @@ class PropertyTransform:
         """
         raise PropertyTransformError("This method is not implemented.")
 
-    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def inverse(self, dataset: Union[List[Configuration], Dataset]):
         """
         Inverse transform the property of a configuration.
 
@@ -46,13 +46,13 @@ class PropertyTransform:
         """
         raise PropertyTransformError("This method is not implemented.")
 
-    def __call__(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def __call__(self, dataset: Union[List[Configuration], Dataset]):
         self.transform(dataset)
 
     @staticmethod
     def get_configuration_list(
-        dataset: Union[List["Configuration"], "Dataset"]
-    ) -> List["Configuration"]:
+        dataset: Union[List[Configuration], Dataset]
+    ) -> List[Configuration]:
         """
         Get a list of configurations from a dataset. This method ensures constant API
         for any arbitrary dataset. It is expected that this method will maintain the
@@ -75,7 +75,7 @@ class PropertyTransform:
         return configuration_list
 
     def _get_property_values(
-        self, dataset: Union[List["Configuration"], "Dataset"]
+        self, dataset: Union[List[Configuration], Dataset]
     ) -> np.ndarray:
         """
         Get the property values from all the configurations in a dataset and return
@@ -95,7 +95,7 @@ class PropertyTransform:
 
     def _set_property_values(
         self,
-        dataset: Union[List["Configuration"], "Dataset"],
+        dataset: Union[List[Configuration], Dataset],
         property_values: Union[np.ndarray, List[float, int]],
     ):
         """
@@ -118,7 +118,7 @@ class NormalizedPropertyTransform(PropertyTransform):
         x' = \\frac{x - \\mu}{\\sigma}
     """
 
-    def __init__(self, property_key="energy", keep_original=False):
+    def __init__(self, property_key: str = "energy", keep_original: bool = False):
         super().__init__(property_key, keep_original)
         self.original_values = None
         self.property_key = property_key
@@ -126,7 +126,7 @@ class NormalizedPropertyTransform(PropertyTransform):
         self.mean = 0.0
         self.std = 1.0
 
-    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def transform(self, dataset: Union[List[Configuration], Dataset]):
         original_property_values = self._get_property_values(dataset)
         if self.keep_original:
             self.original_values = original_property_values
@@ -135,7 +135,7 @@ class NormalizedPropertyTransform(PropertyTransform):
         transformed_values = (original_property_values - self.mean) / self.std
         self._set_property_values(dataset, transformed_values)
 
-    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def inverse(self, dataset: Union[List[Configuration], Dataset]):
         transformed_values = self._get_property_values(dataset)
         transformed_values = transformed_values * self.std + self.mean
         self._set_property_values(dataset, transformed_values)
@@ -151,14 +151,14 @@ class RMSNormalizePropertyTransform(PropertyTransform):
         x' = \\frac{x}{\\sqrt{\\frac{1}{N}\\sum_{i=1}^N x_i^2}}
     """
 
-    def __init__(self, property_key="forces", keep_original=False):
+    def __init__(self, property_key: str = "forces", keep_original: bool = False):
         super().__init__(property_key, keep_original)
         self.original_values = None
         self.property_key = property_key
         self._keep_original = keep_original
         self.rms_mean = 0.0
 
-    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def transform(self, dataset: Union[List[Configuration], Dataset]):
         original_property_values = self._get_property_values(dataset)
         if self.keep_original:
             self.original_values = original_property_values
@@ -166,7 +166,7 @@ class RMSNormalizePropertyTransform(PropertyTransform):
         transformed_values = original_property_values / self.rms_mean
         self._set_property_values(dataset, transformed_values)
 
-    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def inverse(self, dataset: Union[List[Configuration], Dataset]):
         transformed_values = self._get_property_values(dataset)
         transformed_values = transformed_values * self.rms_mean
         self._set_property_values(dataset, transformed_values)
@@ -181,14 +181,14 @@ class RMSMagnitudeNormalizePropertyTransform(PropertyTransform):
         x' = \\frac{x}{\\sqrt{\\frac{1}{N}\\sum_{i=1}^N \\|x_i\\|^2}}
     """
 
-    def __init__(self, property_key="forces", keep_original=False):
+    def __init__(self, property_key: str = "forces", keep_original: bool = False):
         super().__init__(property_key, keep_original)
         self.original_values = None
         self.property_key = property_key
         self._keep_original = keep_original
         self.rms_mean_magnitude = 0.0
 
-    def transform(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def transform(self, dataset: Union[List[Configuration], Dataset]):
         original_property_values = self._get_property_values(dataset)
         if self.keep_original:
             self.original_values = original_property_values
@@ -198,7 +198,7 @@ class RMSMagnitudeNormalizePropertyTransform(PropertyTransform):
         transformed_values = original_property_values / self.rms_mean_magnitude
         self._set_property_values(dataset, transformed_values)
 
-    def inverse(self, dataset: Union[List["Configuration"], "Dataset"]):
+    def inverse(self, dataset: Union[List[Configuration], Dataset]):
         transformed_values = self._get_property_values(dataset)
         transformed_values = transformed_values * self.rms_mean_magnitude
         self._set_property_values(dataset, transformed_values)

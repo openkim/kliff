@@ -88,7 +88,6 @@ class Descriptor(ConfigurationTransform):
         descriptor: str,
         hyperparameters: Union[Dict, str],
         cutoff_function: str = "cos",
-        nl_ctx: NeighborList = None,
         copy_to_config: bool = False,
     ):
         """
@@ -98,7 +97,6 @@ class Descriptor(ConfigurationTransform):
             descriptor (str): String of descriptor type, can be obtained by `show_available_descriptors()`.
             hyperparameters (Dict): Ordered dictionary of hyperparameters.
             cutoff_function (str): Cut-off function, currently only "cos" is supported.
-            nl_ctx (NeighborList): function to compute neighbor list, if not provided, will be computed internally.
             copy_to_config (bool): If True, the fingerprint will be copied to
                 the Configuration object's fingerprint attribute.
         """

@@ -1,15 +1,13 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import List
 
 from loguru import logger
 from monty.dev import requires
 
+from kliff.dataset import Configuration
 from kliff.transforms.configuration_transforms import ConfigurationTransform
 from kliff.transforms.configuration_transforms.graphs import graph_module
 from kliff.utils import torch_available, torch_geometric_available
-
-if TYPE_CHECKING:
-    from kliff.dataset import Configuration
 
 if torch_available():
     import torch
@@ -43,7 +41,7 @@ class PyGGraph(Data):
         self.z = None
         self.contributions = None
 
-    def __inc__(self, key, value, *args, **kwargs):
+    def __inc__(self, key: str, value: torch.Tensor, *args, **kwargs):
         if "index" in key or "face" in key:
             return self.num_nodes
         elif "contributions" in key:
@@ -53,7 +51,7 @@ class PyGGraph(Data):
         else:
             return 0
 
-    def __cat_dim__(self, key, value, *args, **kwargs):
+    def __cat_dim__(self, key: str, value: torch.Tensor, *args, **kwargs):
         if "index" in key or "face" in key:
             return 1
         else:
@@ -77,10 +75,10 @@ class KIMDriverGraph(ConfigurationTransform):
 
     def __init__(
         self,
-        species,
-        cutoff,
-        n_layers,
-        copy_to_config=False,
+        species: List[str],
+        cutoff: float,
+        n_layers: int,
+        copy_to_config: bool = False,
     ):
         super().__init__(copy_to_config=copy_to_config)
         self.species = species
@@ -89,7 +87,7 @@ class KIMDriverGraph(ConfigurationTransform):
         self.infl_dist = n_layers * cutoff
         self._tg = graph_module
 
-    def forward(self, configuration: "Configuration") -> PyGGraph:
+    def forward(self, configuration: Configuration) -> PyGGraph:
         """
         Generate a graph representation of a configuration.
 
@@ -113,12 +111,12 @@ class KIMDriverGraph(ConfigurationTransform):
         return self.to_py_graph(graph)
 
     @staticmethod
-    def to_py_graph(graph) -> PyGGraph:
+    def to_py_graph(graph: graph_module.GraphData) -> PyGGraph:
         """
         Convert a C++ graph object to a KLIFF Geometric Graph Data object, ``GraphData``.
 
         Args:
-            graph: C++ graph object.
+            graph: C++ graph data object.
 
         Returns:
             PyGGraph object.
