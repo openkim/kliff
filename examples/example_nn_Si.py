@@ -8,7 +8,6 @@ In this tutorial, we train a neural network (NN) potential for silicon.
 
 """
 
-
 ##########################################################################################
 # We are going to fit the NN potential to a training set of energies and forces from
 # compressed and stretched diamond silicon structures (the same training set used in

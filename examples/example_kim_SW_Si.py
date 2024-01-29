@@ -8,7 +8,6 @@ In this tutorial, we train a Stillinger-Weber (SW) potential for silicon that is
 on OpenKIM_.
 """
 
-
 ##########################################################################################
 # Before getting started to train the SW model, let's first make sure it is installed.
 #

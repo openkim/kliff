@@ -15,7 +15,6 @@ These parameters will be calibrated to energies and forces of a small dataset,
 consisting of 4 compressed and stretched configurations of diamond silicon structure.
 """
 
-
 ##########################################################################################
 # To start, let's first install the SW model::
 #
