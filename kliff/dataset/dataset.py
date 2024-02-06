@@ -779,7 +779,7 @@ class Dataset:
         """
         instance = cls()
         instance.add_from_ase(
-            ase_atoms_list, path, weight, energy_key, forces_key, slices, file_format
+            path, ase_atoms_list, weight, energy_key, forces_key, slices, file_format
         )
         return instance
 
