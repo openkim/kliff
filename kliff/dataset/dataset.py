@@ -10,7 +10,7 @@ from monty.dev import requires
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
-from kliff.utils import stress_to_voigt, stress_to_tensor, to_path
+from kliff.utils import stress_to_tensor, stress_to_voigt, to_path
 
 # For type checking
 if TYPE_CHECKING:
@@ -178,30 +178,42 @@ class Configuration:
                 function.
         """
         try:
-            configuration_id = data_object['relationships'][0]['configuration']
-            fetched_configuration = database_client.configurations.find_one({'colabfit-id': data_object['relationships'][0]['configuration']})
-            fetched_properties = list(database_client.property_instances.find({'colabfit-id':{'$in':data_object['relationships'][0]['property_instance']}}))
+            configuration_id = data_object["relationships"][0]["configuration"]
+            fetched_configuration = database_client.configurations.find_one(
+                {"colabfit-id": data_object["relationships"][0]["configuration"]}
+            )
+            fetched_properties = list(
+                database_client.property_instances.find(
+                    {
+                        "colabfit-id": {
+                            "$in": data_object["relationships"][0]["property_instance"]
+                        }
+                    }
+                )
+            )
         except:
             raise ConfigurationError(
                 "Looks like Mongo database did not return appropriate response. "
                 f"Please run db.configurations.find('_id':{data_object}) to verify response. "
             )
-        cell = np.asarray(fetched_configuration['cell'])
+        cell = np.asarray(fetched_configuration["cell"])
         # TODO: consistent Z -> symbol mapping -> Z mapping across all kliff
-        species = [chemical_symbols[int(i)] for i in fetched_configuration['atomic_numbers']]
-        coords = np.asarray(fetched_configuration['positions'])
-        PBC = [bool(i) for i in fetched_configuration['pbc']]
+        species = [
+            chemical_symbols[int(i)] for i in fetched_configuration["atomic_numbers"]
+        ]
+        coords = np.asarray(fetched_configuration["positions"])
+        PBC = [bool(i) for i in fetched_configuration["pbc"]]
 
         energy = None
         forces = None
         stress = None
         for property in fetched_properties:
-            if property['type'] == 'potential-energy':
-                energy = float(property['potential-energy']['energy']['source-value'])
-            elif property['type'] == 'atomic-forces':
-                forces = np.asarray(property['atomic-forces']['forces']['source-value'])
-            elif property['type'] == 'cauchy-stress':
-                stress = np.asarray(property['cauchy-stress']['stress']['source-value'])
+            if property["type"] == "potential-energy":
+                energy = float(property["potential-energy"]["energy"]["source-value"])
+            elif property["type"] == "atomic-forces":
+                forces = np.asarray(property["atomic-forces"]["forces"]["source-value"])
+            elif property["type"] == "cauchy-stress":
+                stress = np.asarray(property["cauchy-stress"]["stress"]["source-value"])
 
         stress = stress_to_voigt(stress)
         self = cls(
@@ -552,7 +564,9 @@ class Dataset:
     def __init__(self, configurations: Iterable = None):
         if configurations is None:
             self.configs = []
-        elif isinstance(configurations, Iterable) and not isinstance(configurations, str):
+        elif isinstance(configurations, Iterable) and not isinstance(
+            configurations, str
+        ):
             self.configs = list(configurations)
         else:
             raise DatasetError(
@@ -565,7 +579,7 @@ class Dataset:
         cls,
         colabfit_database: str,
         colabfit_dataset: str,
-        colabfit_uri:str = "mongodb://localhost:27017",
+        colabfit_uri: str = "mongodb://localhost:27017",
         weight: Optional[Weight] = None,
     ) -> "Dataset":
         """
@@ -583,7 +597,9 @@ class Dataset:
             A dataset of configurations.
         """
         instance = cls()
-        instance.add_from_colabfit(colabfit_database, colabfit_dataset, colabfit_uri, weight)
+        instance.add_from_colabfit(
+            colabfit_database, colabfit_dataset, colabfit_uri, weight
+        )
         return instance
 
     @staticmethod
@@ -591,7 +607,7 @@ class Dataset:
     def _read_from_colabfit(
         database_client: MongoDatabase,
         colabfit_dataset: str,
-        weight: Optional[Weight] = None
+        weight: Optional[Weight] = None,
     ) -> List[Configuration]:
         """
         Read configurations from colabfit database.
@@ -607,7 +623,9 @@ class Dataset:
             A list of configurations.
         """
         # get configuration and property ID and send it to load configuration-first get Data Objects
-        data_objects = database_client.data_objects.find({'relationships.dataset': colabfit_dataset})
+        data_objects = database_client.data_objects.find(
+            {"relationships.dataset": colabfit_dataset}
+        )
         if not data_objects:
             logger.error(f"{colabfit_dataset} is either empty or does not exist")
             raise DatasetError(f"{colabfit_dataset} is either empty or does not exist")
@@ -630,7 +648,7 @@ class Dataset:
         self,
         colabfit_database: str,
         colabfit_dataset: str,
-        colabfit_uri:str = "mongodb://localhost:27017",
+        colabfit_uri: str = "mongodb://localhost:27017",
         weight: Optional[Weight] = None,
     ):
         """
