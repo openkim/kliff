@@ -10,7 +10,7 @@ from monty.dev import requires
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
-from kliff.utils import stress_to_voigt, to_path
+from kliff.utils import stress_to_voigt, stress_to_tensor, to_path
 
 # For type checking
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ except ImportError:
     MongoDatabase = None
 
 import ase.io
+from ase.data import chemical_symbols
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
@@ -162,8 +163,7 @@ class Configuration:
     def from_colabfit(
         cls,
         database_client: "MongoDatabase",
-        configuration_id: str,
-        property_ids: Optional[Union[List[str], str]] = None,
+        data_object: dict,
         weight: Optional[Weight] = None,
     ):
         """
@@ -172,46 +172,38 @@ class Configuration:
         Args:
             database_client: Instance of connected MongoDatabase client, which can be used to
                 fetch database from colabfit-tools dataset.
-            configuration_id: ID of the configuration instance to be collected from the collection
-                "configuration" in colabfit-tools.
-            property_ids: ID of the property instance to be associated with current configuration.
-                Usually properties would be trained against. Each associated property "field" will be
-                matched against provided list of aux_property_fields.
+            data_object: colabfit data object dictionary to be associated with current
+                configuration and property.
             weight: an instance that computes the weight of the configuration in the loss
                 function.
         """
         try:
-            fetched_configuration: "ColabfitConfiguration" = (
-                database_client.get_configuration(configuration_id)
-            )
+            configuration_id = data_object['relationships'][0]['configuration']
+            fetched_configuration = database_client.configurations.find_one({'colabfit-id': data_object['relationships'][0]['configuration']})
+            fetched_properties = list(database_client.property_instances.find({'colabfit-id':{'$in':data_object['relationships'][0]['property_instance']}}))
         except:
             raise ConfigurationError(
                 "Looks like Mongo database did not return appropriate response. "
-                f"Please run db.configurations.find('_id':{configuration_id}) to verify response. "
-                f"Or try running the following in separate Python terminal:\n"
-                "from colabfit.tools.database import MongoDatabase\n"
-                f"client = MongoDatabase({database_client.database_name})\n"
-                f"client.get_configuration({configuration_id})\n"
-                " \n"
-                "Above shall return a Configuration object with ASE Atoms format.",
+                f"Please run db.configurations.find('_id':{data_object}) to verify response. "
             )
-        coords = fetched_configuration.arrays["positions"]
-        species = fetched_configuration.get_chemical_symbols()
-        cell = np.array(fetched_configuration.cell.todict()["array"])
-        PBC = fetched_configuration.pbc
+        cell = np.asarray(fetched_configuration['cell'])
+        # TODO: consistent Z -> symbol mapping -> Z mapping across all kliff
+        species = [chemical_symbols[int(i)] for i in fetched_configuration['atomic_numbers']]
+        coords = np.asarray(fetched_configuration['positions'])
+        PBC = [bool(i) for i in fetched_configuration['pbc']]
 
-        # get energy, forces, stresses from the property ids
-        energy = cls._get_colabfit_property(
-            database_client, property_ids, "energy", "potential-energy"
-        )
-        forces = cls._get_colabfit_property(
-            database_client, property_ids, "forces", "atomic-forces"
-        )
-        stress = cls._get_colabfit_property(
-            database_client, property_ids, "stress", "cauchy-stress"
-        )
+        energy = None
+        forces = None
+        stress = None
+        for property in fetched_properties:
+            if property['type'] == 'potential-energy':
+                energy = float(property['potential-energy']['energy']['source-value'])
+            elif property['type'] == 'atomic-forces':
+                forces = np.asarray(property['atomic-forces']['forces']['source-value'])
+            elif property['type'] == 'cauchy-stress':
+                stress = np.asarray(property['cauchy-stress']['stress']['source-value'])
+
         stress = stress_to_voigt(stress)
-
         self = cls(
             cell,
             species,
@@ -224,9 +216,7 @@ class Configuration:
             weight=weight,
         )
         self.metadata = {
-            "database_client": database_client,
-            "property_id": property_ids,
-            "configuration_id": configuration_id,
+            "data_object": data_object,
         }
 
         return self
@@ -277,6 +267,27 @@ class Configuration:
             weight,
         )
         return self
+
+    def to_ase_atoms(self):
+        """
+        Convert the configuration to ase.Atoms object.
+
+        Returns:
+            ase.Atoms representation of the Configuration
+        """
+        atoms = ase.Atoms(
+            symbols=self.species,
+            positions=self.coords,
+            cell=self.cell,
+            pbc=self.PBC,
+        )
+        if self.energy is not None:
+            atoms.info["energy"] = self.energy
+        if self.forces is not None:
+            atoms.set_array("forces", self.forces)
+        if self.stress is not None:
+            atoms.info["stress"] = stress_to_tensor(self.stress)
+        return atoms
 
     @property
     def cell(self) -> np.ndarray:
@@ -541,7 +552,7 @@ class Dataset:
     def __init__(self, configurations: Iterable = None):
         if configurations is None:
             self.configs = []
-        elif isinstance(configurations, Iterable):
+        elif isinstance(configurations, Iterable) and not isinstance(configurations, str):
             self.configs = list(configurations)
         else:
             raise DatasetError(
@@ -549,10 +560,12 @@ class Dataset:
             )
 
     @classmethod
+    @requires(MongoDatabase is not None, "colabfit-tools is not installed")
     def from_colabfit(
         cls,
         colabfit_database: str,
         colabfit_dataset: str,
+        colabfit_uri:str = "mongodb://localhost:27017",
         weight: Optional[Weight] = None,
     ) -> "Dataset":
         """
@@ -562,18 +575,23 @@ class Dataset:
             weight: an instance that computes the weight of the configuration in the loss
                 function.
             colabfit_database: Name of the colabfit Mongo database to read from.
-            colabfit_dataset: Name of the colabfit dataset instance to read from.
+            colabfit_dataset: Name of the colabfit dataset instance to read from, usually
+                it is of form, e.g., "DS_xxxxxxxxxxxx_0"
+            colabfit_uri: connection URI of the colabfit Mongo database to read from.
 
         Returns:
             A dataset of configurations.
         """
         instance = cls()
-        instance.add_from_colabfit(colabfit_database, colabfit_dataset, weight)
+        instance.add_from_colabfit(colabfit_database, colabfit_dataset, colabfit_uri, weight)
         return instance
 
     @staticmethod
+    @requires(MongoDatabase is not None, "colabfit-tools is not installed")
     def _read_from_colabfit(
-        database_client, colabfit_dataset, weight
+        database_client: MongoDatabase,
+        colabfit_dataset: str,
+        weight: Optional[Weight] = None
     ) -> List[Configuration]:
         """
         Read configurations from colabfit database.
@@ -589,30 +607,16 @@ class Dataset:
             A list of configurations.
         """
         # get configuration and property ID and send it to load configuration-first get Data Objects
-        dataset_dos = database_client.get_data(
-            "data_objects",
-            fields=["colabfit-id"],
-            query={"relationships.datasets": {"$in": [colabfit_dataset]}},
-        )
-        if not dataset_dos:
+        data_objects = database_client.data_objects.find({'relationships.dataset': colabfit_dataset})
+        if not data_objects:
             logger.error(f"{colabfit_dataset} is either empty or does not exist")
             raise DatasetError(f"{colabfit_dataset} is either empty or does not exist")
 
         configs = []
-        for do in dataset_dos:
-            co_doc = database_client.configurations.find_one(
-                {"relationships.data_objects": {"$in": [do]}}
-            )
-            pi_doc = database_client.property_instances.find(
-                {"relationships.data_objects": {"$in": [do]}}
-            )
-            co_id = co_doc["colabfit-id"]
-            pi_ids = [i["colabfit-id"] for i in pi_doc]
-
+        for data_object in data_objects:
             configs.append(
-                Configuration.from_colabfit(database_client, co_id, pi_ids, weight)
+                Configuration.from_colabfit(database_client, data_object, weight)
             )
-            # TODO: reduce number of queries to database. Current: 4 per configuration
 
         if len(configs) <= 0:
             raise DatasetError(f"No dataset file with in {colabfit_dataset} dataset.")
@@ -626,6 +630,7 @@ class Dataset:
         self,
         colabfit_database: str,
         colabfit_dataset: str,
+        colabfit_uri:str = "mongodb://localhost:27017",
         weight: Optional[Weight] = None,
     ):
         """
@@ -633,14 +638,15 @@ class Dataset:
 
         Args:
             colabfit_database: Name of the colabfit Mongo database to read from.
-            colabfit_dataset: Name of the colabfit dataset instance to read from.
+            colabfit_dataset: Name of the colabfit dataset instance to read from (usually
+                it is of form, e.g., "DS_xxxxxxxxxxxx_0")
+            colabfit_uri: connection URI of the colabfit Mongo database to read from.
             weight: an instance that computes the weight of the configuration in the loss
                 function.
 
         """
         # open link to the mongo
-        mongo_client = MongoDatabase(colabfit_database)
-        colabfit_dataset = colabfit_dataset
+        mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri)
         configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, weight)
         self.configs.extend(configs)
 
