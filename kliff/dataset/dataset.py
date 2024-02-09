@@ -942,7 +942,7 @@ class Dataset:
         if isinstance(path, str):
             path = Path(path)
         configs = self._read_from_ase(
-            ase_atoms_list, path, weight, energy_key, forces_key, slices
+            path, ase_atoms_list, weight, energy_key, forces_key, slices
         )
         self.configs.extend(configs)
 
