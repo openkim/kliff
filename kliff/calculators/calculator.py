@@ -251,12 +251,12 @@ class Calculator:
         """
         return self.model.get_num_opt_params()
 
-    def has_opt_params_bounds(self):
+    def opt_params_has_bounds(self):
         """
         Return a bool to indicate whether there are parameters whose bounds are
         provided.
         """
-        return self.model.has_opt_params_bounds()
+        return self.model.opt_params_has_bounds()
 
     def get_opt_params_bounds(self):
         """
@@ -267,7 +267,7 @@ class Calculator:
         :meth:`get_opt_params`. ``None`` for ``lower`` or ``upper`` means that no bound
         should be applied.
         """
-        return self.model.get_opt_params_bounds()
+        return self.model.get_formatted_param_bounds()
 
     def update_model_params(self, opt_params: List[float]):
         """
@@ -373,7 +373,7 @@ class _WrapperCalculator(object):
             calc_list.extend([calc] * N)
         return calc_list
 
-    def has_opt_params_bounds(self) -> bool:
+    def opt_params_has_bounds(self) -> bool:
         """
         Return a boolean to indicate whether there are parameters whose bounds are
         provided.
@@ -383,7 +383,7 @@ class _WrapperCalculator(object):
         """
         calc_list = self._calculators
         has_opt_params_bounds_per_calc = [
-            calc.model.has_opt_params_bounds() for calc in calc_list
+            calc.model.opt_params_has_bounds() for calc in calc_list
         ]
         return all(has_opt_params_bounds_per_calc)
 

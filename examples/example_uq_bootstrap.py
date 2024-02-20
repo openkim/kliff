@@ -14,7 +14,6 @@ small dataset, consisting of 4 compressed and stretched configurations of diamon
 structure.
 """
 
-
 ##########################################################################################
 # To start, let's first install the SW model::
 #

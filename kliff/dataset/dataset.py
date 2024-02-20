@@ -430,7 +430,7 @@ class Configuration:
         """
         Set the fingerprint of the configuration.
         Args:
-         fingerprint: Numpy array which is the fingerprint of the configuration.
+         fingerprint: Object which is the fingerprint of the configuration.
         """
         self._fingerprint = fingerprint
 

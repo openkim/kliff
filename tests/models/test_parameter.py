@@ -151,7 +151,7 @@ def create_all_possible_input(v):
 #
 #     bounds = [[i - 0.1, i + 0.1] for i in x0]
 #     assert np.array_equal(op.get_opt_params_bounds(), bounds)
-#     assert op.has_opt_params_bounds() == True
+#     assert op.opt_params_has_bounds() == True
 #
 #     import sys
 #

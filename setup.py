@@ -114,12 +114,18 @@ setup(
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
     install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
-    # TODO, use numpy<1.20 because ptemcee (or emcee) can only work with that.
-    # Should we fork and fix it, and then remove the <1.20 requirement?
-    # This also prohibits the use of py3.10; most distribution channels (e.g. conda)
-    # do not have numpy<1.20 support anymore.
     extras_require={
-        "test": ["pytest", "kimpy", "ptemcee", "emcee", "torch", "numpy<1.20", "ase"],
+        "test": [
+            "pytest",
+            "kimpy",
+            "emcee",
+            "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
+            "torch",
+            "numpy",
+            "ase",
+            "libdescriptor",
+            "torch_geometric",
+        ],
         "docs": [
             "sphinx",
             "furo",
