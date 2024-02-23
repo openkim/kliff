@@ -117,6 +117,7 @@ setup(
     extras_require={
         "test": [
             "pytest",
+            "pytest-cov",
             "kimpy",
             "emcee",
             "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
