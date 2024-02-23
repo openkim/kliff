@@ -32,7 +32,7 @@ class ConfigurationTransform:
     def __call__(self, configuration: Configuration) -> Any:
         fingerprint = self.forward(configuration)
         if self.copy_to_config:
-            configuration.fingerprint(fingerprint)
+            configuration.fingerprint = fingerprint
         return fingerprint
 
     def inverse(self, *args, **kargs) -> Configuration:

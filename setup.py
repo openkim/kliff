@@ -124,6 +124,8 @@ setup(
             "torch",
             "numpy",
             "ase",
+            "libdescriptor",
+            "torch_geometric",
         ],
         "docs": [
             "sphinx",
