@@ -62,4 +62,10 @@ jobs:
         shell: bash -el {0}
         run: |
           cd tests
-          pytest
+          pytest --cov=kliff --cov-report=xml
+
+      - uses: codecov/codecov-action@v4
+        if: matrix.python-version == "3.10" && github.repository == "openkim/kliff"
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
