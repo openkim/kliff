@@ -7,70 +7,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@v5.0.0
         with:
-          python-version: "3.9"
-          cache: pip
+          python-version: "3.10"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pre-commit
+
       - name: Lint
         run: pre-commit run --show-diff-on-failure --all-files
 
   test:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.8", "3.9", "3.10"]
 
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Install gcc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -yq gcc
-          sudo apt-get install -yq gfortran
-
-      # cannot install cmake with apt-get, so using this action
-      - uses: lukka/get-cmake@latest
+      - uses: actions/checkout@v4
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v1.8.0
         with:
-          cmakeVersion: "~3.25.0"
+          # the create command looks like this:
+          # `micromamba create -n test-env python=<the corresponding version> kim-api=2.3.0`
+          environment-name: test-env
+          cache-environment: true
+          create-args: >-
+            python=${{ matrix.python-version }}
+            kim-api=2.3.0
 
-      - name: Install kim-api
+      - name: Install KIM model
+        shell: bash -el {0}
         run: |
-          export KIMAPI_DIR=${PWD}
-          export KIM_API_VERSION="2.3.0"
-          cd $KIMAPI_DIR && cd ..
-          wget http://s3.openkim.org/kim-api/kim-api-$KIM_API_VERSION.txz
-          tar Jxvf kim-api-$KIM_API_VERSION.txz
-          cd kim-api-$KIM_API_VERSION
-          mkdir build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-          make -j2
-          sudo make install
-          sudo ldconfig
-
-          # install SW driver and model
-          cd $KIMAPI_DIR
           kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.7.0
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-
       - name: Install
+        shell: bash -el {0}
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[test]
 
-      - name: Test with pytest
+          # TODO, here, we install ptemcee from Yonatan's fork. See setup.py for details.
+          python -m pip uninstall --yes ptemcee
+          python -m pip install git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0
+
+      - name: Run tests
+        shell: bash -el {0}
         run: |
           cd tests
           pytest --cov=kliff --cov-report=xml
