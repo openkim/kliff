@@ -96,7 +96,7 @@ class PropertyTransform:
     def _set_property_values(
         self,
         dataset: Union[List[Configuration], Dataset],
-        property_values: Union[np.ndarray, List[float, int]],
+        property_values: Union[np.ndarray, List[Union[float, int]]],
     ):
         """
         Set the property values of all the configurations in a dataset. This method
