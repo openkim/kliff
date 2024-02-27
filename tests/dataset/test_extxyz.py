@@ -1,7 +1,34 @@
 import numpy as np
 import pytest
 
-from kliff.dataset.dataset import Configuration, Dataset
+from kliff.dataset.dataset import Configuration, Dataset, read_extxyz, write_extxyz
+
+
+def test_read_write_extxyz(test_data_dir, tmp_dir):
+    path = test_data_dir.joinpath("configs/MoS2/MoS2_energy_forces_stress.xyz")
+    cell, species, coords, PBC, energy, forces, stress = read_extxyz(path)
+
+    fname = "test.xyz"
+    write_extxyz(
+        fname,
+        cell,
+        species,
+        coords,
+        PBC,
+        energy,
+        forces,
+        stress,
+        bool_as_str=True,
+    )
+    cell1, species1, coords1, PBC1, energy1, forces1, stress1 = read_extxyz(fname)
+
+    assert np.allclose(cell, cell1)
+    assert species == species1
+    assert np.allclose(coords, coords1)
+    assert PBC == PBC1
+    assert energy == energy1
+    assert np.allclose(forces, forces1)
+    assert stress == stress1
 
 
 @pytest.mark.parametrize(

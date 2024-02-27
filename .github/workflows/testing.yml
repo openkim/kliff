@@ -60,6 +60,14 @@ jobs:
           python -m pip install git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0
 
       - name: Run tests
+        if: matrix.os == 'macos-latest'
+        shell: bash -el {0}
+        run: |
+          cd tests
+          pytest
+
+      - name: Run tests
+        if: matrix.os == 'ubuntu-latest'
         shell: bash -el {0}
         run: |
           cd tests
