@@ -962,17 +962,23 @@ class Dataset:
         """
         return len(self.configs)
 
-    def __getitem__(self, idx) -> Configuration:
+    def __getitem__(self, idx:Union[int,np.ndarray, List]) -> Union[Configuration, "Dataset"]:
         """
-        Get the configuration at index `idx`.
+        Get the configuration at index `idx`. If the index is a list, it returns a new
+        dataset with the configurations at the indices.
 
         Args:
-         idx: Index of the configuration to get.
+         idx: Index of the configuration to get or a list of indices.
 
         Returns:
-            The configuration at index `idx`.
+            The configuration at index `idx` or a new dataset with the configurations at
+            the indices.
         """
-        return self.configs[idx]
+        if isinstance(idx, int):
+            return self.configs[idx]
+        else:
+            configs = [self.configs[i] for i in idx]
+            return Dataset(configs)
 
 
 class ConfigurationError(Exception):
