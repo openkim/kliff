@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from kliff.dataset import Dataset
@@ -84,3 +86,21 @@ def _compute_magnitude_inverse_weight(c1, c2, norm):
     """
     sigma = np.sqrt(c1**2 + (c2 * norm) ** 2)
     return 1 / sigma
+
+
+def test_weight_from_file():
+    ds = Dataset.from_ase(
+        Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz"),
+        energy_key="Energy",
+        forces_key="force",
+        weight=Path(__file__).parents[1].joinpath("test_data/weights/Si_4_weights.dat"),
+    )
+    configs = ds.get_configs()
+    assert len(configs) == 4
+    assert configs[0].weight.config_weight == 1.0
+    assert configs[0].weight.energy_weight == 0.5
+    assert configs[0].weight.stress_weight == 1.0
+    assert configs[3].weight.forces_weight == 0.5
+    assert configs[3].weight.config_weight == 1.0
+    assert configs[3].weight.energy_weight == 0.5
+    assert configs[3].weight.stress_weight == 4.0
