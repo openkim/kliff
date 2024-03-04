@@ -1,3 +1,5 @@
+import hashlib
+import importlib
 import json
 import os
 import random
@@ -7,23 +9,20 @@ from glob import glob
 from pathlib import Path
 from typing import Callable, Union
 
+import dill  # TODO: include dill in requirements.txt
 import numpy as np
 import yaml
 from loguru import logger
 
 import kliff.transforms.configuration_transforms
 from kliff._exceptions import TrainerError
-
-from .option_enumerations import DataSource, ModelTypes, OptimizerProvider
-import importlib
-
-import dill  # TODO: include dill in requirements.txt
-import hashlib
-
 from kliff.dataset import Dataset
 from kliff.transforms.configuration_transforms import ConfigurationTransform
 from kliff.transforms.parameter_transforms import ParameterTransform
 from kliff.transforms.property_transforms import PropertyTransform
+
+from ..dataset.weight import Weight
+from .option_enumerations import DataSource, ModelTypes, OptimizerProvider
 
 
 class Trainer:
@@ -41,7 +40,8 @@ class Trainer:
     - Set up the work directory
     - Set up the dataset
     - Set up the test train split
-    Model and optimizer setup are left for the derived classes to implement.
+    Model, parameter transform and optimizer setup are left for the derived classes to
+    implement.
 
     Args:
         configuration: configuration dictionary
@@ -97,13 +97,22 @@ class Trainer:
 
         # training variables
         self.loss_function: Callable = None
-        self.energy_loss_weight = 1.0
-        self.forces_loss_weight = 0.0
+        self.loss_function_name = None
+        self.loss_weights: Union[dict, Path] = {
+            "energy": 1.0,
+            "forces": None,
+            "stress": None,
+            "config": 1.0,
+        }
+        self.loss_normalize_per_atom = False
 
         self.optimizer_provider: OptimizerProvider = OptimizerProvider.UNDEFINED
         self.optimizer = None  # instance of optimizer, "scipy" for scipy torch.optim instance for torch
         self.optimizer_name = (
             None  # name of optimizer, e.g. "l-bfgs-b" for scipy, "adam" for torch
+        )
+        self.optimizer_kwargs = (
+            None  # kwargs for optimizer to bundle all unknown kwargs
         )
         self.learning_rate = None  # learning rate for torch
 
@@ -112,6 +121,14 @@ class Trainer:
         self.batch_size = 1
         self.chkpt_interval = 100
         self.stop_condition = None  # function to check if training should stop
+        self.num_workers = 1  # number of workers for data loading
+        self.verbose = True  # whether to print verbose output
+
+        # export trained model
+        self.export_kim_model = False
+        self.export_model_type = None
+        self.export_model_name = None
+        self.export_model_path = None
 
         self.configuration = self.config_from_dict(configuration)
 
@@ -126,10 +143,12 @@ class Trainer:
         self.current_dataset_hash = None
         self.start_current_run_title = None  # start time of the current run
         self.expected_end_time = None
+        self.warned_once = False  # log all one time warnings
 
-        self._initialize()
+        self.initialize()
 
-    def config_from_dict(self, configuration: dict):
+    @staticmethod
+    def config_from_dict(configuration: dict):
         """
         It accepts the raw configuration dictionary, and processes it to the formatted
         configuration. This includes mapping the string fields to enums, and setting sane
@@ -145,106 +164,96 @@ class Trainer:
         date_time_str = start_time.strftime("%Y-%m-%d-%H-%M-%S")
         processed_configuration = {}
 
-        # Workspace variables
-        workspace_block = configuration.get("workspace", None)
-        if workspace_block is not None:
-            processed_configuration["start_time"] = start_time
-            processed_configuration["workspace_name"] = workspace_block.get(
-                "name", f"kliff_{date_time_str}"
-            )
-            processed_configuration["current_run_title"] = (
-                None  # will be assigned in the model block
-            )
-            processed_configuration["export_kim_model"] = workspace_block.get(
-                "export", False
-            )
-            processed_configuration["seed"] = workspace_block.get("seed", 12345)
-            processed_configuration["resume"] = workspace_block.get("resume", False)
-            walltime: Union[str,int] = workspace_block.get("walltime", "2:00:00:00")
-            if type(walltime) is int: # yaml parsed the time
-                processed_configuration["walltime"] = timedelta(seconds=walltime)
-            elif type(walltime) is str:
-                processed_configuration["walltime"] = timedelta(
-                    days=int(walltime.split(":")[0]),
-                    hours=int(walltime.split(":")[1]),
-                    minutes=int(walltime.split(":")[2]),
-                    seconds=int(walltime.split(":")[3]),
-                )
-            else:
-                raise TrainerError("Walltime not in correct format. dd:hh:mm:ss expected.")
-            processed_configuration["expected_end_time"] = (
-                start_time + processed_configuration["walltime"]
+        # Workspace variables ################################################
+        workspace_block = configuration.get("workspace", {})
+        if workspace_block == {}:
+            raise TrainerError("Workspace block not defined in trainer configuration")
+        processed_configuration["start_time"] = start_time
+        processed_configuration["workspace_name"] = workspace_block.get(
+            "name", f"kliff_{date_time_str}"
+        )
+        processed_configuration["current_run_title"] = (
+            None  # will be assigned in the model block
+        )
+        processed_configuration["export_kim_model"] = workspace_block.get(
+            "export", False
+        )
+        processed_configuration["seed"] = workspace_block.get("seed", 12345)
+        processed_configuration["resume"] = workspace_block.get("resume", False)
+        walltime: Union[str, int] = workspace_block.get("walltime", "2:00:00:00")
+        if type(walltime) is int:  # yaml parsed the time
+            processed_configuration["walltime"] = timedelta(seconds=walltime)
+        elif type(walltime) is str:
+            processed_configuration["walltime"] = timedelta(
+                days=int(walltime.split(":")[0]),
+                hours=int(walltime.split(":")[1]),
+                minutes=int(walltime.split(":")[2]),
+                seconds=int(walltime.split(":")[3]),
             )
         else:
-            raise TrainerError("Workspace block not found in the configuration.")
+            raise TrainerError("Walltime not in correct format. dd:hh:mm:ss expected.")
+        processed_configuration["expected_end_time"] = (
+            start_time + processed_configuration["walltime"]
+        )
 
-        # Dataset variables
-        dataset_block = configuration.get("dataset", None)
-        if dataset_block is not None:
-            processed_configuration["dataset_type"] = DataSource.get_data_enum(
-                dataset_block.get("type", "kliff")
+        # Dataset variables #################################################
+        dataset_block = configuration.get("dataset", {})
+        if dataset_block == {}:
+            raise TrainerError(
+                "Dataset block is missing from the trainer configuration file"
             )
-            processed_configuration["dataset_path"] = dataset_block.get(
-                "path", None
-            )
-            processed_configuration["dataset_save"] = dataset_block.get("save", False)
-            processed_configuration["dataset_shuffle"] = dataset_block.get(
-                "shuffle", False
-            )
-            ase_keys = dataset_block.get("keys", {})
-            processed_configuration["ase_keys"] = {
-                "energy_key": ase_keys.get("energy", "energy"),
-                "forces_key": ase_keys.get("forces", "forces"),
-            }
-            train_dataset_info = dataset_block.get("training_dataset", None)
-            if train_dataset_info is not None:
-                # none values will be tackled during dataset loading
-                processed_configuration["train_size"] = train_dataset_info.get(
-                    "train_size", None
-                )
-                processed_configuration["train_indices"] = train_dataset_info.get(
-                    "train_indices", None
-                )
-            else:
-                processed_configuration["train_size"] = None
-                processed_configuration["train_indices"] = None
 
-            val_dataset_info = dataset_block.get("validation_dataset", None)
-            if val_dataset_info is not None:
-                processed_configuration["val_size"] = val_dataset_info.get(
-                    "val_size", None
-                )
-                processed_configuration["val_indices"] = val_dataset_info.get(
-                    "val_indices", None
-                )
-            else:
-                processed_configuration["val_size"] = None
-                processed_configuration["val_indices"] = None
-            processed_configuration["indices_file"] = {"train": None, "val": None}
-            if type(processed_configuration["train_indices"]) is str:
-                processed_configuration["indices_file"] = processed_configuration[
-                    "train_indices"
-                ]
-            if type(processed_configuration["val_indices"]) is str:
-                processed_configuration["indices_file"] = processed_configuration[
-                    "val_indices"
-                ]
+        processed_configuration["dataset_type"] = DataSource.get_data_enum(
+            dataset_block.get("type", "kliff")
+        )
+        processed_configuration["dataset_path"] = dataset_block.get("path", None)
+        processed_configuration["dataset_save"] = dataset_block.get("save", False)
+        processed_configuration["dataset_shuffle"] = dataset_block.get("shuffle", False)
+        ase_keys = dataset_block.get("keys", {})
+        processed_configuration["ase_keys"] = {
+            "energy_key": ase_keys.get("energy", "energy"),
+            "forces_key": ase_keys.get("forces", "forces"),
+        }
+        train_dataset_info = dataset_block.get("training_dataset", {})
 
-            processed_configuration["train_dataset"] = None  # To be assigned
-            processed_configuration["val_dataset"] = None  # To be assigned
-            processed_configuration["dataset"] = None  # To be assigned
+        # none values will be tackled during dataset loading
+        processed_configuration["train_size"] = train_dataset_info.get(
+            "train_size", None
+        )
+        processed_configuration["train_indices"] = train_dataset_info.get(
+            "train_indices", None
+        )
 
-            colabfit_dict = dataset_block.get("colabfit_dataset", None)
-            if colabfit_dict is not None:
-                processed_configuration["colabfit_dataset"] = {
-                    "dataset_name": colabfit_dict.get("dataset_name", None),
-                    "database_name": colabfit_dict.get("database_name", None),
-                    "database_url": colabfit_dict.get("database_url", None),
-                }
-        else:
-            raise TrainerError("Dataset block not found in the configuration.")
+        val_dataset_info = dataset_block.get("validation_dataset", {})
+        processed_configuration["val_size"] = val_dataset_info.get("val_size", None)
+        processed_configuration["val_indices"] = val_dataset_info.get(
+            "val_indices", None
+        )
 
-        # model variables
+        processed_configuration["indices_file"] = {"train": None, "val": None}
+
+        if type(processed_configuration["train_indices"]) is str:
+            processed_configuration["indices_file"] = processed_configuration[
+                "train_indices"
+            ]
+
+        if type(processed_configuration["val_indices"]) is str:
+            processed_configuration["indices_file"] = processed_configuration[
+                "val_indices"
+            ]
+
+        processed_configuration["train_dataset"] = None  # To be assigned
+        processed_configuration["val_dataset"] = None  # To be assigned
+        processed_configuration["dataset"] = None  # To be assigned
+        colabfit_dict = dataset_block.get("colabfit_dataset", {})
+
+        processed_configuration["colabfit_dataset"] = {
+            "dataset_name": colabfit_dict.get("dataset_name", None),
+            "database_name": colabfit_dict.get("database_name", None),
+            "database_url": colabfit_dict.get("database_url", None),
+        }
+
+        # model variables ####################################################
         model_block = configuration.get("model", {})
         processed_configuration["model_type"] = ModelTypes.get_model_enum(
             model_block.get("model_type", "kim")
@@ -261,7 +270,7 @@ class Trainer:
                 f"{processed_configuration['model_name']}_{date_time_str}"
             )
 
-        # transform variables
+        # transform variables ####################################################
         transform_block = configuration.get("transforms", {})
         property_transform_sub_block = transform_block.get("property", {})
         parameter_transform_sub_block = transform_block.get("parameter", {})
@@ -269,25 +278,18 @@ class Trainer:
 
         processed_configuration["property_transform_options"] = {
             "name": property_transform_sub_block.get("name", None),
-            "property_key": property_transform_sub_block.get("property_key", None)
+            "property_key": property_transform_sub_block.get("property_key", None),
         }
         processed_configuration["property_transform"] = (
             property_transform_sub_block.get("instance", None)
         )  # no executable given. initialize on own
 
         processed_configuration["parameter_transform_options"] = {
-            "name": parameter_transform_sub_block.get("name", None),
+            "parameter_list": parameter_transform_sub_block.get("parameter_list", None),
         }
         processed_configuration["parameter_transform"] = (
             parameter_transform_sub_block.get("instance", None)
         )  # no executable given. initialize on own
-
-        # map default hyperparameters
-        configuration_transform_kwargs = configuration_transform_sub_block.get("kwargs", {})
-        hyperparams = configuration_transform_kwargs.get("hyperparameters", None)
-        if hyperparams == "default":
-            configuration_transform_kwargs["hyperparameters"] = \
-                kliff.transforms.configuration_transforms.get_default_hyperparams()
 
         processed_configuration["configuration_transform_options"] = (
             configuration_transform_sub_block  # this might contain lot of variables
@@ -296,15 +298,22 @@ class Trainer:
             configuration_transform_sub_block.get("instance", None)
         )  # no executable given. initialize on own
 
-        # training variables
+        # training variables ########################################################
         training_block = configuration.get("training", {})
         loss_block = training_block.get("loss", {})
-        processed_configuration["loss_function"] = loss_block.get("loss_function", None)
-        processed_configuration["energy_loss_weight"] = loss_block.get(
-            "energy_loss_weight", 1.0
-        )
-        processed_configuration["forces_loss_weight"] = loss_block.get(
-            "forces_loss_weight", 0.0
+        processed_configuration["loss_function_name"] = loss_block.get("function", None)
+        weights = loss_block.get("weights", {})
+        if isinstance(weights, str):
+            processed_configuration["loss_weights"] = Path(weights)
+        else:
+            processed_configuration["loss_weights"] = {
+                "energy": weights.get("energy", 1.0),
+                "forces": weights.get("forces", None),
+                "stress": weights.get("stress", None),
+                "config": weights.get("config", 1.0),
+            }
+        processed_configuration["loss_normalize_per_atom"] = loss_block.get(
+            "normalize_per_atom", False
         )
 
         optimizer_block = training_block.get("optimizer", {})
@@ -318,6 +327,9 @@ class Trainer:
         processed_configuration["learning_rate"] = optimizer_block.get(
             "learning_rate", None
         )
+        processed_configuration["optimizer_kwargs"] = optimizer_block.get(
+            "kwargs", None
+        )
 
         processed_configuration["max_epochs"] = training_block.get("max_epochs", 10000)
         processed_configuration["device"] = training_block.get("device", "cpu")
@@ -328,6 +340,22 @@ class Trainer:
         processed_configuration["stop_condition"] = training_block.get(
             "stop_condition", None
         )
+        processed_configuration["num_workers"] = training_block.get("num_workers", 1)
+        processed_configuration["verbose"] = training_block.get("verbose", True)
+
+        # export trained model ####################################################
+        export_block = configuration.get("export", {})
+        processed_configuration["export_kim_model"] = export_block is not {}
+        if export_block is not {}:
+            processed_configuration["export_model_type"] = ModelTypes.get_model_enum(
+                export_block.get("model_type", "kim")
+            )
+            processed_configuration["export_model_name"] = export_block.get(
+                "model_name", None
+            )
+            processed_configuration["export_model_path"] = export_block.get(
+                "model_path", None
+            )
 
         return processed_configuration
 
@@ -361,7 +389,7 @@ class Trainer:
                 "dataset_name": self.colabfit_dataset["dataset_name"],
                 "database_name": self.colabfit_dataset["database_name"],
                 "database_url": self.colabfit_dataset["database_url"],
-            }
+            },
         }
         if self.ase_keys is not None:
             config["dataset"]["keys"] = {
@@ -381,33 +409,47 @@ class Trainer:
                 "property_key": self.property_transform_options["property_key"],
             },
             "parameter": {
-                "name": self.parameter_transform_options["name"],
+                "parameter_list": self.parameter_transform_options["parameter_list"],
             },
             "configuration": {
                 "name": self.configuration_transform_options["name"],
                 "kwargs": self.configuration_transform_options,
-            }
+            },
         }
 
         config["training"] = {
             "loss": {
-                "loss_function": self.loss_function,
-                "weight": {
-                    "energy": self.energy_loss_weight,
-                    "forces": self.forces_loss_weight,
+                "loss_function": self.loss_function_name,
+                "weights": {
+                    "energy": self.loss_weights["energy"],
+                    "forces": self.loss_weights["forces"],
+                    "stress": self.loss_weights["stress"],
+                    "config": self.loss_weights["config"],
                 },
+                "normalize_per_atom": self.loss_normalize_per_atom,
             },
             "optimizer": {
-                "provider": OptimizerProvider.get_optimizer_str(self.optimizer_provider),
+                "provider": OptimizerProvider.get_optimizer_str(
+                    self.optimizer_provider
+                ),
                 "name": self.optimizer_name,
                 "learning_rate": self.learning_rate,
+                "kwargs": self.optimizer_kwargs,
             },
             "epochs": self.max_epochs,
             "device": self.device,
             "batch_size": self.batch_size,
             "chkpt_interval": self.chkpt_interval,
             "stop_condition": self.stop_condition,
+            "num_workers": self.num_workers,
+            "verbose": self.verbose,
         }
+        if self.export_kim_model:
+            config["export"] = {
+                "model_type": ModelTypes.get_model_str(self.export_model_type),
+                "model_name": self.export_model_name,
+                "model_path": self.export_model_path,
+            }
 
         return config
 
@@ -438,7 +480,7 @@ class Trainer:
         config_immut_str = json.dumps(config, sort_keys=True)
         return hashlib.md5(config_immut_str.encode()).hexdigest()
 
-    def _initialize(self):
+    def initialize(self):
         """
         Initialize the trainer. Assigns the configuration objects, and
         call setup methods.
@@ -456,6 +498,8 @@ class Trainer:
         self.setup_test_train_datasets()
         # Step 6 - Set up the model
         self.setup_model()
+        # Step 6.5 - Setup parameter transform
+        self.setup_parameter_transforms()
         # Step 7 - Set up the optimizer
         self.setup_optimizer()
         # Step 8 - Save the configuration for future
@@ -514,15 +558,23 @@ class Trainer:
             raise TrainerError(f"Dataset type {self.dataset_type} not supported.")
 
         if self.property_transform_options is not None:
-            dataset_transforms += self.property_transform_options["name"]
+            dataset_transforms += str(self.property_transform_options["name"])
 
         dataset_transforms += "_"
 
         if self.configuration_transform_options is not None:
             dataset_transforms += self.configuration_transform_options["name"] + "_"
-            dataset_transforms += str(self.configuration_transform_options["kwargs"]["cutoff"])
+            dataset_transforms += str(
+                self.configuration_transform_options["kwargs"]["cutoff"]
+            )
 
-        dataset_hash_str = dataset_path + "_" + dataset_transforms
+        dataset_hash_str = (
+            dataset_path
+            + "_"
+            + dataset_transforms
+            + "_"
+            + json.dumps(self.loss_weights, sort_keys=True)
+        )
         dataset_hash = hashlib.md5(dataset_hash_str.encode()).hexdigest()
         self.current_dataset_hash = dataset_hash
         dataset_dir = f"{self.workspace_name}/{dataset_hash}"
@@ -536,15 +588,32 @@ class Trainer:
                 f"Dataset not found in {self.workspace_name} directory. Creating dataset."
             )
 
+        if isinstance(self.loss_weights, Path):
+            weights = self.loss_weights
+        elif isinstance(self.loss_weights, dict):
+            weights = Weight(
+                config_weight=self.loss_weights["config"],
+                energy_weight=self.loss_weights["energy"],
+                forces_weight=self.loss_weights["forces"],
+                stress_weight=self.loss_weights["stress"],
+            )
+        elif self.loss_weights is None:
+            weights = None
+        else:
+            raise TrainerError(
+                "Loss weights should be a dictionary or a path to a file, or None."
+            )
+
         if self.dataset_type == DataSource.KLIFF:
-            dataset = Dataset.from_path(dataset_path)
+            dataset = Dataset.from_path(dataset_path, weight=weights)
         elif self.dataset_type == DataSource.ASE:
-            dataset = Dataset.from_ase(dataset_path, **self.ase_keys)
+            dataset = Dataset.from_ase(dataset_path, **self.ase_keys, weight=weights)
         elif self.dataset_type == DataSource.COLABFIT:
             dataset = Dataset.from_colabfit(
                 self.colabfit_dataset["dataset_name"],
                 self.colabfit_dataset["database_name"],
                 self.colabfit_dataset["database_url"],
+                weight=weights,
             )
         else:
             raise TrainerError(f"Dataset type {self.dataset_type} not supported.")
@@ -559,22 +628,28 @@ class Trainer:
             if self.property_transform_options.get("instance") is not None:
                 self.property_transform = self.property_transform_options["instance"]
             else:
-                try:
-                    # try getting class "name" from kliff.transforms.property_transforms
-                    module = importlib.import_module(
-                        "kliff.transforms.property_transforms"
-                    )
-                    class_ = getattr(module, self.property_transform_options["name"])
-                    self.property_transform = class_(
-                        property_key=self.property_transform_options["property_key"],
-                    )
-                except AttributeError:
-                    raise TrainerError(
-                        f"Property transform {self.property_transform_options['name']} not found."
-                        "If it is a custom transform, please provide the instance."
-                    )
+                if self.property_transform_options.get("name"):
+                    try:
+                        # try getting class "name" from kliff.transforms.property_transforms
+                        module = importlib.import_module(
+                            "kliff.transforms.property_transforms"
+                        )
+                        class_ = getattr(
+                            module, self.property_transform_options["name"]
+                        )
+                        self.property_transform = class_(
+                            property_key=self.property_transform_options[
+                                "property_key"
+                            ],
+                        )
+                    except AttributeError:
+                        raise TrainerError(
+                            f"Property transform {self.property_transform_options['name']} not found."
+                            "If it is a custom transform, please provide the instance."
+                        )
 
-        self.property_transform(dataset)
+        if self.property_transform:
+            self.property_transform(dataset)
 
         if self.configuration_transform is not None:
             if not isinstance(self.configuration_transform, ConfigurationTransform):
@@ -583,8 +658,10 @@ class Trainer:
                 )
         else:
             # check if configuration_instance_options have "instance"
-            if "instance" in self.configuration_transform_options \
-                    and self.configuration_transform_options["instance"] is not None:
+            if (
+                "instance" in self.configuration_transform_options
+                and self.configuration_transform_options["instance"] is not None
+            ):
                 self.configuration_transform = self.configuration_transform_options[
                     "instance"
                 ]
@@ -671,6 +748,17 @@ class Trainer:
         """
         raise TrainerError("setup_model not implemented.")
 
+    def setup_parameter_transforms(self):
+        """
+        This method set up the transformed parameter space for models. It can be used
+        for any model type in general, but as there exists a significant difference
+        between how models handles their parameters, it is left for the subclass to
+        implement. Although to ensure that `initialize` function remains consistent
+        this method will not raise NotImplemented error, rather it will quietly pass.
+        So be aware.
+        """
+        pass
+
     def setup_optimizer(self):
         """
         Set up the optimizer based on the provided information. If the optimizer is not
@@ -698,3 +786,6 @@ class Trainer:
 
     def train(self, *args, **kwargs):
         TrainerError("train not implemented.")
+
+    def save_kim_model(self, *args, **kwargs):
+        TrainerError("save_kim_model not implemented.")

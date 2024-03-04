@@ -580,14 +580,18 @@ class Dataset:
         colabfit_database: str,
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
     ) -> "Dataset":
         """
         Read configurations from colabfit database and initialize a dataset.
 
         Args:
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             colabfit_database: Name of the colabfit Mongo database to read from.
             colabfit_dataset: Name of the colabfit dataset instance to read from, usually
                 it is of form, e.g., "DS_xxxxxxxxxxxx_0"
@@ -607,7 +611,7 @@ class Dataset:
     def _read_from_colabfit(
         database_client: MongoDatabase,
         colabfit_dataset: str,
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
     ) -> List[Configuration]:
         """
         Read configurations from colabfit database.
@@ -617,7 +621,11 @@ class Dataset:
                 fetch database from colabfit-tools dataset.
             colabfit_dataset: Name of the colabfit dataset instance to read from.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
 
         Returns:
             A list of configurations.
@@ -630,10 +638,37 @@ class Dataset:
             logger.error(f"{colabfit_dataset} is either empty or does not exist")
             raise DatasetError(f"{colabfit_dataset} is either empty or does not exist")
 
+        if isinstance(weight, Path):
+            print(weight)
+            weights = np.loadtxt(weight)
+            if weights.ndim == 1 and len(weights) == 4:
+                weights = np.tile(weights, (len(data_objects), 1))
+            elif weights.ndim == 2 and len(weights) == len(data_objects):
+                pass
+            else:
+                raise DatasetError(
+                    "Weight file must be a plain text file with 4 whitespace separated "
+                    "columns: config_weight, energy_weight, forces_weight, and "
+                    "stress_weight. Length of the file must be equal to the number of "
+                    "configurations, or 1 (in which case the same weight is used for all "
+                    "configurations)."
+                )
+            weights = [
+                Weight(
+                    config_weight=w[0],
+                    energy_weight=w[1],
+                    forces_weight=w[2],
+                    stress_weight=w[3],
+                )
+                for w in weights
+            ]
+        else:
+            weights = [weight] * len(data_objects)
+
         configs = []
-        for data_object in data_objects:
+        for data_object, weight_obj in zip(data_objects, weights):
             configs.append(
-                Configuration.from_colabfit(database_client, data_object, weight)
+                Configuration.from_colabfit(database_client, data_object, weight_obj)
             )
 
         if len(configs) <= 0:
@@ -649,7 +684,7 @@ class Dataset:
         colabfit_database: str,
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
     ):
         """
         Read configurations from colabfit database and add them to the dataset.
@@ -660,7 +695,11 @@ class Dataset:
                 it is of form, e.g., "DS_xxxxxxxxxxxx_0")
             colabfit_uri: connection URI of the colabfit Mongo database to read from.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
 
         """
         # open link to the mongo
@@ -672,7 +711,7 @@ class Dataset:
     def from_path(
         cls,
         path: Union[Path, str],
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Path, Weight]] = None,
         file_format: str = "xyz",
     ) -> "Dataset":
         """
@@ -681,7 +720,11 @@ class Dataset:
         Args:
             path: Path the directory (or filename) storing the configurations.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
 
         Returns:
@@ -693,7 +736,9 @@ class Dataset:
 
     @staticmethod
     def _read_from_path(
-        path: Path, weight: Optional[Weight] = None, file_format: str = "xyz"
+        path: Path,
+        weight: Optional[Union[Weight, Path]] = None,
+        file_format: str = "xyz",
     ) -> List[Configuration]:
         """
         Read configurations from path.
@@ -702,7 +747,11 @@ class Dataset:
             path: Path of the directory storing the configurations in individual files.
                 For single file with multiple configurations, use `_read_from_ase()` instead.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
 
         Returns:
@@ -730,9 +779,37 @@ class Dataset:
             parent = path.parent
             all_files = [path]
 
+        if isinstance(weight, Path):
+            print(weight)
+            weights = np.loadtxt(weight)
+            if weights.ndim == 1 and len(weights) == 4:
+                weights = np.tile(weights, (len(all_files), 1))
+            elif weights.ndim == 2 and len(weights) == len(all_files):
+                pass
+            else:
+                raise DatasetError(
+                    "Weight file must be a plain text file with 4 whitespace separated "
+                    "columns: config_weight, energy_weight, forces_weight, and "
+                    "stress_weight. Length of the file must be equal to the number of "
+                    "configurations, or 1 (in which case the same weight is used for all "
+                    "configurations)."
+                )
+            weights = [
+                Weight(
+                    config_weight=w[0],
+                    energy_weight=w[1],
+                    forces_weight=w[2],
+                    stress_weight=w[3],
+                )
+                for w in weights
+            ]
+
+        else:
+            weights = [weight] * len(all_files)
+
         configs = [
-            Configuration.from_file(f, copy.copy(weight), file_format)
-            for f in all_files
+            Configuration.from_file(f, copy.copy(w), file_format)
+            for f, w in zip(all_files, weights)
         ]
 
         if len(configs) <= 0:
@@ -744,7 +821,7 @@ class Dataset:
     def add_from_path(
         self,
         path: Union[Path, str],
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         file_format: str = "xyz",
     ):
         """
@@ -753,7 +830,11 @@ class Dataset:
         Args:
             path: Path the directory (or filename) storing the configurations.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
         """
         if isinstance(path, str):
@@ -766,7 +847,7 @@ class Dataset:
         cls,
         path: Union[Path, str] = None,
         ase_atoms_list: List[ase.Atoms] = None,
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
         slices: str = ":",
@@ -791,7 +872,11 @@ class Dataset:
             path: Path the directory (or filename) storing the configurations.
             ase_atoms_list: A list of ase.Atoms objects.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
             slices: Slice of the configurations to read. It is used only when `path` is
@@ -825,7 +910,11 @@ class Dataset:
             path: Path the directory (or filename) storing the configurations.
             ase_atoms_list: A list of ase.Atoms objects.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
             slices: Slice of the configurations to read. It is used only when `path` is
@@ -841,14 +930,42 @@ class Dataset:
             )
 
         if ase_atoms_list:
+            if isinstance(weight, Path):
+                weights = np.loadtxt(weight)
+                if weights.ndim == 1 and len(weights) == 4:
+                    weights = np.tile(weights, (len(ase_atoms_list), 1))
+                if weights.ndim == 2 and len(weights) == len(ase_atoms_list):
+                    pass
+                else:
+                    raise DatasetError(
+                        "Length of weights must be equal to the number of configurations, or 1 "
+                        "(in which case the same weight is used for all configurations)."
+                    )
+                weights = [
+                    Weight(
+                        config_weight=w[0],
+                        energy_weight=w[1],
+                        forces_weight=w[2],
+                        stress_weight=w[3],
+                    )
+                    for w in weights
+                ]
+            else:
+                weights = [weight] * len(ase_atoms_list)
+
+            if len(ase_atoms_list) != len(weights):
+                raise DatasetError(
+                    "Length of weights must be equal to the number of configurations, or 1 "
+                    "(in which case the same weight is used for all configurations)."
+                )
             configs = [
                 Configuration.from_ase_atoms(
                     config,
-                    weight=copy.copy(weight),
+                    weight=copy.copy(weight_obj),
                     energy_key=energy_key,
                     forces_key=forces_key,
                 )
-                for config in ase_atoms_list
+                for config, weight_obj in zip(ase_atoms_list, weights)
             ]
         else:
             try:
@@ -875,24 +992,77 @@ class Dataset:
 
             if len(all_files) == 1:  # single xyz file with multiple configs
                 all_configs = ase.io.read(all_files[0], index=slices)
+
+                # This code fragment is duplicated because in ASE loading, there can be multiple
+                # branches on how the configurations are loaded, and it is simplest to
+                # assign weights accordingly per configuration.
+                if isinstance(weight, Path):
+                    weights = np.loadtxt(weight)
+                    if weights.ndim == 1 and len(weights) == 4:
+                        weights = np.tile(weights, (len(all_configs), 1))
+                    if weights.ndim == 2 and len(weights) == len(all_configs):
+                        pass
+                    else:
+                        raise DatasetError(
+                            "Length of weights must be equal to the number of configurations, or 1 "
+                            "(in which case the same weight is used for all configurations)."
+                        )
+                    weights = [
+                        Weight(
+                            config_weight=w[0],
+                            energy_weight=w[1],
+                            forces_weight=w[2],
+                            stress_weight=w[3],
+                        )
+                        for w in weights
+                    ]
+                else:
+                    weights = [weight] * len(all_configs)
+
                 configs = [
                     Configuration.from_ase_atoms(
                         config,
-                        weight=copy.copy(weight),
+                        weight=copy.copy(weight_obj),
                         energy_key=energy_key,
                         forces_key=forces_key,
                     )
-                    for config in all_configs
+                    for config, weight_obj in zip(all_configs, weights)
                 ]
             else:
+                # This code fragment is duplicated because in ASE loading, there can be multiple
+                # branches on how the configurations are loaded, and it is simplest to
+                # assign weights accordingly per configuration.
+                if isinstance(weight, Path):
+                    weights = np.loadtxt(weight)
+                    if weights.ndim == 1 and len(weights) == 4:
+                        weights = np.tile(weights, (len(all_files), 1))
+                    if weights.ndim == 2 and len(weights) == len(all_files):
+                        pass
+                    else:
+                        raise DatasetError(
+                            "Length of weights must be equal to the number of configurations, or 1 "
+                            "(in which case the same weight is used for all configurations)."
+                        )
+                    weights = [
+                        Weight(
+                            config_weight=w[0],
+                            energy_weight=w[1],
+                            forces_weight=w[2],
+                            stress_weight=w[3],
+                        )
+                        for w in weights
+                    ]
+                else:
+                    weights = [weight] * len(all_files)
+
                 configs = [
                     Configuration.from_ase_atoms(
                         ase.io.read(f),
-                        weight=copy.copy(weight),
+                        weight=copy.copy(w),
                         energy_key=energy_key,
                         forces_key=forces_key,
                     )
-                    for f in all_files
+                    for f, w in zip(all_files, weights)
                 ]
 
         if len(configs) <= 0:
@@ -933,6 +1103,11 @@ class Dataset:
             path: Path the directory (or filename) storing the configurations.
             ase_atoms_list: A list of ase.Atoms objects.
             weight: an instance that computes the weight of the configuration in the loss
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
             slices: Slice of the configurations to read. It is used only when `path` is
@@ -962,7 +1137,9 @@ class Dataset:
         """
         return len(self.configs)
 
-    def __getitem__(self, idx:Union[int,np.ndarray, List]) -> Union[Configuration, "Dataset"]:
+    def __getitem__(
+        self, idx: Union[int, np.ndarray, List]
+    ) -> Union[Configuration, "Dataset"]:
         """
         Get the configuration at index `idx`. If the index is a list, it returns a new
         dataset with the configurations at the indices.

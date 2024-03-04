@@ -113,7 +113,7 @@ setup(
     version=get_version(),
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
-    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
+    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru", "dill"],
     extras_require={
         "test": [
             "pytest",
@@ -125,6 +125,7 @@ setup(
             "ase",
             "libdescriptor",
             "torch_geometric",
+            "dill",
         ],
         "docs": [
             "sphinx",
