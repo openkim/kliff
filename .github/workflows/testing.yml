@@ -42,7 +42,6 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
             kim-api=2.3.0
-            kimpy=2.1.1
 
       - name: Install KIM model
         shell: bash -el {0}
