@@ -224,8 +224,17 @@ class Configuration:
             weight=weight,
         )
         self.metadata = {
-            "data_object": data_object,
+            "do-id": data_object["colabfit-id"],
+            "co-id": fetched_configuration["colabfit-id"],
+            "pi-ids": [pi["colabfit-id"] for pi in fetched_properties],
+            "names": fetched_configuration["names"],
         }
+        # Update self.metadata with information from metadata collection 
+        md_dict = database_client.get_metadata_from_do_doc(data_object)
+        if md_dict:
+            md_dict["md-id"] = md_dict["colabfit-id"]
+            md_dict.pop("colabfit-id")
+            self.metadata.update(md_dict)
 
         return self
 
