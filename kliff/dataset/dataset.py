@@ -179,16 +179,12 @@ class Configuration:
         """
         try:
             configuration_id = data_object["relationships"][0]["configuration"]
-            fetched_configuration = database_client.configurations.find_one(
-                {"colabfit-id": data_object["relationships"][0]["configuration"]}
+            fetched_configuration = database_client.get_cleaned_configuration(
+                configuration_id
             )
             fetched_properties = list(
-                database_client.property_instances.find(
-                    {
-                        "colabfit-id": {
-                            "$in": data_object["relationships"][0]["property_instance"]
-                        }
-                    }
+                database_client.get_cleaned_property_instances(
+                    data_object["relationships"][0]["property_instance"]
                 )
             )
         except:
