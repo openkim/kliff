@@ -179,16 +179,12 @@ class Configuration:
         """
         try:
             configuration_id = data_object["relationships"][0]["configuration"]
-            fetched_configuration = database_client.configurations.find_one(
-                {"colabfit-id": data_object["relationships"][0]["configuration"]}
+            fetched_configuration = database_client.get_cleaned_configuration(
+                configuration_id
             )
             fetched_properties = list(
-                database_client.property_instances.find(
-                    {
-                        "colabfit-id": {
-                            "$in": data_object["relationships"][0]["property_instance"]
-                        }
-                    }
+                database_client.get_cleaned_property_instances(
+                    data_object["relationships"][0]["property_instance"]
                 )
             )
         except:
@@ -228,8 +224,17 @@ class Configuration:
             weight=weight,
         )
         self.metadata = {
-            "data_object": data_object,
+            "do-id": data_object["colabfit-id"],
+            "co-id": fetched_configuration["colabfit-id"],
+            "pi-ids": [pi["colabfit-id"] for pi in fetched_properties],
+            "names": fetched_configuration["names"],
         }
+        # Update self.metadata with information from metadata collection 
+        md_dict = database_client.get_metadata_from_do_doc(data_object)
+        if md_dict:
+            md_dict["md-id"] = md_dict["colabfit-id"]
+            md_dict.pop("colabfit-id")
+            self.metadata.update(md_dict)
 
         return self
 
