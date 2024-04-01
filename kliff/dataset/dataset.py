@@ -229,7 +229,7 @@ class Configuration:
             "pi-ids": [pi["colabfit-id"] for pi in fetched_properties],
             "names": fetched_configuration["names"],
         }
-        # Update self.metadata with information from metadata collection 
+        # Update self.metadata with information from metadata collection
         md_dict = database_client.get_metadata_from_do_doc(data_object)
         if md_dict:
             md_dict["md-id"] = md_dict["colabfit-id"]
@@ -586,6 +586,7 @@ class Dataset:
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
         weight: Optional[Weight] = None,
+        **kwargs,
     ) -> "Dataset":
         """
         Read configurations from colabfit database and initialize a dataset.
@@ -603,7 +604,7 @@ class Dataset:
         """
         instance = cls()
         instance.add_from_colabfit(
-            colabfit_database, colabfit_dataset, colabfit_uri, weight
+            colabfit_database, colabfit_dataset, colabfit_uri, weight, **kwargs
         )
         return instance
 
@@ -655,6 +656,7 @@ class Dataset:
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
         weight: Optional[Weight] = None,
+        **kwargs,
     ):
         """
         Read configurations from colabfit database and add them to the dataset.
@@ -669,7 +671,7 @@ class Dataset:
 
         """
         # open link to the mongo
-        mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri)
+        mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri, **kwargs)
         configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, weight)
         self.configs.extend(configs)
 
