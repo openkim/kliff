@@ -44,17 +44,33 @@ class Weight:
     def config_weight(self):
         return self._config_weight
 
+    @config_weight.setter
+    def config_weight(self, value):
+        self._config_weight = value
+
     @property
     def energy_weight(self):
         return self._energy_weight
+
+    @energy_weight.setter
+    def energy_weight(self, value):
+        self._energy_weight = value
 
     @property
     def forces_weight(self):
         return self._forces_weight
 
+    @forces_weight.setter
+    def forces_weight(self, value):
+        self._forces_weight = value
+
     @property
     def stress_weight(self):
         return self._stress_weight
+
+    @stress_weight.setter
+    def stress_weight(self, value):
+        self._stress_weight = value
 
     def _check_compute_flag(self, config):
         """
