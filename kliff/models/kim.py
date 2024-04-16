@@ -16,7 +16,6 @@ from kliff.models.parameter import Parameter
 from kliff.neighbor import assemble_forces, assemble_stress
 from kliff.utils import install_kim_model, is_kim_model_installed
 
-from omegaconf import DictConfig, OmegaConf
 import kimpy
 import tarfile
 
@@ -697,7 +696,7 @@ class KIMModel(Model):
         return kim_ca_instance.results
 
     @staticmethod
-    def get_model_from_manifest(model_manifest: DictConfig, param_manifest: DictConfig = None):
+    def get_model_from_manifest(model_manifest: dict, param_manifest: dict = None):
         """
         Get the model from a configuration. If it is a valid KIM model, it will return
         the KIMModel object. If it is a TorchML model, it will return the torch
@@ -716,7 +715,6 @@ class KIMModel(Model):
         Example `param_manifest`:
         ```yaml
             parameter:
-                parameter_list: # optional for KIM models, list of parameters to optimize
                     - A         # dict means the parameter is transformed
                     - B         # these are the parameters that are not transformed
                     - sigma:
@@ -737,11 +735,11 @@ class KIMModel(Model):
         Returns:
             Model object
         """
-        model_name = model_manifest.model_name
-        model_type = model_manifest.model_type
-        model_path = model_manifest.model_path
+        model_name: Union[None, str] = model_manifest.get("model_name", None)
+        model_type: Union[None, str] = model_manifest.get("model_type", None)
+        model_path: Union[None, str, Path] = model_manifest.get("model_path", None)
         model_driver = KIMModel.get_model_driver_name(model_name)
-        model_collection = model_manifest.model_collection
+        model_collection = model_manifest.get("model_collection")
 
         if model_driver in UNSUPPORTED_MODEL_DRIVERS:
             logger.error("Model driver not supported for KIM-API based training. "
@@ -779,9 +777,8 @@ class KIMModel(Model):
         model = KIMModel(model_name)
 
         if param_manifest:
-            parameter_list = param_manifest.parameter_list
             mutable_param_list = []
-            for param_to_transform in parameter_list:
+            for param_to_transform in param_manifest:
                 if isinstance(param_to_transform, dict):
                     parameter_name = list(param_to_transform.keys())[0]
                 elif isinstance(param_to_transform, str):
@@ -794,7 +791,7 @@ class KIMModel(Model):
             model_param_list = model.parameters()
 
             # apply transforms if needed
-            for model_params, input_params in zip(model_param_list, parameter_list):
+            for model_params, input_params in zip(model_param_list, param_manifest):
                 if isinstance(input_params, dict):
                     param_name = list(input_params.keys())[0]
                     if param_name != model_params.name:

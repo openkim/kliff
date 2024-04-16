@@ -9,8 +9,6 @@ import dill
 import numpy as np
 from loguru import logger
 from monty.dev import requires
-from omegaconf import OmegaConf, DictConfig
-from omegaconf.errors import ConfigAttributeError
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
@@ -923,7 +921,7 @@ class Dataset:
                         energy_key=energy_key,
                         forces_key=forces_key,
                     )
-                    for config, weight_obj in zip(all_configs)
+                    for config in all_configs
                 ]
             else:
                 configs = [
@@ -933,7 +931,7 @@ class Dataset:
                         energy_key=energy_key,
                         forces_key=forces_key,
                     )
-                    for f in zip(all_files)
+                    for f in all_files
                 ]
 
         if len(configs) <= 0:
@@ -1172,7 +1170,7 @@ class Dataset:
         )
 
     @staticmethod
-    def get_manifest_checksum(dataset_manifest: DictConfig, transform_manifest: Optional[DictConfig] = None) -> str:
+    def get_manifest_checksum(dataset_manifest: dict, transform_manifest: Optional[dict] = None) -> str:
         """
         Get the checksum of the dataset manifest.
 
@@ -1183,16 +1181,15 @@ class Dataset:
         Returns:
             Checksum of the manifest.
         """
-        dataset_str = json.dumps(OmegaConf.to_object(dataset_manifest), sort_keys=True)
+        dataset_str = json.dumps(dataset_manifest, sort_keys=True)
         if transform_manifest:
-            transform_str = json.dumps(OmegaConf.to_object(transform_manifest), sort_keys=True)
+            transform_str = json.dumps(transform_manifest, sort_keys=True)
             dataset_str += transform_str
         return hashlib.md5(dataset_str.encode()).hexdigest()
 
-
     @staticmethod
-    def get_datasets_from_manifest(dataset_manifest: DictConfig, transform_manifest: Optional[DictConfig] = None) -> (
-            Tuple[Optional["Dataset"], Optional["Dataset"], Optional["Dataset"]]):
+    def get_dataset_from_manifest(dataset_manifest: dict, transform_manifest: Optional[dict] = None) -> (
+            "Dataset"):
         """
         Get a dataset from a manifest.
 
@@ -1209,15 +1206,6 @@ class Dataset:
                 keys:
                     energy: Energy  # Key for energy, if ase dataset is used
                     forces: forces  # Key for forces, if ase dataset is used
-                training_dataset:
-                    train_size: 3   # Number of training samples
-                    train_indices:  # files with indices [optional]
-                val_dataset:
-                    val_size: 1     # Number of validation samples
-                    val_indices:    # files with indices [optional]
-                test_dataset:
-                    test_size:
-                    test_indices:
             ```
 
             2. Manifest file for initializing dataset using KLIFF extxyz parser:
@@ -1277,14 +1265,14 @@ class Dataset:
         Returns:
             A dataset of configurations.
         """
-        dataset_type = dataset_manifest.type.tolower()
+        dataset_type = dataset_manifest.get("type").lower()
         if dataset_type != "ase" and dataset_type != "path" and dataset_type != "colabfit":
             raise DatasetError(f"Dataset type {dataset_type} not supported.")
-        weights = dataset_manifest.weights
+        weights = dataset_manifest.get("weights", None)
         if weights is not None:
             if isinstance(weights, str):
                 weights = Path(weights)
-            elif isinstance(weights, DictConfig):
+            elif isinstance(weights, dict):
                 weights = Weight(
                     config_weight=weights.get("config", 0.0),
                     energy_weight=weights.get("energy", 0.0),
@@ -1308,9 +1296,9 @@ class Dataset:
             )
         elif dataset_type == "colabfit":
             try:
-                colabfit_dataset = dataset_manifest.colabfit_dataset
+                colabfit_dataset = dataset_manifest.get("colabfit_dataset")
                 colabfit_database = colabfit_dataset.database_name
-            except ConfigAttributeError:
+            except KeyError:
                 raise DatasetError("Colabfit dataset or database not provided.")
             colabfit_uri = dataset_manifest.get("colabfit_uri", "mongodb://localhost:27017")
 
@@ -1326,12 +1314,14 @@ class Dataset:
 
         # transforms?
         if transform_manifest:
-            configuration_transform = transform_manifest.get("configuration", None)
-            property_transform = transform_manifest.get("property", None)
+            configuration_transform: Union[dict, None] = transform_manifest.get("configuration", None)
+            property_transform: Union[list, None] = transform_manifest.get("property", None)
 
             if property_transform:
                 for property_to_transform in property_transform:
-                    property_name = list(property_to_transform.keys())[0]
+                    property_name = property_to_transform.get("name", None)
+                    if not property_name:
+                        continue # it is probably an empty propery
                     transform_module_name = property_to_transform[property_name].get("name", None)
                     if not transform_module_name:
                         raise DatasetError("Property transform module name not provided.")
@@ -1343,20 +1333,22 @@ class Dataset:
                     dataset = property_module(dataset)
 
             if configuration_transform:
-                configuration_module_name = configuration_transform.get("name", None)
+                configuration_module_name: Union[str, None] = configuration_transform.get("name", None)
                 if not configuration_module_name:
-                    raise DatasetError("Configuration transform module name not provided.")
-                configuration_transform_module = importlib.import_module(
-                    f"kliff.transforms.configuration_transforms"
-                )
-                configuration_module = getattr(configuration_transform_module, configuration_module_name)
-                kwargs = configuration_transform.get("kwargs", None)
-                if not kwargs:
-                    raise DatasetError("Configuration transform module options not provided.")
-                configuration_module = configuration_module(**kwargs, copy_to_config=True)
+                    logger.warning("Configuration transform module name not provided."
+                                   "Skipping configuration transform.")
+                else:
+                    configuration_transform_module = importlib.import_module(
+                        f"kliff.transforms.configuration_transforms"
+                    )
+                    configuration_module = getattr(configuration_transform_module, configuration_module_name)
+                    kwargs: Union[dict, None] = configuration_transform.get("kwargs", None)
+                    if not kwargs:
+                        raise DatasetError("Configuration transform module options not provided.")
+                    configuration_module = configuration_module(**kwargs, copy_to_config=True)
 
-                for config in dataset.configs:
-                    _ = configuration_module(config)
+                    for config in dataset.configs:
+                        _ = configuration_module(config)
 
         # dataset hash
         dataset_checksum = Dataset.get_manifest_checksum(dataset_manifest, transform_manifest)
@@ -1368,45 +1360,7 @@ class Dataset:
             logger.info(f"Saving dataset to {dataset_save_path}/DS_{dataset_checksum[:10]}.pkl")
             dill.dump(dataset, open(f"{dataset_save_path}/DS_{dataset_checksum[:10]}.pkl", "wb"))
 
-        # test train splits
-        train_size = dataset_manifest.training_dataset.get("train_size", len(dataset))
-        val_size = dataset_manifest.val_dataset.get("val_size", 0)
-        test_size = dataset_manifest.test_dataset.get("test_size", 0)
-        if train_size + val_size + test_size > len(dataset):
-            raise DatasetError("Sum of train, val, and test sizes is greater than the dataset size.")
-
-        # check if indices are provided
-        train_indices = dataset_manifest.training_dataset.get("train_indices", np.arange(train_size))
-        val_indices = dataset_manifest.val_dataset.get("val_indices", train_size + np.arange(val_size))
-        test_indices = dataset_manifest.test_dataset.get("test_indices", train_size + val_size + np.arange(test_size))
-
-        if isinstance(train_indices, str):
-            train_indices = np.genfromtxt(train_indices, dtype=int)
-        if isinstance(val_indices, str):
-            val_indices = np.genfromtxt(val_indices, dtype=int)
-        if isinstance(test_indices, str):
-            test_indices = np.genfromtxt(test_indices, dtype=int)
-
-        if dataset_manifest.get("shuffle", False):
-            np.random.shuffle(train_indices)
-            np.random.shuffle(val_indices)
-            np.random.shuffle(test_indices)
-
-        if train_size > 0:
-            train_dataset = Dataset([dataset[i] for i in train_indices])
-        else:
-            train_dataset = dataset
-
-        if val_size > 0:
-            val_dataset = Dataset([dataset[i] for i in val_indices])
-        else:
-            val_dataset = None
-        if test_size > 0:
-            test_dataset = Dataset([dataset[i] for i in test_indices])
-        else:
-            test_dataset = None
-
-        return train_dataset, val_dataset, test_dataset
+        return dataset
 
 
 class ConfigurationError(Exception):

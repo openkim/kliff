@@ -15,14 +15,12 @@ import yaml
 from loguru import logger
 
 import kliff.transforms.configuration_transforms
-from kliff._exceptions import TrainerError
 from kliff.dataset import Dataset
 from kliff.transforms.configuration_transforms import ConfigurationTransform
 from kliff.transforms.parameter_transforms import ParameterTransform
 from kliff.transforms.property_transforms import PropertyTransform
 
 from ..dataset.weight import Weight
-from .option_enumerations import DataSource, ModelTypes, OptimizerProvider
 
 
 class Trainer:
@@ -44,419 +42,228 @@ class Trainer:
     implement.
 
     Args:
-        configuration: configuration dictionary
+        training_manifest: training manifest
     """
 
-    def __init__(self, configuration: dict):
+    def __init__(self, training_manifest: dict):
         # workspace variables
-        self.workspace_name = None  # name of default directory, root
-        self.workspace_name = (
-            None  # where to save everything from current run (inside workspace)
-        )
-        self.current_run_title = (
-            None  # title of current run, usually model name + date and time
-        )
-        self.export_kim_model = False  # whether to export the model to KIM model
-        self.seed = 12345  # random seed
-        self.resume = False  # whether to resume from previous run (conditions apply)
-        self.walltime = None  # maximum walltime for the run
+        self.workspace: dict = {
+            "name": "kliff_workspace",
+            "seed": 12345,
+            "resume": False,
+            "walltime": "2:00:00:00",
+        }
 
         # dataset variables
-        self.dataset_type: DataSource = DataSource.UNDEFINED
-        self.dataset_path = None
-        self.dataset_save = None
-        self.dataset_shuffle = None
-        self.dataset = None
-        self.train_size = None
-        self.val_size = None
-        self.indices_files: dict = {"train": None, "val": None}
-        self.ase_keys = {"energy_key": "energy", "forces_key": "forces"}
-        self.val_indices = None
-        self.train_indices = None
-        self.train_dataset = None
-        self.val_dataset = None
-        self.colabfit_dataset: dict = {
-            "dataset_name": None,
-            "database_name": None,
-            "database_url": None,
+        self.dataset_manifest: dict = {
+            "type": "kliff",
+            "path": "./",
+            "save": False,
+            "shuffle": False,
+            "ase_keys": {"energy": "energy", "forces": "forces"},
+            "colabfit_dataset": {
+                "dataset_name": None,
+                "database_name": None,
+                "database_url": None,
+            },
         }
+        self.dataset = None
 
         # model variables
-        self.model_type: ModelTypes = ModelTypes.UNDEFINED
+        self.model_manifest: dict = {
+            "type": "kim",
+            "name": None,
+            "path": None,
+            "instance": None,
+        }
         self.model: Callable = None
-        self.model_name = None  # KIM string or name of pt/pth file
-        self.model_path = None  # path to the model file
 
         # transform variables
+        self.transform_manifest: dict = {
+            "property": [{
+                "name": None,
+                "property_key": None,
+            }],
+            "parameter": [],
+            "configuration": {
+                "name": None,
+                "kwargs": None,
+            },
+        }
         self.property_transform: PropertyTransform = None
-        self.property_transform_options = None
         self.parameter_transform: ParameterTransform = None
-        self.parameter_transform_options = None
         self.configuration_transform: ConfigurationTransform = None
-        self.configuration_transform_options = None
 
         # training variables
-        self.loss_function: Callable = None
-        self.loss_function_name = None
-        self.loss_weights: Union[dict, Path] = {
-            "energy": 1.0,
-            "forces": None,
-            "stress": None,
-            "config": 1.0,
+        # this is too complicated to put it in singe dict, therefore the training
+        # block is divided into loss, optimizer, dataset_sample
+        self.training_manifest: dict = {}
+        self.loss_manifest: dict = {
+            "function": "mse",
+            "weights": {
+                "energy": 1.0,
+                "forces": None,
+                "stress": None,
+                "config": 1.0,
+            },
+            "normalize_per_atom": False,
+            "loss_traj": False,
         }
-        self.loss_normalize_per_atom = False
+        self.optimizer_manifest: dict = {
+            "provider": "scipy",
+            "name": None,
+            "learning_rate": None,
+            "kwargs": None,
+            "epochs": 10000,
+            "stop_condition": None,
+            "num_workers": 1,
+        }
 
-        self.optimizer_provider: OptimizerProvider = OptimizerProvider.UNDEFINED
-        self.optimizer = None  # instance of optimizer, "scipy" for scipy torch.optim instance for torch
-        self.optimizer_name = (
-            None  # name of optimizer, e.g. "l-bfgs-b" for scipy, "adam" for torch
-        )
-        self.optimizer_kwargs = (
-            None  # kwargs for optimizer to bundle all unknown kwargs
-        )
-        self.learning_rate = None  # learning rate for torch
-
-        self.max_epochs = 10000  # maximum number of epochs
-        self.device = "cpu"
-        self.batch_size = 1
-        self.chkpt_interval = 100
-        self.stop_condition = None  # function to check if training should stop
-        self.num_workers = 1  # number of workers for data loading
-        self.verbose = True  # whether to print verbose output
+        # part of current?
+        self.dataset_sample_manifest: dict = {
+            "train_size": None,
+            "val_size": None,
+            "indices_files": {"train": None, "val": None},
+            "val_indices": None,
+            "train_indices": None,
+            "train_dataset": None,
+            "val_dataset": None,
+        }
 
         # export trained model
-        self.export_kim_model = False
-        self.export_model_type = None
-        self.export_model_name = None
-        self.export_model_path = None
-
-        self.configuration = self.config_from_dict(configuration)
+        self.export_manifest: dict = {
+            "model_type": None,
+            "model_name": None,
+            "model_path": None,
+        }
 
         # state variables
-        self.current_epoch = 0
-        self.current_step = 0
-        self.current_best_loss = None
-        self.current_best_model = None
-        self.current_loss = None
-        self.current_run_dir = None
-        self.appending_to_previous_run = False
-        self.current_dataset_hash = None
-        self.start_current_run_title = None  # start time of the current run
-        self.expected_end_time = None
-        self.warned_once = False  # log all one time warnings
-
+        self.current: dict = {
+            "run_title": None,
+            "run_dir": None,
+            "run_hash": None,
+            "start_time": None,
+            "end_time": None,
+            "best_loss": None,
+            "best_model": None,
+            "loss": None,
+            "epoch": 0,
+            "step": 0,
+            "expected_end_time": None,
+            "warned_once": False,
+            "dataset_hash": None,
+            "appending_to_previous_run": False,
+            "verbose": False,
+            "chkpt_interval": 100,
+        }
+        self.parse_manifest(training_manifest)
         self.initialize()
 
-    @staticmethod
-    def config_from_dict(configuration: dict):
+    def parse_manifest(self, manifest: dict):
         """
-        It accepts the raw configuration dictionary, and processes it to the formatted
-        configuration. This includes mapping the string fields to enums, and setting sane
+        It accepts the raw manifest dictionary, and processes it to the formatted
+        manifest. This includes mapping the string fields to enums, and setting sane
         defaults for missing fields.
 
         Args:
-            configuration: raw incoming dictionary
+            manifest: raw incoming configuration
 
         Returns:
-            Processed configuration dictionary
+            Processed manifest
         """
+        _date_time_format = "%Y-%m-%d-%H-%M-%S"
         start_time = datetime.now()
-        date_time_str = start_time.strftime("%Y-%m-%d-%H-%M-%S")
-        processed_configuration = {}
+        date_time_str = start_time.strftime(_date_time_format)
+        self.current["start_time"] = start_time
 
         # Workspace variables ################################################
-        workspace_block = configuration.get("workspace", {})
-        if workspace_block == {}:
-            raise TrainerError("Workspace block not defined in trainer configuration")
-        processed_configuration["start_time"] = start_time
-        processed_configuration["workspace_name"] = workspace_block.get(
-            "name", f"kliff_{date_time_str}"
-        )
-        processed_configuration["current_run_title"] = (
-            None  # will be assigned in the model block
-        )
-        processed_configuration["export_kim_model"] = workspace_block.get(
-            "export", False
-        )
-        processed_configuration["seed"] = workspace_block.get("seed", 12345)
-        processed_configuration["resume"] = workspace_block.get("resume", False)
-        walltime: Union[str, int] = workspace_block.get("walltime", "2:00:00:00")
-        if type(walltime) is int:  # yaml parsed the time
-            processed_configuration["walltime"] = timedelta(seconds=walltime)
-        elif type(walltime) is str:
-            processed_configuration["walltime"] = timedelta(
-                days=int(walltime.split(":")[0]),
-                hours=int(walltime.split(":")[1]),
-                minutes=int(walltime.split(":")[2]),
-                seconds=int(walltime.split(":")[3]),
-            )
+        workspace_block: Union[None, dict] = manifest.get("workspace", None)
+        if workspace_block is None:
+            logger.warning("Workspace block not found in the configuration. Using default values.")
         else:
-            raise TrainerError("Walltime not in correct format. dd:hh:mm:ss expected.")
-        processed_configuration["expected_end_time"] = (
-            start_time + processed_configuration["walltime"]
-        )
+            self.workspace |= workspace_block
 
-        # Dataset variables #################################################
-        dataset_block = configuration.get("dataset", {})
-        if dataset_block == {}:
-            raise TrainerError(
-                "Dataset block is missing from the trainer configuration file"
-            )
+        if isinstance(self.workspace["walltime"], int):
+            expected_end_time = datetime.now() + timedelta(seconds=self.workspace["walltime"])
+        else:
+            expected_end_time = datetime.now() + timedelta(
+                    days=int(self.workspace["walltime"].split(":")[0]),
+                    hours=int(self.workspace["walltime"].split(":")[1]),
+                    minutes=int(self.workspace["walltime"].split(":")[2]),
+                    seconds=int(self.workspace["walltime"].split(":")[3]),
+                )
+        self.current["expected_end_time"] = expected_end_time
 
-        processed_configuration["dataset_type"] = DataSource.get_data_enum(
-            dataset_block.get("type", "kliff")
-        )
-        processed_configuration["dataset_path"] = dataset_block.get("path", None)
-        processed_configuration["dataset_save"] = dataset_block.get("save", False)
-        processed_configuration["dataset_shuffle"] = dataset_block.get("shuffle", False)
-        ase_keys = dataset_block.get("keys", {})
-        processed_configuration["ase_keys"] = {
-            "energy_key": ase_keys.get("energy", "energy"),
-            "forces_key": ase_keys.get("forces", "forces"),
-        }
-        train_dataset_info = dataset_block.get("training_dataset", {})
+        # Dataset manifest #################################################
+        dataset_manifest: Union[None, dict] = manifest.get("dataset", None)
+        if dataset_manifest is None:
+            raise TrainerError("Dataset block not found in the configuration. Exiting.")
 
-        # none values will be tackled during dataset loading
-        processed_configuration["train_size"] = train_dataset_info.get(
-            "train_size", None
-        )
-        processed_configuration["train_indices"] = train_dataset_info.get(
-            "train_indices", None
-        )
-
-        val_dataset_info = dataset_block.get("validation_dataset", {})
-        processed_configuration["val_size"] = val_dataset_info.get("val_size", None)
-        processed_configuration["val_indices"] = val_dataset_info.get(
-            "val_indices", None
-        )
-
-        processed_configuration["indices_file"] = {"train": None, "val": None}
-
-        if type(processed_configuration["train_indices"]) is str:
-            processed_configuration["indices_file"] = processed_configuration[
-                "train_indices"
-            ]
-
-        if type(processed_configuration["val_indices"]) is str:
-            processed_configuration["indices_file"] = processed_configuration[
-                "val_indices"
-            ]
-
-        processed_configuration["train_dataset"] = None  # To be assigned
-        processed_configuration["val_dataset"] = None  # To be assigned
-        processed_configuration["dataset"] = None  # To be assigned
-        colabfit_dict = dataset_block.get("colabfit_dataset", {})
-
-        processed_configuration["colabfit_dataset"] = {
-            "dataset_name": colabfit_dict.get("dataset_name", None),
-            "database_name": colabfit_dict.get("database_name", None),
-            "database_url": colabfit_dict.get("database_url", None),
-        }
+        self.dataset_manifest |= dataset_manifest
 
         # model variables ####################################################
-        model_block = configuration.get("model", {})
-        processed_configuration["model_type"] = ModelTypes.get_model_enum(
-            model_block.get("model_type", "kim")
-        )
-        processed_configuration["model_name"] = model_block.get("model_name", None)
-        processed_configuration["model_path"] = model_block.get("model_path", None)
-        processed_configuration["model"] = None  # To be assigned
-        if processed_configuration["model_name"] is None:
-            processed_configuration["current_run_title"] = (
-                f"{processed_configuration['model_type']}_{date_time_str}"
-            )
+        model_manifest: Union[None, dict] = manifest.get("model", None)
+        if model_manifest is None:
+            raise TrainerError("Model block not found in the configuration. Exiting.")
+        self.model_manifest |= model_manifest
+
+        if self.model_manifest.get("name", None) is None:
+            self.current["run_title"] = f"{self.model_manifest.get('type')}_{date_time_str}"
         else:
-            processed_configuration["current_run_title"] = (
-                f"{processed_configuration['model_name']}_{date_time_str}"
-            )
+            self.current["run_title"] = f"{self.model_manifest.get('name')}_{date_time_str}"
 
         # transform variables ####################################################
-        transform_block = configuration.get("transforms", {})
-        property_transform_sub_block = transform_block.get("property", {})
-        parameter_transform_sub_block = transform_block.get("parameter", {})
-        configuration_transform_sub_block = transform_block.get("configuration", {})
-
-        processed_configuration["property_transform_options"] = {
-            "name": property_transform_sub_block.get("name", None),
-            "property_key": property_transform_sub_block.get("property_key", None),
-        }
-        processed_configuration["property_transform"] = (
-            property_transform_sub_block.get("instance", None)
-        )  # no executable given. initialize on own
-
-        processed_configuration["parameter_transform_options"] = {
-            "parameter_list": parameter_transform_sub_block.get("parameter_list", None),
-        }
-        processed_configuration["parameter_transform"] = (
-            parameter_transform_sub_block.get("instance", None)
-        )  # no executable given. initialize on own
-
-        processed_configuration["configuration_transform_options"] = (
-            configuration_transform_sub_block  # this might contain lot of variables
-        )
-        processed_configuration["configuration_transform"] = (
-            configuration_transform_sub_block.get("instance", None)
-        )  # no executable given. initialize on own
+        transform_manifest: Union[None, dict] = manifest.get("transforms", None)
+        if transform_manifest is None:
+            logger.warning("Transform block not found in the configuration. This is bit unusual.")
+        else:
+            self.transform_manifest |= transform_manifest
 
         # training variables ########################################################
-        training_block = configuration.get("training", {})
-        loss_block = training_block.get("loss", {})
-        processed_configuration["loss_function_name"] = loss_block.get("function", None)
-        weights = loss_block.get("weights", {})
-        if isinstance(weights, str):
-            processed_configuration["loss_weights"] = Path(weights)
-        else:
-            processed_configuration["loss_weights"] = {
-                "energy": weights.get("energy", 1.0),
-                "forces": weights.get("forces", None),
-                "stress": weights.get("stress", None),
-                "config": weights.get("config", 1.0),
-            }
-        processed_configuration["loss_normalize_per_atom"] = loss_block.get(
-            "normalize_per_atom", False
-        )
+        training_manifest: Union[None, dict] = manifest.get("training", None)
+        if training_manifest is None:
+            logger.warning("Training block not found in the configuration."
+                           "Will try and resume the previous run if possible.")
+            # TODO: implement resume
+        self.training_manifest |= training_manifest
 
-        optimizer_block = training_block.get("optimizer", {})
-        processed_configuration["optimizer_provider"] = (
-            OptimizerProvider.get_optimizer_enum(
-                optimizer_block.get("provider", "scipy")
-            )
-        )
-        processed_configuration["optimizer"] = None  # To be assigned
-        processed_configuration["optimizer_name"] = optimizer_block.get("name", None)
-        processed_configuration["learning_rate"] = optimizer_block.get(
-            "learning_rate", None
-        )
-        processed_configuration["optimizer_kwargs"] = optimizer_block.get(
-            "kwargs", None
-        )
+        if self.training_manifest.get("loss", None) is None:
+            logger.warning("Loss block not found in the configuration. Using default values.")
 
-        processed_configuration["max_epochs"] = training_block.get("max_epochs", 10000)
-        processed_configuration["device"] = training_block.get("device", "cpu")
-        processed_configuration["batch_size"] = training_block.get("batch_size", 1)
-        processed_configuration["chkpt_interval"] = training_block.get(
-            "chkpt_interval", 100
-        )
-        processed_configuration["stop_condition"] = training_block.get(
-            "stop_condition", None
-        )
-        processed_configuration["num_workers"] = training_block.get("num_workers", 1)
-        processed_configuration["verbose"] = training_block.get("verbose", True)
+        self.loss_manifest |= self.training_manifest.get("loss")
 
-        # export trained model ####################################################
-        export_block = configuration.get("export", {})
-        processed_configuration["export_kim_model"] = export_block is not {}
-        if export_block is not {}:
-            processed_configuration["export_model_type"] = ModelTypes.get_model_enum(
-                export_block.get("model_type", "kim")
-            )
-            processed_configuration["export_model_name"] = export_block.get(
-                "model_name", None
-            )
-            processed_configuration["export_model_path"] = export_block.get(
-                "model_path", None
-            )
+        if self.training_manifest.get("optimizer", None) is None:
+            logger.warning("Optimizer block not found in the configuration."
+                           "Will resume the previous run if possible.")
+            # TODO: implement resume
 
-        return processed_configuration
+        self.optimizer_manifest |= self.training_manifest.get("optimizer")
+        self.optimizer_manifest["epochs"] = self.training_manifest.get("epochs", 10000)
+        self.optimizer_manifest["stop_condition"] = self.training_manifest.get("stop_condition", None)
+        self.optimizer_manifest["num_workers"] = self.training_manifest.get("num_workers", 1)
+
+        self.current["chkpt_interval"] = self.training_manifest.get("chkpt_interval", 100)
+        self.current["verbose"] = self.training_manifest.get("verbose", False)
+
+        # dataset sample variables will be processed in the setup_dataset method
+        self.export_manifest |= manifest.get("export", {})
 
     def config_to_dict(self):
         """
         Convert the configuration to a dictionary.
         """
         config = {}
-        config["workspace"] = {
-            "name": self.workspace_name,
-            "export": self.export_kim_model,
-            "seed": self.seed,
-            "resume": self.resume,
-            "walltime": self.walltime.total_seconds(),
-        }
-
-        config["dataset"] = {
-            "type": DataSource.get_data_str(self.dataset_type),
-            "path": self.dataset_path,
-            "save": self.dataset_save,
-            "shuffle": self.dataset_shuffle,
-            "training_dataset": {
-                "train_size": self.train_size,
-                "train_indices": self.indices_files["train"],
-            },
-            "validation_dataset": {
-                "val_size": self.val_size,
-                "val_indices": self.indices_files["val"],
-            },
-            "colabfit_dataset": {
-                "dataset_name": self.colabfit_dataset["dataset_name"],
-                "database_name": self.colabfit_dataset["database_name"],
-                "database_url": self.colabfit_dataset["database_url"],
-            },
-        }
-        if self.ase_keys is not None:
-            config["dataset"]["keys"] = {
-                "energy": self.ase_keys["energy_key"],
-                "forces": self.ase_keys["forces_key"],
-            }
-
-        config["model"] = {
-            "model_type": ModelTypes.get_model_str(self.model_type),
-            "model_name": self.model_name,
-            "model_path": self.model_path,
-        }
-
-        config["transforms"] = {
-            "property": {
-                "name": self.property_transform_options["name"],
-                "property_key": self.property_transform_options["property_key"],
-            },
-            "parameter": {
-                "parameter_list": self.parameter_transform_options["parameter_list"],
-            },
-            "configuration": {
-                "name": self.configuration_transform_options["name"],
-                "kwargs": self.configuration_transform_options,
-            },
-        }
-
-        config["training"] = {
-            "loss": {
-                "loss_function": self.loss_function_name,
-                "weights": {
-                    "energy": self.loss_weights["energy"],
-                    "forces": self.loss_weights["forces"],
-                    "stress": self.loss_weights["stress"],
-                    "config": self.loss_weights["config"],
-                },
-                "normalize_per_atom": self.loss_normalize_per_atom,
-            },
-            "optimizer": {
-                "provider": OptimizerProvider.get_optimizer_str(
-                    self.optimizer_provider
-                ),
-                "name": self.optimizer_name,
-                "learning_rate": self.learning_rate,
-                "kwargs": self.optimizer_kwargs,
-            },
-            "epochs": self.max_epochs,
-            "device": self.device,
-            "batch_size": self.batch_size,
-            "chkpt_interval": self.chkpt_interval,
-            "stop_condition": self.stop_condition,
-            "num_workers": self.num_workers,
-            "verbose": self.verbose,
-        }
-        if self.export_kim_model:
-            config["export"] = {
-                "model_type": ModelTypes.get_model_str(self.export_model_type),
-                "model_name": self.export_model_name,
-                "model_path": self.export_model_path,
-            }
-
+        config |= self.workspace
+        config |= self.dataset_manifest
+        config |= self.model_manifest
+        config |= self.transform_manifest
+        config |= self.training_manifest
         return config
 
     @classmethod
     def from_file(cls, filename: Path):
         """
-        Load the configuration from a YAML file.
+        Load the manifest from a YAML file.
 
         Args:
             filename: name of the yaml file
@@ -465,10 +272,8 @@ class Trainer:
             Trainer instance
 
         """
-        with open(filename, "r") as f:
-            configuration = yaml.safe_load(f)
-        configuration["filename"] = str(filename)
-        return cls(configuration)
+        manifest = yaml.safe_load(open(filename, "r"))
+        return cls(manifest)
 
     def get_trainer_hash(self):
         """
@@ -486,8 +291,7 @@ class Trainer:
         call setup methods.
         """
         # Step 1 - Assign the processed configuration objects to the class variables
-        for key, value in self.configuration.items():
-            setattr(self, key, value)
+        # This has been done in the __init__ method
         # Step 2 - Initialize all seeds
         self.seed_all()
         # Step 3 - Set up the workspace folder
@@ -509,8 +313,8 @@ class Trainer:
         """
         Seed all the random number generators.
         """
-        np.random.seed(self.seed)
-        random.seed(self.seed)
+        np.random.seed(self.workspace["seed"])
+        random.seed(self.workspace["seed"])
         # torch.manual_seed(self.seed) # enable torch seed in respective children
         # torch.cuda.manual_seed_all(self.seed)
         # torch.backends.cudnn.deterministic = True
@@ -520,220 +324,45 @@ class Trainer:
         """
         Check all the existing runs in the root directory and see if it finished the run
         """
-        dir_list = sorted(glob(f"{self.workspace_name}*"))
-        if len(dir_list) == 0 or not self.resume:
-            self.appending_to_previous_run = False
-            self.current_run_dir = f"{self.workspace_name}/{self.current_run_title}"
-            os.makedirs(self.current_run_dir, exist_ok=True)
+        dir_list = sorted(glob(f"{self.workspace['name']}*"))
+        if len(dir_list) == 0 or not self.workspace["resume"]:
+            self.current["appending_to_previous_run"] = False
+            self.current["run_dir"] = f"{self.workspace['name']}/{self.current['run_title']}"
+            os.makedirs(self.current["run_dir"], exist_ok=True)
         else:
             last_dir = dir_list[-1]
             was_it_finished = os.path.exists(f"{last_dir}/.finished")
             if was_it_finished:  # start new run
-                current_run_dir = f"{self.workspace_name}/{self.current_run_title}"
+                current_run_dir = f"{self.workspace['name']}/{self.current['run_title']}"
                 os.makedirs(current_run_dir, exist_ok=True)
-                self.appending_to_previous_run = False
+                self.current["appending_to_previous_run"] = False
             else:
-                self.appending_to_previous_run = True
-                self.current_run_dir = dir_list[-1]
+                self.current["appending_to_previous_run"] = True
+                self.current["run_dir"] = dir_list[-1]
 
     def setup_dataset(self):
         """
-        Set up the dataset based on the provided information. It will check the
-        {workspace}/{dataset_name} directory to see if dataset hash is already there.
-        The dataset hash is determined but hashing the full path to the dataset +
-        transforms names + configuration transform properties.
+        Set up the dataset based on the provided information.
+
+        TODO: It will check the {workspace}/{dataset_name} directory to see if dataset hash
+        is already there. The dataset hash is determined but hashing the full path to
+        the dataset + transforms names + configuration transform properties.
+        TODO: reload hashed dataset if it exists.
         """
-        dataset_path = ""
-        dataset_transforms = ""
-        dataset_hash = ""
-        if self.dataset_type == DataSource.KLIFF or self.dataset_type == DataSource.ASE:
-            dataset_path = os.path.abspath(self.dataset_path)
-        elif self.dataset_type == DataSource.COLABFIT:
-            dataset_path = (
-                self.colabfit_dataset["database_url"]
-                + "/"
-                + self.colabfit_dataset["database_name"]
-            )
-        else:
-            raise TrainerError(f"Dataset type {self.dataset_type} not supported.")
-
-        if self.property_transform_options is not None:
-            dataset_transforms += str(self.property_transform_options["name"])
-
-        dataset_transforms += "_"
-
-        if self.configuration_transform_options is not None:
-            dataset_transforms += self.configuration_transform_options["name"] + "_"
-            dataset_transforms += str(
-                self.configuration_transform_options["kwargs"]["cutoff"]
-            )
-
-        dataset_hash_str = (
-            dataset_path
-            + "_"
-            + dataset_transforms
-            + "_"
-            + json.dumps(self.loss_weights, sort_keys=True)
-        )
-        dataset_hash = hashlib.md5(dataset_hash_str.encode()).hexdigest()
-        self.current_dataset_hash = dataset_hash
-        dataset_dir = f"{self.workspace_name}/{dataset_hash}"
-        os.makedirs(dataset_dir, exist_ok=True)
-        try:
-            self.dataset = dill.load(open(f"{dataset_dir}/dataset.dill", "rb"))
-            logger.info(f"Dataset found in {dataset_dir}.")
-            return
-        except FileNotFoundError:
-            logger.info(
-                f"Dataset not found in {self.workspace_name} directory. Creating dataset."
-            )
-
-        if isinstance(self.loss_weights, Path):
-            weights = self.loss_weights
-        elif isinstance(self.loss_weights, dict):
-            weights = Weight(
-                config_weight=self.loss_weights["config"],
-                energy_weight=self.loss_weights["energy"],
-                forces_weight=self.loss_weights["forces"],
-                stress_weight=self.loss_weights["stress"],
-            )
-        elif self.loss_weights is None:
-            weights = None
-        else:
-            raise TrainerError(
-                "Loss weights should be a dictionary or a path to a file, or None."
-            )
-
-        if self.dataset_type == DataSource.KLIFF:
-            dataset = Dataset.from_path(dataset_path, weight=weights)
-        elif self.dataset_type == DataSource.ASE:
-            dataset = Dataset.from_ase(dataset_path, **self.ase_keys, weight=weights)
-        elif self.dataset_type == DataSource.COLABFIT:
-            dataset = Dataset.from_colabfit(
-                self.colabfit_dataset["dataset_name"],
-                self.colabfit_dataset["database_name"],
-                self.colabfit_dataset["database_url"],
-                weight=weights,
-            )
-        else:
-            raise TrainerError(f"Dataset type {self.dataset_type} not supported.")
-
-        if self.property_transform is not None:
-            if not isinstance(self.property_transform, PropertyTransform):
-                raise TrainerError(
-                    "Property transform is not none and not an instance of PropertyTransform."
-                )
-        else:
-            # check if property_instance_options have "instance"
-            if self.property_transform_options.get("instance") is not None:
-                self.property_transform = self.property_transform_options["instance"]
-            else:
-                if self.property_transform_options.get("name"):
-                    try:
-                        # try getting class "name" from kliff.transforms.property_transforms
-                        module = importlib.import_module(
-                            "kliff.transforms.property_transforms"
-                        )
-                        class_ = getattr(
-                            module, self.property_transform_options["name"]
-                        )
-                        self.property_transform = class_(
-                            property_key=self.property_transform_options[
-                                "property_key"
-                            ],
-                        )
-                    except AttributeError:
-                        raise TrainerError(
-                            f"Property transform {self.property_transform_options['name']} not found."
-                            "If it is a custom transform, please provide the instance."
-                        )
-
-        if self.property_transform:
-            self.property_transform(dataset)
-
-        if self.configuration_transform is not None:
-            if not isinstance(self.configuration_transform, ConfigurationTransform):
-                raise TrainerError(
-                    "Configuration transform is not none and not an instance of ConfigurationTransform."
-                )
-        else:
-            # check if configuration_instance_options have "instance"
-            if (
-                "instance" in self.configuration_transform_options
-                and self.configuration_transform_options["instance"] is not None
-            ):
-                self.configuration_transform = self.configuration_transform_options[
-                    "instance"
-                ]
-            else:
-                try:
-                    # try getting class "name" from kliff.transforms.configuration_transforms
-                    module = importlib.import_module(
-                        "kliff.transforms.configuration_transforms"
-                    )
-                    class_ = getattr(
-                        module, self.configuration_transform_options["name"]
-                    )
-                    self.configuration_transform = class_(
-                        **self.configuration_transform_options["kwargs"],
-                        copy_to_config=True,
-                    )
-                except AttributeError:
-                    raise TrainerError(
-                        f"Configuration transform {self.configuration_transform_options['name']} not found."
-                        "If it is a custom transform, please provide the instance."
-                    )
-        for configuration in dataset:
-            self.configuration_transform(configuration)
-
-        dill.dump(dataset, open(f"{dataset_dir}/dataset.dill", "wb"))
-        logger.info(f"Dataset saved in {dataset_dir}.")
-        if self.dataset_shuffle:
-            random.shuffle(dataset.configs)
-        self.dataset = dataset
-
-    def setup_test_train_datasets(self):
-        """
-        Set up the test and train datasets based on the provided indices. If the indices
-        are not provided, shuffled serial indices will be used. If val_indices are not
-        provided, the train_indices no validation dataset will be used.
-        """
-
-        # training indices
-        if self.indices_files["train"] is not None:
-            self.train_indices = np.load(self.indices_files["train"])
-        else:
-            if self.train_size is not None:
-                self.train_indices = np.arange(self.train_size)
-            else:
-                self.train_indices = np.arange(len(self.dataset))
-
-        # validation indices
-        if self.indices_files["val"] is not None:
-            self.val_indices = np.load(self.indices_files["val"])
-        else:
-            if self.val_size is not None:
-                self.val_indices = np.arange(self.val_size)
-            else:
-                self.val_indices = None
-
-        self.train_dataset = self.dataset[self.train_indices]
-        self.indices_files["train"] = f"{self.current_run_dir}/train_indices.npy"
-        self.train_indices.dump(self.indices_files["train"])
-
-        if self.val_indices:
-            self.val_dataset = self.dataset[self.val_indices]
-            self.indices_files["val"] = f"{self.current_run_dir}/val_indices.npy"
-            self.val_indices.dump(self.indices_files["val"])
+        dataset_module_manifest = deepcopy(self.dataset_manifest)
+        dataset_module_manifest["weights"] = self.loss_manifest["weights"]
+        self.dataset = Dataset.get_dataset_from_manifest(
+            dataset_module_manifest,
+            self.transform_manifest)
 
     def save_config(self):
         """
         Hash and save the configuration to the current run directory.
         """
         config_hash = self.get_trainer_hash()
-        config_file = f"{self.current_run_dir}/{config_hash}.yaml"
+        config_file = f"{self.current['run_dir']}/{config_hash}.yaml"
         with open(config_file, "w") as f:
-            yaml.dump(self.configuration, f, default_flow_style=False)
+            yaml.dump(self.config_to_dict(), f, default_flow_style=False)
         logger.info(f"Configuration saved in {config_file}.")
 
     def setup_model(self):
@@ -769,23 +398,105 @@ class Trainer:
         """
         raise TrainerError("setup_optimizer not implemented.")
 
+    def setup_test_train_datasets(self):
+        """
+        Simple test train split for now, will have more options like stratification
+         in the future.
+
+        """
+        # test train splits
+        train_size = self.dataset_sample_manifest.get("train_size", len(self.dataset))
+        val_size = self.dataset_sample_manifest.get("val_size", 0)
+
+        # sanity checks
+        if not isinstance(train_size, int) or train_size < 1:
+            logger.warning("Train size is not provided or is less than 1. Using full dataset for training.")
+            train_size = len(self.dataset)
+
+        if not isinstance(val_size, int) or val_size < 0:
+            logger.warning("Val size is not provided or is less than 0. Using 0 for validation.")
+            val_size = 0
+
+        if train_size + val_size > len(self.dataset):
+            raise TrainerError("Sum of train, val, and test sizes is greater than the dataset size.")
+
+        # check if indices are provided
+        train_indices = self.dataset_sample_manifest.get("train_indices")
+        if train_indices is None:
+            train_indices = np.arange(train_size, dtype=int)
+        elif isinstance(train_indices, str):
+            train_indices = np.genfromtxt(train_indices, dtype=int)
+        else:
+            TrainerError("train_indices should be a numpy array or a path to a file.")
+
+        val_indices = self.dataset_sample_manifest.get("val_indices")
+        if val_indices is None:
+            val_indices = np.arange(train_size, train_size + val_size, dtype=int)
+        elif isinstance(val_indices, str):
+            val_indices = np.genfromtxt(val_indices, dtype=int)
+        else:
+            TrainerError("val_indices should be a numpy array or a path to a file.")
+
+        if self.dataset_manifest.get("shuffle", False):
+            # instead of shuffling the main dataset, validation/train indices are shuffled
+            # this gives better control over future active learning scenarios
+            np.random.shuffle(train_indices)
+            np.random.shuffle(val_indices)
+
+        print(train_indices, val_indices, self.dataset)
+
+        train_dataset = self.dataset[train_indices]
+
+        if val_size > 0:
+            val_dataset = self.dataset[val_indices]
+        else:
+            val_dataset = None
+
+        self.dataset_sample_manifest["train_size"] = train_size
+        self.dataset_sample_manifest["val_size"] = val_size
+        self.dataset_sample_manifest["train_indices"] = train_indices
+        self.dataset_sample_manifest["val_indices"] = val_indices
+        self.dataset_sample_manifest["train_dataset"] = train_dataset
+        self.dataset_sample_manifest["val_dataset"] = val_dataset
+
+        # save the indices if generated
+        if isinstance(train_indices, str):
+            self.dataset_sample_manifest["indices_files"]["train"] = train_indices
+        else:
+            self.dataset_sample_manifest["indices_files"]["train"] = f"{self.current['run_dir']}/train_indices.txt"
+            np.savetxt(self.dataset_sample_manifest["indices_files"]["train"], train_indices, fmt="%d")
+
+        if isinstance(val_indices, str):
+            self.dataset_sample_manifest["indices_files"]["val"] = val_indices
+        else:
+            self.dataset_sample_manifest["indices_files"]["val"] = f"{self.current['run_dir']}/val_indices.txt"
+            np.savetxt(self.dataset_sample_manifest["indices_files"]["val"], val_indices, fmt="%d")
+
     def loss(self, *args, **kwargs):
-        TrainerError("loss not implemented.")
+        raise TrainerError("loss not implemented.")
 
     def checkpoint(self, *args, **kwargs):
-        TrainerError("checkpoint not implemented.")
+        raise TrainerError("checkpoint not implemented.")
 
     def train_step(self, *args, **kwargs):
-        TrainerError("train_step not implemented.")
+        raise TrainerError("train_step not implemented.")
 
     def validation_step(self, *args, **kwargs):
-        TrainerError("validation_step not implemented.")
+        raise TrainerError("validation_step not implemented.")
 
     def get_optimizer(self, *args, **kwargs):
-        TrainerError("get_optimizer not implemented.")
+        raise TrainerError("get_optimizer not implemented.")
 
     def train(self, *args, **kwargs):
-        TrainerError("train not implemented.")
+        raise TrainerError("train not implemented.")
 
     def save_kim_model(self, *args, **kwargs):
-        TrainerError("save_kim_model not implemented.")
+        raise TrainerError("save_kim_model not implemented.")
+
+
+class TrainerError(Exception):
+    """
+    Exceptions to be raised in Trainer and associated classes.
+    """
+    def __init__(self, message):
+        super().__init__(message)
