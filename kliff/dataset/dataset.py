@@ -183,16 +183,12 @@ class Configuration:
         """
         try:
             configuration_id = data_object["relationships"][0]["configuration"]
-            fetched_configuration = database_client.configurations.find_one(
-                {"colabfit-id": data_object["relationships"][0]["configuration"]}
+            fetched_configuration = database_client.get_cleaned_configuration(
+                configuration_id
             )
             fetched_properties = list(
-                database_client.property_instances.find(
-                    {
-                        "colabfit-id": {
-                            "$in": data_object["relationships"][0]["property_instance"]
-                        }
-                    }
+                database_client.get_cleaned_property_instances(
+                    data_object["relationships"][0]["property_instance"]
                 )
             )
         except:
@@ -232,8 +228,17 @@ class Configuration:
             weight=weight,
         )
         self.metadata = {
-            "data_object": data_object,
+            "do-id": data_object["colabfit-id"],
+            "co-id": fetched_configuration["colabfit-id"],
+            "pi-ids": [pi["colabfit-id"] for pi in fetched_properties],
+            "names": fetched_configuration["names"],
         }
+        # Update self.metadata with information from metadata collection
+        md_dict = database_client.get_metadata_from_do_doc(data_object)
+        if md_dict:
+            md_dict["md-id"] = md_dict["colabfit-id"]
+            md_dict.pop("colabfit-id")
+            self.metadata.update(md_dict)
 
         return self
 
@@ -587,6 +592,7 @@ class Dataset:
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
         weight: Optional[Union[Weight, Path]] = None,
+        **kwargs,
     ) -> "Dataset":
         """
         Read configurations from colabfit database and initialize a dataset.
@@ -608,7 +614,7 @@ class Dataset:
         """
         instance = cls()
         instance.add_from_colabfit(
-            colabfit_database, colabfit_dataset, colabfit_uri, weight
+            colabfit_database, colabfit_dataset, colabfit_uri, weight, **kwargs
         )
         return instance
 
@@ -660,6 +666,7 @@ class Dataset:
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
         weight: Optional[Union[Weight, Path]] = None,
+        **kwargs,
     ):
         """
         Read configurations from colabfit database and add them to the dataset.
@@ -678,7 +685,7 @@ class Dataset:
 
         """
         # open link to the mongo
-        mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri)
+        mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri, **kwargs)
         if isinstance(weight, Weight):
             configs = Dataset._read_from_colabfit(
                 mongo_client, colabfit_dataset, weight
