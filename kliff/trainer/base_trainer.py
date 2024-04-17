@@ -1,5 +1,4 @@
 import hashlib
-import importlib
 import json
 import os
 import random
@@ -14,13 +13,7 @@ import numpy as np
 import yaml
 from loguru import logger
 
-import kliff.transforms.configuration_transforms
 from kliff.dataset import Dataset
-from kliff.transforms.configuration_transforms import ConfigurationTransform
-from kliff.transforms.parameter_transforms import ParameterTransform
-from kliff.transforms.property_transforms import PropertyTransform
-
-from ..dataset.weight import Weight
 
 
 class Trainer:
@@ -80,19 +73,18 @@ class Trainer:
 
         # transform variables
         self.transform_manifest: dict = {
-            "property": [{
-                "name": None,
-                "property_key": None,
-            }],
+            "property": [
+                {
+                    "name": None,
+                    "property_key": None,
+                }
+            ],
             "parameter": [],
             "configuration": {
                 "name": None,
                 "kwargs": None,
             },
         }
-        self.property_transform: PropertyTransform = None
-        self.parameter_transform: ParameterTransform = None
-        self.configuration_transform: ConfigurationTransform = None
 
         # training variables
         # this is too complicated to put it in singe dict, therefore the training
@@ -109,6 +101,7 @@ class Trainer:
             "normalize_per_atom": False,
             "loss_traj": False,
         }
+
         self.optimizer_manifest: dict = {
             "provider": "scipy",
             "name": None,
@@ -118,6 +111,7 @@ class Trainer:
             "stop_condition": None,
             "num_workers": 1,
         }
+        self.optimizer = None
 
         # part of current?
         self.dataset_sample_manifest: dict = {
@@ -126,9 +120,9 @@ class Trainer:
             "indices_files": {"train": None, "val": None},
             "val_indices": None,
             "train_indices": None,
-            "train_dataset": None,
-            "val_dataset": None,
         }
+        self.train_dataset = None
+        self.val_dataset = None
 
         # export trained model
         self.export_manifest: dict = {
@@ -154,7 +148,7 @@ class Trainer:
             "dataset_hash": None,
             "appending_to_previous_run": False,
             "verbose": False,
-            "chkpt_interval": 100,
+            "ckpt_interval": 100,
         }
         self.parse_manifest(training_manifest)
         self.initialize()
@@ -179,19 +173,23 @@ class Trainer:
         # Workspace variables ################################################
         workspace_block: Union[None, dict] = manifest.get("workspace", None)
         if workspace_block is None:
-            logger.warning("Workspace block not found in the configuration. Using default values.")
+            logger.warning(
+                "Workspace block not found in the configuration. Using default values."
+            )
         else:
             self.workspace |= workspace_block
 
         if isinstance(self.workspace["walltime"], int):
-            expected_end_time = datetime.now() + timedelta(seconds=self.workspace["walltime"])
+            expected_end_time = datetime.now() + timedelta(
+                seconds=self.workspace["walltime"]
+            )
         else:
             expected_end_time = datetime.now() + timedelta(
-                    days=int(self.workspace["walltime"].split(":")[0]),
-                    hours=int(self.workspace["walltime"].split(":")[1]),
-                    minutes=int(self.workspace["walltime"].split(":")[2]),
-                    seconds=int(self.workspace["walltime"].split(":")[3]),
-                )
+                days=int(self.workspace["walltime"].split(":")[0]),
+                hours=int(self.workspace["walltime"].split(":")[1]),
+                minutes=int(self.workspace["walltime"].split(":")[2]),
+                seconds=int(self.workspace["walltime"].split(":")[3]),
+            )
         self.current["expected_end_time"] = expected_end_time
 
         # Dataset manifest #################################################
@@ -208,41 +206,57 @@ class Trainer:
         self.model_manifest |= model_manifest
 
         if self.model_manifest.get("name", None) is None:
-            self.current["run_title"] = f"{self.model_manifest.get('type')}_{date_time_str}"
+            self.current["run_title"] = (
+                f"{self.model_manifest.get('type')}_{date_time_str}"
+            )
         else:
-            self.current["run_title"] = f"{self.model_manifest.get('name')}_{date_time_str}"
+            self.current["run_title"] = (
+                f"{self.model_manifest.get('name')}_{date_time_str}"
+            )
 
         # transform variables ####################################################
         transform_manifest: Union[None, dict] = manifest.get("transforms", None)
         if transform_manifest is None:
-            logger.warning("Transform block not found in the configuration. This is bit unusual.")
+            logger.warning(
+                "Transform block not found in the configuration. This is bit unusual."
+            )
         else:
             self.transform_manifest |= transform_manifest
 
         # training variables ########################################################
         training_manifest: Union[None, dict] = manifest.get("training", None)
         if training_manifest is None:
-            logger.warning("Training block not found in the configuration."
-                           "Will try and resume the previous run if possible.")
+            logger.warning(
+                "Training block not found in the configuration."
+                "Will try and resume the previous run if possible."
+            )
             # TODO: implement resume
         self.training_manifest |= training_manifest
 
         if self.training_manifest.get("loss", None) is None:
-            logger.warning("Loss block not found in the configuration. Using default values.")
+            logger.warning(
+                "Loss block not found in the configuration. Using default values."
+            )
 
         self.loss_manifest |= self.training_manifest.get("loss")
 
         if self.training_manifest.get("optimizer", None) is None:
-            logger.warning("Optimizer block not found in the configuration."
-                           "Will resume the previous run if possible.")
+            logger.warning(
+                "Optimizer block not found in the configuration."
+                "Will resume the previous run if possible."
+            )
             # TODO: implement resume
 
         self.optimizer_manifest |= self.training_manifest.get("optimizer")
         self.optimizer_manifest["epochs"] = self.training_manifest.get("epochs", 10000)
-        self.optimizer_manifest["stop_condition"] = self.training_manifest.get("stop_condition", None)
-        self.optimizer_manifest["num_workers"] = self.training_manifest.get("num_workers", 1)
+        self.optimizer_manifest["stop_condition"] = self.training_manifest.get(
+            "stop_condition", None
+        )
+        self.optimizer_manifest["num_workers"] = self.training_manifest.get(
+            "num_workers", 1
+        )
 
-        self.current["chkpt_interval"] = self.training_manifest.get("chkpt_interval", 100)
+        self.current["ckpt_interval"] = self.training_manifest.get("ckpt_interval", 100)
         self.current["verbose"] = self.training_manifest.get("verbose", False)
 
         # dataset sample variables will be processed in the setup_dataset method
@@ -327,13 +341,17 @@ class Trainer:
         dir_list = sorted(glob(f"{self.workspace['name']}*"))
         if len(dir_list) == 0 or not self.workspace["resume"]:
             self.current["appending_to_previous_run"] = False
-            self.current["run_dir"] = f"{self.workspace['name']}/{self.current['run_title']}"
+            self.current["run_dir"] = (
+                f"{self.workspace['name']}/{self.current['run_title']}"
+            )
             os.makedirs(self.current["run_dir"], exist_ok=True)
         else:
             last_dir = dir_list[-1]
             was_it_finished = os.path.exists(f"{last_dir}/.finished")
             if was_it_finished:  # start new run
-                current_run_dir = f"{self.workspace['name']}/{self.current['run_title']}"
+                current_run_dir = (
+                    f"{self.workspace['name']}/{self.current['run_title']}"
+                )
                 os.makedirs(current_run_dir, exist_ok=True)
                 self.current["appending_to_previous_run"] = False
             else:
@@ -352,8 +370,8 @@ class Trainer:
         dataset_module_manifest = deepcopy(self.dataset_manifest)
         dataset_module_manifest["weights"] = self.loss_manifest["weights"]
         self.dataset = Dataset.get_dataset_from_manifest(
-            dataset_module_manifest,
-            self.transform_manifest)
+            dataset_module_manifest, self.transform_manifest
+        )
 
     def save_config(self):
         """
@@ -410,15 +428,21 @@ class Trainer:
 
         # sanity checks
         if not isinstance(train_size, int) or train_size < 1:
-            logger.warning("Train size is not provided or is less than 1. Using full dataset for training.")
+            logger.warning(
+                "Train size is not provided or is less than 1. Using full dataset for training."
+            )
             train_size = len(self.dataset)
 
         if not isinstance(val_size, int) or val_size < 0:
-            logger.warning("Val size is not provided or is less than 0. Using 0 for validation.")
+            logger.warning(
+                "Val size is not provided or is less than 0. Using 0 for validation."
+            )
             val_size = 0
 
         if train_size + val_size > len(self.dataset):
-            raise TrainerError("Sum of train, val, and test sizes is greater than the dataset size.")
+            raise TrainerError(
+                "Sum of train, val, and test sizes is greater than the dataset size."
+            )
 
         # check if indices are provided
         train_indices = self.dataset_sample_manifest.get("train_indices")
@@ -443,8 +467,6 @@ class Trainer:
             np.random.shuffle(train_indices)
             np.random.shuffle(val_indices)
 
-        print(train_indices, val_indices, self.dataset)
-
         train_dataset = self.dataset[train_indices]
 
         if val_size > 0:
@@ -456,21 +478,34 @@ class Trainer:
         self.dataset_sample_manifest["val_size"] = val_size
         self.dataset_sample_manifest["train_indices"] = train_indices
         self.dataset_sample_manifest["val_indices"] = val_indices
-        self.dataset_sample_manifest["train_dataset"] = train_dataset
-        self.dataset_sample_manifest["val_dataset"] = val_dataset
+
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
 
         # save the indices if generated
         if isinstance(train_indices, str):
             self.dataset_sample_manifest["indices_files"]["train"] = train_indices
         else:
-            self.dataset_sample_manifest["indices_files"]["train"] = f"{self.current['run_dir']}/train_indices.txt"
-            np.savetxt(self.dataset_sample_manifest["indices_files"]["train"], train_indices, fmt="%d")
+            self.dataset_sample_manifest["indices_files"][
+                "train"
+            ] = f"{self.current['run_dir']}/train_indices.txt"
+            np.savetxt(
+                self.dataset_sample_manifest["indices_files"]["train"],
+                train_indices,
+                fmt="%d",
+            )
 
         if isinstance(val_indices, str):
             self.dataset_sample_manifest["indices_files"]["val"] = val_indices
         else:
-            self.dataset_sample_manifest["indices_files"]["val"] = f"{self.current['run_dir']}/val_indices.txt"
-            np.savetxt(self.dataset_sample_manifest["indices_files"]["val"], val_indices, fmt="%d")
+            self.dataset_sample_manifest["indices_files"][
+                "val"
+            ] = f"{self.current['run_dir']}/val_indices.txt"
+            np.savetxt(
+                self.dataset_sample_manifest["indices_files"]["val"],
+                val_indices,
+                fmt="%d",
+            )
 
     def loss(self, *args, **kwargs):
         raise TrainerError("loss not implemented.")
@@ -498,5 +533,6 @@ class TrainerError(Exception):
     """
     Exceptions to be raised in Trainer and associated classes.
     """
+
     def __init__(self, message):
         super().__init__(message)

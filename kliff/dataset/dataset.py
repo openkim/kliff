@@ -1,9 +1,11 @@
 import copy
+import hashlib
+import importlib
 import json
 import os
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import dill
 import numpy as np
@@ -13,9 +15,6 @@ from monty.dev import requires
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
 from kliff.utils import stress_to_tensor, stress_to_voigt, to_path
-
-import importlib
-import hashlib
 
 # For type checking
 if TYPE_CHECKING:
@@ -681,7 +680,9 @@ class Dataset:
         # open link to the mongo
         mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri)
         if isinstance(weight, Weight):
-            configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, weight)
+            configs = Dataset._read_from_colabfit(
+                mongo_client, colabfit_dataset, weight
+            )
         else:
             configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, None)
             self.add_weights(weight)
@@ -755,10 +756,7 @@ class Dataset:
             parent = path.parent
             all_files = [path]
 
-        configs = [
-            Configuration.from_file(f, weight, file_format)
-            for f in all_files
-        ]
+        configs = [Configuration.from_file(f, weight, file_format) for f in all_files]
 
         if len(configs) <= 0:
             raise DatasetError(
@@ -988,7 +986,13 @@ class Dataset:
 
         if isinstance(weight, Weight):
             configs = self._read_from_ase(
-                path, ase_atoms_list, weight, energy_key, forces_key, slices, file_format
+                path,
+                ase_atoms_list,
+                weight,
+                energy_key,
+                forces_key,
+                slices,
+                file_format,
             )
         else:
             configs = self._read_from_ase(
@@ -1084,13 +1088,17 @@ class Dataset:
 
         # sanity checks
         if 1 > len(weights_col) > 4:
-            raise DatasetError("Weights file contains improper number of cols,"
-                               "there needs to be at least 1 col, and at most 4")
+            raise DatasetError(
+                "Weights file contains improper number of cols,"
+                "there needs to be at least 1 col, and at most 4"
+            )
 
         if not (weights_data.size == 1 or weights_data.size == len(self)):
-            raise DatasetError("Weights file contains improper number of rows,"
-                               "there can be either 1 row (all weights same), "
-                               "or same number of rows as the configurations.")
+            raise DatasetError(
+                "Weights file contains improper number of rows,"
+                "there can be either 1 row (all weights same), "
+                "or same number of rows as the configurations."
+            )
 
         expected_cols = {"config", "energy", "forces", "stress"}
         missing_cols = expected_cols - set([col.lower() for col in weights_col])
@@ -1156,7 +1164,7 @@ class Dataset:
             logger.warning("No properties provided to check for consistency.")
             return
 
-        property_list = list(copy.deepcopy(properties)) # make it mutable, if not
+        property_list = list(copy.deepcopy(properties))  # make it mutable, if not
         for config in self.configs:
             for prop in property_list:
                 try:
@@ -1170,7 +1178,9 @@ class Dataset:
         )
 
     @staticmethod
-    def get_manifest_checksum(dataset_manifest: dict, transform_manifest: Optional[dict] = None) -> str:
+    def get_manifest_checksum(
+        dataset_manifest: dict, transform_manifest: Optional[dict] = None
+    ) -> str:
         """
         Get the checksum of the dataset manifest.
 
@@ -1188,8 +1198,9 @@ class Dataset:
         return hashlib.md5(dataset_str.encode()).hexdigest()
 
     @staticmethod
-    def get_dataset_from_manifest(dataset_manifest: dict, transform_manifest: Optional[dict] = None) -> (
-            "Dataset"):
+    def get_dataset_from_manifest(
+        dataset_manifest: dict, transform_manifest: Optional[dict] = None
+    ) -> "Dataset":
         """
         Get a dataset from a manifest.
 
@@ -1266,7 +1277,11 @@ class Dataset:
             A dataset of configurations.
         """
         dataset_type = dataset_manifest.get("type").lower()
-        if dataset_type != "ase" and dataset_type != "path" and dataset_type != "colabfit":
+        if (
+            dataset_type != "ase"
+            and dataset_type != "path"
+            and dataset_type != "colabfit"
+        ):
             raise DatasetError(f"Dataset type {dataset_type} not supported.")
         weights = dataset_manifest.get("weights", None)
         if weights is not None:
@@ -1284,15 +1299,15 @@ class Dataset:
 
         if dataset_type == "ase":
             dataset = Dataset.from_ase(
-                            path=dataset_manifest.get("path", "."),
-                            weight=weights,
-                            energy_key=dataset_manifest.get("keys", {}).get("energy", "energy"),
-                            forces_key=dataset_manifest.get("keys", {}).get("forces", "forces"),
+                path=dataset_manifest.get("path", "."),
+                weight=weights,
+                energy_key=dataset_manifest.get("keys", {}).get("energy", "energy"),
+                forces_key=dataset_manifest.get("keys", {}).get("forces", "forces"),
             )
         elif dataset_type == "path":
             dataset = Dataset.from_path(
-                            path=dataset_manifest.get("path", "."),
-                            weight=weights,
+                path=dataset_manifest.get("path", "."),
+                weight=weights,
             )
         elif dataset_type == "colabfit":
             try:
@@ -1300,13 +1315,15 @@ class Dataset:
                 colabfit_database = colabfit_dataset.database_name
             except KeyError:
                 raise DatasetError("Colabfit dataset or database not provided.")
-            colabfit_uri = dataset_manifest.get("colabfit_uri", "mongodb://localhost:27017")
+            colabfit_uri = dataset_manifest.get(
+                "colabfit_uri", "mongodb://localhost:27017"
+            )
 
             dataset = Dataset.from_colabfit(
-                            colabfit_database=colabfit_database,
-                            colabfit_dataset=colabfit_dataset,
-                            colabfit_uri=colabfit_uri,
-                            weight=weights,
+                colabfit_database=colabfit_database,
+                colabfit_dataset=colabfit_dataset,
+                colabfit_uri=colabfit_uri,
+                weight=weights,
             )
         else:
             # this should not happen
@@ -1314,51 +1331,83 @@ class Dataset:
 
         # transforms?
         if transform_manifest:
-            configuration_transform: Union[dict, None] = transform_manifest.get("configuration", None)
-            property_transform: Union[list, None] = transform_manifest.get("property", None)
+            configuration_transform: Union[dict, None] = transform_manifest.get(
+                "configuration", None
+            )
+            property_transform: Union[list, None] = transform_manifest.get(
+                "property", None
+            )
 
             if property_transform:
                 for property_to_transform in property_transform:
                     property_name = property_to_transform.get("name", None)
                     if not property_name:
-                        continue # it is probably an empty propery
-                    transform_module_name = property_to_transform[property_name].get("name", None)
+                        continue  # it is probably an empty propery
+                    transform_module_name = property_to_transform[property_name].get(
+                        "name", None
+                    )
                     if not transform_module_name:
-                        raise DatasetError("Property transform module name not provided.")
+                        raise DatasetError(
+                            "Property transform module name not provided."
+                        )
                     property_transform_module = importlib.import_module(
                         f"kliff.transforms.property_transforms"
                     )
-                    property_module = getattr(property_transform_module, transform_module_name)
-                    property_module = property_module(proprty_key=property_name, **property_to_transform[property_name].get("kwargs", {}))
+                    property_module = getattr(
+                        property_transform_module, transform_module_name
+                    )
+                    property_module = property_module(
+                        proprty_key=property_name,
+                        **property_to_transform[property_name].get("kwargs", {}),
+                    )
                     dataset = property_module(dataset)
 
             if configuration_transform:
-                configuration_module_name: Union[str, None] = configuration_transform.get("name", None)
+                configuration_module_name: Union[str, None] = (
+                    configuration_transform.get("name", None)
+                )
                 if not configuration_module_name:
-                    logger.warning("Configuration transform module name not provided."
-                                   "Skipping configuration transform.")
+                    logger.warning(
+                        "Configuration transform module name not provided."
+                        "Skipping configuration transform."
+                    )
                 else:
                     configuration_transform_module = importlib.import_module(
                         f"kliff.transforms.configuration_transforms"
                     )
-                    configuration_module = getattr(configuration_transform_module, configuration_module_name)
-                    kwargs: Union[dict, None] = configuration_transform.get("kwargs", None)
+                    configuration_module = getattr(
+                        configuration_transform_module, configuration_module_name
+                    )
+                    kwargs: Union[dict, None] = configuration_transform.get(
+                        "kwargs", None
+                    )
                     if not kwargs:
-                        raise DatasetError("Configuration transform module options not provided.")
-                    configuration_module = configuration_module(**kwargs, copy_to_config=True)
+                        raise DatasetError(
+                            "Configuration transform module options not provided."
+                        )
+                    configuration_module = configuration_module(
+                        **kwargs, copy_to_config=True
+                    )
 
                     for config in dataset.configs:
                         _ = configuration_module(config)
 
         # dataset hash
-        dataset_checksum = Dataset.get_manifest_checksum(dataset_manifest, transform_manifest)
+        dataset_checksum = Dataset.get_manifest_checksum(
+            dataset_manifest, transform_manifest
+        )
         dataset.add_metadata({"checksum": dataset_checksum})
 
         if dataset_manifest.get("save", False):
             # TODO: use Path for compatibility
             dataset_save_path = dataset_manifest.get("save_path", "./")
-            logger.info(f"Saving dataset to {dataset_save_path}/DS_{dataset_checksum[:10]}.pkl")
-            dill.dump(dataset, open(f"{dataset_save_path}/DS_{dataset_checksum[:10]}.pkl", "wb"))
+            logger.info(
+                f"Saving dataset to {dataset_save_path}/DS_{dataset_checksum[:10]}.pkl"
+            )
+            dill.dump(
+                dataset,
+                open(f"{dataset_save_path}/DS_{dataset_checksum[:10]}.pkl", "wb"),
+            )
 
         return dataset
 

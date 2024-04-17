@@ -1,10 +1,12 @@
 import importlib
 import os
 import subprocess
+import tarfile
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
+import kimpy
 import numpy as np
 from loguru import logger
 
@@ -15,9 +17,6 @@ from kliff.models.model import ComputeArguments, Model
 from kliff.models.parameter import Parameter
 from kliff.neighbor import assemble_forces, assemble_stress
 from kliff.utils import install_kim_model, is_kim_model_installed
-
-import kimpy
-import tarfile
 
 try:
     import kimpy
@@ -33,6 +32,7 @@ except ImportError:
 UNSUPPORTED_MODEL_DRIVERS = [
     "TorchML",
 ]
+
 
 class KIMComputeArguments(ComputeArguments):
     """
@@ -742,9 +742,13 @@ class KIMModel(Model):
         model_collection = model_manifest.get("model_collection")
 
         if model_driver in UNSUPPORTED_MODEL_DRIVERS:
-            logger.error("Model driver not supported for KIM-API based training. "
-                         "Please use appropriate trainer for this model.")
-            raise KIMModelError(f"Model driver {model_driver} not supported for KIMModel training.")
+            logger.error(
+                "Model driver not supported for KIM-API based training. "
+                "Please use appropriate trainer for this model."
+            )
+            raise KIMModelError(
+                f"Model driver {model_driver} not supported for KIMModel training."
+            )
 
         # ensure model is installed
         if model_type.lower() == "kim":
@@ -755,7 +759,9 @@ class KIMModel(Model):
                 )
                 raise KIMModelError(f"Model {model_name} not found.")
             else:
-                logger.info(f"Model {model_name} is present in {model_collection} collection.")
+                logger.info(
+                    f"Model {model_name} is present in {model_collection} collection."
+                )
         elif model_type.lower() == "tar":
             archive_content = tarfile.open(model_path + "/" + model_name)
             model = archive_content.getnames()[0]
@@ -770,7 +776,9 @@ class KIMModel(Model):
                 ],
                 check=True,
             )
-            logger.info(f"Tarball Model {model} installed in {model_collection} collection.")
+            logger.info(
+                f"Tarball Model {model} installed in {model_collection} collection."
+            )
         else:
             raise KIMModelError(f"Model type {model_type} not supported.")
 
@@ -778,7 +786,7 @@ class KIMModel(Model):
 
         if param_manifest:
             mutable_param_list = []
-            for param_to_transform in param_manifest:
+            for param_to_transform in param_manifest.get("parameter", []):
                 if isinstance(param_to_transform, dict):
                     parameter_name = list(param_to_transform.keys())[0]
                 elif isinstance(param_to_transform, str):
@@ -791,7 +799,9 @@ class KIMModel(Model):
             model_param_list = model.parameters()
 
             # apply transforms if needed
-            for model_params, input_params in zip(model_param_list, param_manifest):
+            for model_params, input_params in zip(
+                model_param_list, param_manifest.get("parameter", [])
+            ):
                 if isinstance(input_params, dict):
                     param_name = list(input_params.keys())[0]
                     if param_name != model_params.name:

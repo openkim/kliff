@@ -1,24 +1,13 @@
 import importlib
-import multiprocessing
-import subprocess
 import tarfile
 from pathlib import Path
-from typing import Callable, Tuple, Union
 
-import kimpy
-import numpy as np
 from loguru import logger
 
-import kliff.models
-from kliff._exceptions import TrainerError
-from kliff.dataset import Configuration
 from kliff.models import KIMModel
-from kliff.utils import install_kim_model
 
+from .base_trainer import Trainer, TrainerError
 from .kim_residuals import MSE_residuals
-from .kliff_trainer import Trainer
-from .option_enumerations import ModelTypes, OptimizerProvider
-
 
 SCIPY_MINIMIZE_METHODS = [
     "Nelder-Mead",
@@ -65,36 +54,18 @@ class KIMTrainer(Trainer):
         by the TorchTrainer.
         """
         # check for unsupported model drivers
-        # 1. get the model driver name
-        if self.model_type == ModelTypes.KIM:
-            self.model_driver_name = self.get_model_driver_name_for_kim(self.model_name)
-        elif self.model_type == ModelTypes.TAR:
-            self.model_driver_name = self.get_model_driver_name_for_tarball(
-                self.model_name
+        if (
+            self.model_manifest["type"].lower() == "kim"
+            or self.model_manifest["type"].lower() == "tar"
+        ):
+            self.model = KIMModel.get_model_from_manifest(
+                self.model_manifest, self.transform_manifest
             )
         else:
-            raise TrainerError(f"Model type {self.model_type} not supported.")
-
-        # 2. check if the model driver is supported
-        if self.model_driver_name in UNSUPPORTED_MODEL_DRIVERS:
             raise TrainerError(
-                f"Model driver {self.model_driver_name} not supported by KIMTrainer."
+                f"Model type {self.model_manifest['type']} not supported."
             )
-        elif self.model_driver_name is None:
-            logger.warning(
-                f"Could not determine model-driver name for {self.model_name}. Please be careful and check if the model is supported."
-            )
-        else:
-            logger.info(f"Model driver name: {self.model_driver_name}")
 
-        # 3. load the model
-        if self.model_type == ModelTypes.KIM:
-            self.ensure_kim_model_installation(self.model_name, self.collection)
-        elif self.model_type == ModelTypes.TAR:
-            # reinstall model to be sure
-            self.ensure_tarball_model_installation(self.model_name, self.collection)
-
-        self.model = KIMModel(self.model_name)
         self.parameters = self.model.get_model_params()
 
     def setup_optimizer(self):
@@ -105,13 +76,15 @@ class KIMTrainer(Trainer):
         loaded from the scipy.optimize. If the optimizer_provider is torch, it will be
         loaded from the torch.optim. Left for the derived classes to implement.
         """
-        if self.optimizer_provider is not OptimizerProvider.SCIPY:
+        if self.optimizer_manifest["provider"] != "scipy":
             raise TrainerError(
-                f"Optimizer provider {self.optimizer_provider} not supported by KIMTrainer."
+                f"Optimizer provider {self.optimizer_manifest['provider']} not supported by KIMTrainer."
             )
 
-        if self.optimizer_name not in SCIPY_MINIMIZE_METHODS:
-            raise TrainerError(f"Optimizer not supported: {self.optimizer_name}.")
+        if self.optimizer_manifest["name"] not in SCIPY_MINIMIZE_METHODS:
+            raise TrainerError(
+                f"Optimizer not supported: {self.optimizer_manifest['name']}."
+            )
         optimizer_lib = importlib.import_module(f"scipy.optimize")
         self.optimizer = getattr(optimizer_lib, "minimize")
 
@@ -171,10 +144,13 @@ class KIMTrainer(Trainer):
             return self.loss(x)
 
         x = self.model.get_opt_params()
-        options = self.optimizer_kwargs
-        options["options"] = {"maxiter": self.max_epochs, "disp": self.verbose}
+        options = self.optimizer_manifest.get("kwargs", {})
+        options["options"] = {
+            "maxiter": self.optimizer_manifest["epochs"],
+            "disp": self.current["verbose"],
+        }
         result = self.optimizer(
-            _wrapper_func, x, method=self.optimizer_name, **self.optimizer_kwargs
+            _wrapper_func, x, method=self.optimizer_manifest["name"], **options
         )
 
         if result.success:
@@ -183,37 +159,22 @@ class KIMTrainer(Trainer):
         else:
             logger.error(f"Optimization failed: {result.message}")
 
-    def set_parameters_as_mutable(self):
-        if self.parameter_transform_options is not None:
-            for param_to_transform in self.parameter_transform_options[
-                "parameter_list"
-            ]:
-                if isinstance(param_to_transform, dict):
-                    parameter_name = list(param_to_transform.keys())[0]
-                elif isinstance(param_to_transform, str):
-                    parameter_name = param_to_transform
-                else:
-                    raise TrainerError(
-                        f"Optimizable parameters must be string or value dict. Got {param_to_transform} instead."
-                    )
-                self.mutable_parameters_list.append(parameter_name)
-        else:
-            for param in self.parameters:
-                self.mutable_parameters_list.append(param)
-
-        self.model.set_params_mutable(self.mutable_parameters_list)
-        logger.info(f"Mutable parameters: {self.mutable_parameters_list}")
-
     def _get_loss_fn(self):
-        if self.loss_function_name == "MSE":
+        if self.loss_manifest["function"].lower() == "mse":
             return MSE_residuals
 
     def save_kim_model(self):
-        if self.export_model_type is ModelTypes.KIM:
-            path = Path(self.export_model_path) / self.export_model_name
+        if self.export_manifest["model_type"].lower() == "kim":
+            path = (
+                Path(self.export_manifest["model_path"])
+                / self.export_manifest["model_name"]
+            )
             self.model.write_kim_model(path)
-        elif self.export_model_type is ModelTypes.TAR:
-            path = Path(self.export_model_path) / self.export_model_name
+        elif self.export_manifest["model_type"] == "tar":
+            path = (
+                Path(self.export_manifest["model_path"])
+                / self.export_manifest["model_name"]
+            )
             self.model.write_kim_model(path)
             tarfile_path = path.with_suffix(".tar.gz")
             with tarfile.open(tarfile_path, "w:gz") as tar:
