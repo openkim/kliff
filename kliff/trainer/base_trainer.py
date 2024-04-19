@@ -67,7 +67,6 @@ class Trainer:
             "type": "kim",
             "name": None,
             "path": None,
-            "instance": None,
         }
         self.model: Callable = None
 
@@ -110,6 +109,7 @@ class Trainer:
             "epochs": 10000,
             "stop_condition": None,
             "num_workers": 1,
+            "batch_size": 1,
         }
         self.optimizer = None
 
@@ -143,6 +143,7 @@ class Trainer:
             "loss": None,
             "epoch": 0,
             "step": 0,
+            "device": "cpu",
             "expected_end_time": None,
             "warned_once": False,
             "dataset_hash": None,
@@ -255,9 +256,13 @@ class Trainer:
         self.optimizer_manifest["num_workers"] = self.training_manifest.get(
             "num_workers", 1
         )
+        self.optimizer_manifest["batch_size"] = self.training_manifest.get(
+            "batch_size", 1
+        )
 
         self.current["ckpt_interval"] = self.training_manifest.get("ckpt_interval", 100)
         self.current["verbose"] = self.training_manifest.get("verbose", False)
+        self.current["device"] = self.training_manifest.get("device", "cpu")
 
         # dataset sample variables will be processed in the setup_dataset method
         self.export_manifest |= manifest.get("export", {})
