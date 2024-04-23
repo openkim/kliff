@@ -20,6 +20,8 @@ from kliff.utils import stress_to_tensor, stress_to_voigt, to_path
 if TYPE_CHECKING:
     from colabfit.tools.configuration import Configuration as ColabfitConfiguration
     from colabfit.tools.database import MongoDatabase
+    from kliff.transforms.configuration_transforms import ConfigurationTransform
+    from kliff.transforms.property_transforms import PropertyTransform
 
 # check if colabfit-tools is installed
 try:
@@ -1205,9 +1207,7 @@ class Dataset:
         return hashlib.md5(dataset_str.encode()).hexdigest()
 
     @staticmethod
-    def get_dataset_from_manifest(
-        dataset_manifest: dict, transform_manifest: Optional[dict] = None
-    ) -> "Dataset":
+    def get_dataset_from_manifest(dataset_manifest: dict) -> "Dataset":
         """
         Get a dataset from a manifest.
 
@@ -1253,32 +1253,9 @@ class Dataset:
                     database_url:
             ```
 
-        For dataset transformation, the transform manifest should be provided. Example,
-        ```yaml
-        property:
-            - energy:
-                name: NormalizedPropertyTransform
-                kwargs:
-                    keep_original: True
-            - forces:
-                name: RMSNormalizePropertyTransform
-                kwargs:
-                    keep_original: True
-
-        configuration: # optional: generate fingerprints from the configuration
-            name: Descriptor # Graph, Descriptor, None
-            kwargs:
-                cutoff: 3.7
-                species: ["Si"]
-                descriptor: "SymmetryFunctions"
-                hyperparameters: set51
-        ```
-
-        TODO: Cross-validation splits, stratified splits, etc.
 
         Args:
             dataset_manifest: List of configurations.
-            transform_manifest: List of configurations.
 
         Returns:
             A dataset of configurations.
@@ -1335,86 +1312,6 @@ class Dataset:
         else:
             # this should not happen
             raise DatasetError(f"Dataset type {dataset_type} not supported.")
-
-        # transforms?
-        if transform_manifest:
-            configuration_transform: Union[dict, None] = transform_manifest.get(
-                "configuration", None
-            )
-            property_transform: Union[list, None] = transform_manifest.get(
-                "property", None
-            )
-
-            if property_transform:
-                for property_to_transform in property_transform:
-                    property_name = property_to_transform.get("name", None)
-                    if not property_name:
-                        continue  # it is probably an empty propery
-                    transform_module_name = property_to_transform[property_name].get(
-                        "name", None
-                    )
-                    if not transform_module_name:
-                        raise DatasetError(
-                            "Property transform module name not provided."
-                        )
-                    property_transform_module = importlib.import_module(
-                        f"kliff.transforms.property_transforms"
-                    )
-                    property_module = getattr(
-                        property_transform_module, transform_module_name
-                    )
-                    property_module = property_module(
-                        proprty_key=property_name,
-                        **property_to_transform[property_name].get("kwargs", {}),
-                    )
-                    dataset = property_module(dataset)
-
-            if configuration_transform:
-                configuration_module_name: Union[str, None] = (
-                    configuration_transform.get("name", None)
-                )
-                if not configuration_module_name:
-                    logger.warning(
-                        "Configuration transform module name not provided."
-                        "Skipping configuration transform."
-                    )
-                else:
-                    configuration_transform_module = importlib.import_module(
-                        f"kliff.transforms.configuration_transforms"
-                    )
-                    configuration_module = getattr(
-                        configuration_transform_module, configuration_module_name
-                    )
-                    kwargs: Union[dict, None] = configuration_transform.get(
-                        "kwargs", None
-                    )
-                    if not kwargs:
-                        raise DatasetError(
-                            "Configuration transform module options not provided."
-                        )
-                    configuration_module = configuration_module(
-                        **kwargs, copy_to_config=True
-                    )
-
-                    for config in dataset.configs:
-                        _ = configuration_module(config)
-
-        # dataset hash
-        dataset_checksum = Dataset.get_manifest_checksum(
-            dataset_manifest, transform_manifest
-        )
-        dataset.add_metadata({"checksum": dataset_checksum})
-
-        if dataset_manifest.get("save", False):
-            # TODO: use Path for compatibility
-            dataset_save_path = dataset_manifest.get("save_path", "./")
-            logger.info(
-                f"Saving dataset to {dataset_save_path}/DS_{dataset_checksum[:10]}.pkl"
-            )
-            dill.dump(
-                dataset,
-                open(f"{dataset_save_path}/DS_{dataset_checksum[:10]}.pkl", "wb"),
-            )
 
         return dataset
 

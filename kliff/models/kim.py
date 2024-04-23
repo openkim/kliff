@@ -735,11 +735,11 @@ class KIMModel(Model):
         Returns:
             Model object
         """
-        model_name: Union[None, str] = model_manifest.get("model_name", None)
-        model_type: Union[None, str] = model_manifest.get("model_type", None)
-        model_path: Union[None, str, Path] = model_manifest.get("model_path", None)
+        model_name: Union[None, str] = model_manifest.get("name", None)
+        model_type: Union[None, str] = model_manifest.get("type", None)
+        model_path: Union[None, str, Path] = model_manifest.get("path", None)
         model_driver = KIMModel.get_model_driver_name(model_name)
-        model_collection = model_manifest.get("model_collection")
+        model_collection = model_manifest.get("collection")
 
         if model_driver in UNSUPPORTED_MODEL_DRIVERS:
             logger.error(

@@ -29,7 +29,24 @@ class ConfigurationTransform:
         """
         raise NotImplementedError
 
-    def __call__(self, configuration: Configuration) -> Any:
+    def __call__(self, configuration: Configuration, return_extended_state=False) -> Any:
+        """
+        Map a configuration to a fingerprint. Also handle the implicit copying of the
+        fingerprint to the configuration. `return_extended_state` is used to return a
+        dictionary of additional information along with the fingerprint, such as
+        neighbor lists, etc. This is useful for having complete context in backward
+        pass of more complex transforms. Will be left unimplemented for transforms that
+        do not require it.
+
+        Args:
+            configuration: Instance of ~:class:`kliff.dataset.Configuration`. For which the
+                fingerprint is to be generated.
+            return_extended_state: If True, return a dictionary of additional information
+                along with the fingerprint.
+
+        Returns:
+
+        """
         fingerprint = self.forward(configuration)
         if self.copy_to_config:
             configuration.fingerprint = fingerprint

@@ -4,7 +4,8 @@ import tarfile
 import torch
 from monty.dev import requires
 from torch.utils.data import DataLoader as TorchDataLoader
-from torch_geometric.loader import DataLoader as GeometricDataLoader
+
+from torch_scatter import scatter_add
 
 from torch_scatter import scatter_add
 
@@ -24,7 +25,7 @@ except ImportError:
     lds = None
 
 
-class TorchTrainer(Trainer):
+class DNNTrainer(Trainer):
     """
     This class extends the base KLIFF trainer class to implement and train MLIPs compatible
     with the TorchML model driver.
@@ -67,15 +68,15 @@ class TorchTrainer(Trainer):
                 f"Step: {self.current['step']}, Train Loss: {self.current['loss']['train']}, Val Loss: {self.current['loss']['val']}\n"
             )
 
-    def get_optimizer(self, *args, **kwargs):
-        if self.optimizer_manifest["provider"] == "torch":
+    def get_optimizer(self):
+        if self.optimizer_manifest["provider"].lower() != "torch":
             raise TrainerError(
                 f"Optimizer provider {self.optimizer_manifest['provider']} not supported."
             )
-        optimizer = getattr(torch.optim, self.optimizer["name"])
-        if self.optimizer["kwargs"]:
+        optimizer = getattr(torch.optim, self.optimizer_manifest["name"])
+        if self.optimizer_manifest["kwargs"]:
             return optimizer(
-                self.model.parameters(), lr=self.optimizer_manifest["learning_rate"], **self.optimizer["kwargs"]
+                self.model.parameters(), lr=self.optimizer_manifest["learning_rate"], **self.optimizer_manifest["kwargs"]
             )
         else:
             return optimizer(self.model.parameters(), lr=self.optimizer_manifest["learning_rate"])
@@ -92,36 +93,23 @@ class TorchTrainer(Trainer):
 
     # train steps #####################################################################
     def train_step(self, batch):
-        if self.transform_manifest["configuration"].lower() == "graph":
-            return self._graph_train_step(batch)
-        elif self.transform_manifest["configuration"].lower() == "descriptor":
+        if self.transform_manifest["configuration"]["name"].lower() == "descriptor":
             return self._descriptor_train_step(batch)
-        elif self.transform_manifest["configuration"].lower() == "neighbors":
-            return self._general_train_step(batch)
         else:
             raise TrainerError(
-                f"Configuration transformation type {self.transform_manifest['configuration']} not supported."
+                f"Configuration transformation type {self.transform_manifest['configuration']['name']} not supported."
             )
 
     def _descriptor_train_step(self, batch):
         self.optimizer.zero_grad()
         loss = self._descriptor_eval_batch(batch)
         loss.backward()
+        self.optimizer.step()
         return loss
 
-    def _graph_train_step(self, batch):
-        pass
-
-    def _general_train_step(self, batch):
-        pass
-
     def validation_step(self, batch):
-        if self.transform_manifest["configuration"].lower() == "graph":
-            return self._graph_validation_step(batch)
-        elif self.transform_manifest["configuration"].lower() == "descriptor":
+        if self.transform_manifest["configuration"].lower() == "descriptor":
             return self._descriptor_validation_step(batch)
-        elif self.transform_manifest["configuration"].lower() == "neighbors":
-            return self._general_validation_step(batch)
         else:
             raise TrainerError(
                 f"Configuration transformation type {self.transform_manifest['configuration']} not supported."
@@ -130,16 +118,9 @@ class TorchTrainer(Trainer):
     def _descriptor_validation_step(self, batch):
         return self._descriptor_eval_batch(batch)
 
-    def _graph_validation_step(self, batch):
-        pass
-
-    def _general_validation_step(self, batch):
-        pass
-
     # eval batches #####################################################################
     @requires(lds, "libdescriptor is needed for descriptor training.")
     def _descriptor_eval_batch(self, batch):
-        batch = batch.to(self.current["device"])
         n_atoms = batch["n_atoms"]
         species = batch["species"]
         neigh_list = batch["neigh_list"]
@@ -153,10 +134,11 @@ class TorchTrainer(Trainer):
         ptr = batch["ptr"]
 
         descriptors.requires_grad_(True)
+        descriptors.to(self.current["device"])
         predictions = self.model(descriptors)
+        predictions = scatter_add(predictions, contribution, dim=0)
 
         loss = self.loss(predictions, properties["energy"]) # energy will always be present for conservative models
-
         # TODO: Add per component loss extraction
         # TODO: Add per configuration loss extraction
         if self.loss_manifest["weights"]["energy"]:
@@ -164,7 +146,8 @@ class TorchTrainer(Trainer):
 
         if self.loss_manifest["weights"]["forces"]:
             dE_dzeta = torch.autograd.grad(
-                predictions, descriptors, grad_outputs=torch.ones_like(predictions)
+                predictions, descriptors, grad_outputs=torch.ones_like(predictions),
+                create_graph=True, retain_graph=True
             )[0]
 
             forces = lds.gradient(self.configuration_transform._cdesc,
@@ -177,29 +160,37 @@ class TorchTrainer(Trainer):
                               dE_dzeta.detach().cpu().numpy()
             )
             forces_predicted = torch.zeros_like(properties["forces"])
+            forces = torch.from_numpy(forces).to(self.current["device"])
             force_summed = scatter_add(forces, image, dim=0)
             for i in range(len(ptr) - 1):
                 from_ = torch.sum(n_atoms[:i])
                 to_ = from_ + n_atoms[i]
-                forces_predicted[from_, to_] = force_summed[ptr[i]: ptr[i] + n_atoms[i]]
+                forces_predicted[from_:to_] = force_summed[ptr[i]: ptr[i] + n_atoms[i]]
 
-            loss_forces = self.loss(forces_predicted, properties["forces"]) # TODO: Add force loss dump feature for Josh's UQ
+            loss_forces = self.loss(forces_predicted, properties["forces"])
+            # TODO: Add force loss dump feature for Josh's UQ
             loss = loss + loss_forces * self.loss_manifest["weights"]["forces"]
+            # TODO: Discuss and check if this is correct
+            # F = - ∂E/∂r, ℒ = f(E, F)
+            # F = - ∂E/∂ζ * ∂ζ/∂r
+            # ∂ℒ/∂θ = ∂ℒ/∂E * ∂E/∂θ + ∂ℒ/∂F * ∂F/∂θ
+            # tricky part is ∂F/∂θ, as F is computed using Enzyme
+            # ∂F/∂θ = ∂^2E/∂ζ∂θ * ∂ζ/∂r + ∂E/∂ζ * ∂^2ζ/∂r∂θ
+            #       = ∂^2E/∂ζ∂θ * ∂ζ/∂r + 0 (∂ζ/∂r independent of θ)
+            # So we do not need second derivative wrt to ζ,
+            # and ∂ζ/∂r is provided by the descriptor module. So autograd should be able
+            # to handle this. But need to confirm, else we need an explicitly compute
+            # ∂^2E/∂ζ∂θ and then call lds.gradient again.
+            # ask pytorch forum. Or use custom gradient optimization.
         if self.loss_manifest["weights"]["stress"]:
             pass # TODO: Add stress loss dump feature for Josh's UQ
 
         return loss
 
-    def _graph_eval_batch(self, batch):
-        pass
-
-    def _general_eval_batch(self, batch):
-        pass
-
-    def train(self, *args, **kwargs):
+    def train(self):
         # TODO: granularity of train: train, train_step, train_epoch?
         # currently it is train -> train_step, so train is wrapper for train_epoch
-        for epoch in range(self.current["epochs"]):
+        for epoch in range(self.optimizer_manifest["epochs"]):
             epoch_train_loss = 0.0
             self.model.train()
             for batch in self.train_dataloader:
@@ -207,16 +198,19 @@ class TorchTrainer(Trainer):
                 epoch_train_loss += loss.detach().cpu().numpy()
 
             if epoch % self.current["ckpt_interval"] == 0:
-                epoch_val_loss = 0.0
-                self.model.eval()
-                for batch in self.val_dataloader:
-                    loss = self.validation_step(batch)
-                    epoch_val_loss += loss.detach().cpu().numpy()
+                if self.val_dataset:
+                    epoch_val_loss = 0.0
+                    self.model.eval()
+                    for batch in self.val_dataloader:
+                        loss = self.validation_step(batch)
+                        epoch_val_loss += loss.detach().cpu().numpy()
 
-                self.current["loss"] = {"train": epoch_train_loss, "val": epoch_val_loss}
+                    self.current["loss"] = {"train": epoch_train_loss, "val": epoch_val_loss}
+                else:
+                    self.current["loss"] = {"train": epoch_train_loss, "val": None}
                 self.checkpoint()
             self.current["step"] += 1
-            logger.info(f"Epoch {epoch} completed.")
+            logger.info(f"Epoch {epoch} completed. Train loss: {epoch_train_loss}")
 
     # model io #####################################################################
     def setup_model(self):
@@ -224,7 +218,7 @@ class TorchTrainer(Trainer):
             if self.model_manifest["type"].lower() == "tar":
                 self.get_torchscript_model_from_tar()
             elif self.model_manifest["type"].lower() == "torch":
-                self.torchscript_file = self.model_manifest["path"]
+                self.torchscript_file = self.model_manifest["path"] + self.model_manifest["name"]
             else:
                 raise TrainerError(f"Model type {self.model_manifest['type']} not supported.")
             self.model = torch.jit.load(self.torchscript_file)
@@ -232,6 +226,13 @@ class TorchTrainer(Trainer):
             logger.warning("Model already provided. Ignoring model manifest.")
             self.model_manifest["type"] = "pytorch"
 
+        # change precision of model
+        if self.training_manifest["precision"] == "single":
+            self.model = self.model.float()
+        elif self.training_manifest["precision"] == "double":
+            self.model = self.model.double()
+        else:
+            raise TrainerError(f"Precision {self.training_manifest['precision']} not supported.")
         self.model.to(self.current["device"])
 
     def save_kim_model(self):
@@ -267,31 +268,17 @@ class TorchTrainer(Trainer):
 
     # Data loaders #####################################################################
     def setup_dataloaders(self):
-        if self.transform_manifest["configuration"]["name"].lower() == "graph":
-            self._setup_graph_dataloaders()
-        elif self.transform_manifest["configuration"]["name"].lower() == "descriptor":
+        if self.transform_manifest["configuration"]["name"].lower() == "descriptor":
             self._setup_descriptor_dataloaders()
-        elif self.transform_manifest["configuration"]["name"].lower() == "neighbors":
-            self._setup_general_dataloaders()
         else:
             raise TrainerError(
                 f"Configuration transformation type {self.transform_manifest['configuration']['name']} not supported."
             )
 
-    def _setup_graph_dataloaders(self):
-        self.train_dataset = GraphDataset(self.train_dataset)
-        self.val_dataset = GraphDataset(self.val_dataset)
-
-        self.train_dataloader = GeometricDataLoader(
-            self.train_dataset, batch_size=self.optimizer_manifest["batch_size"], shuffle=self.dataset_manifest["shuffle"]
-        )
-        self.val_dataloader = GeometricDataLoader(
-            self.val_dataset, batch_size=self.optimizer_manifest["batch_size"], shuffle=False
-        )
-
     def _setup_descriptor_dataloaders(self):
         self.train_dataset = DescriptorDataset(self.train_dataset)
-        self.val_dataset = DescriptorDataset(self.val_dataset)
+        if self.val_dataset:
+            self.val_dataset = DescriptorDataset(self.val_dataset)
 
         self.train_dataloader = TorchDataLoader(
             self.train_dataset,
@@ -300,7 +287,6 @@ class TorchTrainer(Trainer):
             collate_fn=self.train_dataset.collate,
         )
         if self.val_dataset:
-            print("here:", self.val_dataset)
             self.val_dataloader = TorchDataLoader(
                 self.val_dataset,
                 batch_size=self.optimizer_manifest["batch_size"],
@@ -309,9 +295,6 @@ class TorchTrainer(Trainer):
             )
         else:
             logger.warning("No validation dataset loaded.")
-
-    def _setup_general_dataloaders(self):
-        pass
 
     # Auxilliary #####################################################################
     def setup_parameter_transforms(self):

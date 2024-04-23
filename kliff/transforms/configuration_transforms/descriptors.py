@@ -303,6 +303,54 @@ class Descriptor(ConfigurationTransform):
 
         return derivatives
 
+    def __call__(
+        self, configuration: Configuration, return_extended_state=False
+    ) -> Union[np.ndarray, Dict]:
+        """
+        Map a configuration to a descriptor, but more importantly store all the information
+        needed to compute the reverse pass easily on the batched configuration.
+        This __call__ method specifically stores the neighbor lists and species information
+        as a dictionary and copy it to fingerprint attribute. This will be used by the
+        descriptor dataset collate function to attach neighbor lists in sequential
+        edge-index like format, where then gradient function can be called on stacked
+        batch of configurations.
+        To get this full state dictionary, set the return_extended_state to True. Otherwise,
+        the descriptor numpy array will be returned. This functionality is useful for
+        the descriptor dataset collate function.
+
+        Args:
+            configuration: ~:class:`kliff.dataset.Configuration` object.
+            return_extended_state: If True, the full state dictionary will be returned. Otherwise,
+                the descriptor numpy array will be returned.
+
+        Returns:
+            Union[numpy.ndarray, Dict]: Descriptor numpy array or full state dictionary.
+        """
+        nl_ctx = NeighborList(configuration, self.cutoff)
+        n_atoms = configuration.get_num_atoms()
+        descriptors = np.zeros((n_atoms, self.width))
+        species = np.array(self._map_species_to_int(nl_ctx.species), np.intc)
+        num_neigh, neigh_list = nl_ctx.get_numneigh_and_neighlist_1D()
+        coords = nl_ctx.get_coords()
+        descriptors = lds.compute(
+            self._cdesc, n_atoms, species, neigh_list, num_neigh, coords
+        )
+        if return_extended_state:
+            output = {
+                "n_atoms": n_atoms,
+                "species": species,
+                "neigh_list": neigh_list,
+                "num_neigh": num_neigh,
+                "image": nl_ctx.get_image(),
+                "coords": coords,
+                "descriptor": descriptors,
+            }
+        else:
+            output = descriptors
+        if self.copy_to_config:
+            configuration.fingerprint = output
+        return output
+
     def save_descriptor_state(
         self, path: Union[str, Path], fname: str = "descriptor.params"
     ):

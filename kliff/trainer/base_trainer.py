@@ -1,4 +1,5 @@
 import hashlib
+import importlib
 import json
 import os
 import random
@@ -84,6 +85,8 @@ class Trainer:
                 "kwargs": None,
             },
         }
+        self.property_transforms = []
+        self.configuration_transform = None
 
         # training variables
         # this is too complicated to put it in singe dict, therefore the training
@@ -240,6 +243,10 @@ class Trainer:
             )
 
         self.loss_manifest |= self.training_manifest.get("loss")
+        # update missing weights
+        for key in ["energy", "forces", "stress", "config"]:
+            if self.loss_manifest["weights"].get(key, None) is None:
+                self.loss_manifest["weights"][key] = None
 
         if self.training_manifest.get("optimizer", None) is None:
             logger.warning(
@@ -313,18 +320,24 @@ class Trainer:
         # This has been done in the __init__ method
         # Step 2 - Initialize all seeds
         self.seed_all()
+        logger.info(f"Seed set to {self.workspace['seed']}.")
         # Step 3 - Set up the workspace folder
         self.setup_workspace()
+        logger.info(f"Workspace set to {self.current['run_dir']}.")
         # Step 4 - Read or load the dataset, initialize the property/configuration transforms
         self.setup_dataset()
+        logger.info(f"Dataset loaded.")
         # Step 5 - Set up the test and train datasets, based on the provided indices
         self.setup_test_train_datasets()
+        logger.info(f"Train and validation datasets set up.")
         # Step 6 - Set up the model
         self.setup_model()
+        logger.info(f"Model loaded.")
         # Step 6.5 - Setup parameter transform
         self.setup_parameter_transforms()
         # Step 7 - Set up the optimizer
         self.setup_optimizer()
+        logger.info(f"Optimizer loaded.")
         # Step 8 - Save the configuration for future
         self.save_config()
 
@@ -375,8 +388,76 @@ class Trainer:
         dataset_module_manifest = deepcopy(self.dataset_manifest)
         dataset_module_manifest["weights"] = self.loss_manifest["weights"]
         self.dataset = Dataset.get_dataset_from_manifest(
-            dataset_module_manifest, self.transform_manifest
+            dataset_module_manifest
         )
+
+        # transforms?
+        if self.transform_manifest:
+            configuration_transform: Union[dict, None] = self.transform_manifest.get(
+                "configuration", None
+            )
+            property_transform: Union[list, None] = self.transform_manifest.get(
+                "property", None
+            )
+
+            if property_transform:
+                for property_to_transform in property_transform:
+                    property_name = property_to_transform.get("name", None)
+                    if not property_name:
+                        continue  # it is probably an empty propery
+                    transform_module_name = property_to_transform[property_name].get(
+                        "name", None
+                    )
+                    if not transform_module_name:
+                        raise TrainerError(
+                            "Property transform module name not provided."
+                        )
+                    property_transform_module = importlib.import_module(
+                        f"kliff.transforms.property_transforms"
+                    )
+                    property_module = getattr(
+                        property_transform_module, transform_module_name
+                    )
+                    property_module = property_module(
+                        proprty_key=property_name,
+                        **property_to_transform[property_name].get("kwargs", {}),
+                    )
+                    self.dataset = property_module(self.dataset)
+                    self.property_transforms.append(property_module)
+
+            if configuration_transform:
+                configuration_module_name: Union[str, None] = (
+                    configuration_transform.get("name", None)
+                )
+                if not configuration_module_name:
+                    logger.warning(
+                        "Configuration transform module name not provided."
+                        "Skipping configuration transform."
+                    )
+                else:
+                    configuration_transform_module = importlib.import_module(
+                        f"kliff.transforms.configuration_transforms"
+                    )
+                    configuration_module = getattr(
+                        configuration_transform_module, configuration_module_name
+                    )
+                    kwargs: Union[dict, None] = configuration_transform.get(
+                        "kwargs", None
+                    )
+                    if not kwargs:
+                        raise TrainerError(
+                            "Configuration transform module options not provided."
+                        )
+                    configuration_module = configuration_module(
+                        **kwargs, copy_to_config=True
+                    )
+
+                    for config in self.dataset.configs:
+                        _ = configuration_module(config, return_extended_state=True)
+
+                    self.configuration_transform = configuration_module
+        else:
+            logger.warning("No transforms provided. Using raw dataset.")
 
     def save_config(self):
         """
