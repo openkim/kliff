@@ -144,7 +144,7 @@ class DNNTrainer(Trainer):
         if self.loss_manifest["weights"]["energy"]:
             loss = loss * self.loss_manifest["weights"]["energy"]
 
-        if self.loss_manifest["weights"]["forces"]:
+        if self.loss_manifest["weights"]["forces"] or self.loss_manifest["weights"]["stress"]:
             dE_dzeta = torch.autograd.grad(
                 predictions, descriptors, grad_outputs=torch.ones_like(predictions),
                 create_graph=True, retain_graph=True
@@ -183,7 +183,23 @@ class DNNTrainer(Trainer):
             # ∂^2E/∂ζ∂θ and then call lds.gradient again.
             # ask pytorch forum. Or use custom gradient optimization.
         if self.loss_manifest["weights"]["stress"]:
-            pass # TODO: Add stress loss dump feature for Josh's UQ
+            # stress = \sum_i (f_i \otimes r_i)
+            stress = torch.zeros(len(ptr),6) # voigt notation
+            for i in range(len(ptr) - 1):
+                from_ = torch.sum(n_atoms[:i])
+                to_ = from_ + n_atoms[i]
+                full_stress = torch.einsum("ij,ik->ijk",
+                                           forces_predicted[from_:to_], coords[from_:to_])
+                summed_stress = torch.sum(full_stress, dim=0)
+                stress[i, 0] = summed_stress[0, 0]
+                stress[i, 1] = summed_stress[1, 1]
+                stress[i, 2] = summed_stress[2, 2]
+                stress[i, 3] = summed_stress[1, 2]
+                stress[i, 4] = summed_stress[0, 2]
+                stress[i, 5] = summed_stress[0, 1]
+
+            loss_stress = self.loss(stress, properties["stress"])
+            loss = loss + loss_stress * self.loss_manifest["weights"]["stress"]
 
         return loss
 
