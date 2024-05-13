@@ -135,7 +135,6 @@ class DescriptorDataset(TorchDataset):
             "image": image_0,
             "coords": coords_0,
             "descriptors": descriptors_0,
-            "config": config_0,
             "property_dict": property_dict_0,
             "ptr": ptr,
             "contribution": contribution_0,

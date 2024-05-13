@@ -39,7 +39,7 @@ class Trainer:
         training_manifest: training manifest
     """
 
-    def __init__(self, training_manifest: dict):
+    def __init__(self, training_manifest: dict, model=None):
         # workspace variables
         self.workspace: dict = {
             "name": "kliff_workspace",
@@ -69,7 +69,7 @@ class Trainer:
             "name": None,
             "path": None,
         }
-        self.model: Callable = None
+        self.model: Callable = model
 
         # transform variables
         self.transform_manifest: dict = {
@@ -153,6 +153,7 @@ class Trainer:
             "appending_to_previous_run": False,
             "verbose": False,
             "ckpt_interval": 100,
+            "per_atom_loss": {"train": None, "val": None},
         }
         self.parse_manifest(training_manifest)
         self.initialize()
@@ -509,8 +510,8 @@ class Trainer:
 
         """
         # test train splits
-        train_size = self.dataset_sample_manifest.get("train_size", len(self.dataset))
-        val_size = self.dataset_sample_manifest.get("val_size", 0)
+        train_size = self.training_manifest.get("training_dataset",{}).get("train_size", len(self.dataset))
+        val_size = self.training_manifest.get("validation_dataset",{}).get("val_size", 0)
 
         # sanity checks
         if not isinstance(train_size, int) or train_size < 1:
@@ -518,12 +519,16 @@ class Trainer:
                 "Train size is not provided or is less than 1. Using full dataset for training."
             )
             train_size = len(self.dataset)
+        else:
+            logger.info(f"Training dataset size: {train_size}")
 
         if not isinstance(val_size, int) or val_size < 0:
             logger.warning(
                 "Val size is not provided or is less than 0. Using 0 for validation."
             )
             val_size = 0
+        else:
+            logger.info(f"Validation dataset size: {val_size}")
 
         if train_size + val_size > len(self.dataset):
             raise TrainerError(

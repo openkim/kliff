@@ -1,6 +1,7 @@
 import os
 import tarfile
 
+import numpy as np
 import torch
 from monty.dev import requires
 from torch.utils.data import DataLoader as TorchDataLoader
@@ -35,9 +36,9 @@ class DNNTrainer(Trainer):
         self.torchscript_file = None
         self.train_dataloader = None
         self.validation_dataloader = None
-        self.model = model
+        # self.model = model
         # self.base_model = None
-        super().__init__(configuration)
+        super().__init__(configuration, model)
 
         self.loss_function = self._get_loss_function()
         self.setup_dataloaders()
@@ -63,6 +64,7 @@ class DNNTrainer(Trainer):
             },
             f"{self.current['run_dir']}/checkpoint_{self.current['step']}.pkl",
         )
+        # self.model.save(f"{self.current['run_dir']}/model_{self.current['step']}.pt")
         with open(f"{self.current['run_dir']}/log.txt", "a") as f:
             f.write(
                 f"Step: {self.current['step']}, Train Loss: {self.current['loss']['train']}, Val Loss: {self.current['loss']['val']}\n"
@@ -108,7 +110,7 @@ class DNNTrainer(Trainer):
         return loss
 
     def validation_step(self, batch):
-        if self.transform_manifest["configuration"].lower() == "descriptor":
+        if self.transform_manifest["configuration"]["name"].lower() == "descriptor":
             return self._descriptor_validation_step(batch)
         else:
             raise TrainerError(
@@ -128,7 +130,6 @@ class DNNTrainer(Trainer):
         image = batch["image"]
         coords = batch["coords"]
         descriptors = batch["descriptors"]
-        config = batch["config"]
         properties = batch["property_dict"]
         contribution = batch["contribution"]
         ptr = batch["ptr"]
@@ -137,10 +138,16 @@ class DNNTrainer(Trainer):
         descriptors.to(self.current["device"])
         predictions = self.model(descriptors)
         predictions = scatter_add(predictions, contribution, dim=0)
+        # check if gradient is NaN
+        grads = torch.autograd.grad(
+            predictions, descriptors, grad_outputs=torch.ones_like(predictions),
+            create_graph=True, retain_graph=True
+        )[0]
 
         loss = self.loss(predictions, properties["energy"]) # energy will always be present for conservative models
         # TODO: Add per component loss extraction
         # TODO: Add per configuration loss extraction
+
         if self.loss_manifest["weights"]["energy"]:
             loss = loss * self.loss_manifest["weights"]["energy"]
 
@@ -150,7 +157,9 @@ class DNNTrainer(Trainer):
                 create_graph=True, retain_graph=True
             )[0]
 
-            forces = lds.gradient(self.configuration_transform._cdesc,
+            from copy import deepcopy
+            desc_before = deepcopy(descriptors)
+            forces = lds.gradient_batch(self.configuration_transform._cdesc,
                               torch.sum(n_atoms).detach().cpu().numpy(),
                               species.detach().cpu().numpy(),
                               neigh_list.detach().cpu().numpy(),
@@ -159,6 +168,7 @@ class DNNTrainer(Trainer):
                               descriptors.detach().cpu().numpy(),
                               dE_dzeta.detach().cpu().numpy()
             )
+
             forces_predicted = torch.zeros_like(properties["forces"])
             forces = torch.from_numpy(forces).to(self.current["device"])
             force_summed = scatter_add(forces, image, dim=0)
@@ -172,7 +182,7 @@ class DNNTrainer(Trainer):
             loss = loss + loss_forces * self.loss_manifest["weights"]["forces"]
             # TODO: Discuss and check if this is correct
             # F = - ∂E/∂r, ℒ = f(E, F)
-            # F = - ∂E/∂ζ * ∂ζ/∂r
+            # F = - ∂E/∂ζ * ∂ζ/∂r <- ∂ζ/∂r is a jacobian, vjp is computed by enzyme
             # ∂ℒ/∂θ = ∂ℒ/∂E * ∂E/∂θ + ∂ℒ/∂F * ∂F/∂θ
             # tricky part is ∂F/∂θ, as F is computed using Enzyme
             # ∂F/∂θ = ∂^2E/∂ζ∂θ * ∂ζ/∂r + ∂E/∂ζ * ∂^2ζ/∂r∂θ
@@ -209,7 +219,7 @@ class DNNTrainer(Trainer):
         for epoch in range(self.optimizer_manifest["epochs"]):
             epoch_train_loss = 0.0
             self.model.train()
-            for batch in self.train_dataloader:
+            for i, batch in enumerate(self.train_dataloader):
                 loss = self.train_step(batch)
                 epoch_train_loss += loss.detach().cpu().numpy()
 
@@ -224,6 +234,7 @@ class DNNTrainer(Trainer):
                     self.current["loss"] = {"train": epoch_train_loss, "val": epoch_val_loss}
                 else:
                     self.current["loss"] = {"train": epoch_train_loss, "val": None}
+                logger.info(f"Epoch {epoch} completed. val loss: {epoch_val_loss}")
                 self.checkpoint()
             self.current["step"] += 1
             logger.info(f"Epoch {epoch} completed. Train loss: {epoch_train_loss}")
@@ -299,7 +310,7 @@ class DNNTrainer(Trainer):
         self.train_dataloader = TorchDataLoader(
             self.train_dataset,
             batch_size=self.optimizer_manifest["batch_size"],
-            shuffle=self.dataset_manifest["shuffle"],
+            shuffle=False,#self.dataset_manifest["shuffle"],
             collate_fn=self.train_dataset.collate,
         )
         if self.val_dataset:
