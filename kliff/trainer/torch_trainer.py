@@ -3,17 +3,12 @@ import tarfile
 
 import numpy as np
 import torch
+from loguru import logger
 from monty.dev import requires
 from torch.utils.data import DataLoader as TorchDataLoader
-
 from torch_scatter import scatter_add
-
-from torch_scatter import scatter_add
-
-from loguru import logger
 
 from .base_trainer import Trainer, TrainerError
-
 from .torch_trainer_utils.dataloaders import (
     DescriptorDataset,
     GraphDataset,
@@ -78,14 +73,21 @@ class DNNTrainer(Trainer):
         optimizer = getattr(torch.optim, self.optimizer_manifest["name"])
         if self.optimizer_manifest["kwargs"]:
             return optimizer(
-                self.model.parameters(), lr=self.optimizer_manifest["learning_rate"], **self.optimizer_manifest["kwargs"]
+                self.model.parameters(),
+                lr=self.optimizer_manifest["learning_rate"],
+                **self.optimizer_manifest["kwargs"],
             )
         else:
-            return optimizer(self.model.parameters(), lr=self.optimizer_manifest["learning_rate"])
+            return optimizer(
+                self.model.parameters(), lr=self.optimizer_manifest["learning_rate"]
+            )
         # TODO: Scheduler and ema
 
     def _get_loss_function(self):
-        if self.loss_manifest["function"].lower() == "mseloss" or self.loss_manifest["function"].lower() == "mse":
+        if (
+            self.loss_manifest["function"].lower() == "mseloss"
+            or self.loss_manifest["function"].lower() == "mse"
+        ):
             return torch.nn.MSELoss()
         else:
             raise TrainerError(
@@ -140,33 +142,46 @@ class DNNTrainer(Trainer):
         predictions = scatter_add(predictions, contribution, dim=0)
         # check if gradient is NaN
         grads = torch.autograd.grad(
-            predictions, descriptors, grad_outputs=torch.ones_like(predictions),
-            create_graph=True, retain_graph=True
+            predictions,
+            descriptors,
+            grad_outputs=torch.ones_like(predictions),
+            create_graph=True,
+            retain_graph=True,
         )[0]
 
-        loss = self.loss(predictions, properties["energy"]) # energy will always be present for conservative models
+        loss = self.loss(
+            predictions, properties["energy"]
+        )  # energy will always be present for conservative models
         # TODO: Add per component loss extraction
         # TODO: Add per configuration loss extraction
 
         if self.loss_manifest["weights"]["energy"]:
             loss = loss * self.loss_manifest["weights"]["energy"]
 
-        if self.loss_manifest["weights"]["forces"] or self.loss_manifest["weights"]["stress"]:
+        if (
+            self.loss_manifest["weights"]["forces"]
+            or self.loss_manifest["weights"]["stress"]
+        ):
             dE_dzeta = torch.autograd.grad(
-                predictions, descriptors, grad_outputs=torch.ones_like(predictions),
-                create_graph=True, retain_graph=True
+                predictions,
+                descriptors,
+                grad_outputs=torch.ones_like(predictions),
+                create_graph=True,
+                retain_graph=True,
             )[0]
 
             from copy import deepcopy
+
             desc_before = deepcopy(descriptors)
-            forces = lds.gradient_batch(self.configuration_transform._cdesc,
-                              torch.sum(n_atoms).detach().cpu().numpy(),
-                              species.detach().cpu().numpy(),
-                              neigh_list.detach().cpu().numpy(),
-                              num_neigh.detach().cpu().numpy(),
-                              coords.detach().cpu().numpy(),
-                              descriptors.detach().cpu().numpy(),
-                              dE_dzeta.detach().cpu().numpy()
+            forces = lds.gradient_batch(
+                self.configuration_transform._cdesc,
+                torch.sum(n_atoms).detach().cpu().numpy(),
+                species.detach().cpu().numpy(),
+                neigh_list.detach().cpu().numpy(),
+                num_neigh.detach().cpu().numpy(),
+                coords.detach().cpu().numpy(),
+                descriptors.detach().cpu().numpy(),
+                dE_dzeta.detach().cpu().numpy(),
             )
 
             forces_predicted = torch.zeros_like(properties["forces"])
@@ -175,7 +190,7 @@ class DNNTrainer(Trainer):
             for i in range(len(ptr) - 1):
                 from_ = torch.sum(n_atoms[:i])
                 to_ = from_ + n_atoms[i]
-                forces_predicted[from_:to_] = force_summed[ptr[i]: ptr[i] + n_atoms[i]]
+                forces_predicted[from_:to_] = force_summed[ptr[i] : ptr[i] + n_atoms[i]]
 
             loss_forces = self.loss(forces_predicted, properties["forces"])
             # TODO: Add force loss dump feature for Josh's UQ
@@ -189,17 +204,18 @@ class DNNTrainer(Trainer):
             #       = ∂^2E/∂ζ∂θ * ∂ζ/∂r + 0 (∂ζ/∂r independent of θ)
             # So we do not need second derivative wrt to ζ,
             # and ∂ζ/∂r is provided by the descriptor module. So autograd should be able
-            # to handle this. But need to confirm, else we need an explicitly compute
+            # to handle this. But need to confirm, else we need to explicitly compute
             # ∂^2E/∂ζ∂θ and then call lds.gradient again.
             # ask pytorch forum. Or use custom gradient optimization.
         if self.loss_manifest["weights"]["stress"]:
             # stress = \sum_i (f_i \otimes r_i)
-            stress = torch.zeros(len(ptr),6) # voigt notation
+            stress = torch.zeros(len(ptr), 6)  # voigt notation
             for i in range(len(ptr) - 1):
                 from_ = torch.sum(n_atoms[:i])
                 to_ = from_ + n_atoms[i]
-                full_stress = torch.einsum("ij,ik->ijk",
-                                           forces_predicted[from_:to_], coords[from_:to_])
+                full_stress = torch.einsum(
+                    "ij,ik->ijk", forces_predicted[from_:to_], coords[from_:to_]
+                )
                 summed_stress = torch.sum(full_stress, dim=0)
                 stress[i, 0] = summed_stress[0, 0]
                 stress[i, 1] = summed_stress[1, 1]
@@ -231,7 +247,10 @@ class DNNTrainer(Trainer):
                         loss = self.validation_step(batch)
                         epoch_val_loss += loss.detach().cpu().numpy()
 
-                    self.current["loss"] = {"train": epoch_train_loss, "val": epoch_val_loss}
+                    self.current["loss"] = {
+                        "train": epoch_train_loss,
+                        "val": epoch_val_loss,
+                    }
                 else:
                     self.current["loss"] = {"train": epoch_train_loss, "val": None}
                 logger.info(f"Epoch {epoch} completed. val loss: {epoch_val_loss}")
@@ -245,9 +264,13 @@ class DNNTrainer(Trainer):
             if self.model_manifest["type"].lower() == "tar":
                 self.get_torchscript_model_from_tar()
             elif self.model_manifest["type"].lower() == "torch":
-                self.torchscript_file = self.model_manifest["path"] + self.model_manifest["name"]
+                self.torchscript_file = (
+                    self.model_manifest["path"] + self.model_manifest["name"]
+                )
             else:
-                raise TrainerError(f"Model type {self.model_manifest['type']} not supported.")
+                raise TrainerError(
+                    f"Model type {self.model_manifest['type']} not supported."
+                )
             self.model = torch.jit.load(self.torchscript_file)
         else:
             logger.warning("Model already provided. Ignoring model manifest.")
@@ -259,7 +282,9 @@ class DNNTrainer(Trainer):
         elif self.training_manifest["precision"] == "double":
             self.model = self.model.double()
         else:
-            raise TrainerError(f"Precision {self.training_manifest['precision']} not supported.")
+            raise TrainerError(
+                f"Precision {self.training_manifest['precision']} not supported."
+            )
         self.model.to(self.current["device"])
 
     def save_kim_model(self):
@@ -268,14 +293,19 @@ class DNNTrainer(Trainer):
             self.current["best_model"].save(self.torchscript_file)
             with tarfile.open(self.model_manifest["path"], "w") as tar:
                 tar.add(self.torchscript_file, arcname="model.pt")
-        elif self.model_manifest["type"] == "torch" or self.model_manifest["type"] == "pytorch":
+        elif (
+            self.model_manifest["type"] == "torch"
+            or self.model_manifest["type"] == "pytorch"
+        ):
             model_pt = torch.jit.script(self.current["best_model"])
             model_path = f"{self.export_manifest['model_path'] }/{self.export_manifest['model_name']}"
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             model_pt.save(f"{model_path}/model.pt")
             # TODO: add remaining files to make it complete model
         else:
-            raise TrainerError(f"Model type {self.model_manifest['type']} not supported.")
+            raise TrainerError(
+                f"Model type {self.model_manifest['type']} not supported."
+            )
 
     def get_torchscript_model_from_tar(self):
         tarfile_path = self.model_manifest["path"]
@@ -310,7 +340,7 @@ class DNNTrainer(Trainer):
         self.train_dataloader = TorchDataLoader(
             self.train_dataset,
             batch_size=self.optimizer_manifest["batch_size"],
-            shuffle=False,#self.dataset_manifest["shuffle"],
+            shuffle=self.dataset_manifest["shuffle"],
             collate_fn=self.train_dataset.collate,
         )
         if self.val_dataset:

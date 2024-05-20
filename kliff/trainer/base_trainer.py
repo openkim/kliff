@@ -54,7 +54,7 @@ class Trainer:
             "path": "./",
             "save": False,
             "shuffle": False,
-            "ase_keys": {"energy": "energy", "forces": "forces"},
+            "keys": {"energy": "energy", "forces": "forces"},
             "colabfit_dataset": {
                 "dataset_name": None,
                 "database_name": None,
@@ -388,9 +388,7 @@ class Trainer:
         """
         dataset_module_manifest = deepcopy(self.dataset_manifest)
         dataset_module_manifest["weights"] = self.loss_manifest["weights"]
-        self.dataset = Dataset.get_dataset_from_manifest(
-            dataset_module_manifest
-        )
+        self.dataset = Dataset.get_dataset_from_manifest(dataset_module_manifest)
 
         # transforms?
         if self.transform_manifest:
@@ -510,8 +508,12 @@ class Trainer:
 
         """
         # test train splits
-        train_size = self.training_manifest.get("training_dataset",{}).get("train_size", len(self.dataset))
-        val_size = self.training_manifest.get("validation_dataset",{}).get("val_size", 0)
+        train_size = self.training_manifest.get("training_dataset", {}).get(
+            "train_size", len(self.dataset)
+        )
+        val_size = self.training_manifest.get("validation_dataset", {}).get(
+            "val_size", 0
+        )
 
         # sanity checks
         if not isinstance(train_size, int) or train_size < 1:

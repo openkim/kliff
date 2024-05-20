@@ -29,7 +29,9 @@ class ConfigurationTransform:
         """
         raise NotImplementedError
 
-    def __call__(self, configuration: Configuration, return_extended_state=False) -> Any:
+    def __call__(
+        self, configuration: Configuration, return_extended_state=False
+    ) -> Any:
         """
         Map a configuration to a fingerprint. Also handle the implicit copying of the
         fingerprint to the configuration. `return_extended_state` is used to return a

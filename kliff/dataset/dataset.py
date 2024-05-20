@@ -20,6 +20,7 @@ from kliff.utils import stress_to_tensor, stress_to_voigt, to_path
 if TYPE_CHECKING:
     from colabfit.tools.configuration import Configuration as ColabfitConfiguration
     from colabfit.tools.database import MongoDatabase
+
     from kliff.transforms.configuration_transforms import ConfigurationTransform
     from kliff.transforms.property_transforms import PropertyTransform
 
@@ -810,7 +811,7 @@ class Dataset:
         weight: Optional[Union[Weight, Path]] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
-        slices: str = ":",
+        slices: Union[slice, str] = ":",
         file_format: str = "xyz",
     ) -> "Dataset":
         """
@@ -893,7 +894,7 @@ class Dataset:
                     energy_key=energy_key,
                     forces_key=forces_key,
                 )
-                for config, weight_obj in zip(ase_atoms_list)
+                for config in ase_atoms_list
             ]
         else:
             try:

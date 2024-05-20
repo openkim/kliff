@@ -3,6 +3,7 @@ from torch.utils.data import Dataset as TorchDataset
 from torch_geometric.data import Dataset as TorchGeometricDataset
 
 from kliff.dataset import Dataset
+from kliff.transforms.configuration_transforms.graphs import PyGGraph
 
 
 class NeighborListDataset(TorchDataset):
@@ -154,5 +155,8 @@ class GraphDataset(TorchGeometricDataset):
     def __len__(self):
         return len(self.dataset)
 
+    def len(self):
+        return len(self.dataset)
+
     def get(self, idx):
-        return self.dataset[idx].fingerprint
+        return PyGGraph.from_dict(self.dataset[idx].fingerprint)

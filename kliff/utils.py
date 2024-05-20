@@ -260,3 +260,31 @@ def install_kim_model(model_name: str, collection: str = "user") -> bool:
         return output.returncode == 0
     else:
         return True
+
+
+def get_n_configs_in_xyz(file_path: str) -> int:
+    """
+    Get the number of configurations in a xyz file. It uses the grep command to count the number of lines
+    that contain only numbers.
+    Args:
+        file_path: Path to the xyz file.
+
+    Returns:
+
+    """
+    pattern = "^[0-9]+$"
+    # Run the grep command and capture the output
+    result = subprocess.run(
+        ["grep", "-Ec", pattern, file_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    # Check if there is any error
+    if result.returncode != 0:
+        raise Exception(result.stderr)
+    else:
+        num_atoms = int(result.stdout.strip())
+
+    return num_atoms

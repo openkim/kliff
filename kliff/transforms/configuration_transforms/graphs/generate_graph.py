@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from loguru import logger
 from monty.dev import requires
@@ -14,12 +14,15 @@ if torch_available():
 
 if torch_geometric_available():
     from torch_geometric.data import Data
+else:
+    Data = object
 
 
-@requires(
-    torch_geometric_available(),
-    "Pytorch Geometric is not available. It is required for PyGGraph.",
-)
+# @requires overrides the classmethod decorator, hence this needs to be removed
+# @requires(
+#     torch_geometric_available(),
+#     "Pytorch Geometric is not available. It is required for PyGGraph.",
+# )
 class PyGGraph(Data):
     """
     A Pytorch Geometric compatible graph representation of a configuration. When loaded
@@ -27,6 +30,10 @@ class PyGGraph(Data):
     will be automatically collated and batched.
     """
 
+    @requires(
+        torch_geometric_available(),
+        "Pytorch Geometric is not available. It is required for PyGGraph.",
+    )
     def __init__(self):
         super().__init__()
         self.num_nodes = (
@@ -56,6 +63,34 @@ class PyGGraph(Data):
             return 1
         else:
             return 0
+
+    @classmethod
+    def from_dict(cls, mapping: Dict[str, Any]):
+        """
+        Create a PyGGraph object from a dictionary.
+
+        Args:
+            mapping: Dictionary containing the graph data.
+
+        Returns:
+            PyGGraph object.
+        """
+        graph = cls()
+        for key, value in mapping.items():
+            setattr(graph, key, torch.as_tensor(value))
+        return graph
+
+    def to_dict(self):
+        """
+        Convert the PyGGraph object to a dictionary.
+
+        Returns:
+            Dictionary containing the graph data.
+        """
+        graph_dict = {}
+        for key, value in self.__dict__["_store"].items():
+            graph_dict[key] = value.detach().cpu().numpy()
+        return graph_dict
 
 
 class KIMDriverGraph(ConfigurationTransform):
@@ -137,6 +172,16 @@ class KIMDriverGraph(ConfigurationTransform):
             )
         # pyg_graph.coords.requires_grad_(True)
         return pyg_graph
+
+    def __call__(
+        self, configuration: Configuration, return_extended_state=False
+    ) -> PyGGraph:
+        graph = self.forward(configuration)
+        if return_extended_state:
+            graph = graph.to_dict()
+        if self.copy_to_config:
+            configuration.fingerprint = graph
+        return graph
 
     def export_kim_model(self, path: Path, model: str):
         """
