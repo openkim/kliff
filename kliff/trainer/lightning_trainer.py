@@ -1,9 +1,12 @@
 # Mostly to be used by GNNs for now
 import importlib
 import importlib.metadata
+import json
+import os.path
 from copy import deepcopy
 from typing import List, Union
 
+import dill
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -33,6 +36,8 @@ try:
     is_torch_ema_present = True
 except:
     is_torch_ema_present = False
+
+import hashlib
 
 
 class LightningTrainerWrapper(pl.LightningModule):
@@ -200,29 +205,52 @@ class GNNLightningTrainer(Trainer):
         TODO: reload hashed dataset if it exists.
         """
         dataset_type = self.dataset_manifest.get("type").lower()
-        if dataset_type != "ase":
-            super().setup_dataset()
-            return
+        dataset_immutable_str = json.dumps(
+            self.dataset_manifest | self.transform_manifest, sort_keys=True
+        )
+        dataset_hash = hashlib.md5(dataset_immutable_str.encode()).hexdigest()
+
+        self.current["dataset_hash"] = dataset_hash  # TODO: move it in base trainer
+
+        # check if dataset hash named dill file exists in the workspace
+        if os.path.exists(f"{self.current['data_dir']}/{dataset_hash}.dill"):
+            logger.info(
+                f"Dataset hash {dataset_hash} found. Loading dataset from cache."
+            )
+            self.dataset = dill.load(
+                open(f"{self.current['data_dir']}/{dataset_hash}.dill", "rb")
+            )
+
         else:
-            logger.warning(
-                "Using parallel processing for dataset loading. Indices order may not be preserved."
-            )
-            # num_chunks = n_workers?
-            dataset_chunks = _parallel_read_and_transform(
-                self.dataset_manifest["path"],
-                self.optimizer_manifest["num_workers"],  # num_chunks
-                energy_key=self.dataset_manifest.get("keys", {}).get(
-                    "energy", "energy"
-                ),
-                forces_key=self.dataset_manifest.get("keys", {}).get(
-                    "forces", "forces"
-                ),
-                transform_manifest=self.transform_manifest,
-            )
-            self.dataset = deepcopy(dataset_chunks[0])
-            for ds in dataset_chunks[1:]:
-                self.dataset.configs.extend(ds)
-            # del dataset_chunks
+            if dataset_type != "ase":
+                super().setup_dataset()
+                return
+            else:
+                logger.warning(
+                    "Using parallel processing for dataset loading. Indices order may not be preserved."
+                )
+                # num_chunks = n_workers?
+                dataset_chunks = _parallel_read_and_transform(
+                    self.dataset_manifest["path"],
+                    self.optimizer_manifest["num_workers"],  # num_chunks
+                    energy_key=self.dataset_manifest.get("keys", {}).get(
+                        "energy", "energy"
+                    ),
+                    forces_key=self.dataset_manifest.get("keys", {}).get(
+                        "forces", "forces"
+                    ),
+                    transform_manifest=self.transform_manifest,
+                )
+                self.dataset = deepcopy(dataset_chunks[0])
+                for ds in dataset_chunks[1:]:
+                    self.dataset.configs.extend(ds)
+
+                # save the dataset to the data_dir, it should exist at base class init
+                dill.dump(
+                    self.dataset,
+                    open(f"{self.current['data_dir']}/{dataset_hash}.dill", "wb"),
+                )
+                # del dataset_chunks
 
     def train(self):
         self.pl_trainer.fit(self.pl_model, self.data_module)

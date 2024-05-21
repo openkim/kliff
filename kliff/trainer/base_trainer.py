@@ -150,6 +150,7 @@ class Trainer:
             "expected_end_time": None,
             "warned_once": False,
             "dataset_hash": None,
+            "data_dir": None,
             "appending_to_previous_run": False,
             "verbose": False,
             "ckpt_interval": 100,
@@ -376,6 +377,10 @@ class Trainer:
             else:
                 self.current["appending_to_previous_run"] = True
                 self.current["run_dir"] = dir_list[-1]
+
+        # make dataset directory
+        self.current["data_dir"] = f"{self.workspace['name']}/datasets"
+        os.makedirs(self.current["data_dir"], exist_ok=True)
 
     def setup_dataset(self):
         """
