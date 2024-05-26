@@ -1,13 +1,14 @@
 import hashlib
 import importlib
 import json
+import multiprocessing
 import os
 import random
 from copy import deepcopy
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import Callable, Union
+from typing import Callable, List, Union
 
 import dill  # TODO: include dill in requirements.txt
 import numpy as np
@@ -15,6 +16,7 @@ import yaml
 from loguru import logger
 
 from kliff.dataset import Dataset
+from kliff.utils import get_n_configs_in_xyz
 
 
 class Trainer:
@@ -55,6 +57,7 @@ class Trainer:
             "save": False,
             "shuffle": False,
             "keys": {"energy": "energy", "forces": "forces"},
+            "dynamic_loading": False,
             "colabfit_dataset": {
                 "dataset_name": None,
                 "database_name": None,
@@ -329,6 +332,8 @@ class Trainer:
         # Step 4 - Read or load the dataset, initialize the property/configuration transforms
         self.setup_dataset()
         logger.info(f"Dataset loaded.")
+        # Step 4.5 - Set up the dataset transforms
+        self.setup_dataset_transforms()
         # Step 5 - Set up the test and train datasets, based on the provided indices
         self.setup_test_train_datasets()
         logger.info(f"Train and validation datasets set up.")
@@ -393,8 +398,34 @@ class Trainer:
         """
         dataset_module_manifest = deepcopy(self.dataset_manifest)
         dataset_module_manifest["weights"] = self.loss_manifest["weights"]
-        self.dataset = Dataset.get_dataset_from_manifest(dataset_module_manifest)
+        dataset_list = _parallel_read(
+            self.dataset_manifest["path"],
+            num_chunks=self.optimizer_manifest["num_workers"],
+            energy_key=self.dataset_manifest.get("keys", {}).get("energy", "energy"),
+            forces_key=self.dataset_manifest.get("keys", {}).get("forces", "forces"),
+        )
+        self.dataset = deepcopy(dataset_list[0])
+        for ds in dataset_list[1:]:
+            self.dataset.configs.extend(ds)
 
+    def save_config(self):
+        """
+        Hash and save the configuration to the current run directory.
+        """
+        config_hash = self.get_trainer_hash()
+        config_file = f"{self.current['run_dir']}/{config_hash}.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(self.config_to_dict(), f, default_flow_style=False)
+        logger.info(f"Configuration saved in {config_file}.")
+
+    def setup_dataset_transforms(self):
+        """
+        Set up the dataset transforms based on the provided information. If the
+        transforms are not provided, it will raise an error. If the transform is of type
+        ASE, it will be loaded from the ASE library. If the transform is of type
+        KLIF, it will be loaded from the KLIF library. Left for the derived classes to
+        implement.
+        """
         # transforms?
         if self.transform_manifest:
             configuration_transform: Union[dict, None] = self.transform_manifest.get(
@@ -439,6 +470,11 @@ class Trainer:
                         "Skipping configuration transform."
                     )
                 else:
+                    configuration_module_name = (
+                        "KIMDriverGraph"
+                        if configuration_module_name.lower() == "graph"
+                        else configuration_module_name
+                    )
                     configuration_transform_module = importlib.import_module(
                         f"kliff.transforms.configuration_transforms"
                     )
@@ -453,25 +489,10 @@ class Trainer:
                             "Configuration transform module options not provided."
                         )
                     configuration_module = configuration_module(
-                        **kwargs, copy_to_config=True
+                        **kwargs, copy_to_config=False
                     )
 
-                    for config in self.dataset.configs:
-                        _ = configuration_module(config, return_extended_state=True)
-
                     self.configuration_transform = configuration_module
-        else:
-            logger.warning("No transforms provided. Using raw dataset.")
-
-    def save_config(self):
-        """
-        Hash and save the configuration to the current run directory.
-        """
-        config_hash = self.get_trainer_hash()
-        config_file = f"{self.current['run_dir']}/{config_hash}.yaml"
-        with open(config_file, "w") as f:
-            yaml.dump(self.config_to_dict(), f, default_flow_style=False)
-        logger.info(f"Configuration saved in {config_file}.")
 
     def setup_model(self):
         """
@@ -625,6 +646,57 @@ class Trainer:
 
     def save_kim_model(self, *args, **kwargs):
         raise TrainerError("save_kim_model not implemented.")
+
+
+# Parallel processing for dataset loading #############################################
+def _parallel_read(
+    file_path,
+    num_chunks=None,
+    energy_key="Energy",
+    forces_key="forces",
+) -> List[Dataset]:
+    """
+    Read and transform frames in parallel. Returns n_chunks of datasets.
+    Args:
+        file_path:
+        num_chunks:
+        energy_key:
+        forces_key:
+        transform:
+
+    Returns:
+        List of datasets processed by each node
+
+    """
+    if not num_chunks:
+        num_chunks = multiprocessing.cpu_count()
+    total_frames = get_n_configs_in_xyz(file_path)
+    frames_per_chunk = total_frames // num_chunks
+
+    # Generate slices for each chunk
+    chunks = []
+    for i in range(num_chunks):
+        start = i * frames_per_chunk
+        end = (i + 1) * frames_per_chunk if i < num_chunks - 1 else total_frames
+        chunks.append((start, end))
+
+    with multiprocessing.Pool(processes=num_chunks) as pool:
+        ds = pool.starmap(
+            _read_frames,
+            [(file_path, start, end, energy_key, forces_key) for start, end in chunks],
+        )
+
+    return ds
+
+
+def _read_frames(file_path, start, end, energy_key, forces_key):
+    ds = Dataset.from_ase(
+        path=file_path,
+        energy_key=energy_key,
+        forces_key=forces_key,
+        slices=slice(start, end),
+    )
+    return ds
 
 
 class TrainerError(Exception):

@@ -41,6 +41,7 @@ class DescriptorDataset(TorchDataset):
         self.dataset = dataset
         self.dataset.check_properties_consistency(property_keys)
         self.consistent_properties = self.dataset.get_metadata("consistent_properties")
+        self.transform = None
 
     def __len__(self):
         return len(self.dataset)
@@ -50,7 +51,11 @@ class DescriptorDataset(TorchDataset):
         for key in self.consistent_properties:
             property_dict[key] = getattr(self.dataset[idx], key)
 
-        return self.dataset[idx].fingerprint, property_dict
+        if self.transform:
+            fingerprint = self.transform(self.dataset[idx], return_extended_state=True)
+        else:
+            fingerprint = self.dataset[idx].fingerprint
+        return fingerprint, property_dict
 
     def collate(self, batch) -> dict:
         """
@@ -141,6 +146,9 @@ class DescriptorDataset(TorchDataset):
             "contribution": contribution_0,
         }
 
+    def add_transform(self, transform):
+        self.transform = transform
+
 
 class GraphDataset(TorchGeometricDataset):
     """
@@ -148,8 +156,8 @@ class GraphDataset(TorchGeometricDataset):
     the use of :class:`kliff.dataset.Dataset` as a data source for the graph based models.
     """
 
-    def __init__(self, dataset: Dataset):
-        super().__init__("./", None, None, None)
+    def __init__(self, dataset: Dataset, transform=None):
+        super().__init__("./", transform, None, None)
         self.dataset = dataset
 
     def __len__(self):
@@ -159,4 +167,7 @@ class GraphDataset(TorchGeometricDataset):
         return len(self.dataset)
 
     def get(self, idx):
-        return PyGGraph.from_dict(self.dataset[idx].fingerprint)
+        if self.transform is None:
+            return PyGGraph.from_dict(self.dataset[idx].fingerprint)
+        else:
+            return self.dataset[idx]

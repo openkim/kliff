@@ -333,9 +333,21 @@ class DNNTrainer(Trainer):
             )
 
     def _setup_descriptor_dataloaders(self):
+
         self.train_dataset = DescriptorDataset(self.train_dataset)
         if self.val_dataset:
             self.val_dataset = DescriptorDataset(self.val_dataset)
+
+        if self.dataset_manifest["dynamic_loading"]:
+            self.train_dataset.add_transform(self.configuration_transform)
+            if self.val_dataset:
+                self.val_dataset.add_transform(self.configuration_transform)
+        else:
+            for config in self.train_dataset:
+                config.fingerprint = self.configuration_transform(config)
+            if self.val_dataset:
+                for config in self.val_dataset:
+                    config.fingerprint = self.configuration_transform(config)
 
         self.train_dataloader = TorchDataLoader(
             self.train_dataset,

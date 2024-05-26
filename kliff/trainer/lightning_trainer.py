@@ -194,70 +194,26 @@ class GNNLightningTrainer(Trainer):
             forces_weight=self.loss_manifest["weights"]["forces"],
         )
 
-    def setup_dataset(self):
-        """
-        Set up the dataset based on the provided information. Override this method to
-        provide parallel data loading for the dataset.
-        TODO: Integrate parallel processing in `get_dataset_from_manifest` method.
-        TODO: It will check the {workspace}/{dataset_name} directory to see if dataset hash
-        is already there. The dataset hash is determined but hashing the full path to
-        the dataset + transforms names + configuration transform properties.
-        TODO: reload hashed dataset if it exists.
-        """
-        dataset_type = self.dataset_manifest.get("type").lower()
-        dataset_immutable_str = json.dumps(
-            self.dataset_manifest | self.transform_manifest, sort_keys=True
-        )
-        dataset_hash = hashlib.md5(dataset_immutable_str.encode()).hexdigest()
-
-        self.current["dataset_hash"] = dataset_hash  # TODO: move it in base trainer
-
-        # check if dataset hash named dill file exists in the workspace
-        if os.path.exists(f"{self.current['data_dir']}/{dataset_hash}.dill"):
-            logger.info(
-                f"Dataset hash {dataset_hash} found. Loading dataset from cache."
-            )
-            self.dataset = dill.load(
-                open(f"{self.current['data_dir']}/{dataset_hash}.dill", "rb")
-            )
-
-        else:
-            if dataset_type != "ase":
-                super().setup_dataset()
-                return
-            else:
-                logger.warning(
-                    "Using parallel processing for dataset loading. Indices order may not be preserved."
-                )
-                # num_chunks = n_workers?
-                dataset_chunks = _parallel_read_and_transform(
-                    self.dataset_manifest["path"],
-                    self.optimizer_manifest["num_workers"],  # num_chunks
-                    energy_key=self.dataset_manifest.get("keys", {}).get(
-                        "energy", "energy"
-                    ),
-                    forces_key=self.dataset_manifest.get("keys", {}).get(
-                        "forces", "forces"
-                    ),
-                    transform_manifest=self.transform_manifest,
-                )
-                self.dataset = deepcopy(dataset_chunks[0])
-                for ds in dataset_chunks[1:]:
-                    self.dataset.configs.extend(ds)
-
-                # save the dataset to the data_dir, it should exist at base class init
-                dill.dump(
-                    self.dataset,
-                    open(f"{self.current['data_dir']}/{dataset_hash}.dill", "wb"),
-                )
-                # del dataset_chunks
-
     def train(self):
         self.pl_trainer.fit(self.pl_model, self.data_module)
 
     def setup_dataloaders(self):
-        self.train_dataset = GraphDataset(self.train_dataset)
-        self.val_dataset = GraphDataset(self.val_dataset)
+        if self.dataset_manifest["dynamic_loading"]:
+            transform = self.configuration_transform
+        else:
+            transform = None
+
+        self.train_dataset = GraphDataset(self.train_dataset, transform)
+        if self.val_dataset:
+            self.val_dataset = GraphDataset(self.val_dataset, transform)
+
+        if not transform:
+            for config in self.train_dataset:
+                config.fingerprint = self.configuration_transform(config)
+            if self.val_dataset:
+                for config in self.val_dataset:
+                    config.fingerprint = self.configuration_transform(config)
+
         self.data_module = LightningDataset(
             self.train_dataset,
             self.val_dataset,
@@ -274,107 +230,9 @@ class GNNLightningTrainer(Trainer):
             logger=self.tb_logger,
             max_epochs=self.optimizer_manifest["epochs"],
             accelerator="auto",
-            strategy="ddp",
+            strategy="auto",
         )
 
     def setup_optimizer(self):
         # Not needed as Pytorch Lightning handles the optimizer
         pass
-
-
-# Parallel processing for dataset loading #############################################
-def _parallel_read_and_transform(
-    file_path,
-    num_chunks=None,
-    energy_key="Energy",
-    forces_key="forces",
-    transform_manifest=None,
-) -> List[Dataset]:
-    """
-    Read and transform frames in parallel. Returns n_chunks of datasets.
-    Args:
-        file_path:
-        num_chunks:
-        energy_key:
-        forces_key:
-        transform:
-
-    Returns:
-        List of datasets processed by each node
-
-    """
-    if not num_chunks:
-        num_chunks = multiprocessing.cpu_count()
-    total_frames = get_n_configs_in_xyz(file_path)
-    frames_per_chunk = total_frames // num_chunks
-
-    # Generate slices for each chunk
-    chunks = []
-    for i in range(num_chunks):
-        start = i * frames_per_chunk
-        end = (i + 1) * frames_per_chunk if i < num_chunks - 1 else total_frames
-        chunks.append((start, end))
-
-    with multiprocessing.Pool(processes=num_chunks) as pool:
-        ds = pool.starmap(
-            _read_and_transform_frames,
-            [
-                (file_path, start, end, energy_key, forces_key, transform_manifest)
-                for start, end in chunks
-            ],
-        )
-
-    return ds
-
-
-def _read_and_transform_frames(
-    file_path, start, end, energy_key, forces_key, transform_manifest=None
-):
-    ds = Dataset.from_ase(
-        path=file_path,
-        energy_key=energy_key,
-        forces_key=forces_key,
-        slices=slice(start, end),
-    )
-    if transform_manifest:
-        configuration_transform: Union[dict, None] = transform_manifest.get(
-            "configuration", None
-        )
-        # property_transform: Union[list, None] = transform_manifest.get(
-        #     "property", None
-        # ) # Figure out how dataset wide properties can be parallelized
-        # TODO: Property transform. Simply add one more transform to the function
-        if configuration_transform:
-            configuration_module_name: Union[str, None] = configuration_transform.get(
-                "name", None
-            )
-            if configuration_module_name == "Graph":
-                configuration_module_name = "KIMDriverGraph"
-            if not configuration_module_name:
-                logger.warning(
-                    "Configuration transform module name not provided."
-                    "Skipping configuration transform."
-                )
-                configuration_module = None
-            else:
-                configuration_transform_module = importlib.import_module(
-                    f"kliff.transforms.configuration_transforms"
-                )
-                configuration_module = getattr(
-                    configuration_transform_module, configuration_module_name
-                )
-                kwargs: Union[dict, None] = configuration_transform.get("kwargs", None)
-                if not kwargs:
-                    raise TrainerError(
-                        "Configuration transform module options not provided."
-                    )
-                configuration_module = configuration_module(
-                    **kwargs, copy_to_config=True
-                )
-        else:
-            configuration_module = None
-        if configuration_module:
-            for config in ds.get_configs():
-                _ = configuration_module(config, return_extended_state=True)
-        del configuration_module
-    return ds
