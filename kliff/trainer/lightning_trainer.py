@@ -23,7 +23,7 @@ if importlib.metadata.version("torch") <= "1.13":
 else:
     from torch_geometric.data.lightning import LightningDataset
 
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 
 from kliff.dataset import Dataset
 from kliff.utils import get_n_configs_in_xyz
@@ -38,6 +38,9 @@ except:
     is_torch_ema_present = False
 
 import hashlib
+
+from .torch_trainer_utils.lightning_checkpoints import SaveModelCallback, LossTrajectoryCallback
+from pytorch_lightning.callbacks import EarlyStopping
 
 
 class LightningTrainerWrapper(pl.LightningModule):
@@ -60,6 +63,8 @@ class LightningTrainerWrapper(pl.LightningModule):
         n_workers=1,
         energy_weight=1.0,
         forces_weight=1.0,
+        lr_scheduler=None,
+        lr_scheduler_args=None,
     ):
 
         super().__init__()
@@ -78,6 +83,9 @@ class LightningTrainerWrapper(pl.LightningModule):
             ema = ExponentialMovingAverage(self.model.parameters(), decay=ema_decay)
             ema.to(device)
             self.ema = ema
+
+        self.lr_scheduler = lr_scheduler
+        self.lr_scheduler_args = lr_scheduler_args
 
     def forward(self, batch):
         batch["coords"].requires_grad_(True)
@@ -108,7 +116,7 @@ class LightningTrainerWrapper(pl.LightningModule):
             predicted_forces.squeeze(), target_forces.squeeze()
         )
         self.log(
-            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+            "train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
         return loss
 
@@ -116,7 +124,21 @@ class LightningTrainerWrapper(pl.LightningModule):
         optimizer = getattr(torch.optim, self.optimizer_name)(
             self.model.parameters(), lr=self.lr
         )
-        return optimizer
+
+        if self.lr_scheduler:
+            self.lr_scheduler = getattr(torch.optim.lr_scheduler, self.lr_scheduler)(
+                optimizer, **self.lr_scheduler_args
+            )
+            return {"optimizer": optimizer,
+                    "lr_scheduler":
+                        {"scheduler": self.lr_scheduler,
+                         "interval": "epoch",
+                         "frequency": 1,
+                         "monitor": "val_loss"
+                         }
+                    }
+        else:
+            return optimizer
 
     def validation_step(self, batch, batch_idx):
         torch.set_grad_enabled(True)
@@ -129,20 +151,20 @@ class LightningTrainerWrapper(pl.LightningModule):
 
         predicted_energy, predicted_forces = self.forward(batch)
 
+        per_atom_force_loss = torch.sum(
+            (predicted_forces.squeeze() - target_forces.squeeze()) ** 2, dim=1
+        )
+
         loss = energy_weight * F.mse_loss(
             predicted_energy.squeeze(), target_energy.squeeze()
-        ) + forces_weight * F.mse_loss(
-            predicted_forces.squeeze(), target_forces.squeeze()
-        )
+        ) + forces_weight * torch.mean(per_atom_force_loss)/3 # divide by 3 to get correct MSE
+
         self.log(
-            "val_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+            "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
-        return loss
+        return {"val_loss": loss, "per_atom_force_loss": per_atom_force_loss}
 
     # def test_step(self, batch, batch_idx):
-    #     pass
-    #
-    # def configure_optimizers(self):
     #     pass
     #
     # def setup_model(self):
@@ -168,8 +190,13 @@ class GNNLightningTrainer(Trainer):
 
         super().__init__(manifest, model)
 
+        # loggers and callbacks
         self.tb_logger = self._tb_logger()
+        self.csv_logger = self._csv_logger()
         self.setup_dataloaders()
+        self.callbacks = self._get_callbacks()
+
+        # setup lightning trainer
         self.pl_trainer = self._get_pl_trainer()
 
     def setup_model(self):
@@ -179,6 +206,8 @@ class GNNLightningTrainer(Trainer):
             ema_decay = self.optimizer_manifest.get("ema_decay", 0.99)
         else:
             ema_decay = None
+
+        scheduler = self.optimizer_manifest.get("lr_scheduler", {})
 
         self.pl_model = LightningTrainerWrapper(
             model=self.model,
@@ -192,6 +221,8 @@ class GNNLightningTrainer(Trainer):
             lr=self.optimizer_manifest["learning_rate"],
             energy_weight=self.loss_manifest["weights"]["energy"],
             forces_weight=self.loss_manifest["weights"]["forces"],
+            lr_scheduler=scheduler.get("name", None),
+            lr_scheduler_args=scheduler.get("args", None),
         )
 
     def train(self):
@@ -223,15 +254,56 @@ class GNNLightningTrainer(Trainer):
         logger.info("Data modules setup complete.")
 
     def _tb_logger(self):
-        return TensorBoardLogger(self.current["run_dir"], name="lightning_logs")
+        return TensorBoardLogger(f"{self.current['run_dir']}/logs", name="lightning_logs")
+
+    def _csv_logger(self):
+        return CSVLogger(f"{self.current['run_dir']}/logs", name="csv_logs")
 
     def _get_pl_trainer(self):
         return pl.Trainer(
-            logger=self.tb_logger,
+            logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],
             accelerator="auto",
-            strategy="auto",
+            strategy="ddp",
+            callbacks=self.callbacks,
         )
+
+    def _get_callbacks(self):
+        callbacks = []
+
+        ckpt_dir = f"{self.current['run_dir']}/checkpoints"
+        ckpt_interval = self.training_manifest.get("ckpt_interval", 50)
+        save_model_callback = SaveModelCallback(ckpt_dir, ckpt_interval)
+        callbacks.append(save_model_callback)
+        logger.info("Checkpointing setup complete.")
+
+        if self.training_manifest.get("early_stopping", False):
+            patience = self.training_manifest["early_stopping"].get("patience", 10)
+            if not isinstance(patience, int):
+                raise TrainerError(
+                    f"Early stopping should be an integer, got {patience}"
+                )
+            delta = self.training_manifest["early_stopping"].get("delta", 1e-3)
+            early_stopping = EarlyStopping(
+                monitor="val_loss",
+                patience=patience,
+                mode="min",
+                min_delta=delta,
+            )
+            callbacks.append(early_stopping)
+            logger.info("Early stopping setup complete.")
+
+        if self.loss_manifest.get("loss_traj", False):
+            loss_traj_folder = f"{self.current['run_dir']}/loss_trajectory"
+            loss_idxs = self.dataset_sample_manifest["val_indices"]
+            ckpt_interval = self.training_manifest.get("ckpt_interval", 10)
+            loss_trajectory_callback = LossTrajectoryCallback(
+                loss_traj_folder, loss_idxs, ckpt_interval
+            )
+            callbacks.append(loss_trajectory_callback)
+            logger.info("Loss trajectory setup complete.")
+
+        return callbacks
 
     def setup_optimizer(self):
         # Not needed as Pytorch Lightning handles the optimizer

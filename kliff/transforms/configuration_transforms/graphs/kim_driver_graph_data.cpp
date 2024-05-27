@@ -41,6 +41,7 @@ struct GraphData{
     py::array_t<int64_t> images; // periodic images of the atoms
     py::array_t<int64_t> species; // species index of the atoms
     py::array_t<int64_t> z; // atomic number of the atoms
+    py::array_t<double> cell; // cell of the system
     py::array_t<int64_t> contributions; // contributing of the atoms to the energy
 };
 
@@ -260,6 +261,9 @@ GraphData get_complete_graph(
         = py::array_t<int64_t>(n_atoms + n_pad, need_neighbors_64.data());
 
     gs.n_nodes = n_atoms + n_pad;
+
+    gs.cell = py::array_t<double>(cell.size(), cell.data());
+
     delete[] padded_coords;
     delete[] need_neighbors;
     for (int i = 0; i < n_graph_layers; i++) { delete[] graph_edge_indices[i]; }
@@ -282,6 +286,7 @@ PYBIND11_MODULE(graph_module, m)
         .def_readwrite("images", &GraphData::images)
         .def_readwrite("species", &GraphData::species)
         .def_readwrite("z", &GraphData::z)
+        .def_readwrite("cell", &GraphData::cell)
         .def_readwrite("contributions", &GraphData::contributions);
     m.def("get_complete_graph",
             &get_complete_graph,

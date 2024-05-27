@@ -46,6 +46,7 @@ class PyGGraph(Data):
         self.images = None
         self.species = None
         self.z = None
+        self.cell = None
         self.contributions = None
 
     def __inc__(self, key: str, value: torch.Tensor, *args, **kwargs):
@@ -164,6 +165,7 @@ class KIMDriverGraph(ConfigurationTransform):
         pyg_graph.images = torch.as_tensor(graph.images)
         pyg_graph.species = torch.as_tensor(graph.species)
         pyg_graph.z = torch.as_tensor(graph.z)
+        pyg_graph.cell = torch.as_tensor(graph.cell)
         pyg_graph.contributions = torch.as_tensor(graph.contributions)
         pyg_graph.num_nodes = torch.as_tensor(graph.n_nodes)
         for i in range(graph.n_layers):
