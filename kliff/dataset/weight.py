@@ -72,6 +72,9 @@ class Weight:
     def stress_weight(self, value):
         self._stress_weight = value
 
+    def __repr__(self):
+        return f"Weights: config={self.config_weight}, energy={self.energy_weight}, forces={self.forces_weight}, stress={self.stress_weight}"
+
     def _check_compute_flag(self, config):
         """
         Check whether compute flag correctly set when the corresponding weight in

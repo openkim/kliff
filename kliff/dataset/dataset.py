@@ -695,7 +695,7 @@ class Dataset:
             )
         else:
             configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, None)
-            self.add_weights(weight)
+            Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
 
     @classmethod
@@ -800,7 +800,7 @@ class Dataset:
             configs = self._read_from_path(path, weight, file_format)
         else:
             configs = self._read_from_path(path, None, file_format)
-            self.add_weights(weight)
+            Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
 
     @classmethod
@@ -1008,7 +1008,7 @@ class Dataset:
             configs = self._read_from_ase(
                 path, ase_atoms_list, None, energy_key, forces_key, slices, file_format
             )
-            self.add_weights(weight)
+            Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
 
     def get_configs(self) -> List[Configuration]:
@@ -1064,7 +1064,8 @@ class Dataset:
                     + f"{config.weight.stress_weight}\n"
                 )
 
-    def add_weights(self, path: Union[Path, str]):
+    @staticmethod
+    def add_weights(configurations: List[Configuration], path: Union[Path, str]):
         """
         Load weights from a text file. The text file should contain 1 to 4 columns,
         whitespace seperated, formatted as,
@@ -1086,6 +1087,7 @@ class Dataset:
         ```
 
         Args:
+            configurations: List of configurations to add weights to.
             path: Path to the configuration file
 
         """
@@ -1103,7 +1105,7 @@ class Dataset:
                 "there needs to be at least 1 col, and at most 4"
             )
 
-        if not (weights_data.size == 1 or weights_data.size == len(self)):
+        if not (weights_data.size == 1 or weights_data.size == len(configurations)):
             raise DatasetError(
                 "Weights file contains improper number of rows,"
                 "there can be either 1 row (all weights same), "
@@ -1118,8 +1120,12 @@ class Dataset:
         for fields in missing_cols:
             weights[fields] = np.zeros_like(weights["config"])
 
+        # if only one row, set same weight for all
+        if weights_data.size == 1:
+            weights = {k: np.full(len(configurations), v) for k, v in weights.items()}
+
         # set weights
-        for i, config in enumerate(self.configs):
+        for i, config in enumerate(configurations):
             config.weight = Weight(
                 config_weight=weights["config"][i],
                 energy_weight=weights["energy"][i],

@@ -23,7 +23,7 @@ if importlib.metadata.version("torch") <= "1.13":
 else:
     from torch_geometric.data.lightning import LightningDataset
 
-from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
+from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
 from kliff.dataset import Dataset
 from kliff.utils import get_n_configs_in_xyz
@@ -39,8 +39,12 @@ except:
 
 import hashlib
 
-from .torch_trainer_utils.lightning_checkpoints import SaveModelCallback, LossTrajectoryCallback
 from pytorch_lightning.callbacks import EarlyStopping
+
+from .torch_trainer_utils.lightning_checkpoints import (
+    LossTrajectoryCallback,
+    SaveModelCallback,
+)
 
 
 class LightningTrainerWrapper(pl.LightningModule):
@@ -129,14 +133,15 @@ class LightningTrainerWrapper(pl.LightningModule):
             self.lr_scheduler = getattr(torch.optim.lr_scheduler, self.lr_scheduler)(
                 optimizer, **self.lr_scheduler_args
             )
-            return {"optimizer": optimizer,
-                    "lr_scheduler":
-                        {"scheduler": self.lr_scheduler,
-                         "interval": "epoch",
-                         "frequency": 1,
-                         "monitor": "val_loss"
-                         }
-                    }
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": self.lr_scheduler,
+                    "interval": "epoch",
+                    "frequency": 1,
+                    "monitor": "val_loss",
+                },
+            }
         else:
             return optimizer
 
@@ -155,9 +160,11 @@ class LightningTrainerWrapper(pl.LightningModule):
             (predicted_forces.squeeze() - target_forces.squeeze()) ** 2, dim=1
         )
 
-        loss = energy_weight * F.mse_loss(
-            predicted_energy.squeeze(), target_energy.squeeze()
-        ) + forces_weight * torch.mean(per_atom_force_loss)/3 # divide by 3 to get correct MSE
+        loss = (
+            energy_weight
+            * F.mse_loss(predicted_energy.squeeze(), target_energy.squeeze())
+            + forces_weight * torch.mean(per_atom_force_loss) / 3
+        )  # divide by 3 to get correct MSE
 
         self.log(
             "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
@@ -254,7 +261,9 @@ class GNNLightningTrainer(Trainer):
         logger.info("Data modules setup complete.")
 
     def _tb_logger(self):
-        return TensorBoardLogger(f"{self.current['run_dir']}/logs", name="lightning_logs")
+        return TensorBoardLogger(
+            f"{self.current['run_dir']}/logs", name="lightning_logs"
+        )
 
     def _csv_logger(self):
         return CSVLogger(f"{self.current['run_dir']}/logs", name="csv_logs")
