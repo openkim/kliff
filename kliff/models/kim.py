@@ -752,16 +752,24 @@ class KIMModel(Model):
 
         # ensure model is installed
         if model_type.lower() == "kim":
-            is_model_installed = install_kim_model(model_name, model_collection)
-            if not is_model_installed:
-                logger.error(
-                    f"Mode: {model_name} neither installed nor available in the KIM API collections. Please check the model name and try again."
-                )
-                raise KIMModelError(f"Model {model_name} not found.")
+            is_model_installed = is_kim_model_installed(model_name)
+            if is_model_installed:
+                logger.info(f"Model {model_name} is already installed, continuing ...")
             else:
                 logger.info(
-                    f"Model {model_name} is present in {model_collection} collection."
+                    f"Model {model_name} not installed on system, attempting to installing ..."
                 )
+                was_install_success = install_kim_model(model_name, model_collection)
+                if not was_install_success:
+                    logger.error(
+                        f"Model {model_name} not found in the KIM API collections. Please check the model name and try again."
+                    )
+                    raise KIMModelError(f"Model {model_name} not found.")
+                else:
+                    logger.info(
+                        f"Model {model_name} installed in {model_collection} collection."
+                    )
+
         elif model_type.lower() == "tar":
             archive_content = tarfile.open(model_path + "/" + model_name)
             model = archive_content.getnames()[0]

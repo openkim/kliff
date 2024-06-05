@@ -47,7 +47,6 @@ class Trainer:
             "name": "kliff_workspace",
             "seed": 12345,
             "resume": False,
-            "walltime": "2:00:00:00",
         }
 
         # dataset variables
@@ -55,7 +54,6 @@ class Trainer:
             "type": "kliff",
             "path": "./",
             "save": False,
-            "shuffle": False,
             "keys": {"energy": "energy", "forces": "forces"},
             "dynamic_loading": False,
             "colabfit_dataset": {
@@ -144,13 +142,12 @@ class Trainer:
             "run_hash": None,
             "start_time": None,
             "end_time": None,
-            "best_loss": None,
+            "best_loss": np.inf,
             "best_model": None,
             "loss": None,
             "epoch": 0,
             "step": 0,
             "device": "cpu",
-            "expected_end_time": None,
             "warned_once": False,
             "dataset_hash": None,
             "data_dir": None,
@@ -187,19 +184,6 @@ class Trainer:
             )
         else:
             self.workspace |= workspace_block
-
-        if isinstance(self.workspace["walltime"], int):
-            expected_end_time = datetime.now() + timedelta(
-                seconds=self.workspace["walltime"]
-            )
-        else:
-            expected_end_time = datetime.now() + timedelta(
-                days=int(self.workspace["walltime"].split(":")[0]),
-                hours=int(self.workspace["walltime"].split(":")[1]),
-                minutes=int(self.workspace["walltime"].split(":")[2]),
-                seconds=int(self.workspace["walltime"].split(":")[3]),
-            )
-        self.current["expected_end_time"] = expected_end_time
 
         # Dataset manifest #################################################
         dataset_manifest: Union[None, dict] = manifest.get("dataset", None)
@@ -283,12 +267,13 @@ class Trainer:
         """
         Convert the configuration to a dictionary.
         """
-        config = {}
-        config |= self.workspace
-        config |= self.dataset_manifest
-        config |= self.model_manifest
-        config |= self.transform_manifest
-        config |= self.training_manifest
+        config = {
+            "workspace": self.workspace,
+            "dataset": self.dataset_manifest,
+            "model": self.model_manifest,
+            "transforms": self.transform_manifest,
+            "training": self.training_manifest,
+        }
         return config
 
     @classmethod
@@ -335,7 +320,7 @@ class Trainer:
         # Step 4.5 - Set up the dataset transforms
         self.setup_dataset_transforms()
         # Step 5 - Set up the test and train datasets, based on the provided indices
-        self.setup_test_train_datasets()
+        self.setup_dataset_split()
         logger.info(f"Train and validation datasets set up.")
         # Step 6 - Set up the model
         self.setup_model()
@@ -527,7 +512,7 @@ class Trainer:
         """
         raise TrainerError("setup_optimizer not implemented.")
 
-    def setup_test_train_datasets(self):
+    def setup_dataset_split(self):
         """
         Simple test train split for now, will have more options like stratification
          in the future.
@@ -565,41 +550,35 @@ class Trainer:
 
         # check if indices are provided
         train_indices = self.dataset_sample_manifest.get("train_indices")
-        if train_indices is None:
-            train_indices = np.arange(train_size, dtype=int)
-        elif isinstance(train_indices, str):
+        val_indices = None
+        if isinstance(train_indices, str):
             train_indices = np.genfromtxt(train_indices, dtype=int)
+            if val_size > 0:
+                val_indices = np.genfromtxt(
+                    self.dataset_sample_manifest.get("val_indices"), dtype=int
+                )
         else:
-            TrainerError("train_indices should be a numpy array or a path to a file.")
+            TrainerError(f"Could not load indices from {train_indices}.")
 
-        val_indices = self.dataset_sample_manifest.get("val_indices")
-        if val_indices is None:
-            val_indices = np.arange(train_size, train_size + val_size, dtype=int)
-        elif isinstance(val_indices, str):
-            val_indices = np.genfromtxt(val_indices, dtype=int)
-        else:
-            TrainerError("val_indices should be a numpy array or a path to a file.")
-
-        if self.dataset_manifest.get("shuffle", False):
-            # instead of shuffling the main dataset, validation/train indices are shuffled
-            # this gives better control over future active learning scenarios
-            np.random.shuffle(train_indices)
-            np.random.shuffle(val_indices)
-
-        train_dataset = self.dataset[train_indices]
-
-        if val_size > 0:
-            val_dataset = self.dataset[val_indices]
-        else:
-            val_dataset = None
+        if train_indices is None:
+            indices = np.random.permutation(train_size + val_size)
+            train_indices = indices[:train_size]
+            if val_size > 0:
+                val_indices = indices[-val_size:]
 
         self.dataset_sample_manifest["train_size"] = train_size
         self.dataset_sample_manifest["val_size"] = val_size
         self.dataset_sample_manifest["train_indices"] = train_indices
         self.dataset_sample_manifest["val_indices"] = val_indices
 
+        train_dataset = self.dataset[train_indices]
         self.train_dataset = train_dataset
-        self.val_dataset = val_dataset
+
+        if val_size > 0:
+            val_dataset = self.dataset[val_indices]
+            self.val_dataset = val_dataset
+        else:
+            self.val_dataset = None
 
         # save the indices if generated
         if isinstance(train_indices, str):

@@ -59,7 +59,20 @@ class DNNTrainer(Trainer):
             },
             f"{self.current['run_dir']}/checkpoint_{self.current['step']}.pkl",
         )
-        # self.model.save(f"{self.current['run_dir']}/model_{self.current['step']}.pt")
+
+        # save best and last model
+        if self.current["loss"]["val"] < self.current["best_loss"]:
+            self.current["best_loss"] = self.current["loss"]["val"]
+            torch.save(
+                self.model.state_dict(),
+                f"{self.current['run_dir']}/best_model.pth",
+            )
+
+        torch.save(
+            self.model.state_dict(),
+            f"{self.current['run_dir']}/last_model.pth",
+        )
+
         with open(f"{self.current['run_dir']}/log.txt", "a") as f:
             f.write(
                 f"Step: {self.current['step']}, Train Loss: {self.current['loss']['train']}, Val Loss: {self.current['loss']['val']}\n"
@@ -84,10 +97,7 @@ class DNNTrainer(Trainer):
         # TODO: Scheduler and ema
 
     def _get_loss_function(self):
-        if (
-            self.loss_manifest["function"].lower() == "mseloss"
-            or self.loss_manifest["function"].lower() == "mse"
-        ):
+        if self.loss_manifest["function"].lower() == "mse":
             return torch.nn.MSELoss()
         else:
             raise TrainerError(

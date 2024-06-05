@@ -162,6 +162,10 @@ class KIMTrainer(Trainer):
     def _get_loss_fn(self):
         if self.loss_manifest["function"].lower() == "mse":
             return MSE_residuals
+        else:
+            raise TrainerError(
+                f"Loss function {self.loss_manifest['function']} not supported."
+            )
 
     def save_kim_model(self):
         if self.export_manifest["model_type"].lower() == "kim":
