@@ -5,7 +5,7 @@ import importlib.metadata
 import json
 import os
 from copy import deepcopy
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import dill
 import pytorch_lightning as pl
@@ -106,9 +106,7 @@ class LightningTrainerWrapper(pl.LightningModule):
         self.lr_scheduler = lr_scheduler
         self.lr_scheduler_args = lr_scheduler_args
 
-    def forward(
-        self, batch: Dict[str : torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass of the model. Returns the energy, and forces predicted by the model.
         Args:
@@ -448,7 +446,7 @@ class GNNLightningTrainer(Trainer):
 
         return callbacks
 
-    def save_kim_model(self, path):
+    def save_kim_model(self, path: str = "kim-model"):
         """
         Save the KIM model to the given path. The KIM model is saved as a portable
         TorchML model.
@@ -457,6 +455,9 @@ class GNNLightningTrainer(Trainer):
             path: Path to save the model
         """
         # create folder if not already present
+        if self.export_manifest["model_path"]:
+            path = self.export_manifest["model_path"]
+
         os.makedirs(path, exist_ok=True)
 
         # save the best pl_model
@@ -464,7 +465,12 @@ class GNNLightningTrainer(Trainer):
         pl_module.load_state_dict(
             torch.load(f"{self.current['run_dir']}/checkpoints/best_model.pth")
         )
-        model = pl_module.to_torchscript()
+        try:
+            model = torch.jit.script(pl_module.model)
+        except RuntimeError:
+            from e3nn.util import jit
+
+            model = jit.script(pl_module.model)
         model = model.cpu()
         torch.jit.save(model, f"{path}/model.pt")
 
@@ -472,16 +478,19 @@ class GNNLightningTrainer(Trainer):
         self.configuration_transform.export_kim_model(path, "model.pt")
 
         # CMakeLists.txt
-        current_model_iter = glob.glob(f"{path}/*MO_000000000*")
-        current_model_iter.sort()
-        if current_model_iter:
-            model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
-        else:
-            model_iter = 0
+        if not self.export_manifest["model_name"]:
+            # current_model_iter = glob.glob(f"{self.export_manifest['model_path']}/*MO_000000000*")
+            # current_model_iter.sort()
+            # if current_model_iter:
+            #     model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
+            # else:
+            #     model_iter = 0
+            # TODO: get the model iter from the model name
 
-        qualified_model_name = (
-            f"{self.current['run_title']}_MO_000000000000_{model_iter:03d}"
-        )
+            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
+        else:
+            qualified_model_name = self.export_manifest["model_name"]
+
         cmakefile = self._generate_kim_cmake(
             qualified_model_name,
             "TorchML__MD_173118614730_000",

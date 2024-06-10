@@ -136,7 +136,6 @@ class Trainer:
 
         # export trained model
         self.export_manifest: dict = {
-            "model_type": None,
             "model_name": None,
             "model_path": None,
         }
@@ -664,6 +663,7 @@ class Trainer:
         Returns:
             CMakeLists.txt file as a string
         """
+        model_name = model_name.replace("-", "_")
         cmake = f"""cmake_minimum_required(VERSION 3.10)
 
                     list(APPEND CMAKE_PREFIX_PATH $ENV{{KIM_API_CMAKE_PREFIX_DIR}})
@@ -679,6 +679,7 @@ class Trainer:
                     PARAMETER_FILES {" ".join(file_list)}
                     )
                 """
+        return cmake
 
 
 # Parallel processing for dataset loading #############################################
