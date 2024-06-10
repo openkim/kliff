@@ -4,6 +4,7 @@ import json
 import multiprocessing
 import os
 import random
+import sys
 from copy import deepcopy
 from datetime import datetime, timedelta
 from glob import glob
@@ -366,8 +367,15 @@ class Trainer:
         """
         Check all the existing runs in the root directory and see if it finished the run
         """
-        dir_list = sorted(glob(f"{self.workspace['name']}*"))
+        dir_list = sorted(
+            glob(f"{self.workspace['name']}/{self.model_manifest['name']}*")
+        )
+        dir_list = [p for p in dir_list if os.path.isdir(p)]
+
         if len(dir_list) == 0 or not self.workspace["resume"]:
+            logger.info(
+                "Either a fresh run or resume is not requested. Starting a new run."
+            )
             self.current["appending_to_previous_run"] = False
             self.current["run_dir"] = (
                 f"{self.workspace['name']}/{self.current['run_title']}"
@@ -377,12 +385,17 @@ class Trainer:
             last_dir = dir_list[-1]
             was_it_finished = os.path.exists(f"{last_dir}/.finished")
             if was_it_finished:  # start new run
-                current_run_dir = (
-                    f"{self.workspace['name']}/{self.current['run_title']}"
+                logger.warning(
+                    "Resuming from last training was requested, but it was completed. Exiting."
                 )
-                os.makedirs(current_run_dir, exist_ok=True)
-                self.current["appending_to_previous_run"] = False
+                # current_run_dir = (
+                #     f"{self.workspace['name']}/{self.current['run_title']}"
+                # )
+                # os.makedirs(current_run_dir, exist_ok=True)
+                # self.current["appending_to_previous_run"] = False
+                sys.exit()
             else:
+                logger.info("Last trainer was not finished. Resuming the training.")
                 self.current["appending_to_previous_run"] = True
                 self.current["run_dir"] = dir_list[-1]
 

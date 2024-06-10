@@ -1,33 +1,25 @@
 # Mostly to be used by GNNs for now
-import glob
-import importlib
+# check torch version, if <= 1.13, use torch_geometric.data.lightning_module
+# This is temporary fix till torch 1 -> 2 migration is complete
 import importlib.metadata
-import json
 import os
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Union
 
-import dill
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from loguru import logger
-from torch import multiprocessing
 from torch_scatter import scatter_add
 
 from .base_trainer import Trainer, TrainerError
 
-# check torch version, if <= 1.13, use torch_geometric.data.lightning_module
-# This is temporary fix till torch 1 -> 2 migration is complete
 if importlib.metadata.version("torch") <= "1.13":
     from torch_geometric.data.lightning_datamodule import LightningDataset
 else:
     from torch_geometric.data.lightning import LightningDataset
 
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
-
-from kliff.dataset import Dataset
-from kliff.utils import get_n_configs_in_xyz
 
 from .torch_trainer_utils.dataloaders import GraphDataset
 
@@ -37,8 +29,6 @@ try:
     is_torch_ema_present = True
 except:
     is_torch_ema_present = False
-
-import hashlib
 
 from pytorch_lightning.callbacks import EarlyStopping
 
@@ -321,8 +311,26 @@ class GNNLightningTrainer(Trainer):
         """
         Call the `fit` method of the Pytorch Lightning Trainer to train the model.
         """
-        self.pl_trainer.fit(self.pl_model, self.data_module)
+        if self.current["appending_to_previous_run"]:
+            logger.warning("Resuming training from checkpoint ...")
+            self.pl_trainer.fit(
+                self.pl_model,
+                self.data_module,
+                ckpt_path=f"{self.current['run_dir']}/checkpoints/trainer_checkpoint.ckpt",
+            )
+        else:
+            logger.warning("Starting training from scratch ...")
+            self.pl_trainer.fit(self.pl_model, self.data_module)
+
         # currently getting warnings. https://github.com/pytorch/pytorch/issues/89064
+
+        # training finished, 'touch' a .finished file
+        if self.pl_trainer.state.finished:
+            with open(f"{self.current['run_dir']}/.finished", "w") as f:
+                f.write("")
+            logger.info("Training complete.")
+        else:
+            logger.error("Training incomplete. Check logs for errors.")
 
     def setup_dataloaders(self):
         """
@@ -395,7 +403,6 @@ class GNNLightningTrainer(Trainer):
                 "Single precision is not supported yet. Using double precision."
             )
             # TODO: Add support for single precision
-
         return pl.Trainer(
             logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],
@@ -468,7 +475,7 @@ class GNNLightningTrainer(Trainer):
         try:
             model = torch.jit.script(pl_module.model)
         except RuntimeError:
-            from e3nn.util import jit
+            from e3nn.util import jit # model might be an e3nn model
 
             model = jit.script(pl_module.model)
         model = model.cpu()

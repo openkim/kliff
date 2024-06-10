@@ -41,6 +41,9 @@ class SaveModelCallback(pl.Callback):
             )
             torch.save(pl_module.state_dict(), epoch_save_path)
 
+        # save the trainer checkpoint as well
+        trainer.save_checkpoint(os.path.join(self.ckpt_dir, "trainer_checkpoint.ckpt"))
+
 
 class LossTrajectoryCallback(pl.Callback):
     """
