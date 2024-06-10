@@ -4,11 +4,12 @@ import json
 import multiprocessing
 import os
 import random
+import sys
 from copy import deepcopy
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import Callable, List, Union
+from typing import TYPE_CHECKING, Callable, List, Union
 
 import dill  # TODO: include dill in requirements.txt
 import numpy as np
@@ -16,6 +17,10 @@ import yaml
 from loguru import logger
 
 from kliff.dataset import Dataset
+
+if TYPE_CHECKING:
+    from kliff.transforms.configuration_transforms import ConfigurationTransform
+
 from kliff.utils import get_n_configs_in_xyz
 
 
@@ -87,7 +92,7 @@ class Trainer:
             },
         }
         self.property_transforms = []
-        self.configuration_transform = None
+        self.configuration_transform: "ConfigurationTransform" = None
 
         # training variables
         # this is too complicated to put it in singe dict, therefore the training
@@ -112,7 +117,7 @@ class Trainer:
             "kwargs": None,
             "epochs": 10000,
             "stop_condition": None,
-            "num_workers": 1,
+            "num_workers": None,
             "batch_size": 1,
         }
         self.optimizer = None
@@ -130,7 +135,6 @@ class Trainer:
 
         # export trained model
         self.export_manifest: dict = {
-            "model_type": None,
             "model_name": None,
             "model_path": None,
         }
@@ -250,7 +254,7 @@ class Trainer:
             "stop_condition", None
         )
         self.optimizer_manifest["num_workers"] = self.training_manifest.get(
-            "num_workers", 1
+            "num_workers", None
         )
         self.optimizer_manifest["batch_size"] = self.training_manifest.get(
             "batch_size", 1
@@ -348,8 +352,15 @@ class Trainer:
         """
         Check all the existing runs in the root directory and see if it finished the run
         """
-        dir_list = sorted(glob(f"{self.workspace['name']}*"))
+        dir_list = sorted(
+            glob(f"{self.workspace['name']}/{self.model_manifest['name']}*")
+        )
+        dir_list = [p for p in dir_list if os.path.isdir(p)]
+
         if len(dir_list) == 0 or not self.workspace["resume"]:
+            logger.info(
+                "Either a fresh run or resume is not requested. Starting a new run."
+            )
             self.current["appending_to_previous_run"] = False
             self.current["run_dir"] = (
                 f"{self.workspace['name']}/{self.current['run_title']}"
@@ -359,12 +370,17 @@ class Trainer:
             last_dir = dir_list[-1]
             was_it_finished = os.path.exists(f"{last_dir}/.finished")
             if was_it_finished:  # start new run
-                current_run_dir = (
-                    f"{self.workspace['name']}/{self.current['run_title']}"
+                logger.warning(
+                    "Resuming from last training was requested, but it was completed. Exiting."
                 )
-                os.makedirs(current_run_dir, exist_ok=True)
-                self.current["appending_to_previous_run"] = False
+                # current_run_dir = (
+                #     f"{self.workspace['name']}/{self.current['run_title']}"
+                # )
+                # os.makedirs(current_run_dir, exist_ok=True)
+                # self.current["appending_to_previous_run"] = False
+                sys.exit()
             else:
+                logger.info("Last trainer was not finished. Resuming the training.")
                 self.current["appending_to_previous_run"] = True
                 self.current["run_dir"] = dir_list[-1]
 
@@ -625,6 +641,37 @@ class Trainer:
 
     def save_kim_model(self, *args, **kwargs):
         raise TrainerError("save_kim_model not implemented.")
+
+    @staticmethod
+    def _generate_kim_cmake(model_name: str, driver_name: str, file_list: List) -> str:
+        """
+        Generate the CMakeLists.txt file for KIM API. This will be used to compile the
+        driver with the KIM API. The driver name is the name of the driver, and the file
+        list is the list of files to be included in the CMakeLists.txt file.
+        Private method.
+        Args:
+            driver_name: Name of the driver
+            file_list: List of files to be included in the CMakeLists.txt file
+        Returns:
+            CMakeLists.txt file as a string
+        """
+        model_name = model_name.replace("-", "_")
+        cmake = f"""cmake_minimum_required(VERSION 3.10)
+
+                    list(APPEND CMAKE_PREFIX_PATH $ENV{{KIM_API_CMAKE_PREFIX_DIR}})
+                    find_package(KIM-API-ITEMS 2.2 REQUIRED CONFIG)
+
+                    kim_api_items_setup_before_project(ITEM_TYPE "portableModel")
+                    project({model_name})
+                    kim_api_items_setup_after_project(ITEM_TYPE "portableModel")
+
+                    add_kim_api_model_library(
+                    NAME            ${{PROJECT_NAME}}
+                    DRIVER_NAME     "{driver_name}"
+                    PARAMETER_FILES {" ".join(file_list)}
+                    )
+                """
+        return cmake
 
 
 # Parallel processing for dataset loading #############################################

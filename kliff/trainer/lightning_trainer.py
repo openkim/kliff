@@ -1,32 +1,25 @@
 # Mostly to be used by GNNs for now
-import importlib
+# check torch version, if <= 1.13, use torch_geometric.data.lightning_module
+# This is temporary fix till torch 1 -> 2 migration is complete
 import importlib.metadata
-import json
-import os.path
+import os
 from copy import deepcopy
-from typing import List, Union
+from typing import Any, Dict, List, Tuple, Union
 
-import dill
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from loguru import logger
-from torch import multiprocessing
 from torch_scatter import scatter_add
 
 from .base_trainer import Trainer, TrainerError
 
-# check torch version, if <= 1.13, use torch_geometric.data.lightning_module
-# This is temporary fix till torch 1 -> 2 migration is complete
 if importlib.metadata.version("torch") <= "1.13":
     from torch_geometric.data.lightning_datamodule import LightningDataset
 else:
     from torch_geometric.data.lightning import LightningDataset
 
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
-
-from kliff.dataset import Dataset
-from kliff.utils import get_n_configs_in_xyz
 
 from .torch_trainer_utils.dataloaders import GraphDataset
 
@@ -36,8 +29,6 @@ try:
     is_torch_ema_present = True
 except:
     is_torch_ema_present = False
-
-import hashlib
 
 from pytorch_lightning.callbacks import EarlyStopping
 
@@ -49,22 +40,38 @@ from .torch_trainer_utils.lightning_checkpoints import (
 
 class LightningTrainerWrapper(pl.LightningModule):
     """
-    This class extends the base Trainer class for training GNNs using PyTorch Lightning.
-    input_args = ["x", "coords", "edge_index0", "edge_index1" ...,"batch"]
+    Wrapper class for Pytorch Lightning Module. This class is used to wrap the model and
+    the training loop in a Pytorch Lightning Module. It returns the energy, and forces
+    predicted by the model. Stress computations need partial-derivatives of the
+    coordinates, and hence are done in the `training_step` functions.
+
+    Args:
+        model: Pytorch model to be trained
+        input_args: List of input arguments to the model. They are passed as dictionary
+            to the model, therefore order, and the name of the arguments should be the
+            same as in the model definition. Example: ["x", "coords", "edge_index0", "edge_index1" ...,"batch"]
+        ckpt_dir: Directory to save the checkpoints
+        device: Device to run the model on. Default is "cpu"
+        ema: Whether to use Exponential Moving Average. Default is True
+        ema_decay: Decay rate for Exponential Moving Average. Default is 0.99
+        optimizer_name: Name of the optimizer to use. Default is "Adam"
+        lr: Learning rate for the optimizer. Default is 0.001
+        energy_weight: Weight for the energy loss. Default is 1.0
+        forces_weight: Weight for the forces loss. Default is 1.0
+        lr_scheduler: Name of the learning rate scheduler. Default is None
+        lr_scheduler_args: Arguments for the learning rate scheduler. Default is None
     """
 
     def __init__(
         self,
         model,
         input_args: List,
-        batch_size=5,
         ckpt_dir=None,
         device="cpu",
         ema=True,
         ema_decay=0.99,
         optimizer_name="Adam",
         lr=0.001,
-        n_workers=1,
         energy_weight=1.0,
         forces_weight=1.0,
         lr_scheduler=None,
@@ -74,12 +81,10 @@ class LightningTrainerWrapper(pl.LightningModule):
         super().__init__()
         self.model = model
         self.input_args = input_args
-        self.batch_size = batch_size
         self.ckpt_dir = ckpt_dir
         self.ema = ema
         self.optimizer_name = optimizer_name
         self.lr = lr
-        self.n_workers = n_workers
         self.energy_weight = energy_weight
         self.forces_weight = forces_weight
 
@@ -91,7 +96,18 @@ class LightningTrainerWrapper(pl.LightningModule):
         self.lr_scheduler = lr_scheduler
         self.lr_scheduler_args = lr_scheduler_args
 
-    def forward(self, batch):
+    def forward(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass of the model. Returns the energy, and forces predicted by the model.
+        Args:
+            batch: dict containing torch tensors. It should at least have same keys as
+                defined in `self.input_keys`
+
+        Returns:
+            Energy and forces of the supplied batch. Please note that the forces are
+            partial forces, and hence needs to be summed to the contributing particles.
+
+        """
         batch["coords"].requires_grad_(True)
         model_inputs = {k: batch[k] for k in self.input_args}
         predicted_energy = self.model(**model_inputs)
@@ -106,6 +122,19 @@ class LightningTrainerWrapper(pl.LightningModule):
         return predicted_energy, -predicted_forces
 
     def training_step(self, batch, batch_idx):
+        """
+        Single training step for lightning.
+
+        TODO:
+            Support for Stresses
+
+        Args:
+            batch: batch to take step over
+            batch_idx: batch index, input from lightning
+
+        Returns:
+            loss: loss for the batch
+        """
         target_energy = batch.energy
         target_forces = batch.forces
 
@@ -120,11 +149,24 @@ class LightningTrainerWrapper(pl.LightningModule):
             predicted_forces.squeeze(), target_forces.squeeze()
         )
         self.log(
-            "train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+            "train_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
         )
         return loss
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> Union[torch.optim.Optimizer, Dict]:
+        """
+        Configure and return optimizer and learning rate scheduler
+
+        Returns:
+            A dict of optimizer and lr_scheduler if scheduler is requested, else it
+            returns just the optimizer.
+        """
         optimizer = getattr(torch.optim, self.optimizer_name)(
             self.model.parameters(), lr=self.lr
         )
@@ -145,7 +187,17 @@ class LightningTrainerWrapper(pl.LightningModule):
         else:
             return optimizer
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx) -> Dict[str, torch.Tensor]:
+        """
+        Single validation step for lightning.
+
+        Args:
+            batch: batch to take step over
+            batch_idx: batch index, input from lightning
+
+        Returns:
+            loss: loss for the batch, and per atom force loss for loss trajectory
+        """
         torch.set_grad_enabled(True)
 
         target_energy = batch.energy
@@ -167,7 +219,13 @@ class LightningTrainerWrapper(pl.LightningModule):
         )  # divide by 3 to get correct MSE
 
         self.log(
-            "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+            "val_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
         )
         return {"val_loss": loss, "per_atom_force_loss": per_atom_force_loss}
 
@@ -191,7 +249,21 @@ class LightningTrainerWrapper(pl.LightningModule):
 
 
 class GNNLightningTrainer(Trainer):
+    """
+    Trainer class for GNN models. This class is used to train GNN models using Pytorch
+    Lightning. It uses the `LightningTrainerWrapper` to wrap the model and the training
+    loop in a Pytorch Lightning Module. It also handles the dataloaders, loggers, and
+    callbacks.
+    """
+
     def __init__(self, manifest, model):
+        """
+        Initialize the GNNLightningTrainer.
+
+        Args:
+            manifest: Dictionary containing the manifest for the trainer.
+            model: Pytorch model to be trained.
+        """
         self.pl_model: LightningTrainerWrapper = None
         self.data_module = None
 
@@ -207,6 +279,10 @@ class GNNLightningTrainer(Trainer):
         self.pl_trainer = self._get_pl_trainer()
 
     def setup_model(self):
+        """
+        Set up the model for training. This function initializes the `LightningTrainerWrapper`
+        with the model, and the training parameters.
+        """
         # if dict has key ema, then set ema to True, decay to the dict value, else set ema false
         ema = True if self.optimizer_manifest.get("ema", False) else False
         if ema:
@@ -219,7 +295,6 @@ class GNNLightningTrainer(Trainer):
         self.pl_model = LightningTrainerWrapper(
             model=self.model,
             input_args=self.model_manifest["input_args"],
-            batch_size=self.optimizer_manifest["batch_size"],
             ckpt_dir=self.current["run_dir"],
             device=self.current["device"],
             ema=ema,
@@ -233,9 +308,39 @@ class GNNLightningTrainer(Trainer):
         )
 
     def train(self):
-        self.pl_trainer.fit(self.pl_model, self.data_module)
+        """
+        Call the `fit` method of the Pytorch Lightning Trainer to train the model.
+        """
+        if self.current["appending_to_previous_run"]:
+            logger.warning("Resuming training from checkpoint ...")
+            self.pl_trainer.fit(
+                self.pl_model,
+                self.data_module,
+                ckpt_path=f"{self.current['run_dir']}/checkpoints/trainer_checkpoint.ckpt",
+            )
+        else:
+            logger.warning("Starting training from scratch ...")
+            self.pl_trainer.fit(self.pl_model, self.data_module)
+
+        # currently getting warnings. https://github.com/pytorch/pytorch/issues/89064
+
+        # training finished, 'touch' a .finished file
+        if self.pl_trainer.state.finished:
+            with open(f"{self.current['run_dir']}/.finished", "w") as f:
+                f.write("")
+            logger.info("Training complete.")
+        else:
+            logger.error("Training incomplete. Check logs for errors.")
 
     def setup_dataloaders(self):
+        """
+        Set up the dataloaders for the training and validation datasets. If `dynamic_loading`
+        is set to True in the dataset manifest, the dataloaders are set up with the
+        configuration transform. Otherwise, the dataloaders are set up without the
+        configuration transform. Number of workers for the dataloaders is set to the number
+        of CPUs available in the system. If a SLURM job is running, the number of workers is
+        set to the number of CPUs per task.
+        """
         if self.dataset_manifest["dynamic_loading"]:
             transform = self.configuration_transform
         else:
@@ -252,32 +357,66 @@ class GNNLightningTrainer(Trainer):
                 for config in self.val_dataset:
                     config.fingerprint = self.configuration_transform(config)
 
+        if self.optimizer_manifest["num_workers"]:
+            num_workers = self.optimizer_manifest["num_workers"]
+        else:
+            num_workers = os.getenv("SLURM_CPUS_PER_TASK", 1)
+
         self.data_module = LightningDataset(
             self.train_dataset,
             self.val_dataset,
             batch_size=self.optimizer_manifest["batch_size"],
-            num_workers=self.optimizer_manifest["num_workers"],
+            num_workers=num_workers,
         )
         logger.info("Data modules setup complete.")
 
-    def _tb_logger(self):
+    def _tb_logger(self) -> TensorBoardLogger:
+        """
+        Set up the TensorBoard logger for the training.
+
+        Returns: TensorBoardLogger
+        """
         return TensorBoardLogger(
             f"{self.current['run_dir']}/logs", name="lightning_logs"
         )
 
-    def _csv_logger(self):
+    def _csv_logger(self) -> CSVLogger:
+        """
+        Set up the CSV logger for the training. Just for logging the losses in plain text
+        """
         return CSVLogger(f"{self.current['run_dir']}/logs", name="csv_logs")
 
-    def _get_pl_trainer(self):
+    def _get_pl_trainer(self) -> pl.Trainer:
+        """
+        Set up the Pytorch Lightning Trainer with the required parameters. The trainer is
+        set up with the TensorBoard and CSV loggers, and the callbacks. Support for single
+        precision is not added yet. The number of nodes is set to the number of nodes in the
+        SLURM job, or 1 if not running on SLURM. Other job management systems are not
+        supported yet.
+
+        Returns: Pytorch Lightning Trainer
+        """
+        num_nodes = int(os.getenv("SLURM_JOB_NUM_NODES", 1))
+        # precision = 32 if self.model_manifest["precision"] == "single" else 64
+        if self.model_manifest["precision"] == "single":
+            logger.warning(
+                "Single precision is not supported yet. Using double precision."
+            )
+            # TODO: Add support for single precision
         return pl.Trainer(
             logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],
             accelerator="auto",
             strategy="ddp",
             callbacks=self.callbacks,
+            num_nodes=num_nodes,
+            # precision=32
         )
 
     def _get_callbacks(self):
+        """
+        Set up the model checkpoints, early stopping, and loss trajectory callbacks.
+        """
         callbacks = []
 
         ckpt_dir = f"{self.current['run_dir']}/checkpoints"
@@ -313,6 +452,61 @@ class GNNLightningTrainer(Trainer):
             logger.info("Loss trajectory setup complete.")
 
         return callbacks
+
+    def save_kim_model(self, path: str = "kim-model"):
+        """
+        Save the KIM model to the given path. The KIM model is saved as a portable
+        TorchML model.
+
+        Args:
+            path: Path to save the model
+        """
+        # create folder if not already present
+        if self.export_manifest["model_path"]:
+            path = self.export_manifest["model_path"]
+
+        os.makedirs(path, exist_ok=True)
+
+        # save the best pl_model
+        pl_module = deepcopy(self.pl_model)
+        pl_module.load_state_dict(
+            torch.load(f"{self.current['run_dir']}/checkpoints/best_model.pth")
+        )
+        try:
+            model = torch.jit.script(pl_module.model)
+        except RuntimeError:
+            from e3nn.util import jit # model might be an e3nn model
+
+            model = jit.script(pl_module.model)
+        model = model.cpu()
+        torch.jit.save(model, f"{path}/model.pt")
+
+        # save the configuration transform
+        self.configuration_transform.export_kim_model(path, "model.pt")
+
+        # CMakeLists.txt
+        if not self.export_manifest["model_name"]:
+            # current_model_iter = glob.glob(f"{self.export_manifest['model_path']}/*MO_000000000*")
+            # current_model_iter.sort()
+            # if current_model_iter:
+            #     model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
+            # else:
+            #     model_iter = 0
+            # TODO: get the model iter from the model name
+
+            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
+        else:
+            qualified_model_name = self.export_manifest["model_name"]
+
+        cmakefile = self._generate_kim_cmake(
+            qualified_model_name,
+            "TorchML__MD_173118614730_000",
+            ["model.pt", "kliff_graph.param"],
+        )
+        with open(f"{path}/CMakeLists.txt", "w") as f:
+            f.write(cmakefile)
+
+        logger.info(f"KIM model saved at {path}")
 
     def setup_optimizer(self):
         # Not needed as Pytorch Lightning handles the optimizer
