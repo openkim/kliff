@@ -398,7 +398,8 @@ class GNNLightningTrainer(Trainer):
         """
         num_nodes = int(os.getenv("SLURM_JOB_NUM_NODES", 1))
         # precision = 32 if self.model_manifest["precision"] == "single" else 64
-        if self.model_manifest["precision"] == "single":
+        precision = self.model_manifest.get("precision", "double")
+        if precision == "single":
             logger.warning(
                 "Single precision is not supported yet. Using double precision."
             )
@@ -475,7 +476,7 @@ class GNNLightningTrainer(Trainer):
         try:
             model = torch.jit.script(pl_module.model)
         except RuntimeError:
-            from e3nn.util import jit # model might be an e3nn model
+            from e3nn.util import jit  # model might be an e3nn model
 
             model = jit.script(pl_module.model)
         model = model.cpu()

@@ -703,11 +703,15 @@ class KIMModel(Model):
         ReverseScriptedModule object *in future*. Else raise error. If the model is a tarball, it
         will extract and install the model.
 
+        ```{todo}
+        Get torchscript model from TorchML driver.
+        ```
+
         Example `model_manifest`:
         ```yaml
             model:
-                model_type: kim     # kim or torch or tar
-                model_path: ./
+                model_type: kim     # kim or torch
+                model_path: ./model.tar.gz  # path to the model tarball
                 model_name: SW_StillingerWeber_1985_Si__MO_405512056662_006 # KIM model name, installed if missing
                 model_collection: "user"
         ```
@@ -750,8 +754,15 @@ class KIMModel(Model):
                 f"Model driver {model_driver} not supported for KIMModel training."
             )
 
+        # is model a tarball?
+        if model_path is not None:
+            model_path = Path(model_path)
+            if model_path.suffix == ".tar":
+                model_type = "tar"
+
         # ensure model is installed
         if model_type.lower() == "kim":
+            # is it a tar file?
             is_model_installed = is_kim_model_installed(model_name)
             if is_model_installed:
                 logger.info(f"Model {model_name} is already installed, continuing ...")

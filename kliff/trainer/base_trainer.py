@@ -41,12 +41,46 @@ class Trainer:
     - Set up the test train split
     Model, parameter transform and optimizer setup are left for the derived classes to
     implement.
-
-    Args:
-        training_manifest: training manifest
     """
 
     def __init__(self, training_manifest: dict, model=None):
+        """
+        Initialize the trainer with the provided manifest and model. Model can be initialized
+        from the manifest itself for simpler, KIM-API based models. For more complex models,
+        the model should be provided as an argument.
+
+        The model manifest should contain the following sections, or keys:
+        - workspace: Workspace configuration, folders, name of run etc
+            - name: Name of the workspace
+            - seed: Seed for random number generators
+            - resume: Resume from the previous run if possible
+
+        - dataset: Dataset to train on, usually an XYZ file, or ColabFit dataset. The
+                   content of this block will be given {func}`kliff.dataset.Dataset.from_manifest`
+                   function. Consult the documentation of the function for more information.
+
+        - model: Model to train, usually a KIM-API model. The content of this block will be given to the
+                    {func}`kliff.models.Model.get_model_from_manifest` function. Consult the documentation of the
+                    function for more information. The above function usually works for
+                    physics based KIM-API models. For more complex ML models, you need to
+                    initialize the model and provide it as an argument. Tarfiles can be used
+                    for TorchML driver based model drivers.
+                    Additional keys might be needed on model specific basis.
+        - transforms: Transformations to be applied to the dataset. This includes
+                    parameter transforms (for KIM models), configuration transforms
+                    (descriptors, and graphs), and property transforms (energy, forces,
+                    stress).
+        - training: Training configuration, including loss function, optimizer, batch size,
+                    number of epochs, early stopping, dataset test-train split etc.
+                    TODO: Add more details about the training block.
+
+        - export: Export the trained model. This includes the model name and the path to
+                    save the model.
+
+        Args:
+            training_manifest: Dictionary containing the training configuration
+            model: Model instance or None, usually a pytorch model
+        """
         # workspace variables
         self.workspace: dict = {
             "name": "kliff_workspace",
@@ -145,7 +179,6 @@ class Trainer:
             "run_dir": None,
             "run_hash": None,
             "start_time": None,
-            "end_time": None,
             "best_loss": np.inf,
             "best_model": None,
             "loss": None,
@@ -227,7 +260,6 @@ class Trainer:
                 "Training block not found in the configuration."
                 "Will try and resume the previous run if possible."
             )
-            # TODO: implement resume
         self.training_manifest |= training_manifest
 
         if self.training_manifest.get("loss", None) is None:
@@ -246,7 +278,6 @@ class Trainer:
                 "Optimizer block not found in the configuration."
                 "Will resume the previous run if possible."
             )
-            # TODO: implement resume
 
         self.optimizer_manifest |= self.training_manifest.get("optimizer")
         self.optimizer_manifest["epochs"] = self.training_manifest.get("epochs", 10000)
@@ -351,6 +382,8 @@ class Trainer:
     def setup_workspace(self):
         """
         Check all the existing runs in the root directory and see if it finished the run
+        or not. If it is finished, it will start a new run. If it is not finished, it will
+        resume the training. If the resume is not requested, it will start a new run.
         """
         dir_list = sorted(
             glob(f"{self.workspace['name']}/{self.model_manifest['name']}*")
@@ -391,11 +424,7 @@ class Trainer:
     def setup_dataset(self):
         """
         Set up the dataset based on the provided information.
-
-        TODO: It will check the {workspace}/{dataset_name} directory to see if dataset hash
-        is already there. The dataset hash is determined but hashing the full path to
-        the dataset + transforms names + configuration transform properties.
-        TODO: reload hashed dataset if it exists.
+        TODO: ColabFit integration for extreme scale datasets.
         """
         dataset_module_manifest = deepcopy(self.dataset_manifest)
         dataset_module_manifest["weights"] = self.loss_manifest["weights"]
@@ -424,7 +453,7 @@ class Trainer:
         Set up the dataset transforms based on the provided information. If the
         transforms are not provided, it will raise an error. If the transform is of type
         ASE, it will be loaded from the ASE library. If the transform is of type
-        KLIF, it will be loaded from the KLIF library. Left for the derived classes to
+        KLIFF, it will be loaded from the KLIFF library. Left for the derived classes to
         implement.
         """
         # transforms?
@@ -684,11 +713,10 @@ def _parallel_read(
     """
     Read and transform frames in parallel. Returns n_chunks of datasets.
     Args:
-        file_path:
-        num_chunks:
-        energy_key:
-        forces_key:
-        transform:
+        file_path: Path to the file
+        num_chunks: Number of chunks to split the dataset into, usually = number of cores
+        energy_key: Key for energy in the dataset
+        forces_key: Key for forces in the dataset
 
     Returns:
         List of datasets processed by each node
@@ -698,6 +726,12 @@ def _parallel_read(
         num_chunks = multiprocessing.cpu_count()
     total_frames = get_n_configs_in_xyz(file_path)
     frames_per_chunk = total_frames // num_chunks
+
+    if (
+        frames_per_chunk == 0
+    ):  # if the number of frames is less than the number of chunks
+        frames_per_chunk = total_frames
+        num_chunks = 1
 
     # Generate slices for each chunk
     chunks = []

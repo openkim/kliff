@@ -126,6 +126,7 @@ setup(
             "ase",
             "libdescriptor",
             "torch_geometric",
+            "pytorch_lightning",
             "dill",
         ],
         "docs": [
