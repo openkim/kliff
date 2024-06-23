@@ -1,9 +1,15 @@
+from typing import Any, List, Tuple, Union
+
 import torch
 from torch.utils.data import Dataset as TorchDataset
 from torch_geometric.data import Dataset as TorchGeometricDataset
 
 from kliff.dataset import Dataset
-from kliff.transforms.configuration_transforms.graphs import PyGGraph
+from kliff.transforms.configuration_transforms import (
+    Descriptor,
+    KIMDriverGraph,
+    PyGGraph,
+)
 
 
 class NeighborListDataset(TorchDataset):
@@ -37,7 +43,11 @@ class DescriptorDataset(TorchDataset):
             configurations.
     """
 
-    def __init__(self, dataset: Dataset, property_keys=("energy", "forces", "stress")):
+    def __init__(
+        self,
+        dataset: Dataset,
+        property_keys: Union[Tuple, List] = ("energy", "forces", "stress"),
+    ):
         self.dataset = dataset
         self.dataset.check_properties_consistency(property_keys)
         self.consistent_properties = self.dataset.get_metadata("consistent_properties")
@@ -46,18 +56,20 @@ class DescriptorDataset(TorchDataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, idx):
-        property_dict = {}
-        for key in self.consistent_properties:
-            property_dict[key] = getattr(self.dataset[idx], key)
+    def __getitem__(self, idx: int):
+        property_dict = {
+            key: getattr(self.dataset[idx], key) for key in self.consistent_properties
+        }
 
         if self.transform:
-            fingerprint = self.transform(self.dataset[idx], return_extended_state=True)
+            representation = self.transform(
+                self.dataset[idx], return_extended_state=True
+            )
         else:
-            fingerprint = self.dataset[idx].fingerprint
-        return fingerprint, property_dict
+            representation = self.dataset[idx].fingerprint
+        return representation, property_dict
 
-    def collate(self, batch) -> dict:
+    def collate(self, batch: Any) -> dict:
         """
         Collate function for the dataset. This function takes in a batch of configurations
         and properties and returns the collated configuration, properties and contribution
@@ -70,22 +82,33 @@ class DescriptorDataset(TorchDataset):
         """
         # get fingerprint and consistent properties
         config_0, property_dict_0 = batch[0]
-        ptr = torch.tensor([0], dtype=torch.int64)
+        device = config_0.device
+        ptr = torch.tensor([0], dtype=torch.int64, device=device)
 
         # extract the fingerprint fields
-        n_atoms_0 = torch.tensor([config_0["n_atoms"]], dtype=torch.int64)
-        species_0 = torch.tensor(config_0["species"], dtype=torch.int64)
-        neigh_list_0 = torch.tensor(config_0["neigh_list"], dtype=torch.int64)
-        num_neigh_0 = torch.tensor(config_0["num_neigh"], dtype=torch.int64)
-        image_0 = torch.tensor(config_0["image"], dtype=torch.int64)
-        coords_0 = torch.tensor(config_0["coords"])
-        descriptors_0 = torch.tensor(config_0["descriptor"])
-        contribution_0 = torch.zeros(descriptors_0.shape[0], dtype=torch.int64)
+        n_atoms_0 = torch.tensor(
+            [config_0["n_atoms"]], dtype=torch.int64, device=device
+        )
+        species_0 = torch.tensor(config_0["species"], dtype=torch.int64, device=device)
+        neigh_list_0 = torch.tensor(
+            config_0["neigh_list"], dtype=torch.int64, device=device
+        )
+        num_neigh_0 = torch.tensor(
+            config_0["num_neigh"], dtype=torch.int64, device=device
+        )
+        image_0 = torch.tensor(config_0["image"], dtype=torch.int64, device=device)
+        coords_0 = torch.tensor(config_0["coords"], device=device)
+        descriptors_0 = torch.tensor(config_0["descriptor"], device=device)
+        contribution_0 = torch.zeros(
+            descriptors_0.shape[0], dtype=torch.int64, device=device
+        )
         batch_len = len(batch)
-        ptr_shift = torch.tensor(coords_0.shape[0], dtype=torch.int64)
+        ptr_shift = torch.tensor(coords_0.shape[0], dtype=torch.int64, device=device)
 
         for prop in self.consistent_properties:
-            property_dict_0[prop] = torch.as_tensor(property_dict_0[prop])
+            property_dict_0[prop] = torch.as_tensor(
+                property_dict_0[prop], device=device
+            )
 
         for i in range(1, batch_len):
             config_i, property_dict_i = batch[i]
@@ -97,7 +120,10 @@ class DescriptorDataset(TorchDataset):
             image_i = config_i["image"]
             coords_i = config_i["coords"]
             descriptors_i = config_i["descriptor"]
-            contribution_i = torch.zeros(descriptors_i.shape[0], dtype=torch.int64) + i
+            contribution_i = (
+                torch.zeros(descriptors_i.shape[0], dtype=torch.int64, device=device)
+                + i
+            )
 
             n_atoms_0 = torch.cat(
                 (n_atoms_0, torch.tensor([n_atoms_i], dtype=torch.int64)), 0
@@ -146,7 +172,7 @@ class DescriptorDataset(TorchDataset):
             "contribution": contribution_0,
         }
 
-    def add_transform(self, transform):
+    def add_transform(self, transform: Descriptor):
         self.transform = transform
 
 
@@ -156,7 +182,7 @@ class GraphDataset(TorchGeometricDataset):
     the use of :class:`kliff.dataset.Dataset` as a data source for the graph based models.
     """
 
-    def __init__(self, dataset: Dataset, transform=None):
+    def __init__(self, dataset: Dataset, transform: KIMDriverGraph = None):
         super().__init__("./", transform, None, None)
         self.dataset = dataset
 
@@ -166,7 +192,7 @@ class GraphDataset(TorchGeometricDataset):
     def len(self):
         return len(self.dataset)
 
-    def get(self, idx):
+    def get(self, idx: int):
         if self.transform is None:
             return PyGGraph.from_dict(self.dataset[idx].fingerprint)
         else:

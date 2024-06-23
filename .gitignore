@@ -25,6 +25,9 @@ examples/Si_training_set
 libs/geodesicLMv1.1
 tests/echo*
 tests/fingerprints/
+kliff.log
+kim.log
+
 tmp_*
 *_kliff_trained/
 tests/uq/*.pkl
@@ -32,7 +35,6 @@ tests/uq/*.json
 tests/uq/kliff_saved_model
 
 tests/trainer/test_run
-tests/trainer/kliff.log
 
 # dataset
 Si_training_set_4_configs

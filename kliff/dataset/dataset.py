@@ -5,7 +5,7 @@ import json
 import os
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import dill
 import numpy as np
@@ -1180,13 +1180,22 @@ class Dataset:
             logger.warning("No properties provided to check for consistency.")
             return
 
-        property_list = list(copy.deepcopy(properties))  # make it mutable, if not
-        for config in self.configs:
-            for prop in property_list:
+        # property_list = list(copy.deepcopy(properties))  # make it mutable, if not
+        # for config in self.configs:
+        #     for prop in property_list:
+        #         try:
+        #             getattr(config, prop)
+        #         except ConfigurationError:
+        #             property_list.remove(prop)
+        property_list = []
+        for prop in properties:
+            for config in self.configs:
                 try:
                     getattr(config, prop)
                 except ConfigurationError:
-                    property_list.remove(prop)
+                    break
+            else:
+                property_list.append(prop)
 
         self.add_metadata({"consistent_properties": tuple(property_list)})
         logger.info(
@@ -1195,7 +1204,8 @@ class Dataset:
 
     @staticmethod
     def get_manifest_checksum(
-        dataset_manifest: dict, transform_manifest: Optional[dict] = None
+        dataset_manifest: dict[str, Any],
+        transform_manifest: Optional[dict[str, Any]] = None,
     ) -> str:
         """
         Get the checksum of the dataset manifest.
@@ -1273,7 +1283,10 @@ class Dataset:
             and dataset_type != "path"
             and dataset_type != "colabfit"
         ):
-            raise DatasetError(f"Dataset type {dataset_type} not supported.")
+            raise DatasetError(
+                f"Dataset type {dataset_type} not supported."
+                "Supported types are: ase, path, colabfit"
+            )
         weights = dataset_manifest.get("weights", None)
         if weights is not None:
             if isinstance(weights, str):

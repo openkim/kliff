@@ -18,11 +18,6 @@ else:
     Data = object
 
 
-# @requires overrides the classmethod decorator, hence this needs to be removed
-# @requires(
-#     torch_geometric_available(),
-#     "Pytorch Geometric is not available. It is required for PyGGraph.",
-# )
 class PyGGraph(Data):
     """
     A Pytorch Geometric compatible graph representation of a configuration. When loaded

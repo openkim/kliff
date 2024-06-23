@@ -32,13 +32,13 @@ except:
 
 from pytorch_lightning.callbacks import EarlyStopping
 
-from .torch_trainer_utils.lightning_checkpoints import (
+from .torch_trainer_utils.lightning_utils import (
     LossTrajectoryCallback,
     SaveModelCallback,
 )
 
 
-class LightningTrainerWrapper(pl.LightningModule):
+class LightningTrainer(pl.LightningModule):
     """
     Wrapper class for Pytorch Lightning Module. This class is used to wrap the model and
     the training loop in a Pytorch Lightning Module. It returns the energy, and forces
@@ -48,8 +48,7 @@ class LightningTrainerWrapper(pl.LightningModule):
     Args:
         model: Pytorch model to be trained
         input_args: List of input arguments to the model. They are passed as dictionary
-            to the model, therefore order, and the name of the arguments should be the
-            same as in the model definition. Example: ["x", "coords", "edge_index0", "edge_index1" ...,"batch"]
+            to the model. Example: ["x", "coords", "edge_index0", "edge_index1" ...,"batch"]
         ckpt_dir: Directory to save the checkpoints
         device: Device to run the model on. Default is "cpu"
         ema: Whether to use Exponential Moving Average. Default is True
@@ -112,14 +111,12 @@ class LightningTrainerWrapper(pl.LightningModule):
         model_inputs = {k: batch[k] for k in self.input_args}
         predicted_energy = self.model(**model_inputs)
         (predicted_forces,) = torch.autograd.grad(
-            [predicted_energy],
+            predicted_energy.sum(),
             batch["coords"],
             create_graph=True,  # TODO: grad against arbitrary param name
-            retain_graph=True,
-            grad_outputs=torch.ones_like(predicted_energy),
         )
-        predicted_forces = scatter_add(predicted_forces, batch["images"], dim=0)
-        return predicted_energy, -predicted_forces
+        predicted_forces = -scatter_add(predicted_forces, batch["images"], dim=0)
+        return predicted_energy, predicted_forces
 
     def training_step(self, batch, batch_idx):
         """
@@ -251,7 +248,7 @@ class LightningTrainerWrapper(pl.LightningModule):
 class GNNLightningTrainer(Trainer):
     """
     Trainer class for GNN models. This class is used to train GNN models using Pytorch
-    Lightning. It uses the `LightningTrainerWrapper` to wrap the model and the training
+    Lightning. It uses the `LightningTrainer` to wrap the model and the training
     loop in a Pytorch Lightning Module. It also handles the dataloaders, loggers, and
     callbacks.
     """
@@ -264,7 +261,7 @@ class GNNLightningTrainer(Trainer):
             manifest: Dictionary containing the manifest for the trainer.
             model: Pytorch model to be trained.
         """
-        self.pl_model: LightningTrainerWrapper = None
+        self.pl_model: LightningTrainer = None
         self.data_module = None
 
         super().__init__(manifest, model)
@@ -280,7 +277,7 @@ class GNNLightningTrainer(Trainer):
 
     def setup_model(self):
         """
-        Set up the model for training. This function initializes the `LightningTrainerWrapper`
+        Set up the model for training. This function initializes the `LightningTrainer`
         with the model, and the training parameters.
         """
         # if dict has key ema, then set ema to True, decay to the dict value, else set ema false
@@ -292,7 +289,7 @@ class GNNLightningTrainer(Trainer):
 
         scheduler = self.optimizer_manifest.get("lr_scheduler", {})
 
-        self.pl_model = LightningTrainerWrapper(
+        self.pl_model = LightningTrainer(
             model=self.model,
             input_args=self.model_manifest["input_args"],
             ckpt_dir=self.current["run_dir"],
@@ -512,3 +509,7 @@ class GNNLightningTrainer(Trainer):
     def setup_optimizer(self):
         # Not needed as Pytorch Lightning handles the optimizer
         pass
+
+    def seed_all(self):
+        super().seed_all()
+        pl.seed_everything(self.current["seed"])

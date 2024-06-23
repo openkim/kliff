@@ -11,7 +11,6 @@ from glob import glob
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, List, Union
 
-import dill  # TODO: include dill in requirements.txt
 import numpy as np
 import yaml
 from loguru import logger
@@ -470,46 +469,46 @@ class Trainer:
                     property_name = property_to_transform.get("name", None)
                     if not property_name:
                         continue  # it is probably an empty propery
-                    transform_module_name = property_to_transform[property_name].get(
+                    transform_class_name = property_to_transform[property_name].get(
                         "name", None
                     )
-                    if not transform_module_name:
+                    if not transform_class_name:
                         raise TrainerError(
                             "Property transform module name not provided."
                         )
                     property_transform_module = importlib.import_module(
                         f"kliff.transforms.property_transforms"
                     )
-                    property_module = getattr(
-                        property_transform_module, transform_module_name
+                    TransformClass = getattr(
+                        property_transform_module, transform_class_name
                     )
-                    property_module = property_module(
+                    TransformClass = TransformClass(
                         proprty_key=property_name,
                         **property_to_transform[property_name].get("kwargs", {}),
                     )
-                    self.dataset = property_module(self.dataset)
-                    self.property_transforms.append(property_module)
+                    self.dataset = TransformClass(self.dataset)
+                    self.property_transforms.append(TransformClass)
 
             if configuration_transform:
-                configuration_module_name: Union[str, None] = (
+                configuration_class_name: Union[str, None] = (
                     configuration_transform.get("name", None)
                 )
-                if not configuration_module_name:
+                if not configuration_class_name:
                     logger.warning(
                         "Configuration transform module name not provided."
                         "Skipping configuration transform."
                     )
                 else:
-                    configuration_module_name = (
+                    configuration_class_name = (
                         "KIMDriverGraph"
-                        if configuration_module_name.lower() == "graph"
-                        else configuration_module_name
+                        if configuration_class_name.lower() == "graph"
+                        else configuration_class_name
                     )
                     configuration_transform_module = importlib.import_module(
                         f"kliff.transforms.configuration_transforms"
                     )
-                    configuration_module = getattr(
-                        configuration_transform_module, configuration_module_name
+                    ConfigurationClass = getattr(
+                        configuration_transform_module, configuration_class_name
                     )
                     kwargs: Union[dict, None] = configuration_transform.get(
                         "kwargs", None
@@ -518,11 +517,11 @@ class Trainer:
                         raise TrainerError(
                             "Configuration transform module options not provided."
                         )
-                    configuration_module = configuration_module(
+                    ConfigurationClass = ConfigurationClass(
                         **kwargs, copy_to_config=False
                     )
 
-                    self.configuration_transform = configuration_module
+                    self.configuration_transform = ConfigurationClass
 
     def setup_model(self):
         """
@@ -766,3 +765,9 @@ class TrainerError(Exception):
 
     def __init__(self, message):
         super().__init__(message)
+
+
+# TODO:
+# 1. Test dataset
+# 2. Stress
+# 3. Get top k models
