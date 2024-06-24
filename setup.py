@@ -113,7 +113,7 @@ setup(
     version=get_version(),
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
-    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
+    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru", "dill"],
     extras_require={
         "test": [
             "pytest",
@@ -121,12 +121,11 @@ setup(
             "kimpy",
             "emcee",
             "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
-            "torch",
             "numpy",
             "ase",
             "libdescriptor",
-            "torch_geometric",
         ],
+        "torch": ["torch", "torch_geometric", "pytorch_lightning"],
         "docs": [
             "sphinx",
             "furo",

@@ -334,11 +334,11 @@ class Descriptor:
 
     def get_mean(self):
         """Return a list of the mean of the fingerprints."""
-        return self.mean.copy()
+        return self.mean
 
     def get_stdev(self):
         """Return a list of the standard deviation of the fingerprints."""
-        return self.stdev.copy()
+        return self.stdev
 
     def get_dtype(self):
         """Return the data type of the fingerprints."""

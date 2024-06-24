@@ -1,9 +1,13 @@
 import copy
+import hashlib
+import importlib
+import json
 import os
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
+import dill
 import numpy as np
 from loguru import logger
 from monty.dev import requires
@@ -16,6 +20,9 @@ from kliff.utils import stress_to_tensor, stress_to_voigt, to_path
 if TYPE_CHECKING:
     from colabfit.tools.configuration import Configuration as ColabfitConfiguration
     from colabfit.tools.database import MongoDatabase
+
+    from kliff.transforms.configuration_transforms import ConfigurationTransform
+    from kliff.transforms.property_transforms import PropertyTransform
 
 # check if colabfit-tools is installed
 try:
@@ -210,8 +217,8 @@ class Configuration:
                 forces = np.asarray(property["atomic-forces"]["forces"]["source-value"])
             elif property["type"] == "cauchy-stress":
                 stress = np.asarray(property["cauchy-stress"]["stress"]["source-value"])
+                stress = stress_to_voigt(stress)
 
-        stress = stress_to_voigt(stress)
         self = cls(
             cell,
             species,
@@ -578,6 +585,8 @@ class Dataset:
                 "configurations must be a iterable of Configuration objects."
             )
 
+        self._metadata: dict = {}
+
     @classmethod
     @requires(MongoDatabase is not None, "colabfit-tools is not installed")
     def from_colabfit(
@@ -585,7 +594,7 @@ class Dataset:
         colabfit_database: str,
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         **kwargs,
     ) -> "Dataset":
         """
@@ -593,7 +602,11 @@ class Dataset:
 
         Args:
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             colabfit_database: Name of the colabfit Mongo database to read from.
             colabfit_dataset: Name of the colabfit dataset instance to read from, usually
                 it is of form, e.g., "DS_xxxxxxxxxxxx_0"
@@ -655,7 +668,7 @@ class Dataset:
         colabfit_database: str,
         colabfit_dataset: str,
         colabfit_uri: str = "mongodb://localhost:27017",
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         **kwargs,
     ):
         """
@@ -667,19 +680,29 @@ class Dataset:
                 it is of form, e.g., "DS_xxxxxxxxxxxx_0")
             colabfit_uri: connection URI of the colabfit Mongo database to read from.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
 
         """
         # open link to the mongo
         mongo_client = MongoDatabase(colabfit_database, uri=colabfit_uri, **kwargs)
-        configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, weight)
+        if isinstance(weight, Weight):
+            configs = Dataset._read_from_colabfit(
+                mongo_client, colabfit_dataset, weight
+            )
+        else:
+            configs = Dataset._read_from_colabfit(mongo_client, colabfit_dataset, None)
+            Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
 
     @classmethod
     def from_path(
         cls,
         path: Union[Path, str],
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Path, Weight]] = None,
         file_format: str = "xyz",
     ) -> "Dataset":
         """
@@ -688,7 +711,11 @@ class Dataset:
         Args:
             path: Path the directory (or filename) storing the configurations.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
 
         Returns:
@@ -700,7 +727,9 @@ class Dataset:
 
     @staticmethod
     def _read_from_path(
-        path: Path, weight: Optional[Weight] = None, file_format: str = "xyz"
+        path: Path,
+        weight: Optional[Weight] = None,
+        file_format: str = "xyz",
     ) -> List[Configuration]:
         """
         Read configurations from path.
@@ -737,10 +766,7 @@ class Dataset:
             parent = path.parent
             all_files = [path]
 
-        configs = [
-            Configuration.from_file(f, copy.copy(weight), file_format)
-            for f in all_files
-        ]
+        configs = [Configuration.from_file(f, weight, file_format) for f in all_files]
 
         if len(configs) <= 0:
             raise DatasetError(
@@ -751,7 +777,7 @@ class Dataset:
     def add_from_path(
         self,
         path: Union[Path, str],
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         file_format: str = "xyz",
     ):
         """
@@ -760,12 +786,21 @@ class Dataset:
         Args:
             path: Path the directory (or filename) storing the configurations.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
         """
         if isinstance(path, str):
             path = Path(path)
-        configs = self._read_from_path(path, weight, file_format)
+
+        if isinstance(weight, Weight):
+            configs = self._read_from_path(path, weight, file_format)
+        else:
+            configs = self._read_from_path(path, None, file_format)
+            Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
 
     @classmethod
@@ -773,10 +808,10 @@ class Dataset:
         cls,
         path: Union[Path, str] = None,
         ase_atoms_list: List[ase.Atoms] = None,
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
-        slices: str = ":",
+        slices: Union[slice, str] = ":",
         file_format: str = "xyz",
     ) -> "Dataset":
         """
@@ -798,7 +833,11 @@ class Dataset:
             path: Path the directory (or filename) storing the configurations.
             ase_atoms_list: A list of ase.Atoms objects.
             weight: an instance that computes the weight of the configuration in the loss
-                function.
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
             slices: Slice of the configurations to read. It is used only when `path` is
@@ -851,7 +890,7 @@ class Dataset:
             configs = [
                 Configuration.from_ase_atoms(
                     config,
-                    weight=copy.copy(weight),
+                    weight=weight,
                     energy_key=energy_key,
                     forces_key=forces_key,
                 )
@@ -882,10 +921,11 @@ class Dataset:
 
             if len(all_files) == 1:  # single xyz file with multiple configs
                 all_configs = ase.io.read(all_files[0], index=slices)
+
                 configs = [
                     Configuration.from_ase_atoms(
                         config,
-                        weight=copy.copy(weight),
+                        weight=weight,
                         energy_key=energy_key,
                         forces_key=forces_key,
                     )
@@ -895,7 +935,7 @@ class Dataset:
                 configs = [
                     Configuration.from_ase_atoms(
                         ase.io.read(f),
-                        weight=copy.copy(weight),
+                        weight=weight,
                         energy_key=energy_key,
                         forces_key=forces_key,
                     )
@@ -914,7 +954,7 @@ class Dataset:
         self,
         path: Union[Path, str] = None,
         ase_atoms_list: List[ase.Atoms] = None,
-        weight: Optional[Weight] = None,
+        weight: Optional[Union[Weight, Path]] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
         slices: str = ":",
@@ -940,6 +980,11 @@ class Dataset:
             path: Path the directory (or filename) storing the configurations.
             ase_atoms_list: A list of ase.Atoms objects.
             weight: an instance that computes the weight of the configuration in the loss
+                function. If a path is provided, it is used to read the weight from the
+                file.  The file must be a plain text file with 4 whitespace separated
+                columns: config_weight, energy_weight, forces_weight, and stress_weight.
+                Length of the file must be equal to the number of configurations, or 1
+                (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
             slices: Slice of the configurations to read. It is used only when `path` is
@@ -948,9 +993,22 @@ class Dataset:
         """
         if isinstance(path, str):
             path = Path(path)
-        configs = self._read_from_ase(
-            path, ase_atoms_list, weight, energy_key, forces_key, slices
-        )
+
+        if isinstance(weight, Weight):
+            configs = self._read_from_ase(
+                path,
+                ase_atoms_list,
+                weight,
+                energy_key,
+                forces_key,
+                slices,
+                file_format,
+            )
+        else:
+            configs = self._read_from_ase(
+                path, ase_atoms_list, None, energy_key, forces_key, slices, file_format
+            )
+            Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
 
     def get_configs(self) -> List[Configuration]:
@@ -969,17 +1027,313 @@ class Dataset:
         """
         return len(self.configs)
 
-    def __getitem__(self, idx) -> Configuration:
+    def __getitem__(
+        self, idx: Union[int, np.ndarray, List]
+    ) -> Union[Configuration, "Dataset"]:
         """
-        Get the configuration at index `idx`.
+        Get the configuration at index `idx`. If the index is a list, it returns a new
+        dataset with the configurations at the indices.
 
         Args:
-         idx: Index of the configuration to get.
+         idx: Index of the configuration to get or a list of indices.
 
         Returns:
-            The configuration at index `idx`.
+            The configuration at index `idx` or a new dataset with the configurations at
+            the indices.
         """
-        return self.configs[idx]
+        if isinstance(idx, int):
+            return self.configs[idx]
+        else:
+            configs = [self.configs[i] for i in idx]
+            return Dataset(configs)
+
+    def save_weights(self, path: Union[Path, str]):
+        """
+        Save the weights of the configurations to a file.
+
+        Args:
+            path: Path of the file to save the weights.
+        """
+        path = to_path(path)
+        with path.open("w") as f:
+            for config in self.configs:
+                f.write(
+                    f"{config.weight.config_weight} "
+                    + f"{config.weight.energy_weight} "
+                    + f"{config.weight.forces_weight} "
+                    + f"{config.weight.stress_weight}\n"
+                )
+
+    @staticmethod
+    def add_weights(configurations: List[Configuration], path: Union[Path, str]):
+        """
+        Load weights from a text file. The text file should contain 1 to 4 columns,
+        whitespace seperated, formatted as,
+        ```
+        Config Energy Forces Stress
+        1.0    0.0    10.0   0.0
+        ```
+        ```{note}
+        The column headers are case-insensitive, but should have same name as above.
+        The weight of 0.0 will set respective weight as `None`. The length of column can
+        be either 1 (all configs same weight) or n, where n is the number of configs in
+        the dataset.
+        ```
+        Missing columns are treated as 0.0, i.e. above example file can also be written
+        as
+        ```
+        Config Forces
+        1.0    10.0
+        ```
+
+        Args:
+            configurations: List of configurations to add weights to.
+            path: Path to the configuration file
+
+        """
+        if path is None:
+            logger.info("No weights provided.")
+            return
+
+        weights_data = np.genfromtxt(path, names=True)
+        weights_col = weights_data.dtype.names
+
+        # sanity checks
+        if 1 > len(weights_col) > 4:
+            raise DatasetError(
+                "Weights file contains improper number of cols,"
+                "there needs to be at least 1 col, and at most 4"
+            )
+
+        if not (weights_data.size == 1 or weights_data.size == len(configurations)):
+            raise DatasetError(
+                "Weights file contains improper number of rows,"
+                "there can be either 1 row (all weights same), "
+                "or same number of rows as the configurations."
+            )
+
+        expected_cols = {"config", "energy", "forces", "stress"}
+        missing_cols = expected_cols - set([col.lower() for col in weights_col])
+
+        # missing weights are set to 0.0
+        weights = {k.lower(): weights_data[k] for k in weights_col}
+        for fields in missing_cols:
+            weights[fields] = np.zeros_like(weights["config"])
+
+        # if only one row, set same weight for all
+        if weights_data.size == 1:
+            weights = {k: np.full(len(configurations), v) for k, v in weights.items()}
+
+        # set weights
+        for i, config in enumerate(configurations):
+            config.weight = Weight(
+                config_weight=weights["config"][i],
+                energy_weight=weights["energy"][i],
+                forces_weight=weights["forces"][i],
+                stress_weight=weights["stress"][i],
+            )
+
+    def add_metadata(self, metadata: dict):
+        """
+        Add metadata to the dataset object.
+
+        Args:
+            metadata: A dictionary containing the metadata.
+        """
+        if not isinstance(metadata, dict):
+            raise DatasetError("metadata must be a dictionary.")
+        self._metadata.update(metadata)
+
+    def get_metadata(self, key: str):
+        """
+        Get the metadata of the dataset.
+
+        Args:
+            key: Key of the metadata to get.
+
+        Returns:
+            Value of the metadata.
+        """
+        return self._metadata[key]
+
+    @property
+    def metadata(self):
+        """
+        Return the metadata of the dataset.
+        """
+        return self._metadata
+
+    def check_properties_consistency(self, properties: List[str] = None):
+        """
+        Check which of the properties of the configurations are consistent. These
+        consistent properties are saved a list which can be used to get the attributes
+        from the configurations. "Consistent" in this context means that same property
+        is available for all the configurations. A property is not considered consistent
+        if it is None for any of the configurations.
+
+        Args:
+            properties: List of properties to check for consistency. If None, no
+                properties are checked. All consistent properties are saved in the
+                metadata.
+        """
+        if properties is None:
+            logger.warning("No properties provided to check for consistency.")
+            return
+
+        # property_list = list(copy.deepcopy(properties))  # make it mutable, if not
+        # for config in self.configs:
+        #     for prop in property_list:
+        #         try:
+        #             getattr(config, prop)
+        #         except ConfigurationError:
+        #             property_list.remove(prop)
+        property_list = []
+        for prop in properties:
+            for config in self.configs:
+                try:
+                    getattr(config, prop)
+                except ConfigurationError:
+                    break
+            else:
+                property_list.append(prop)
+
+        self.add_metadata({"consistent_properties": tuple(property_list)})
+        logger.info(
+            f"Consistent properties: {property_list}, stored in metadata key: `consistent_properties`"
+        )
+
+    @staticmethod
+    def get_manifest_checksum(
+        dataset_manifest: dict[str, Any],
+        transform_manifest: Optional[dict[str, Any]] = None,
+    ) -> str:
+        """
+        Get the checksum of the dataset manifest.
+
+        Args:
+            dataset_manifest: Manifest of the dataset.
+            transform_manifest: Manifest of the transformation.
+
+        Returns:
+            Checksum of the manifest.
+        """
+        dataset_str = json.dumps(dataset_manifest, sort_keys=True)
+        if transform_manifest:
+            transform_str = json.dumps(transform_manifest, sort_keys=True)
+            dataset_str += transform_str
+        return hashlib.md5(dataset_str.encode()).hexdigest()
+
+    @staticmethod
+    def get_dataset_from_manifest(dataset_manifest: dict) -> "Dataset":
+        """
+        Get a dataset from a manifest.
+
+        Examples:
+           1.  Manifest file for initializing dataset using ASE parser:
+            ```yaml
+            dataset:
+                type: ase           # ase or path or colabfit
+                path: Si.xyz        # Path to the dataset
+                save: True          # Save processed dataset to a file
+                save_path: /folder/to   # Save to this folder
+                shuffle: False      # Shuffle the dataset
+                weights: /path/to/weights.dat # or dictionary with weights
+                keys:
+                    energy: Energy  # Key for energy, if ase dataset is used
+                    forces: forces  # Key for forces, if ase dataset is used
+            ```
+
+            2. Manifest file for initializing dataset using KLIFF extxyz parser:
+            ```yaml
+            dataset:
+                type: path          # ase or path or colabfit
+                path: /all/my/xyz   # Path to the dataset
+                save: False         # Save processed dataset to a file
+                shuffle: False      # Shuffle the dataset
+                weights:            # same weight for all, or file with weights
+                    config: 1.0
+                    energy: 0.0
+                    forces: 10.0
+                    stress: 0.0
+            ```
+
+            3. Manifest file for initializing dataset using ColabFit parser:
+            ```yaml
+            dataset:
+                type: colabfit      # ase or path or colabfit
+                save: False         # Save processed dataset to a file
+                shuffle: False      # Shuffle the dataset
+                weights: None
+                colabfit_dataset:
+                    dataset_name:
+                    database_name:
+                    database_url:
+            ```
+
+
+        Args:
+            dataset_manifest: List of configurations.
+
+        Returns:
+            A dataset of configurations.
+        """
+        dataset_type = dataset_manifest.get("type").lower()
+        if (
+            dataset_type != "ase"
+            and dataset_type != "path"
+            and dataset_type != "colabfit"
+        ):
+            raise DatasetError(
+                f"Dataset type {dataset_type} not supported."
+                "Supported types are: ase, path, colabfit"
+            )
+        weights = dataset_manifest.get("weights", None)
+        if weights is not None:
+            if isinstance(weights, str):
+                weights = Path(weights)
+            elif isinstance(weights, dict):
+                weights = Weight(
+                    config_weight=weights.get("config", 0.0),
+                    energy_weight=weights.get("energy", 0.0),
+                    forces_weight=weights.get("forces", 0.0),
+                    stress_weight=weights.get("stress", 0.0),
+                )
+            else:
+                raise DatasetError("Weights must be a path or a dictionary.")
+
+        if dataset_type == "ase":
+            dataset = Dataset.from_ase(
+                path=dataset_manifest.get("path", "."),
+                weight=weights,
+                energy_key=dataset_manifest.get("keys", {}).get("energy", "energy"),
+                forces_key=dataset_manifest.get("keys", {}).get("forces", "forces"),
+            )
+        elif dataset_type == "path":
+            dataset = Dataset.from_path(
+                path=dataset_manifest.get("path", "."),
+                weight=weights,
+            )
+        elif dataset_type == "colabfit":
+            try:
+                colabfit_dataset = dataset_manifest.get("colabfit_dataset")
+                colabfit_database = colabfit_dataset.database_name
+            except KeyError:
+                raise DatasetError("Colabfit dataset or database not provided.")
+            colabfit_uri = dataset_manifest.get(
+                "colabfit_uri", "mongodb://localhost:27017"
+            )
+
+            dataset = Dataset.from_colabfit(
+                colabfit_database=colabfit_database,
+                colabfit_dataset=colabfit_dataset,
+                colabfit_uri=colabfit_uri,
+                weight=weights,
+            )
+        else:
+            # this should not happen
+            raise DatasetError(f"Dataset type {dataset_type} not supported.")
+
+        return dataset
 
 
 class ConfigurationError(Exception):
