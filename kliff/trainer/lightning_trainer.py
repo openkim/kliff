@@ -3,6 +3,7 @@
 # This is temporary fix till torch 1 -> 2 migration is complete
 import importlib.metadata
 import os
+import tarfile
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Union
 
@@ -253,7 +254,7 @@ class GNNLightningTrainer(Trainer):
     callbacks.
     """
 
-    def __init__(self, manifest, model):
+    def __init__(self, manifest, model=None):
         """
         Initialize the GNNLightningTrainer.
 
@@ -281,6 +282,14 @@ class GNNLightningTrainer(Trainer):
         with the model, and the training parameters.
         """
         # if dict has key ema, then set ema to True, decay to the dict value, else set ema false
+        if not self.model:
+            try:
+                self.model = torch.jit.load(self.model_manifest["model_path"])
+            except ValueError:
+                raise TrainerError(
+                    "No model was provided, and model_path is not a valid TorchScript model."
+                )
+
         ema = True if self.optimizer_manifest.get("ema", False) else False
         if ema:
             ema_decay = self.optimizer_manifest.get("ema_decay", 0.99)
@@ -504,6 +513,11 @@ class GNNLightningTrainer(Trainer):
         with open(f"{path}/CMakeLists.txt", "w") as f:
             f.write(cmakefile)
 
+        if self.export_manifest["generate_tarball"]:
+            tarball_name = f"{path}.tar.gz"
+            with tarfile.open(tarball_name, "w:gz") as tar:
+                tar.add(path, arcname=os.path.basename(path))
+            logger.info(f"Model tarball saved: {tarball_name}")
         logger.info(f"KIM model saved at {path}")
 
     def setup_optimizer(self):
@@ -512,4 +526,8 @@ class GNNLightningTrainer(Trainer):
 
     def seed_all(self):
         super().seed_all()
-        pl.seed_everything(self.current["seed"])
+        pl.seed_everything(self.workspace["seed"])
+
+
+# TODO: Custom loss (via torchmetrics)?
+# TODO: switch str everywhere to Path

@@ -622,10 +622,10 @@ class KIMModel(Model):
         Write out a KIM model that can be used directly with the kim-api.
 
         This function typically write two files to `path`: (1) CMakeLists.txt, and (2)
-        a parameter file like A.model_params. `path` will be created if it does not exist.
+        a parameter file like A.params. `path` will be created if it does not exist.
 
         Args:
-            path: Path to the a directory to store the model. If `None`, it is set to
+            path: Path to a directory to store the model. If `None`, it is set to
                 `./MODEL_NAME_kliff_trained`, where `MODEL_NAME` is the `model_name` that
                 provided at the initialization of this class.
 
@@ -696,7 +696,11 @@ class KIMModel(Model):
         return kim_ca_instance.results
 
     @staticmethod
-    def get_model_from_manifest(model_manifest: dict, param_manifest: dict = None):
+    def get_model_from_manifest(
+        model_manifest: dict,
+        param_manifest: dict = None,
+        is_model_tarfile: bool = False,
+    ):
         """
         Get the model from a configuration. If it is a valid KIM model, it will return
         the KIMModel object. If it is a TorchML model, it will return the torch
@@ -710,7 +714,6 @@ class KIMModel(Model):
         Example `model_manifest`:
         ```yaml
             model:
-                model_type: kim     # kim or torch
                 model_path: ./model.tar.gz  # path to the model tarball
                 model_name: SW_StillingerWeber_1985_Si__MO_405512056662_006 # KIM model name, installed if missing
                 model_collection: "user"
@@ -735,12 +738,12 @@ class KIMModel(Model):
         Args:
             model_manifest: configuration object
             param_manifest: parameter transformation configuration
+            is_model_tarfile: whether the model is a tarball
 
         Returns:
             Model object
         """
         model_name: Union[None, str] = model_manifest.get("name", None)
-        model_type: Union[None, str] = model_manifest.get("type", None)
         model_path: Union[None, str, Path] = model_manifest.get("path", None)
         model_driver = KIMModel.get_model_driver_name(model_name)
         model_collection = model_manifest.get("collection")
@@ -754,35 +757,9 @@ class KIMModel(Model):
                 f"Model driver {model_driver} not supported for KIMModel training."
             )
 
-        # is model a tarball?
-        if model_path is not None:
-            model_path = Path(model_path)
-            if model_path.suffix == ".tar":
-                model_type = "tar"
-
         # ensure model is installed
-        if model_type.lower() == "kim":
-            # is it a tar file?
-            is_model_installed = is_kim_model_installed(model_name)
-            if is_model_installed:
-                logger.info(f"Model {model_name} is already installed, continuing ...")
-            else:
-                logger.info(
-                    f"Model {model_name} not installed on system, attempting to installing ..."
-                )
-                was_install_success = install_kim_model(model_name, model_collection)
-                if not was_install_success:
-                    logger.error(
-                        f"Model {model_name} not found in the KIM API collections. Please check the model name and try again."
-                    )
-                    raise KIMModelError(f"Model {model_name} not found.")
-                else:
-                    logger.info(
-                        f"Model {model_name} installed in {model_collection} collection."
-                    )
-
-        elif model_type.lower() == "tar":
-            archive_content = tarfile.open(model_path + "/" + model_name)
+        if is_model_tarfile:
+            archive_content = tarfile.open(model_path)
             model = archive_content.getnames()[0]
             archive_content.extractall(model_path)
             subprocess.run(
@@ -798,8 +775,25 @@ class KIMModel(Model):
             logger.info(
                 f"Tarball Model {model} installed in {model_collection} collection."
             )
+
+        is_model_installed = is_kim_model_installed(model_name)
+
+        if is_model_installed:
+            logger.info(f"Model {model_name} is already installed, continuing ...")
         else:
-            raise KIMModelError(f"Model type {model_type} not supported.")
+            logger.info(
+                f"Model {model_name} not installed on system, attempting to installing ..."
+            )
+            was_install_success = install_kim_model(model_name, model_collection)
+            if not was_install_success:
+                logger.error(
+                    f"Model {model_name} not found in the KIM API collections. Please check the model name and try again."
+                )
+                raise KIMModelError(f"Model {model_name} not found.")
+            else:
+                logger.info(
+                    f"Model {model_name} installed in {model_collection} collection."
+                )
 
         model = KIMModel(model_name)
 

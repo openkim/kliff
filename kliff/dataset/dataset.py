@@ -1092,7 +1092,7 @@ class Dataset:
 
         """
         if path is None:
-            logger.info("No weights provided.")
+            logger.info("No explicit weights datafile provided.")
             return
 
         weights_data = np.genfromtxt(path, names=True)
@@ -1293,10 +1293,10 @@ class Dataset:
                 weights = Path(weights)
             elif isinstance(weights, dict):
                 weights = Weight(
-                    config_weight=weights.get("config", 0.0),
-                    energy_weight=weights.get("energy", 0.0),
-                    forces_weight=weights.get("forces", 0.0),
-                    stress_weight=weights.get("stress", 0.0),
+                    config_weight=weights.get("config", None),
+                    energy_weight=weights.get("energy", None),
+                    forces_weight=weights.get("forces", None),
+                    stress_weight=weights.get("stress", None),
                 )
             else:
                 raise DatasetError("Weights must be a path or a dictionary.")
