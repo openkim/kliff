@@ -16,6 +16,7 @@ import yaml
 from loguru import logger
 
 from kliff.dataset import Dataset
+from kliff.dataset.weight import Weight
 
 if TYPE_CHECKING:
     from kliff.transforms.configuration_transforms import ConfigurationTransform
@@ -104,9 +105,9 @@ class Trainer:
 
         # model variables
         self.model_manifest: dict = {
-            "type": "kim",
             "name": None,
             "path": None,
+            "collection": "user",
         }
         self.model: Callable = model
 
@@ -144,7 +145,6 @@ class Trainer:
         }
 
         self.optimizer_manifest: dict = {
-            "provider": "scipy",
             "name": None,
             "learning_rate": None,
             "kwargs": None,
@@ -170,6 +170,7 @@ class Trainer:
         self.export_manifest: dict = {
             "model_name": None,
             "model_path": None,
+            "generate_tarball": False,
         }
 
         # state variables
@@ -426,12 +427,29 @@ class Trainer:
         TODO: ColabFit integration for extreme scale datasets.
         """
         dataset_module_manifest = deepcopy(self.dataset_manifest)
-        dataset_module_manifest["weights"] = self.loss_manifest["weights"]
+        # dataset_module_manifest["weights"] = self.loss_manifest["weights"]
+
+        weights = self.loss_manifest["weights"]
+
+        if weights is not None:
+            if isinstance(weights, str):
+                weights = Path(weights)
+            elif isinstance(weights, dict):
+                weights = Weight(
+                    config_weight=weights.get("config", None),
+                    energy_weight=weights.get("energy", None),
+                    forces_weight=weights.get("forces", None),
+                    stress_weight=weights.get("stress", None),
+                )
+            else:
+                raise TrainerError("Weights must be a path or a dictionary.")
+
         dataset_list = _parallel_read(
             self.dataset_manifest["path"],
             num_chunks=self.optimizer_manifest["num_workers"],
             energy_key=self.dataset_manifest.get("keys", {}).get("energy", "energy"),
             forces_key=self.dataset_manifest.get("keys", {}).get("forces", "forces"),
+            weights=weights,
         )
         self.dataset = deepcopy(dataset_list[0])
         for ds in dataset_list[1:]:
@@ -637,17 +655,18 @@ class Trainer:
                 fmt="%d",
             )
 
-        if isinstance(val_indices, str):
-            self.dataset_sample_manifest["indices_files"]["val"] = val_indices
-        else:
-            self.dataset_sample_manifest["indices_files"][
-                "val"
-            ] = f"{self.current['run_dir']}/val_indices.txt"
-            np.savetxt(
-                self.dataset_sample_manifest["indices_files"]["val"],
-                val_indices,
-                fmt="%d",
-            )
+        if val_size > 0:
+            if isinstance(val_indices, str):
+                self.dataset_sample_manifest["indices_files"]["val"] = val_indices
+            else:
+                self.dataset_sample_manifest["indices_files"][
+                    "val"
+                ] = f"{self.current['run_dir']}/val_indices.txt"
+                np.savetxt(
+                    self.dataset_sample_manifest["indices_files"]["val"],
+                    val_indices,
+                    fmt="%d",
+                )
 
     def loss(self, *args, **kwargs):
         raise TrainerError("loss not implemented.")
@@ -708,6 +727,7 @@ def _parallel_read(
     num_chunks=None,
     energy_key="Energy",
     forces_key="forces",
+    weights=None,
 ) -> List[Dataset]:
     """
     Read and transform frames in parallel. Returns n_chunks of datasets.
@@ -742,18 +762,22 @@ def _parallel_read(
     with multiprocessing.Pool(processes=num_chunks) as pool:
         ds = pool.starmap(
             _read_frames,
-            [(file_path, start, end, energy_key, forces_key) for start, end in chunks],
+            [
+                (file_path, start, end, energy_key, forces_key, weights)
+                for start, end in chunks
+            ],
         )
 
     return ds
 
 
-def _read_frames(file_path, start, end, energy_key, forces_key):
+def _read_frames(file_path, start, end, energy_key, forces_key, weights):
     ds = Dataset.from_ase(
         path=file_path,
         energy_key=energy_key,
         forces_key=forces_key,
         slices=slice(start, end),
+        weight=weights,
     )
     return ds
 

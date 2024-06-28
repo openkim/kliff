@@ -58,8 +58,6 @@ def test_trainer():
     }
     assert trainer.dataset_manifest == expected_dataset_manifest
 
-    assert trainer.model_manifest["type"] == "torch"
-
     # check graph settings
     config_transform = {
         "name": "Graph",
@@ -83,7 +81,6 @@ def test_trainer():
 
     # check optimizer settings
     expected_optimizer_manifest = {
-        "provider": "torch",
         "name": "Adam",
         "learning_rate": 0.001,
         "kwargs": None,

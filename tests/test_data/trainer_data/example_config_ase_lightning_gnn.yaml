@@ -17,7 +17,6 @@ dataset:
           # stress: virial  # Key for stress, if ase dataset is used
 
 model:
-    type: torch     # torch or tar
     path: ./
     name: "TorchGNN" # Just a name for the model
     input_args:
@@ -46,7 +45,6 @@ training:
         loss_traj: False
     optimizer:
         name: Adam
-        provider: torch
         learning_rate:  1.e-3
 
     training_dataset:
