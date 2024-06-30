@@ -357,8 +357,9 @@ class Trainer:
         # Step 5 - Set up the test and train datasets, based on the provided indices
         self.setup_dataset_split()
         logger.info(f"Train and validation datasets set up.")
-        # Step 6 - Set up the model
-        self.setup_model()
+        # Step 6 - Set up the model, if not provided
+        if not self.model:
+            self.setup_model()
         logger.info(f"Model loaded.")
         # Step 6.5 - Setup parameter transform
         self.setup_parameter_transforms()

@@ -212,3 +212,5 @@ class KIMTrainer(Trainer):
                 tar.add(path, arcname=path.name)
             logger.info(f"Model tarball saved: {tarfile_path}")
         logger.info(f"KIM model saved at {path}")
+
+# TODO: Support for lst_sq in optimizer
