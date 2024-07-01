@@ -721,6 +721,38 @@ class Trainer:
                 """
         return cmake
 
+    def write_training_env_edn(self, path: str):
+        """
+        Generate the training_env.edn file for the KIM API. This file will be used to
+        accurately determine the training environment . The file will be saved in the current run directory.
+        It saves the hash of the configuration, and list of all python dependencies from
+        pip freeze.
+        """
+        env_file = f"{path}/training_env.edn"
+        with open(env_file, "w") as f:
+            try:
+                from kliff import __version__
+                from pip._internal.operations.freeze import freeze
+            except ImportError:
+                logger.warning(
+                    "Could not import kliff version or pip freeze. Skipping."
+                )
+                return
+            python_env = []
+            for module in list(freeze()):
+                if "@" in module:
+                    module = module.split("@")[0]
+                python_env.append(module)
+
+            f.write("{\n")
+            f.write(f'"kliff-version" "{__version__}"\n')
+            f.write(f'"manifest-hash" "{self.current["run_hash"]}"\n')
+            f.write(f'"python-dependencies" [\n')
+            for module in python_env:
+                f.write(f'    "{module}"\n')
+            f.write(f"]\n")
+            f.write("}\n")
+
 
 # Parallel processing for dataset loading #############################################
 def _parallel_read(

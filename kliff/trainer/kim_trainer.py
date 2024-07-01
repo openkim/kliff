@@ -206,6 +206,7 @@ class KIMTrainer(Trainer):
             / self.export_manifest["model_name"]
         )
         self.model.write_kim_model(path)
+        self.write_training_env_edn(path)
         if self.export_manifest["generate_tarball"]:
             tarfile_path = path.with_suffix(".tar.gz")
             with tarfile.open(tarfile_path, "w:gz") as tar:

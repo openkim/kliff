@@ -513,6 +513,9 @@ class GNNLightningTrainer(Trainer):
         with open(f"{path}/CMakeLists.txt", "w") as f:
             f.write(cmakefile)
 
+        # write training environment
+        self.write_training_env_edn(path)
+
         if self.export_manifest["generate_tarball"]:
             tarball_name = f"{path}.tar.gz"
             with tarfile.open(tarball_name, "w:gz") as tar:
