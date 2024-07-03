@@ -1,7 +1,9 @@
 import os
 import tarfile
-
+from copy import deepcopy
 from typing import TYPE_CHECKING
+
+import libdescriptor as lds
 import numpy as np
 import torch
 from loguru import logger
@@ -11,8 +13,6 @@ from torch_scatter import scatter_add
 
 from .base_trainer import Trainer, TrainerError
 from .torch_trainer_utils.dataloaders import DescriptorDataset
-
-import libdescriptor as lds
 
 if TYPE_CHECKING:
     from kliff.transforms.configuration_transforms import Descriptor
@@ -33,12 +33,15 @@ class DNNTrainer(Trainer):
     """
 
     def __init__(self, configuration: dict, model=None):
-        self.configuration_transform: "Descriptor" = None # for type checking the functions
+        self.configuration_transform: "Descriptor" = (
+            None  # for type checking the functions
+        )
         self.torchscript_file = None
         self.train_dataloader = None
         self.validation_dataloader = None
         self.lr_scheduler = None
         self.early_stopping = None
+        self.dtype = torch.float64
 
         super().__init__(configuration, model)
 
@@ -60,11 +63,11 @@ class DNNTrainer(Trainer):
         loss to the log file.
         """
         checkpoint = {
-                "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "current_step": self.current["step"],
-                "current_loss": self.current["loss"],
-            }
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "current_step": self.current["step"],
+            "current_loss": self.current["loss"],
+        }
 
         if self.lr_scheduler:
             checkpoint["lr_scheduler"] = self.lr_scheduler.state_dict()
@@ -75,8 +78,9 @@ class DNNTrainer(Trainer):
                 "best_loss": self.early_stopping.best_loss,
             }
 
-        torch.save(checkpoint,
-                   f"{self.current['run_dir']}/checkpoint_{self.current['step']}.pkl",
+        torch.save(
+            checkpoint,
+            f"{self.current['run_dir']}/checkpoint_{self.current['step']}.pkl",
         )
 
         # save best and last model
@@ -123,7 +127,6 @@ class DNNTrainer(Trainer):
             self.early_stopping.counter = checkpoint["early_stopping"]["counter"]
             self.early_stopping.best_loss = checkpoint["early_stopping"]["best_loss"]
 
-
     def get_last_checkpoint(self):
         """
         Get the last checkpoint file in the run directory.
@@ -136,7 +139,9 @@ class DNNTrainer(Trainer):
             for f in os.listdir(f"{self.current['run_dir']}")
             if f.startswith("checkpoint")
         ]
-        max_step = max(list(map(lambda x: int(x.split("_")[1].split(".")[0]), checkpoints)))
+        max_step = max(
+            list(map(lambda x: int(x.split("_")[1].split(".")[0]), checkpoints))
+        )
         return f"{self.current['run_dir']}/checkpoint_{max_step}.pkl"
 
     def get_optimizer(self):
@@ -151,7 +156,6 @@ class DNNTrainer(Trainer):
             return optimizer(
                 self.model.parameters(), lr=self.optimizer_manifest["learning_rate"]
             )
-        # TODO: Scheduler, early stopping, and ema
 
     def get_scheduler(self):
         """
@@ -161,8 +165,12 @@ class DNNTrainer(Trainer):
             torch.optim.lr_scheduler: The scheduler object.
         """
         if self.optimizer_manifest.get("lr_scheduler", None):
-            scheduler = getattr(torch.optim.lr_scheduler, self.optimizer_manifest["scheduler"])
-            return scheduler(self.optimizer, **self.optimizer_manifest["scheduler_kwargs"])
+            scheduler = getattr(
+                torch.optim.lr_scheduler, self.optimizer_manifest["scheduler"]
+            )
+            return scheduler(
+                self.optimizer, **self.optimizer_manifest["scheduler_kwargs"]
+            )
         return None
 
     def get_early_stopping(self):
@@ -173,7 +181,10 @@ class DNNTrainer(Trainer):
             EarlyStopping: The early stopping callback object.
         """
         if self.optimizer_manifest.get("early_stopping", None):
-            return _EarlyStopping(self.optimizer_manifest["early_stopping"]["patience"], self.optimizer_manifest["early_stopping"]["min_delta"])
+            return _EarlyStopping(
+                self.optimizer_manifest["early_stopping"]["patience"],
+                self.optimizer_manifest["early_stopping"]["min_delta"],
+            )
         return None
 
     def _get_loss_function(self):
@@ -183,9 +194,12 @@ class DNNTrainer(Trainer):
             # try torchmetrics for more loss functions
             try:
                 import torchmetrics
+
                 return getattr(torchmetrics, self.loss_manifest["function"])()
             except ImportError:
-                logger.info("torchmetrics not found. If you want to use its loss functions, please install it.")
+                logger.info(
+                    "torchmetrics not found. If you want to use its loss functions, please install it."
+                )
             raise TrainerError(
                 f"Loss function {self.loss_manifest['function']} not supported."
             )
@@ -234,21 +248,26 @@ class DNNTrainer(Trainer):
         contribution = batch["contribution"]
         ptr = batch["ptr"]
 
-        descriptors.requires_grad_(True)
-        descriptors.to(self.current["device"])
-        predictions = self.model(descriptors)
-        predictions = scatter_add(predictions, contribution, dim=0)
-        # check if gradient is NaN
-        grads = torch.autograd.grad(
-            predictions,
+        descriptor_tensor = torch.tensor(
             descriptors,
-            grad_outputs=torch.ones_like(predictions),
-            create_graph=True,
-            retain_graph=True,
-        )[0]
+            dtype=self.dtype,
+            device=self.current["device"],
+            requires_grad=True,
+        )
+        predictions = self.model(descriptor_tensor)
+        predictions = scatter_add(
+            predictions,
+            torch.tensor(
+                contribution, device=self.current["device"], dtype=torch.int64
+            ),
+            dim=0,
+        )
 
         loss = self.loss(
-            predictions, properties["energy"]
+            predictions,
+            torch.as_tensor(
+                properties["energy"], dtype=self.dtype, device=self.current["device"]
+            ),
         )  # energy will always be present for conservative models
         # TODO: Add per component loss extraction
         # TODO: Add per configuration loss extraction
@@ -261,36 +280,57 @@ class DNNTrainer(Trainer):
             or self.loss_manifest["weights"]["stress"]
         ):
             dE_dzeta = torch.autograd.grad(
-                predictions,
-                descriptors,
-                grad_outputs=torch.ones_like(predictions),
-                create_graph=True,
+                predictions.sum(),
+                descriptor_tensor,
                 retain_graph=True,
             )[0]
 
-            from copy import deepcopy
-
-            desc_before = deepcopy(descriptors)
             forces = lds.gradient_batch(
                 self.configuration_transform._cdesc,
-                torch.sum(n_atoms).detach().cpu().numpy(),
-                species.detach().cpu().numpy(),
-                neigh_list.detach().cpu().numpy(),
-                num_neigh.detach().cpu().numpy(),
-                coords.detach().cpu().numpy(),
-                descriptors.detach().cpu().numpy(),
-                dE_dzeta.detach().cpu().numpy(),
+                n_atoms,
+                ptr,
+                species,
+                neigh_list,
+                num_neigh,
+                coords,
+                descriptors,
+                dE_dzeta.double().detach().cpu().numpy(),
             )
 
-            forces_predicted = torch.zeros_like(properties["forces"])
-            forces = torch.from_numpy(forces).to(self.current["device"])
-            force_summed = scatter_add(forces, image, dim=0)
-            for i in range(len(ptr) - 1):
-                from_ = torch.sum(n_atoms[:i])
-                to_ = from_ + n_atoms[i]
-                forces_predicted[from_:to_] = force_summed[ptr[i] : ptr[i] + n_atoms[i]]
+            forces_predicted = torch.zeros(
+                properties["forces"].shape,
+                device=self.current["device"],
+                dtype=self.dtype,
+            )
+            forces = torch.tensor(
+                forces, device=self.current["device"], dtype=self.dtype
+            )
+            force_summed = scatter_add(
+                forces,
+                torch.tensor(image, device=self.current["device"], dtype=torch.int64),
+                dim=0,
+            )
+            n_atoms_tensor = torch.tensor(
+                n_atoms, device=self.current["device"], dtype=torch.int64
+            )
+            ptr_tensor = torch.tensor(
+                ptr, device=self.current["device"], dtype=torch.int64
+            )
+            for i in range(len(ptr_tensor) - 1):
+                from_ = torch.sum(n_atoms_tensor[:i])
+                to_ = from_ + n_atoms_tensor[i]
+                forces_predicted[from_:to_] = force_summed[
+                    ptr_tensor[i] : ptr_tensor[i] + n_atoms_tensor[i]
+                ]
 
-            loss_forces = self.loss(forces_predicted, properties["forces"])
+            loss_forces = self.loss(
+                forces_predicted,
+                torch.tensor(
+                    properties["forces"],
+                    device=self.current["device"],
+                    dtype=self.dtype,
+                ),
+            )
             # TODO: Add force loss dump feature for Josh's UQ
             loss = loss + loss_forces * self.loss_manifest["weights"]["forces"]
             # TODO: Discuss and check if this is correct
@@ -356,7 +396,7 @@ class DNNTrainer(Trainer):
                     self.current["loss"] = {"train": epoch_train_loss, "val": None}
                 logger.info(f"Epoch {epoch} completed. val loss: {epoch_val_loss}")
                 self.checkpoint()
-                if self.early_stopping(epoch_val_loss):
+                if self.early_stopping and self.early_stopping(epoch_val_loss):
                     logger.info(f"Early stopping at epoch {epoch}")
                     break
             self.current["step"] += 1
@@ -372,7 +412,7 @@ class DNNTrainer(Trainer):
         Load the torchscript model from the model manifest. If model is provided, ignore the manifest.
         """
         torchscript_path = self.model_manifest["path"]
-        self.model = torch.jit.load(torchscript_path)
+        model = torch.jit.load(torchscript_path)
 
         # change precision of model
         # if self.training_manifest["precision"] == "single":
@@ -383,7 +423,7 @@ class DNNTrainer(Trainer):
         #     raise TrainerError(
         #         f"Precision {self.training_manifest['precision']} not supported."
         #     )
-        self.model.to(self.current["device"])
+        self.model = model.to(device=self.current["device"], dtype=self.dtype)
 
     def save_kim_model(self, path: str = "kim-model"):
         """
@@ -403,14 +443,16 @@ class DNNTrainer(Trainer):
             torch.load(f"{self.current['run_dir']}/checkpoints/best_model.pth")
         )
 
-        model = torch.jit.script(self.model)
+        model = torch.jit.script(best_model)
 
         model = model.cpu()
         torch.jit.save(model, f"{path}/model.pt")
 
         # save the configuration transform
-        self.configuration_transform.export_kim_model(path, "model.pt") # kim_model.param
-        self.configuration_transform.save_descriptor_state(path) # descriptor.dat
+        self.configuration_transform.export_kim_model(
+            path, "model.pt"
+        )  # kim_model.param
+        self.configuration_transform.save_descriptor_state(path)  # descriptor.dat
 
         # CMakeLists.txt
         if not self.export_manifest["model_name"]:
@@ -423,6 +465,7 @@ class DNNTrainer(Trainer):
             "TorchML__MD_173118614730_000",
             ["model.pt", "descriptor.dat", "kim_model.param"],
         )
+
         with open(f"{path}/CMakeLists.txt", "w") as f:
             f.write(cmakefile)
 
@@ -435,7 +478,6 @@ class DNNTrainer(Trainer):
                 tar.add(path, arcname=os.path.basename(path))
             logger.info(f"Model tarball saved: {tarball_name}")
         logger.info(f"KIM model saved at {path}")
-
 
     def get_torchscript_model_from_tar(self):
         tarfile_path = self.model_manifest["path"]
@@ -463,26 +505,35 @@ class DNNTrainer(Trainer):
             )
 
     def _setup_descriptor_dataloaders(self):
-
-        self.train_dataset = DescriptorDataset(self.train_dataset)
-        if self.val_dataset:
-            self.val_dataset = DescriptorDataset(self.val_dataset)
-
         if self.dataset_manifest["dynamic_loading"]:
+            self.train_dataset = DescriptorDataset(self.train_dataset)
+
+            if self.val_dataset:
+                self.val_dataset = DescriptorDataset(self.val_dataset)
+
             self.train_dataset.add_transform(self.configuration_transform)
             if self.val_dataset:
                 self.val_dataset.add_transform(self.configuration_transform)
         else:
             for config in self.train_dataset:
-                config.fingerprint = self.configuration_transform(config)
+                config.fingerprint = self.configuration_transform(
+                    config, return_extended_state=True
+                )
+
+            self.train_dataset = DescriptorDataset(self.train_dataset)
+
             if self.val_dataset:
                 for config in self.val_dataset:
-                    config.fingerprint = self.configuration_transform(config)
+                    config.fingerprint = self.configuration_transform(
+                        config, return_extended_state=True
+                    )
+
+                self.val_dataset = DescriptorDataset(self.val_dataset)
 
         self.train_dataloader = TorchDataLoader(
             self.train_dataset,
             batch_size=self.optimizer_manifest["batch_size"],
-            shuffle=self.dataset_manifest["shuffle"],
+            shuffle=True,
             collate_fn=self.train_dataset.collate,
         )
         if self.val_dataset:

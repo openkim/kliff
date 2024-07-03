@@ -539,7 +539,6 @@ class Trainer:
                     ConfigurationClass = ConfigurationClass(
                         **kwargs, copy_to_config=False
                     )
-
                     self.configuration_transform = ConfigurationClass
 
     def setup_model(self):
@@ -731,8 +730,9 @@ class Trainer:
         env_file = f"{path}/training_env.edn"
         with open(env_file, "w") as f:
             try:
-                from kliff import __version__
                 from pip._internal.operations.freeze import freeze
+
+                from kliff import __version__
             except ImportError:
                 logger.warning(
                     "Could not import kliff version or pip freeze. Skipping."
