@@ -100,7 +100,6 @@ def test_trainer():
         "learning_rate": None,
         "kwargs": {"tol": 1e-06},
         "epochs": 1000,
-        "stop_condition": None,
         "num_workers": 2,
         "batch_size": 1,
     }

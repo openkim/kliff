@@ -149,7 +149,6 @@ class Trainer:
             "learning_rate": None,
             "kwargs": None,
             "epochs": 10000,
-            "stop_condition": None,
             "num_workers": None,
             "batch_size": 1,
         }
@@ -281,9 +280,6 @@ class Trainer:
 
         self.optimizer_manifest |= self.training_manifest.get("optimizer")
         self.optimizer_manifest["epochs"] = self.training_manifest.get("epochs", 10000)
-        self.optimizer_manifest["stop_condition"] = self.training_manifest.get(
-            "stop_condition", None
-        )
         self.optimizer_manifest["num_workers"] = self.training_manifest.get(
             "num_workers", None
         )
@@ -728,6 +724,7 @@ class Trainer:
         pip freeze.
         """
         env_file = f"{path}/training_env.edn"
+        hash = self.get_trainer_hash()
         with open(env_file, "w") as f:
             try:
                 from pip._internal.operations.freeze import freeze
@@ -746,7 +743,8 @@ class Trainer:
 
             f.write("{\n")
             f.write(f'"kliff-version" "{__version__}"\n')
-            f.write(f'"manifest-hash" "{self.current["run_hash"]}"\n')
+            f.write(f'"trainer-used" "{type(self).__name__}"\n')
+            f.write(f'"manifest-hash" "{hash}"\n')
             f.write(f'"python-dependencies" [\n')
             for module in python_env:
                 f.write(f'    "{module}"\n')

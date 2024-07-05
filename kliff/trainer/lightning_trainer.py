@@ -274,6 +274,7 @@ class GNNLightningTrainer(Trainer):
         self.callbacks = self._get_callbacks()
 
         # setup lightning trainer
+        self.setup_model()  # call setup_model explicitly as it converty torch -> lightning
         self.pl_trainer = self._get_pl_trainer()
 
     def setup_model(self):
@@ -293,6 +294,7 @@ class GNNLightningTrainer(Trainer):
         ema = True if self.optimizer_manifest.get("ema", False) else False
         if ema:
             ema_decay = self.optimizer_manifest.get("ema_decay", 0.99)
+            logger.info(f"Using Exponential Moving Average with decay rate {ema_decay}")
         else:
             ema_decay = None
 
@@ -312,6 +314,7 @@ class GNNLightningTrainer(Trainer):
             lr_scheduler=scheduler.get("name", None),
             lr_scheduler_args=scheduler.get("args", None),
         )
+        logger.info("Lightning Model setup complete.")
 
     def train(self):
         """
