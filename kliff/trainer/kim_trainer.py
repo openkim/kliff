@@ -206,9 +206,13 @@ class KIMTrainer(Trainer):
             / self.export_manifest["model_name"]
         )
         self.model.write_kim_model(path)
+        self.write_training_env_edn(path)
         if self.export_manifest["generate_tarball"]:
             tarfile_path = path.with_suffix(".tar.gz")
             with tarfile.open(tarfile_path, "w:gz") as tar:
                 tar.add(path, arcname=path.name)
             logger.info(f"Model tarball saved: {tarfile_path}")
         logger.info(f"KIM model saved at {path}")
+
+
+# TODO: Support for lst_sq in optimizer

@@ -352,7 +352,7 @@ class Descriptor(ConfigurationTransform):
         return output
 
     def save_descriptor_state(
-        self, path: Union[str, Path], fname: str = "descriptor.params"
+        self, path: Union[str, Path], fname: str = "descriptor.dat"
     ):
         """
         Write the descriptor parameters to a file, which can be used by libdescritpor

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import numpy as np
@@ -5,32 +6,33 @@ import pytest
 import torch
 import yaml
 
-from kliff.trainer import GNNLightningTrainer
+from kliff.trainer import DNNTrainer
 
 
-def test_trainer():
+def test_descriptor_trainer():
     """
     Basic tests for proper initialization of the Trainer module
     """
-    torch.set_default_tensor_type(torch.DoubleTensor)
     manifest_file = filename = (
         Path(__file__)
         .parents[1]
-        .joinpath("test_data/trainer_data/example_config_ase_lightning_gnn.yaml")
+        .joinpath("test_data/trainer_data/example_config_ase_dnn.yaml")
     )
-    model_file = (
-        Path(__file__).parents[1].joinpath("test_data/trainer_data/dummy_model.pt")
+    model = torch.jit.load(
+        Path(__file__).parents[1].joinpath("test_data/trainer_data/model_dnn.pt")
     )
+    model = model.double()
 
     manifest = yaml.safe_load(open(manifest_file, "r"))
-    model = torch.jit.load(model_file)
 
-    trainer = GNNLightningTrainer(manifest, model)
+    trainer = DNNTrainer(manifest)
 
-    # check basic initialization
-    assert trainer.model is model
-    assert trainer.current["best_loss"] == np.inf
-    assert trainer.current["best_model"] == None
+    loaded_model_dict = trainer.model.state_dict()
+    trainer_model_dict = model.state_dict()
+
+    for key in loaded_model_dict.keys():
+        assert torch.allclose(loaded_model_dict[key], trainer_model_dict[key])
+
     assert trainer.current["loss"] == None
     assert trainer.current["epoch"] == 0
     assert trainer.current["step"] == 0
@@ -40,8 +42,6 @@ def test_trainer():
     assert trainer.current["data_dir"] == "test_run/datasets"
     assert trainer.current["appending_to_previous_run"] == False
     assert trainer.current["verbose"] == False
-    assert trainer.current["ckpt_interval"] == 3
-    assert trainer.current["per_atom_loss"] == {"train": None, "val": None}
 
     # check dataset manifest
     expected_dataset_manifest = {
@@ -49,7 +49,7 @@ def test_trainer():
         "path": "../test_data/configs/Si_4.xyz",
         "save": False,
         "keys": {"energy": "Energy", "forces": "force"},
-        "dynamic_loading": True,
+        "dynamic_loading": False,
         "colabfit_dataset": {
             "dataset_name": None,
             "database_name": None,
@@ -58,19 +58,25 @@ def test_trainer():
     }
     assert trainer.dataset_manifest == expected_dataset_manifest
 
-    # check graph settings
+    # check descriptor settings
     config_transform = {
-        "name": "Graph",
-        "kwargs": {"cutoff": 3.77, "species": ["Si"], "n_layers": 1},
+        "name": "Descriptor",
+        "kwargs": {
+            "cutoff": 4.0,
+            "species": ["Si"],
+            "descriptor": "SymmetryFunctions",
+            "hyperparameters": "set51",
+        },
     }
     assert trainer.transform_manifest["configuration"] == config_transform
 
     expected_loss_manifest = {
         "function": "MSE",
-        "weights": {"config": 1.0, "energy": 1.0, "forces": 10.0, "stress": None},
-        "normalize_per_atom": False,
+        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0, "stress": None},
+        "normalize_per_atom": True,
         "loss_traj": False,
     }
+
     assert trainer.loss_manifest == expected_loss_manifest
 
     # dataset samples
@@ -82,29 +88,36 @@ def test_trainer():
     # check optimizer settings
     expected_optimizer_manifest = {
         "name": "Adam",
-        "learning_rate": 0.001,
+        "learning_rate": 1.0e-3,
         "kwargs": None,
         "epochs": 2,
         "num_workers": None,
-        "batch_size": 1,
+        "batch_size": 2,
+        "lr_scheduler": {
+            "name": "ReduceLROnPlateau",
+            "args": {"factor": 0.5, "patience": 5, "min_lr": 1.0e-6},
+        },
     }
     assert trainer.optimizer_manifest == expected_optimizer_manifest
 
     # dummy training
     trainer.train()
     # check if the trainer exited without any errors, check if .finished file is created
-    assert trainer.pl_trainer.state.finished
-    assert Path(f"{trainer.current['run_dir']}/.finished").exists()
-
-    # check if the best model is saved
-    assert Path(f"{trainer.current['run_dir']}/checkpoints/best_model.pth").exists()
-    assert Path(f"{trainer.current['run_dir']}/checkpoints/last_model.pth").exists()
+    assert os.path.exists(f'{trainer.current["run_dir"]}/.finished')
 
     # check if the kim model is saved, default folder is kim-model
     trainer.save_kim_model()
-    assert Path(f"kim-model/model.pt").exists()
-    assert Path(f"kim-model/kliff_graph.param").exists()
-    assert Path(f"kim-model/CMakeLists.txt").exists()
+    assert os.path.exists("./kim-model/CMakeLists.txt")
 
-    # check restart
-    # TODO: implement restart test
+    # check if checkpoints are properly saved
+    ckpt = f'{trainer.current["run_dir"]}/checkpoints/checkpoint_0.pkl'
+    assert os.path.exists(ckpt)
+    ckpt_dict = torch.load(ckpt)
+    assert ckpt_dict["model_state_dict"].keys() == model.state_dict().keys()
+    assert (
+        ckpt_dict["optimizer_state_dict"].keys()
+        == trainer.optimizer.state_dict().keys()
+    )
+    assert ckpt_dict["current_step"] == 0
+    assert ckpt_dict["lr_scheduler"].keys() == trainer.lr_scheduler.state_dict().keys()
+    assert ckpt_dict["early_stopping"] == {"counter": 0, "best_loss": np.inf}

@@ -149,7 +149,6 @@ class Trainer:
             "learning_rate": None,
             "kwargs": None,
             "epochs": 10000,
-            "stop_condition": None,
             "num_workers": None,
             "batch_size": 1,
         }
@@ -281,9 +280,6 @@ class Trainer:
 
         self.optimizer_manifest |= self.training_manifest.get("optimizer")
         self.optimizer_manifest["epochs"] = self.training_manifest.get("epochs", 10000)
-        self.optimizer_manifest["stop_condition"] = self.training_manifest.get(
-            "stop_condition", None
-        )
         self.optimizer_manifest["num_workers"] = self.training_manifest.get(
             "num_workers", None
         )
@@ -357,8 +353,9 @@ class Trainer:
         # Step 5 - Set up the test and train datasets, based on the provided indices
         self.setup_dataset_split()
         logger.info(f"Train and validation datasets set up.")
-        # Step 6 - Set up the model
-        self.setup_model()
+        # Step 6 - Set up the model, if not provided
+        if not self.model:
+            self.setup_model()
         logger.info(f"Model loaded.")
         # Step 6.5 - Setup parameter transform
         self.setup_parameter_transforms()
@@ -538,7 +535,6 @@ class Trainer:
                     ConfigurationClass = ConfigurationClass(
                         **kwargs, copy_to_config=False
                     )
-
                     self.configuration_transform = ConfigurationClass
 
     def setup_model(self):
@@ -719,6 +715,41 @@ class Trainer:
                     )
                 """
         return cmake
+
+    def write_training_env_edn(self, path: str):
+        """
+        Generate the training_env.edn file for the KIM API. This file will be used to
+        accurately determine the training environment . The file will be saved in the current run directory.
+        It saves the hash of the configuration, and list of all python dependencies from
+        pip freeze.
+        """
+        env_file = f"{path}/training_env.edn"
+        hash = self.get_trainer_hash()
+        with open(env_file, "w") as f:
+            try:
+                from pip._internal.operations.freeze import freeze
+
+                from kliff import __version__
+            except ImportError:
+                logger.warning(
+                    "Could not import kliff version or pip freeze. Skipping."
+                )
+                return
+            python_env = []
+            for module in list(freeze()):
+                if "@" in module:
+                    module = module.split("@")[0]
+                python_env.append(module)
+
+            f.write("{\n")
+            f.write(f'"kliff-version" "{__version__}"\n')
+            f.write(f'"trainer-used" "{type(self).__name__}"\n')
+            f.write(f'"manifest-hash" "{hash}"\n')
+            f.write(f'"python-dependencies" [\n')
+            for module in python_env:
+                f.write(f'    "{module}"\n')
+            f.write(f"]\n")
+            f.write("}\n")
 
 
 # Parallel processing for dataset loading #############################################
