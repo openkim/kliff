@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from loguru import logger
 
-from kliff.descriptors.descriptor import Descriptor
+from kliff.legacy.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
 
 
@@ -18,8 +18,8 @@ class ModelTorch(nn.Module):
 
     Args:
         descriptor: atomic environment descriptor for computing configuration
-            fingerprints. See :meth:`~kliff.descriptors.SymmetryFunction` and
-            :meth:`~kliff.descriptors.Bispectrum`.
+            fingerprints. See :meth:`~kliff.legacy.descriptors.SymmetryFunction` and
+            :meth:`~kliff.legacy.descriptors.Bispectrum`.
         seed: random seed.
     """
 

@@ -3,8 +3,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kliff.calculators import Calculator
 from kliff.dataset import Dataset
+from kliff.legacy.calculators import Calculator
 from kliff.models import KIMModel
 
 ref_energies = [-277.409737571, -275.597759276, -276.528342759, -275.482988187]

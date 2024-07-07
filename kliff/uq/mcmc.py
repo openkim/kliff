@@ -4,7 +4,7 @@ from typing import Callable, List, Optional
 import numpy as np
 
 from kliff.error import report_import_error
-from kliff.loss import Loss
+from kliff.legacy.loss import Loss
 
 try:
     import emcee
@@ -50,7 +50,7 @@ def get_T0(loss: Loss) -> float:
     The minimum loss is the loss value at the optimal parameters.
 
     Args:
-        loss: Loss function class from :class:`~kliff.loss.Loss`.
+        loss: Loss function class from :class:`~kliff.legacy.loss.Loss`.
 
     Returns:
         Value of the natural temperature.
@@ -68,7 +68,7 @@ class MCMC:
     :class:`EmceeSampler`. Currently, only these  2 samplers implemented.
 
     Args:
-        loss: Loss function class from :class:`~kliff.loss.Loss`.
+        loss: Loss function class from :class:`~kliff.legacy.loss.Loss`.
         nwalkers: Number of walkers to simulate. The minimum number of walkers is twice
         the number of parameters. It defaults to this minimum value.
         logprior_fn: A function that evaluate logarithm of the prior distribution. The
@@ -152,7 +152,7 @@ if ptemcee_avail:
         """Sampler class for PTMCMC via ``ptemcee`` Python package.
 
         Args:
-            loss: Loss function instance from :class:`~kliff.loss.Loss`.
+            loss: Loss function instance from :class:`~kliff.legacy.loss.Loss`.
             nwalkers: Number of walkers to simulate. The minimum number of walkers is
                 twice the number of parameters. It defaults to this minimum value.
             ntemps: Number of temperatures to simulate. It defaults to 10.
@@ -171,7 +171,7 @@ if ptemcee_avail:
             **kwargs: Additional keyword arguments for ``ptemcee.Sampler``.
 
         Attributes:
-            loss: Loss function instance from :class:`~kliff.loss.Loss`
+            loss: Loss function instance from :class:`~kliff.legacy.loss.Loss`
             T0: Values of the natural temperature, :math:`T_0` [Frederiksen2004]_.
             Tladder: An array containing the values of the sampling temperatures.
             sampler: Sampler instance from ``ptemcee.Sampler``
@@ -248,7 +248,7 @@ if emcee_avail:
         """Sampler class for affine invariant MCMC via ``emcee`` Python package.
 
         Args:
-            loss: Loss function instance from :class:`~kliff.loss.Loss`.
+            loss: Loss function instance from :class:`~kliff.legacy.loss.Loss`.
             nwalkers: Number of walkers to simulate. The minimum number of walkers is
                 twice the number of parameters. It defaults to this minimum value.
             T: Sampling temperatures, used to inflate the likelihood function in the MCMC
@@ -262,7 +262,7 @@ if emcee_avail:
             **kwargs: Additional keyword arguments for ``emcee.EnsembleSampler``.
 
         Attributes:
-            loss: Loss function instance from :class:`~kliff.loss.Loss`
+            loss: Loss function instance from :class:`~kliff.legacy.loss.Loss`
             T: Values of the sampling temperature.
             sampler: Sampler instance from ``emcee.EnsembleSampler``
 

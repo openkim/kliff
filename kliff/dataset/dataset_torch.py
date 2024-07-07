@@ -4,7 +4,7 @@ from typing import Callable, Optional
 import torch
 from torch.utils.data import Dataset
 
-from kliff.descriptors.descriptor import load_fingerprints
+from kliff.legacy.descriptors.descriptor import load_fingerprints
 
 
 class FingerprintsDataset(Dataset):

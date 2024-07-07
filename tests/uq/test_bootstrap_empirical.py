@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from scipy.optimize import OptimizeResult
 
-from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset import Dataset
-from kliff.loss import Loss
+from kliff.legacy.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.legacy.loss import Loss
 from kliff.models import KIMModel
 from kliff.uq.bootstrap import (
     Bootstrap,
