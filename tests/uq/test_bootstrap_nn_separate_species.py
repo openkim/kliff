@@ -3,11 +3,11 @@ from pathlib import Path
 
 import numpy as np
 
-from kliff import nn
-from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
 from kliff.dataset import Dataset
-from kliff.descriptors import SymmetryFunction
-from kliff.loss import Loss
+from kliff.legacy import nn
+from kliff.legacy.calculators.calculator_torch import CalculatorTorchSeparateSpecies
+from kliff.legacy.descriptors import SymmetryFunction
+from kliff.legacy.loss import Loss
 from kliff.models import NeuralNetwork
 from kliff.uq.bootstrap import BootstrapNeuralNetworkModel
 

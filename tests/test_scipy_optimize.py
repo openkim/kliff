@@ -1,8 +1,8 @@
 import numpy as np
 
-from kliff.calculators import Calculator
 from kliff.dataset import Dataset
-from kliff.loss import Loss
+from kliff.legacy.calculators import Calculator
+from kliff.legacy.loss import Loss
 from kliff.models import KIMModel
 
 

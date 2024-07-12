@@ -4,13 +4,13 @@ from collections import OrderedDict
 import numpy as np
 from loguru import logger
 
-from kliff.descriptors.descriptor import (
+from kliff.legacy.descriptors.descriptor import (
     Descriptor,
     generate_full_cutoff,
     generate_species_code,
     generate_unique_cutoff_pairs,
 )
-from kliff.descriptors.symmetry_function import sf  # C extension
+from kliff.legacy.descriptors.symmetry_function import sf  # C extension
 from kliff.neighbor import NeighborList
 
 

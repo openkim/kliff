@@ -6,10 +6,10 @@ import scipy.optimize
 from loguru import logger
 
 from kliff import parallel
-from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.calculators.calculator_torch import CalculatorTorch
 from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
+from kliff.legacy.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.legacy.calculators.calculator_torch import CalculatorTorch
 
 try:
     import torch

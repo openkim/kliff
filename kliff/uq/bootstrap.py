@@ -6,9 +6,9 @@ from typing import Any, Callable, List, Optional, Union
 
 import numpy as np
 
-from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
-from kliff.loss import (
+from kliff.legacy.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.legacy.calculators.calculator_torch import CalculatorTorchSeparateSpecies
+from kliff.legacy.loss import (
     Loss,
     LossNeuralNetworkModel,
     LossPhysicsMotivatedModel,
@@ -23,7 +23,7 @@ class _BaseBootstrap:
     Base class for bootstrap sampler.
 
     Args:
-        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        loss: Loss function class instance from :class:`~kliff.legacy.loss.Loss`.
         seed: Random number generator seed.
     """
 
@@ -154,7 +154,7 @@ class Bootstrap:
     two classes directly.
 
     Args:
-        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        loss: Loss function class instance from :class:`~kliff.legacy.loss.Loss`.
         seed: Random number generator seed.
         args, kwargs: Additional positional and keyword arguments for instantiating
             :class:`BootstrapEmpiricalModel` or :class:`BootstrapNeuralNetworkModel`.
@@ -271,7 +271,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
     Bootstrap sampler class for empirical, physics-based potentials.
 
     Args:
-        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        loss: Loss function class instance from :class:`~kliff.legacy.loss.Loss`.
         seed: Random number generator seed.
     """
 
@@ -396,7 +396,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
         potential using each compute arguments sample.
 
         Args:
-            min_kwargs: Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
+            min_kwargs: Keyword arguments for :meth:`~kliff.legacy.loss.Loss.minimize`.
             initial_guess: (ndim,) Initial guess of parameters to use for the
                 minimization. It is recommended to use the same values as used in the
                 training process if such step is done prior to running bootstrap.
@@ -405,7 +405,7 @@ class BootstrapEmpiricalModel(_BaseBootstrap):
                 If there is only a single calculator, don't worry about this argument.
             callback: Called after each iteration. The arguments for this function are
                 the bootstrap instance and and output of
-                :meth:`~kliff.loss.Loss.minimize`. This function can also be used to
+                :meth:`~kliff.legacy.loss.Loss.minimize`. This function can also be used to
                 break the run, by returning boolean `True`.
 
         Returns:
@@ -565,7 +565,7 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
     Bootstrap sampler class for neural network potentials.
 
     Args:
-        loss: Loss function class instance from :class:`~kliff.loss.Loss`.
+        loss: Loss function class instance from :class:`~kliff.legacy.loss.Loss`.
         seed: Random number generator seed.
         orig_state_filename: Name of the file in which the initial state of the model
             prior to bootstrapping will be stored. This is to use at the end of the
@@ -703,10 +703,10 @@ class BootstrapNeuralNetworkModel(_BaseBootstrap):
         potential using each compute arguments sample.
 
         Args:
-            min_kwargs: Keyword arguments for :meth:`~kliff.loss.Loss.minimize`.
+            min_kwargs: Keyword arguments for :meth:`~kliff.legacy.loss.Loss.minimize`.
             callback: Called after each iteration. The arguments for this function are
                 the bootstrap instance and and output of
-                :meth:`~kliff.loss.Loss.minimize`. This function can also be used to
+                :meth:`~kliff.legacy.loss.Loss.minimize`. This function can also be used to
                 break the run, by returning boolean `True`.
 
         Returns:

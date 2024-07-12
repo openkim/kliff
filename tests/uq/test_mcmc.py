@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kliff.calculators import Calculator
 from kliff.dataset import Dataset
-from kliff.loss import Loss
+from kliff.legacy.calculators import Calculator
+from kliff.legacy.loss import Loss
 from kliff.models import KIMModel
 from kliff.uq import MCMC, get_T0
 

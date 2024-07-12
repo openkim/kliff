@@ -8,11 +8,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kliff import nn
-from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
-from kliff.descriptors import SymmetryFunction
-from kliff.loss import Loss
+from kliff.legacy import nn
+from kliff.legacy.calculators import CalculatorTorch
+from kliff.legacy.descriptors import SymmetryFunction
+from kliff.legacy.loss import Loss
 from kliff.models import NeuralNetwork
 from kliff.uq.bootstrap import (
     Bootstrap,

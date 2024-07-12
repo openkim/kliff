@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from kliff.dataset import Configuration
-from kliff.descriptors import Bispectrum, SymmetryFunction
+from kliff.legacy.descriptors import Bispectrum, SymmetryFunction
 from kliff.transforms.configuration_transforms.descriptors import (
     Descriptor,
     bispectrum_default,

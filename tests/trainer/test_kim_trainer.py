@@ -13,11 +13,25 @@ def test_trainer():
     """
     Basic tests for proper initialization of the Trainer module
     """
-    manifest_file = filename = (
+    manifest_file_template = (
         Path(__file__)
         .parents[1]
-        .joinpath("test_data/trainer_data/example_config_ase_kim.yaml")
+        .joinpath("test_data/trainer_data/training_manifest_ase_kim.yaml.tpl")
     )
+    data_file = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
+
+    manifest_data = yaml.safe_load(open(manifest_file_template, "r"))
+
+    manifest_data["dataset"]["path"] = str(data_file)
+
+    manifest_file = (
+        Path(__file__)
+        .parents[1]
+        .joinpath("test_data/trainer_data/manifest_ase_kim.yaml")
+    )
+    with open(manifest_file, "w") as f:
+        yaml.dump(manifest_data, f)
+
     model = KIMModel("SW_StillingerWeber_1985_Si__MO_405512056662_006")
 
     manifest = yaml.safe_load(open(manifest_file, "r"))
@@ -53,7 +67,7 @@ def test_trainer():
     # check dataset manifest
     expected_dataset_manifest = {
         "type": "ase",
-        "path": "../test_data/configs/Si_4.xyz",
+        "path": str(data_file),
         "save": False,
         "keys": {"energy": "Energy", "forces": "force"},
         "dynamic_loading": False,

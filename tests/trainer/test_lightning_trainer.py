@@ -13,16 +13,32 @@ def test_trainer():
     Basic tests for proper initialization of the Trainer module
     """
     torch.set_default_tensor_type(torch.DoubleTensor)
-    manifest_file = filename = (
+    manifest_file_template = (
         Path(__file__)
         .parents[1]
-        .joinpath("test_data/trainer_data/example_config_ase_lightning_gnn.yaml")
+        .joinpath("test_data/trainer_data/training_manifest_ase_lightning_gnn.yaml.tpl")
     )
     model_file = (
         Path(__file__).parents[1].joinpath("test_data/trainer_data/dummy_model.pt")
     )
 
+    data_file = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
+
+    manifest_data = yaml.safe_load(open(manifest_file_template, "r"))
+
+    manifest_data["model"]["path"] = str(model_file)
+    manifest_data["dataset"]["path"] = str(data_file)
+
+    manifest_file = (
+        Path(__file__)
+        .parents[1]
+        .joinpath("test_data/trainer_data/manifest_ase_lightning_gnn.yaml")
+    )
+    with open(manifest_file, "w") as f:
+        yaml.dump(manifest_data, f)
+
     manifest = yaml.safe_load(open(manifest_file, "r"))
+
     model = torch.jit.load(model_file)
 
     trainer = GNNLightningTrainer(manifest, model)
@@ -46,7 +62,7 @@ def test_trainer():
     # check dataset manifest
     expected_dataset_manifest = {
         "type": "ase",
-        "path": "../test_data/configs/Si_4.xyz",
+        "path": str(data_file),
         "save": False,
         "keys": {"energy": "Energy", "forces": "force"},
         "dynamic_loading": True,
