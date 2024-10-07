@@ -1,8 +1,9 @@
 from pathlib import Path
+
 import pytest
 
-from kliff.models import KIMModel
 from kliff.dataset import Dataset
+from kliff.models import KIMModel
 
 
 @pytest.fixture(scope="session")

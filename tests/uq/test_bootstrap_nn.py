@@ -94,7 +94,9 @@ def test_bootstrap_cas_generator(BS, fingerprints):
     assert np.all(
         [len(bs_cas) == fingerprints[1] for _, bs_cas in bootstrap_cas.items()]
     ), "For each sample, generator should generate the same number of cas as the original"
-    assert BS._nsamples_prepared == nsamples, "`_nsamples_prepared` property doesn't work"
+    assert (
+        BS._nsamples_prepared == nsamples
+    ), "`_nsamples_prepared` property doesn't work"
 
     # Test the shape of bootstrap cas samples if we specify the number of cas to generate
     nfp = fingerprints[1] - 1

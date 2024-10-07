@@ -1,6 +1,5 @@
-import pytest
-
 import numpy as np
+import pytest
 from scipy.optimize import OptimizeResult
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
@@ -106,7 +105,9 @@ def test_bootstrap_cas_generator(BS_1calc, calc_forces):
 
     # Test the shape of bootstrap cas samples if we specify the number of cas to generate
     ncas = ncas_forces - 1
-    bootstrap_cas_2 = bootstrap_cas_generator_empirical(nsamples, [cas_forces], ncas=ncas)
+    bootstrap_cas_2 = bootstrap_cas_generator_empirical(
+        nsamples, [cas_forces], ncas=ncas
+    )
     assert np.all(
         [
             [len(bs_cas) == ncas for bs_cas in bootstrap_cas_2[ii]]

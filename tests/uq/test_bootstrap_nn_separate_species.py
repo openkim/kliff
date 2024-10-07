@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
-import pytest
 
 import numpy as np
+import pytest
 
 from kliff import nn
 from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
@@ -93,7 +93,9 @@ def test_original_state(BS, uq_nn_orig_state_filename):
     ), "There should be 2 elements in orig_state_filename"
     # check elements
     splitted_path = os.path.splitext(uq_nn_orig_state_filename)
-    fnames = [Path(splitted_path[0] + f"_{el}" + splitted_path[1]) for el in ["Si", "C"]]
+    fnames = [
+        Path(splitted_path[0] + f"_{el}" + splitted_path[1]) for el in ["Si", "C"]
+    ]
     assert np.all(
         [str(fname) in BS.orig_state_filename for fname in fnames]
     ), "Not all original state filename are listed"
