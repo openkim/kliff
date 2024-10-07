@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
+import pytest
 
 import numpy as np
 
 from kliff import nn
 from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
-from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
@@ -14,52 +14,68 @@ from kliff.uq.bootstrap import BootstrapNeuralNetworkModel
 seed = 1717
 np.random.seed(seed)
 
-# descriptor
-descriptor = SymmetryFunction(
-    cut_name="cos",
-    cut_dists={"Si-Si": 5.0, "C-C": 5.0, "Si-C": 5.0},
-    hyperparams="set30",
-    normalize=True,
-)
-
-# models
-# Si
-N1 = np.random.randint(5, 10)
-model_si = NeuralNetwork(descriptor)
-model_si.add_layers(
-    nn.Linear(descriptor.get_size(), N1),
-    nn.Tanh(),
-    nn.Linear(N1, 1),
-)
-
-# C
-model_c = NeuralNetwork(descriptor)
-model_c.add_layers(
-    nn.Linear(descriptor.get_size(), N1),
-    nn.Tanh(),
-    nn.Linear(N1, 1),
-)
-
-# training set
-FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
-path = FILE_DIR.parent.joinpath("test_data/configs/SiC_4")
-data = Dataset(path)
-configs = data.get_configs()
-
-# calculators
-calc = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
-_ = calc.create(configs, use_energy=False, use_forces=True)
-
-loss = Loss(calc)
-min_kwargs = dict(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
-result = loss.minimize(**min_kwargs)
-
-orig_state_filename = FILE_DIR / "orig_model.pkl"
-BS = BootstrapNeuralNetworkModel(loss, orig_state_filename=orig_state_filename)
+# Number of bootstrap samples
 nsamples = np.random.randint(1, 5)
+# Number of nodes of the model
+N = np.random.randint(5, 10)
+# Optimizer settings
+min_kwargs = dict(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 
-def test_model():
+@pytest.fixture(scope="session")
+def descriptor():
+    """Return atomic descriptor."""
+    return SymmetryFunction(
+        cut_name="cos",
+        cut_dists={"Si-Si": 5.0, "C-C": 5.0, "Si-C": 5.0},
+        hyperparams="set30",
+        normalize=True,
+    )
+
+
+@pytest.fixture(scope="session")
+def model_si(descriptor):
+    """Return a model for Si."""
+    model = NeuralNetwork(descriptor)
+    model.add_layers(
+        nn.Linear(descriptor.get_size(), N),
+        nn.Tanh(),
+        nn.Linear(N, 1),
+    )
+    return model
+
+
+@pytest.fixture(scope="session")
+def model_c(descriptor):
+    """Return a model for C."""
+    model = NeuralNetwork(descriptor)
+    model.add_layers(
+        nn.Linear(descriptor.get_size(), N),
+        nn.Tanh(),
+        nn.Linear(N, 1),
+    )
+    return model
+
+
+@pytest.fixture(scope="session")
+def calc(uq_test_configs, model_si, model_c):
+    """Calculator for the test."""
+    calculator = CalculatorTorchSeparateSpecies({"Si": model_si, "C": model_c})
+    _ = calculator.create(uq_test_configs, use_energy=False, use_forces=True)
+    return calculator
+
+
+@pytest.fixture(scope="session")
+def BS(calc, uq_nn_orig_state_filename):
+    """Return a Bootstrap object."""
+    loss = Loss(calc)
+    _ = loss.minimize(**min_kwargs)
+    return BootstrapNeuralNetworkModel(
+        loss, orig_state_filename=uq_nn_orig_state_filename
+    )
+
+
+def test_model(BS):
     """Test the model property."""
     # models
     assert len(BS.model) == 2, "There should be 2 elements in BS.model"
@@ -69,17 +85,15 @@ def test_model():
     ), "There are species not recorded"
 
 
-def test_original_state():
+def test_original_state(BS, uq_nn_orig_state_filename):
     """Test we export the original states for all models when we instantiate the class."""
     # check shape
     assert (
         len(BS.orig_state_filename) == 2
     ), "There should be 2 elements in orig_state_filename"
     # check elements
-    splitted_path = os.path.splitext(orig_state_filename)
-    fnames = [
-        Path(splitted_path[0] + f"_{el}" + splitted_path[1]) for el in ["Si", "C"]
-    ]
+    splitted_path = os.path.splitext(uq_nn_orig_state_filename)
+    fnames = [Path(splitted_path[0] + f"_{el}" + splitted_path[1]) for el in ["Si", "C"]]
     assert np.all(
         [str(fname) in BS.orig_state_filename for fname in fnames]
     ), "Not all original state filename are listed"
@@ -89,7 +103,7 @@ def test_original_state():
     ), "Not all original state is not exported"
 
 
-def test_run():
+def test_run(BS, calc):
     """Test the method to run the calculation."""
     BS.generate_bootstrap_compute_arguments(nsamples)
     BS.run(min_kwargs=min_kwargs)

@@ -1,13 +1,10 @@
-from pathlib import Path
+import pytest
 
 import numpy as np
-import pytest
 from scipy.optimize import OptimizeResult
 
 from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.dataset import Dataset
 from kliff.loss import Loss
-from kliff.models import KIMModel
 from kliff.uq.bootstrap import (
     Bootstrap,
     BootstrapEmpiricalModel,
@@ -15,61 +12,72 @@ from kliff.uq.bootstrap import (
     bootstrap_cas_generator_empirical,
 )
 
-seed = 1717
-np.random.seed(seed)
+np.random.seed(1717)
 
-# model
-modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-model = KIMModel(modelname)
-model.set_opt_params(A=[["default"]])
-
-# training set
-FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
-path = FILE_DIR.parent.joinpath("test_data/configs/Si_4")
-data = Dataset(path)
-configs = data.get_configs()
-
-# calculators
-# forces
-calc_forces = Calculator(model)
-cas_forces = calc_forces.create(configs, use_energy=False, use_forces=True)
-ncas_forces = len(calc_forces.get_compute_arguments())
-calc_energy = Calculator(model)
-cas_energy = calc_energy.create(configs, use_energy=True, use_forces=False)
-ncas_energy = len(calc_energy.get_compute_arguments())
-calc_comb = _WrapperCalculator(calculators=[calc_energy, calc_forces])
+# Some variables
+min_kwargs = dict(method="lm")  # Optimizer settings
+nsamples = np.random.randint(1, 5)  # Number of samples
 
 
-# Single calculator
-# loss
-min_kwargs = dict(method="lm")
-loss_forces = Loss(calc_forces)
-loss_forces.minimize(**min_kwargs)
-# initial state
-orig_params = calc_forces.get_opt_params()
-
-# Bootstrap class
-BS_1calc = Bootstrap(loss_forces)
-nsamples = np.random.randint(1, 5)
+@pytest.fixture(scope="module")
+def calc_forces(uq_kim_model, uq_test_configs):
+    """Calculator that only computes forces."""
+    calculator_forces = Calculator(uq_kim_model)
+    cas_forces = calculator_forces.create(
+        uq_test_configs, use_energy=False, use_forces=True
+    )
+    ncas_forces = len(cas_forces)
+    return calculator_forces, cas_forces, ncas_forces
 
 
-# Multiple calculators
-# loss
-loss_comb = Loss(calc_comb)
-loss_comb.minimize(**min_kwargs)
+@pytest.fixture(scope="module")
+def calc_energy(uq_kim_model, uq_test_configs):
+    """Calculator that only computes energy."""
+    calculator_energy = Calculator(uq_kim_model)
+    cas_energy = calculator_energy.create(
+        uq_test_configs, use_energy=True, use_forces=False
+    )
+    ncas_energy = len(cas_energy)
+    return calculator_energy, ncas_energy
 
-# Bootstrap class
-BS_2calc = Bootstrap(loss_comb)
+
+@pytest.fixture(scope="module")
+def BS_1calc(calc_forces):
+    """Bootstrap class with a single calculator."""
+    loss_forces = Loss(calc_forces[0])
+    loss_forces.minimize(**min_kwargs)
+    return Bootstrap(loss_forces)
 
 
-def test_wrapper():
+@pytest.fixture(scope="module")
+def orig_params(calc_forces, BS_1calc):
+    """Original parameters of the model."""
+    return calc_forces[0].get_opt_params()
+
+
+@pytest.fixture(scope="module")
+def BS_2calc(uq_kim_model, uq_test_configs):
+    """Bootstrap class with multiple calculators."""
+    # Combined calculators
+    calculator_forces = Calculator(uq_kim_model)
+    _ = calculator_forces.create(uq_test_configs, use_energy=False, use_forces=True)
+    calculator_energy = Calculator(uq_kim_model)
+    _ = calculator_energy.create(uq_test_configs, use_energy=True, use_forces=False)
+    calc_comb = _WrapperCalculator(calculators=[calculator_energy, calculator_forces])
+
+    loss_comb = Loss(calc_comb)
+    loss_comb.minimize(**min_kwargs)
+    return Bootstrap(loss_comb)
+
+
+def test_wrapper(BS_1calc):
     """Test if the Bootstrap class wrapper instantiate the correct class."""
     assert isinstance(
         BS_1calc, BootstrapEmpiricalModel
     ), "Wrapper should instantiate BootstrapEmpiricalModel"
 
 
-def test_error():
+def test_error(BS_1calc):
     """Test if BootstrapError is raised when we try to call run before generating
     bootstrap compute arguments.
     """
@@ -77,10 +85,11 @@ def test_error():
         BS_1calc.run(min_kwargs=min_kwargs)
 
 
-def test_bootstrap_cas_generator():
+def test_bootstrap_cas_generator(BS_1calc, calc_forces):
     """Test the shape of generated bootstrap compute arguments."""
     BS_1calc.generate_bootstrap_compute_arguments(nsamples)
     bootstrap_cas = BS_1calc.bootstrap_compute_arguments
+    _, cas_forces, ncas_forces = calc_forces
     # Test the shape of bootstrap cas samples with default arguments
     assert (
         len(bootstrap_cas) == nsamples
@@ -97,9 +106,7 @@ def test_bootstrap_cas_generator():
 
     # Test the shape of bootstrap cas samples if we specify the number of cas to generate
     ncas = ncas_forces - 1
-    bootstrap_cas_2 = bootstrap_cas_generator_empirical(
-        nsamples, [cas_forces], ncas=ncas
-    )
+    bootstrap_cas_2 = bootstrap_cas_generator_empirical(nsamples, [cas_forces], ncas=ncas)
     assert np.all(
         [
             [len(bs_cas) == ncas for bs_cas in bootstrap_cas_2[ii]]
@@ -108,7 +115,7 @@ def test_bootstrap_cas_generator():
     ), "Generator doesn't generate the same number of cas as requested for each sample"
 
 
-def test_callback():
+def test_callback(BS_1calc):
     """Test if callback function works and can break the loop in run method."""
 
     def callback(_, opt):
@@ -121,7 +128,7 @@ def test_callback():
     ), "Callback function cannot break the loop in run method."
 
 
-def test_run():
+def test_run(BS_1calc, orig_params):
     """Test the method to run the calculation."""
     BS_1calc.run(min_kwargs=min_kwargs)
     # Test the shape of ensembles
@@ -138,7 +145,7 @@ def test_run():
     ), "Parameters are not restored to initial state"
 
 
-def test_appending_cas():
+def test_appending_cas(BS_1calc):
     """If we call the generate method again, test if it appends the newly generated
     bootstrap compute arguments to the previously generated list.
     """
@@ -148,9 +155,9 @@ def test_appending_cas():
     ), "The newly generated cas is not appended to the old list"
 
 
-def test_save_load_cas():
+def test_save_load_cas(BS_1calc, uq_test_dir):
     """Test the function to load bootstrap compute arguments."""
-    filename = FILE_DIR / "bootstrap_cas.json"
+    filename = uq_test_dir / "bootstrap_cas.json"
     BS_1calc.save_bootstrap_compute_arguments(filename)
     BS_1calc.load_bootstrap_compute_arguments(filename)
     filename.unlink()
@@ -159,7 +166,7 @@ def test_save_load_cas():
     ), "Problem with function to load bootstrap cas"
 
 
-def test_reset():
+def test_reset(BS_1calc, orig_params):
     """Test the reset method."""
     BS_1calc.reset()
     # Check reset parameters
@@ -171,12 +178,14 @@ def test_reset():
     assert BS_1calc._nsamples_done == 0, "Reset ensembles failed"
 
 
-def test_multi_calc_cas_generator():
+def test_multi_calc_cas_generator(BS_2calc, calc_energy, calc_forces):
     """Test the shape of generated bootstrap compute arguments when we use multiple
     calculators.
     """
     BS_2calc.generate_bootstrap_compute_arguments(nsamples)
     bootstrap_cas = BS_2calc.bootstrap_compute_arguments
+    ncas_energy = calc_energy[1]
+    ncas_forces = calc_forces[2]
     assert (
         len(bootstrap_cas) == nsamples
     ), "The number of generated cas is not the same as requested, check the generator"
@@ -185,4 +194,7 @@ def test_multi_calc_cas_generator():
     ), "For each sample, the generator should generate cas for each calculator"
     assert (
         len(bootstrap_cas[0][0]) + len(bootstrap_cas[0][1]) == ncas_energy + ncas_forces
-    ), "For each sample, generator should generate the same number of cas in total as the original"
+    ), (
+        "For each sample, generator should generate the same number of cas in total "
+        "as the original"
+    )

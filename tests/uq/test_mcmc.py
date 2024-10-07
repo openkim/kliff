@@ -1,76 +1,59 @@
 from multiprocessing import Pool
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 from kliff.calculators import Calculator
-from kliff.dataset import Dataset
 from kliff.loss import Loss
-from kliff.models import KIMModel
 from kliff.uq import MCMC, get_T0
 
 try:
     from kliff.uq.mcmc import PtemceeSampler
-
-    ptemcee_avail = True
 except ImportError:
-    ptemcee_avail = False
+    print("ptemcee is not found")
 
 try:
     from kliff.uq.mcmc import EmceeSampler
-
-    emcee_avail = True
 except ImportError:
-    emcee_avail = False
+    print("emcee is not found")
 
 
 seed = 1717
 np.random.seed(seed)
 
-# model
-modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
-model = KIMModel(modelname)
-model.set_opt_params(A=[["default"]])
 
-# training set
-path = Path(__file__).absolute().parents[1].joinpath("test_data/configs/Si_4")
-data = Dataset(path)
-configs = data.get_configs()
-
-# calculator
-calc = Calculator(model)
-ca = calc.create(configs)
-
-# loss
-loss = Loss(calc)
-loss.minimize(method="lm")
-
-# dimensionality
-ndim = calc.get_num_opt_params()
+# dimensionality --- Number of parameters is defined when creating the calculator
 nwalkers = 2 * np.random.randint(1, 3)
 ntemps = np.random.randint(2, 4)
 nsteps = np.random.randint(5, 10)
 
-# samplers
-prior_bounds = np.tile([0, 10], (ndim, 1))
 
-if ptemcee_avail:
-    ptsampler = MCMC(
-        loss,
-        ntemps=ntemps,
-        nwalkers=nwalkers,
-        logprior_args=(prior_bounds,),
-        random=np.random.RandomState(seed),
-    )
-if emcee_avail:
-    sampler = MCMC(
-        loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), sampler="emcee"
-    )
+@pytest.fixture(scope="module")
+def calc(uq_kim_model, uq_test_configs):
+    """Create calculator instance."""
+    model = uq_kim_model
+    # calculator
+    calculator = Calculator(model)
+    ca = calculator.create(uq_test_configs)
+    return calculator
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
+def ndim(calc):
+    return calc.get_num_opt_params()
+
+
+@pytest.fixture(scope="module")
+def loss(calc):
+    """Create loss instance."""
+    L = Loss(calc)
+    L.minimize(method="lm")
+    return L
+
+
+@pytest.fixture(scope="module")
 def ptemcee_avail():
+    """Check if ptemcee is available."""
     try:
         from kliff.uq.mcmc import PtemceeSampler
 
@@ -79,8 +62,9 @@ def ptemcee_avail():
         return False
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def emcee_avail():
+    """Check if emcee is available."""
     try:
         from kliff.uq.mcmc import EmceeSampler
 
@@ -89,7 +73,33 @@ def emcee_avail():
         return False
 
 
-def test_T0():
+@pytest.fixture(scope="module")
+def prior_bounds(ndim):
+    """Return prior bounds."""
+    return np.tile([0, 10], (ndim, 1))
+
+
+@pytest.fixture(scope="module")
+def ptsampler(ptemcee_avail, loss, prior_bounds):
+    """Instantiate PTSampler."""
+    print("Instantiating PTSampler")
+    return MCMC(
+        loss,
+        ntemps=ntemps,
+        nwalkers=nwalkers,
+        logprior_args=(prior_bounds,),
+        random=np.random.RandomState(seed),
+    )
+
+
+@pytest.fixture(scope="module")
+def sampler(emcee_avail, loss, prior_bounds):
+    """Instantiate Emcee Sampler."""
+    print("Instantiating Emcee Sampler")
+    return MCMC(loss, nwalkers=nwalkers, logprior_args=(prior_bounds,), sampler="emcee")
+
+
+def test_T0(calc, loss):
     """Test if the function to compute T0 works properly. This is done by comparing T0
     computed using the internal function and computed manually.
     """
@@ -103,7 +113,7 @@ def test_T0():
 
 
 @pytest.mark.skipif(not ptemcee_avail, reason="ptemcee is not found")
-def test_MCMC_wrapper1():
+def test_MCMC_wrapper1(ptsampler):
     """Test if the MCMC wrapper class returns the correct sampler instance."""
     assert (
         type(ptsampler) == PtemceeSampler
@@ -111,12 +121,12 @@ def test_MCMC_wrapper1():
 
 
 @pytest.mark.skipif(not emcee_avail, reason="emcee is not found")
-def test_MCMC_wrapper2():
+def test_MCMC_wrapper2(sampler):
     assert type(sampler) == EmceeSampler, "MCMC should return ``EmceeSampler`` instance"
 
 
 @pytest.mark.skipif(not ptemcee_avail, reason="ptemcee is not found")
-def test_dimensionality1():
+def test_dimensionality1(ptsampler, ndim):
     """Test the number of temperatures, walkers, steps, and parameters. This is done by
     comparing the shape of the resulting MCMC chains and the variables used to set these
     dimensions.
@@ -134,7 +144,7 @@ def test_dimensionality1():
 
 
 @pytest.mark.skipif(not emcee_avail, reason="emcee is not found")
-def test_dimensionality2():
+def test_dimensionality2(sampler, ndim):
     # Test for emcee wrapper
     p0 = np.random.uniform(0, 10, (nwalkers, ndim))
     sampler.run_mcmc(initial_state=p0, nsteps=nsteps)
@@ -146,7 +156,7 @@ def test_dimensionality2():
 
 
 @pytest.mark.skipif(not ptemcee_avail, reason="ptemcee is not found")
-def test_pool_exception():
+def test_pool_exception(loss, prior_bounds):
     """Test if an exception is raised when declaring the pool prior to instantiating
     ``kliff.uq.MCMC``.
     """
@@ -160,7 +170,7 @@ def test_pool_exception():
         )
 
 
-def test_sampler_exception():
+def test_sampler_exception(loss, prior_bounds):
     """Test if an exception is raised when specifying sampler string other than the
     built-in ones.
     """
