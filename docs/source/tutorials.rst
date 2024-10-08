@@ -15,5 +15,6 @@ Tutorials
    tutorials/nn_SiC
    tutorials/parameter_transform
    tutorials/uq_mcmc
+   tutorials/uq_bootstrap
    tutorials/lennard_jones
    tutorials/linear_regression

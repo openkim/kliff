@@ -1,16 +1,8 @@
-"""
-TODO:
-- [] Test if the implementation works with model with multiple elements.
-"""
-
-from pathlib import Path
-
 import numpy as np
 import pytest
 
 from kliff import nn
 from kliff.calculators import CalculatorTorch
-from kliff.dataset import Dataset
 from kliff.descriptors import SymmetryFunction
 from kliff.loss import Loss
 from kliff.models import NeuralNetwork
@@ -24,49 +16,59 @@ from kliff.uq.bootstrap import (
 seed = 1717
 np.random.seed(seed)
 
-# descriptor
-descriptor = SymmetryFunction(
-    cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
-)
-
-# model
-N1 = np.random.randint(5, 10)
-model = NeuralNetwork(descriptor)
-model.add_layers(
-    nn.Linear(descriptor.get_size(), N1),
-    nn.Tanh(),
-    nn.Linear(N1, 1),
-)
-
-# training set
-FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
-path = FILE_DIR.parent.joinpath("test_data/configs/Si_4")
-data = Dataset(path)
-configs = data.get_configs()
-
-# calculators
-calc = CalculatorTorch(model)
-_ = calc.create(configs, use_energy=False, use_forces=True)
-fingerprints = calc.get_fingerprints()
-nfingerprints = len(fingerprints)
-
-loss = Loss(calc)
-min_kwargs = dict(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
-result = loss.minimize(**min_kwargs)
-
-orig_state_filename = FILE_DIR / "orig_model.pkl"
-BS = Bootstrap(loss, orig_state_filename=orig_state_filename)
+# Number of bootstrap samples
 nsamples = np.random.randint(1, 5)
+# Optimizer settings
+min_kwargs = dict(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 
 
-def test_wrapper():
+@pytest.fixture(scope="session")
+def model():
+    # descriptor
+    descriptor = SymmetryFunction(
+        cut_name="cos", cut_dists={"Si-Si": 5.0}, hyperparams="set30", normalize=True
+    )
+
+    # model
+    N1 = np.random.randint(5, 10)
+    nn_model = NeuralNetwork(descriptor)
+    nn_model.add_layers(
+        nn.Linear(descriptor.get_size(), N1),
+        nn.Tanh(),
+        nn.Linear(N1, 1),
+    )
+    return nn_model
+
+
+@pytest.fixture(scope="session")
+def calc(model, uq_test_configs):
+    calculator = CalculatorTorch(model)
+    _ = calculator.create(uq_test_configs, use_energy=False, use_forces=True)
+    return calculator
+
+
+@pytest.fixture(scope="session")
+def fingerprints(calc):
+    fp = calc.get_fingerprints()
+    nfp = len(fp)
+    return fp, nfp
+
+
+@pytest.fixture(scope="session")
+def BS(calc, uq_nn_orig_state_filename):
+    loss = Loss(calc)
+    _ = loss.minimize(**min_kwargs)
+    return Bootstrap(loss, orig_state_filename=uq_nn_orig_state_filename)
+
+
+def test_wrapper(BS):
     """Test if the Bootstrap class wrapper instantiate the correct class."""
     assert isinstance(
         BS, BootstrapNeuralNetworkModel
     ), "Wrapper should instantiate BootstrapNeuralNetworkModel"
 
 
-def test_error():
+def test_error(BS):
     """Test if BootstrapError is raised when we try to call run before generating
     bootstrap compute arguments.
     """
@@ -74,12 +76,12 @@ def test_error():
         BS.run(min_kwargs=min_kwargs)
 
 
-def test_original_state():
+def test_original_state(uq_nn_orig_state_filename):
     """Test we export the original state when we instantiate the class."""
-    assert orig_state_filename.exists(), "Original state is not exported"
+    assert uq_nn_orig_state_filename.exists(), "Original state is not exported"
 
 
-def test_bootstrap_cas_generator():
+def test_bootstrap_cas_generator(BS, fingerprints):
     """Test the generator function generate the same number of bootstrap compute arguments
     samples as requested.
     """
@@ -90,23 +92,23 @@ def test_bootstrap_cas_generator():
         len(bootstrap_cas) == nsamples
     ), "The number of generated cas is not the same as requested, check the generator"
     assert np.all(
-        [len(bs_cas) == nfingerprints for _, bs_cas in bootstrap_cas.items()]
+        [len(bs_cas) == fingerprints[1] for _, bs_cas in bootstrap_cas.items()]
     ), "For each sample, generator should generate the same number of cas as the original"
     assert (
         BS._nsamples_prepared == nsamples
     ), "`_nsamples_prepared` property doesn't work"
 
     # Test the shape of bootstrap cas samples if we specify the number of cas to generate
-    nfp = nfingerprints - 1
+    nfp = fingerprints[1] - 1
     bootstrap_cas_2 = bootstrap_cas_generator_neuralnetwork(
-        nsamples, fingerprints, nfingerprints=nfp
+        nsamples, fingerprints[0], nfingerprints=nfp
     )
     assert np.all(
         [len(bs_cas) == nfp for _, bs_cas in bootstrap_cas_2.items()]
     ), "Generator doesn't generate the same number of cas as requested for each sample"
 
 
-def test_run():
+def test_run(BS, calc):
     """Test the method to run the calculation."""
     BS.run(min_kwargs=min_kwargs)
     # Test the shape of ensembles
@@ -119,7 +121,7 @@ def test_run():
     assert BS._nsamples_done == nsamples
 
 
-def test_appending_cas():
+def test_appending_cas(BS):
     """If we call the generate method again, test if it appends the newly generated
     bootstrap compute arguments to the previously generated list.
     """
@@ -129,9 +131,9 @@ def test_appending_cas():
     ), "The newly generated cas is not appended to the old list"
 
 
-def test_save_load_cas():
+def test_save_load_cas(BS, uq_test_dir):
     """Test the function to load bootstrap compute arguments."""
-    filename = FILE_DIR / "bootstrap_cas.json"
+    filename = uq_test_dir / "bootstrap_cas.json"
     BS.save_bootstrap_compute_arguments(filename)
     BS.load_bootstrap_compute_arguments(filename)
     filename.unlink()
@@ -140,7 +142,7 @@ def test_save_load_cas():
     ), "Problem with function to load bootstrap cas"
 
 
-def test_reset():
+def test_reset(BS):
     """Test the reset method."""
     BS.reset()
     # Check reset bootstrap samples
