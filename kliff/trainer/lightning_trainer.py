@@ -22,7 +22,7 @@ else:
 
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
-from .torch_trainer_utils.dataloaders import GraphDataset
+from .utils.dataloaders import GraphDataset
 
 try:
     from torch_ema import ExponentialMovingAverage
@@ -33,10 +33,7 @@ except:
 
 from pytorch_lightning.callbacks import EarlyStopping
 
-from .torch_trainer_utils.lightning_utils import (
-    LossTrajectoryCallback,
-    SaveModelCallback,
-)
+from .utils.lightning_utils import SaveModelCallback, SavePerAtomPredictions
 
 
 class LightningTrainer(pl.LightningModule):
@@ -155,7 +152,7 @@ class LightningTrainer(pl.LightningModule):
             logger=True,
             sync_dist=True,
         )
-        return loss
+        return {"loss": loss, "per_atom_pred": predicted_forces}
 
     def configure_optimizers(self) -> Union[torch.optim.Optimizer, Dict]:
         """
@@ -225,7 +222,7 @@ class LightningTrainer(pl.LightningModule):
             logger=True,
             sync_dist=True,
         )
-        return {"val_loss": loss, "per_atom_force_loss": per_atom_force_loss}
+        return {"val_loss": loss, "per_atom_pred": predicted_forces}
 
     # def test_step(self, batch, batch_idx):
     #     pass
@@ -451,15 +448,14 @@ class GNNLightningTrainer(Trainer):
             callbacks.append(early_stopping)
             logger.info("Early stopping setup complete.")
 
-        if self.loss_manifest.get("loss_traj", False):
-            loss_traj_folder = f"{self.current['run_dir']}/loss_trajectory"
-            loss_idxs = self.dataset_sample_manifest["val_indices"]
-            ckpt_interval = self.training_manifest.get("ckpt_interval", 10)
-            loss_trajectory_callback = LossTrajectoryCallback(
-                loss_traj_folder, loss_idxs, ckpt_interval
+        if self.current["log_per_atom_pred"]:
+            per_atom_pred_callback = SavePerAtomPredictions(
+                self.current["per_atom_pred_database"], ckpt_interval
             )
-            callbacks.append(loss_trajectory_callback)
-            logger.info("Loss trajectory setup complete.")
+            callbacks.append(per_atom_pred_callback)
+            logger.info("Per atom pred dumping setup complete.")
+        else:
+            logger.info("Per atom pred dumping not enabled.")
 
         return callbacks
 

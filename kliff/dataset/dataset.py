@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import dill
 import numpy as np
+import yaml
 from loguru import logger
 from monty.dev import requires
 
@@ -269,9 +270,12 @@ class Configuration:
         PBC = atoms.get_pbc()
         energy = atoms.info[energy_key]
         try:
-            forces = atoms.arrays[forces_key]
+            forces = atoms.arrays[forces_key]  # ASE <= 3.22
         except KeyError:
-            forces = None
+            try:
+                forces = atoms.get_forces()  # ASE >= 3.23
+            except RuntimeError:
+                forces = None
 
         try:
             stress = atoms.get_stress(voigt=True)
@@ -466,7 +470,7 @@ class Configuration:
         """
         Set the metadata of the configuration.
         """
-        self._metadata = metadata
+        self._metadata |= metadata
 
     def get_num_atoms(self) -> int:
         """
@@ -1065,9 +1069,12 @@ class Dataset:
                 )
 
     @staticmethod
-    def add_weights(configurations: List[Configuration], path: Union[Path, str]):
+    def add_weights(
+        configurations: Union[List[Configuration], "Dataset"],
+        source: Union[Path, str, Weight],
+    ):
         """
-        Load weights from a text file. The text file should contain 1 to 4 columns,
+        Load weights from a text file/ Weight class. The text file should contain 1 to 4 columns,
         whitespace seperated, formatted as,
         ```
         Config Energy Forces Stress
@@ -1086,52 +1093,101 @@ class Dataset:
         1.0    10.0
         ```
 
+        It also now supports the yaml weight file. The yaml file should be formatted as,
+        ```
+        - config: [1.0, 1.0, 1.0]
+          energy: 0.0
+          forces: [1.0, 1.0, 1.0]
+          stress: 0.0
+        - config: [1.0, 1.0, 1.0]
+          energy: 0.0
+          forces: [1.0, 1.0, 1.0]
+          stress: 0.0
+        ```
+        Any missing key is treated as 0.0. The weights are assumed to be in same order
+        as the dataset configurations.
+
+        TODO:
+            - Add support for Index. Currently, it is assumed that the weights are in
+                same order as the configurations. Ideally, it should be able to handle
+                index based weights.
+
         Args:
             configurations: List of configurations to add weights to.
-            path: Path to the configuration file
+            source: Path to the configuration file
 
         """
-        if path is None:
-            logger.info("No explicit weights datafile provided.")
+        if source is None:
+            logger.info("No explicit weights provided.")
+            return
+        elif isinstance(source, Weight):
+            print("HERE", source)
+            for config in configurations:
+                config.weight = source
+            logger.info("Weights set to the same value for all configurations.")
             return
 
-        weights_data = np.genfromtxt(path, names=True)
-        weights_col = weights_data.dtype.names
+        path = to_path(source)
 
-        # sanity checks
-        if 1 > len(weights_col) > 4:
-            raise DatasetError(
-                "Weights file contains improper number of cols,"
-                "there needs to be at least 1 col, and at most 4"
-            )
+        if path.suffix == ".yaml":
+            with path.open("r") as f:
+                weights_data = yaml.safe_load(f)
+                for weight, config in zip(weights_data, configurations):
+                    # check if config and forces have per atom weights
+                    forces_weight = weight.get("forces", None)
+                    if isinstance(forces_weight, list):
+                        forces_weight = np.array(forces_weight).reshape(
+                            -1, 1
+                        )  # reshape to column vector for broadcasting
 
-        if not (weights_data.size == 1 or weights_data.size == len(configurations)):
-            raise DatasetError(
-                "Weights file contains improper number of rows,"
-                "there can be either 1 row (all weights same), "
-                "or same number of rows as the configurations."
-            )
+                    config.weight = Weight(
+                        config_weight=weight.get("config", None),
+                        energy_weight=weight.get("energy", None),
+                        forces_weight=forces_weight,
+                        stress_weight=weight.get("stress", None),
+                    )
+            logger.info(f"Weights loaded from YAML file: {path}")
+        else:
+            weights_data = np.genfromtxt(path, names=True)
+            weights_col = weights_data.dtype.names
 
-        expected_cols = {"config", "energy", "forces", "stress"}
-        missing_cols = expected_cols - set([col.lower() for col in weights_col])
+            # sanity checks
+            if 1 > len(weights_col) > 4:
+                raise DatasetError(
+                    "Weights file contains improper number of cols,"
+                    "there needs to be at least 1 col, and at most 4"
+                )
 
-        # missing weights are set to 0.0
-        weights = {k.lower(): weights_data[k] for k in weights_col}
-        for fields in missing_cols:
-            weights[fields] = np.zeros_like(weights["config"])
+            if not (weights_data.size == 1 or weights_data.size == len(configurations)):
+                raise DatasetError(
+                    "Weights file contains improper number of rows,"
+                    "there can be either 1 row (all weights same), "
+                    "or same number of rows as the configurations."
+                )
 
-        # if only one row, set same weight for all
-        if weights_data.size == 1:
-            weights = {k: np.full(len(configurations), v) for k, v in weights.items()}
+            expected_cols = {"config", "energy", "forces", "stress"}
+            missing_cols = expected_cols - set([col.lower() for col in weights_col])
 
-        # set weights
-        for i, config in enumerate(configurations):
-            config.weight = Weight(
-                config_weight=weights["config"][i],
-                energy_weight=weights["energy"][i],
-                forces_weight=weights["forces"][i],
-                stress_weight=weights["stress"][i],
-            )
+            # missing weights are set to 0.0
+            weights = {k.lower(): weights_data[k] for k in weights_col}
+            for fields in missing_cols:
+                weights[fields] = np.zeros_like(weights["config"])
+
+            # if only one row, set same weight for all
+            if weights_data.size == 1:
+                weights = {
+                    k: np.full(len(configurations), v) for k, v in weights.items()
+                }
+
+            # set weights
+            for i, config in enumerate(configurations):
+                config.weight = Weight(
+                    config_weight=weights["config"][i],
+                    energy_weight=weights["energy"][i],
+                    forces_weight=weights["forces"][i],
+                    stress_weight=weights["stress"][i],
+                )
+            logger.info(f"Weights loaded from {path}")
 
     def add_metadata(self, metadata: dict):
         """

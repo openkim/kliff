@@ -328,13 +328,15 @@ class Descriptor(ConfigurationTransform):
         """
         nl_ctx = NeighborList(configuration, self.cutoff)
         n_atoms = configuration.get_num_atoms()
-        descriptors = np.zeros((n_atoms, self.width))
         species = np.array(self._map_species_to_int(nl_ctx.species), np.intc)
         num_neigh, neigh_list = nl_ctx.get_numneigh_and_neighlist_1D()
         coords = nl_ctx.get_coords()
         descriptors = lds.compute(
             self._cdesc, n_atoms, species, neigh_list, num_neigh, coords
         )
+
+        index = configuration.metadata.get("index", -1)
+
         if return_extended_state:
             output = {
                 "n_atoms": n_atoms,
@@ -344,6 +346,8 @@ class Descriptor(ConfigurationTransform):
                 "image": nl_ctx.get_image(),
                 "coords": coords,
                 "descriptor": descriptors,
+                "index": index,
+                "weight": configuration.weight.to_dict(),
             }
         else:
             output = descriptors

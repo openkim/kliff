@@ -64,6 +64,7 @@ extensions = [
     "sphinx_copybutton",
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
+    # "myst_parser",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -76,6 +77,7 @@ source_suffix = {
     ".rst": "restructuredtext",
     ".ipynb": "myst-nb",
     ".myst": "myst-nb",
+    # ".md": "markdown",
 }
 
 # The master toctree document.
@@ -223,6 +225,8 @@ autodoc_mock_imports = [
     "yaml",
     "ase",
     "torch",
+    "torch_lightning",
+    "libdescriptor"
 ]
 
 # do not sort member functions of a class
@@ -313,29 +317,80 @@ def autodoc_module(path: Path, module: str):
         f.write("    :inherited-members:\n")
 
 
+# def create_apidoc(directory: Path = "./apidoc"):
+#     """
+#     Create API documentation, a separate page for each module.
+#
+#     Args:
+#         directory:
+#
+#     Returns:
+#
+#     """
+#
+#     # modules with the below names will not be excluded
+#     excludes = ["cmdline"]
+#
+#     package_path = Path(__file__).parents[2] / "kliff"
+#     modules = get_all_modules(package_path)
+#     for exc in excludes:
+#         modules.remove(exc)
+#     modules = sorted(modules)
+#
+#     autodoc_package(directory, modules)
+#     for mod in modules:
+#         autodoc_module(directory, mod)
+import importlib, inspect
+
 def create_apidoc(directory: Path = "./apidoc"):
     """
-    Create API documentation, a separate page for each module.
+    Create API documentation, listing all classes for each module, including nested modules.
 
     Args:
-        directory:
-
-    Returns:
-
+        directory: The directory where the .rst files will be stored.
     """
-
-    # modules with the below names will not be excluded
+    # Exclude specific modules if needed
     excludes = ["cmdline"]
 
+    # Path to the source code
     package_path = Path(__file__).parents[2] / "kliff"
     modules = get_all_modules(package_path)
+
+    # Exclude specified modules
     for exc in excludes:
-        modules.remove(exc)
+        modules = [m for m in modules if not m.startswith(exc)]
+
+    # Sort modules alphabetically
     modules = sorted(modules)
 
     autodoc_package(directory, modules)
+
     for mod in modules:
+        # Generate the .rst file for each module
         autodoc_module(directory, mod)
+
+        # Import the module to inspect its classes
+        module_name = f"kliff.{mod}"
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError as e:
+            print(f"Error importing {module_name}: {e}")
+            continue
+
+        # Get all classes in the module
+        classes = inspect.getmembers(module, inspect.isclass)
+
+        # Write class documentation to the corresponding .rst file
+        rst_file = Path(directory) / f"{module_name.replace('.', '/')}.rst"
+        rst_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directories exist
+        with open(rst_file, "a") as f:
+            for class_name, class_obj in classes:
+                # Only document classes defined in the current module
+                if class_obj.__module__ == module_name:
+                    f.write(f"\n.. autoclass:: {module_name}.{class_name}\n")
+                    f.write(f"   :members:\n")
+                    f.write(f"   :undoc-members:\n")
+                    f.write(f"   :inherited-members:\n")
 
 
 create_apidoc(directory="./apidoc")

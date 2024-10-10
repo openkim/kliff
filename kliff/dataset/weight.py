@@ -98,6 +98,14 @@ class Weight:
         if config._stress is not None and sw is not None and np.all(sw < 1e-12):
             logger.warning(msg.format("stress", sw))
 
+    def to_dict(self):
+        return {
+            "config": self.config_weight,
+            "energy": self.energy_weight,
+            "forces": self.forces_weight,
+            "stress": self.stress_weight,
+        }
+
 
 class MagnitudeInverseWeight(Weight):
     r"""Non-uniform weight that is computed from the data. The calculation follows

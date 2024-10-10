@@ -34,6 +34,7 @@ struct GraphData{
     GraphData() {}; // default constructor
     int n_layers; // number of layers in the graph, i.e. influence distance/ cutoff
     int n_nodes;  // number of nodes/atoms in the graph
+    int idx; // index of the configuration in the dataset
     std::vector<py::array_t<int64_t> > edge_index; // nx2 edge index of the graph
     py::array_t<double> coords; // coordinates of the atoms
     double energy; // energy of the system that can be used for training, field to be assigned in python
@@ -283,6 +284,7 @@ PYBIND11_MODULE(graph_module, m)
         .def_readwrite("n_nodes", &GraphData::n_nodes)
         .def_readwrite("energy", &GraphData::energy)
         .def_readwrite("forces", &GraphData::forces)
+        .def_readwrite("idx", &GraphData::idx)
         .def_readwrite("images", &GraphData::images)
         .def_readwrite("species", &GraphData::species)
         .def_readwrite("z", &GraphData::z)

@@ -10,7 +10,6 @@ KLIFF requires:
 - Python_ 3.6 or newer.
 - A C++ compiler that supports C++11.
 
-
 KLIFF
 =====
 
@@ -71,6 +70,32 @@ network models and conduct the training. So if you want to train neural network
 potentials, PyTorch_ needs to be installed.
 Please follow the instructions given on the official PyTorch_ website to install it.
 
+PyTorch Geometric
+-----------------
+
+If you want to use the graph neural network potentials, you need to install PyTorch
+Geometric. The installation instructions can be found on the official website of
+Pytorch-geometric_. It is also advisable to use ``torch-scatter`` dependency for
+the Pytorch-geometric package (installation instructions available on Pytorch-Geometric
+website only).
+
+PyTorch Lightning
+-----------------
+For using multi GPU trainer, please also install PyTorch Lightning. The installation
+instructions can be found on the official website of Pytorch-lightning_.
+
+Libdescriptor
+-------------
+
+For working with descriptor-based potentials, you need to install libdescriptor. The original
+descriptor module now resides in ``legacy`` module of KLIFF. Libdescriptor can be installed using
+conda:
+
+.. code-block:: bash
+
+    $ conda install -c conda-forge -c ipcamit libdescriptor
+
+For more information on libdescriptor, please refer to the `libdescriptor documentation`_.
 
 .. _Python: http://www.python.org
 .. _PyTorch: https://pytorch.org
@@ -78,3 +103,6 @@ Please follow the instructions given on the official PyTorch_ website to install
 .. _kim-api: https://openkim.org/kim-api
 .. _openkim-models: https://openkim.org/doc/usage/obtaining-models
 .. _kimpy: https://github.com/openkim/kimpy
+.. _Pytorch-geometric: https://pytorch-geometric.readthedocs.io
+.. _Pytorch-lightning: https://lightning.ai/docs/pytorch/stable
+.. _libdescriptor documentation: https://libdescriptor.readthedocs.io/en/latest/

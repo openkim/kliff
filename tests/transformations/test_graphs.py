@@ -4,7 +4,7 @@ from ase import Atoms
 from torch import tensor
 
 from kliff.dataset import Configuration
-from kliff.transforms.configuration_transforms.graphs import KIMDriverGraph
+from kliff.transforms.configuration_transforms.graphs import RadialGraph
 
 
 def test_implicit_copying(test_data_dir):
@@ -12,7 +12,7 @@ def test_implicit_copying(test_data_dir):
         test_data_dir / "configs" / "Si_4" / "Si_T300_step_0.xyz"
     )
 
-    graph_generator = KIMDriverGraph(
+    graph_generator = RadialGraph(
         species=["Si"], cutoff=4.5, n_layers=2, copy_to_config=True
     )
     graph = graph_generator(config)
@@ -22,7 +22,7 @@ def test_implicit_copying(test_data_dir):
 
 def test_graph_generation(test_data_dir):
     config = Configuration.from_file(test_data_dir / "configs" / "Si.xyz")
-    graph_generator = KIMDriverGraph(species=["Si"], cutoff=3.7, n_layers=2)
+    graph_generator = RadialGraph(species=["Si"], cutoff=3.7, n_layers=2)
     graph = graph_generator(config)
     assert np.allclose(
         graph.edge_index0.numpy(),

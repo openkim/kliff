@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any, List, Tuple, Union
 
 import numpy as np
@@ -6,11 +7,7 @@ from torch.utils.data import Dataset as TorchDataset
 from torch_geometric.data import Dataset as TorchGeometricDataset
 
 from kliff.dataset import Dataset
-from kliff.transforms.configuration_transforms import (
-    Descriptor,
-    KIMDriverGraph,
-    PyGGraph,
-)
+from kliff.transforms.configuration_transforms import Descriptor, PyGGraph, RadialGraph
 
 
 class NeighborListDataset(TorchDataset):
@@ -70,108 +67,6 @@ class DescriptorDataset(TorchDataset):
             representation = self.dataset[idx].fingerprint
         return representation, property_dict
 
-    # def collate(self, batch: Any) -> dict:
-    #     """
-    #     Collate function for the dataset. This function takes in a batch of configurations
-    #     and properties and returns the collated configuration, properties and contribution
-    #     index tensors.
-    #     Args:
-    #         batch: list of configurations and properties for each configuration.
-    #
-    #     Returns:
-    #         dict: collated configuration, properties and contribution index tensors.
-    #     """
-    #     # get fingerprint and consistent properties
-    #     config_0, property_dict_0 = batch[0]
-    #     ptr = torch.tensor([0], dtype=torch.int64)
-    #
-    #     # extract the fingerprint fields
-    #     n_atoms_0 = torch.tensor(
-    #         [config_0["n_atoms"]], dtype=torch.int64
-    #     )
-    #     species_0 = torch.tensor(config_0["species"], dtype=torch.int64)
-    #     neigh_list_0 = torch.tensor(
-    #         config_0["neigh_list"], dtype=torch.int64
-    #     )
-    #     num_neigh_0 = torch.tensor(
-    #         config_0["num_neigh"], dtype=torch.int64
-    #     )
-    #     image_0 = torch.tensor(config_0["image"], dtype=torch.int64)
-    #     coords_0 = torch.tensor(config_0["coords"])
-    #     descriptors_0 = torch.tensor(config_0["descriptor"])
-    #     contribution_0 = torch.zeros(
-    #         descriptors_0.shape[0], dtype=torch.int64
-    #     )
-    #     batch_len = len(batch)
-    #     ptr_shift = torch.tensor(coords_0.shape[0], dtype=torch.int64)
-    #
-    #     for prop in self.consistent_properties:
-    #         property_dict_0[prop] = torch.as_tensor(
-    #             property_dict_0[prop]
-    #         )
-    #
-    #     for i in range(1, batch_len):
-    #         config_i, property_dict_i = batch[i]
-    #
-    #         n_atoms_i = config_i["n_atoms"]
-    #         species_i = config_i["species"]
-    #         neigh_list_i = config_i["neigh_list"]
-    #         num_neigh_i = config_i["num_neigh"]
-    #         image_i = config_i["image"]
-    #         coords_i = config_i["coords"]
-    #         descriptors_i = config_i["descriptor"]
-    #         contribution_i = (
-    #             torch.zeros(descriptors_i.shape[0], dtype=torch.int64)
-    #             + i
-    #         )
-    #
-    #         n_atoms_0 = torch.cat(
-    #             (n_atoms_0, torch.tensor([n_atoms_i], dtype=torch.int64)), 0
-    #         )
-    #         species_0 = torch.cat(
-    #             (species_0, torch.tensor(species_i, dtype=torch.int64)), 0
-    #         )
-    #         neigh_list_0 = torch.cat(
-    #             (
-    #                 neigh_list_0,
-    #                 torch.tensor(neigh_list_i, dtype=torch.int64) + ptr_shift,
-    #             ),
-    #             0,
-    #         )
-    #         num_neigh_0 = torch.cat(
-    #             (num_neigh_0, torch.tensor(num_neigh_i, dtype=torch.int64)), 0
-    #         )
-    #         image_0 = torch.cat(
-    #             (image_0, torch.tensor(image_i, dtype=torch.int64) + ptr_shift), 0
-    #         )
-    #         coords_0 = torch.cat((coords_0, torch.tensor(coords_i)), 0)
-    #         descriptors_0 = torch.cat((descriptors_0, torch.tensor(descriptors_i)), 0)
-    #         contribution_0 = torch.cat(
-    #             (contribution_0, torch.tensor(contribution_i)), 0
-    #         )
-    #
-    #         for prop in self.consistent_properties:
-    #             property_dict_0[prop] = torch.vstack(
-    #                 (property_dict_0[prop], torch.as_tensor(property_dict_i[prop]))
-    #             )
-    #
-    #         ptr = torch.cat((ptr, torch.tensor([ptr_shift], dtype=torch.int64)), 0)
-    #         ptr_shift += coords_i.shape[0]
-    #
-    #     return {
-    #         "n_atoms": n_atoms_0,
-    #         "n_particle": n_atoms_0,
-    #         "species": species_0,
-    #         "neigh_list": neigh_list_0,
-    #         "num_neigh": num_neigh_0,
-    #         "image": image_0,
-    #         "coords": coords_0,
-    #         "descriptors": descriptors_0,
-    #         "property_dict": property_dict_0,
-    #         "ptr": ptr,
-    #         "contribution": contribution_0,
-    #     }
-
     def collate(self, batch: Any) -> dict:
         """
         Collate function for the dataset. This function takes in a batch of configurations
@@ -196,6 +91,8 @@ class DescriptorDataset(TorchDataset):
         coords_0 = np.array(config_0["coords"])
         descriptors_0 = np.array(config_0["descriptor"])
         contribution_0 = np.zeros(descriptors_0.shape[0], dtype=np.intc)
+        index_0 = np.array([config_0["index"]], dtype=np.intc)
+        weight_0 = deepcopy(config_0["weight"])
         batch_len = len(batch)
         ptr_shift = np.array(coords_0.shape[0], dtype=np.intc)
 
@@ -212,6 +109,7 @@ class DescriptorDataset(TorchDataset):
             image_i = config_i["image"]
             coords_i = config_i["coords"]
             descriptors_i = config_i["descriptor"]
+            weight_i = config_i["weight"]
             contribution_i = np.zeros(descriptors_i.shape[0], dtype=np.intc) + i
 
             n_atoms_0 = np.concatenate(
@@ -240,6 +138,20 @@ class DescriptorDataset(TorchDataset):
             contribution_0 = np.concatenate(
                 (contribution_0, np.array(contribution_i)), axis=0
             )
+            index_0 = np.concatenate(
+                (index_0, np.array([config_i["index"]], dtype=np.intc)), axis=0
+            )
+
+            for key in weight_0:
+                try:
+                    weight_0[key] = np.concatenate(
+                        (weight_0[key], np.array(weight_i[key])), axis=0
+                    )
+                except ValueError:
+                    weight_0[key] = np.concatenate(
+                        (np.atleast_2d(weight_0[key]), np.atleast_2d(weight_i[key])),
+                        axis=0,
+                    )
 
             for prop in self.consistent_properties:
                 property_dict_0[prop] = np.vstack(
@@ -261,6 +173,8 @@ class DescriptorDataset(TorchDataset):
             "property_dict": property_dict_0,
             "ptr": ptr,
             "contribution": contribution_0,
+            "index": index_0,
+            "weight": weight_0,
         }
 
     def add_transform(self, transform: Descriptor):
@@ -273,7 +187,7 @@ class GraphDataset(TorchGeometricDataset):
     the use of :class:`kliff.dataset.Dataset` as a data source for the graph based models.
     """
 
-    def __init__(self, dataset: Dataset, transform: KIMDriverGraph = None):
+    def __init__(self, dataset: Dataset, transform: RadialGraph = None):
         super().__init__("./", transform, None, None)
         self.dataset = dataset
 

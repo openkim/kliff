@@ -43,6 +43,7 @@ class PyGGraph(Data):
         self.z = None
         self.cell = None
         self.contributions = None
+        self.idx = None
 
     def __inc__(self, key: str, value: torch.Tensor, *args, **kwargs):
         if "index" in key or "face" in key:
@@ -89,7 +90,7 @@ class PyGGraph(Data):
         return graph_dict
 
 
-class KIMDriverGraph(ConfigurationTransform):
+class RadialGraph(ConfigurationTransform):
     """
     Generate a graph representation of a configuration. This generator will also save the
     required parameters for porting the model over to KIM-API using TorchMLModelDriver.
@@ -139,6 +140,7 @@ class KIMDriverGraph(ConfigurationTransform):
         )
         graph.energy = configuration.energy
         graph.forces = configuration.forces
+        graph.idx = configuration.metadata.get("index", -1)
         return self.to_py_graph(graph)
 
     @staticmethod
@@ -163,6 +165,7 @@ class KIMDriverGraph(ConfigurationTransform):
         pyg_graph.cell = torch.as_tensor(graph.cell)
         pyg_graph.contributions = torch.as_tensor(graph.contributions)
         pyg_graph.num_nodes = torch.as_tensor(graph.n_nodes)
+        pyg_graph.idx = torch.as_tensor(graph.idx)
         for i in range(graph.n_layers):
             pyg_graph.__setattr__(
                 f"edge_index{i}", torch.as_tensor(graph.edge_index[i])

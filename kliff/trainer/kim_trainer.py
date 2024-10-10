@@ -7,8 +7,8 @@ from loguru import logger
 
 from kliff.models import KIMModel
 
-from ._kim_loss_functions import MSE_loss
 from .base_trainer import Trainer, TrainerError
+from .utils.losses import MAE_loss, MSE_loss
 
 SCIPY_MINIMIZE_METHODS = [
     "Nelder-Mead",
@@ -112,9 +112,15 @@ class KIMTrainer(Trainer):
         # compute the loss
         loss = 0.0
         for configuration in self.train_dataset:
-            compute_energy = True if configuration.weight.energy_weight else False
-            compute_forces = True if configuration.weight.forces_weight else False
-            compute_stress = True if configuration.weight.stress_weight else False
+            compute_energy = (
+                True if configuration.weight.energy_weight is not None else False
+            )
+            compute_forces = (
+                True if configuration.weight.forces_weight is not None else False
+            )
+            compute_stress = (
+                True if configuration.weight.stress_weight is not None else False
+            )
 
             prediction = self.model(
                 configuration,
@@ -123,20 +129,35 @@ class KIMTrainer(Trainer):
                 compute_stress=compute_stress,
             )
 
-            if configuration.weight.energy_weight:
-                loss += configuration.weight.energy_weight * self.loss_function(
-                    prediction["energy"], configuration.energy
+            if self.current["log_per_atom_pred"]:
+                self.log_per_atom_outputs(
+                    self.current["epoch"],
+                    [configuration.metadata.get("index")],
+                    [prediction["forces"]],
                 )
-            if configuration.weight.forces_weight:
-                loss += configuration.weight.forces_weight * self.loss_function(
-                    prediction["forces"], configuration.forces
-                )
-            if configuration.weight.stress_weight:
-                loss += configuration.weight.stress_weight * self.loss_function(
-                    prediction["stress"], configuration.stress
-                )
-            loss *= configuration.weight.config_weight
 
+            if configuration.weight.energy_weight is not None:
+                loss += self.loss_function(
+                    prediction["energy"],
+                    configuration.energy,
+                    configuration.weight.energy_weight,
+                )
+            if configuration.weight.forces_weight is not None:
+                loss += self.loss_function(
+                    prediction["forces"],
+                    configuration.forces,
+                    configuration.weight.forces_weight,
+                )
+            if configuration.weight.stress_weight is not None:
+                loss += self.loss_function(
+                    prediction["stress"],
+                    configuration.stress,
+                    configuration.weight.stress_weight,
+                )
+            if configuration.weight.config_weight is not None:
+                loss *= configuration.weight.config_weight
+
+        self.current["epoch"] += 1
         return loss
 
     def checkpoint(self, *args, **kwargs):
@@ -191,6 +212,8 @@ class KIMTrainer(Trainer):
         """
         if self.loss_manifest["function"].lower() == "mse":
             return MSE_loss
+        if self.loss_manifest["function"].lower() == "mae":
+            return MAE_loss
         else:
             raise TrainerError(
                 f"Loss function {self.loss_manifest['function']} not supported."

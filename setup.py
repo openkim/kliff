@@ -76,7 +76,7 @@ neighlist = Extension(
 graph_module = Extension(
     "kliff.transforms.configuration_transforms.graphs.graph_module",
     sources=[
-        "kliff/transforms/configuration_transforms/graphs/kim_driver_graph_data.cpp",
+        "kliff/transforms/configuration_transforms/graphs/radial_graph.cpp",
         "kliff/neighbor/neighbor_list.cpp",
     ],
     include_dirs=get_includes(),

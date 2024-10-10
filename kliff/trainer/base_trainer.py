@@ -1,12 +1,11 @@
 import hashlib
 import importlib
 import json
-import multiprocessing
 import os
+import pickle as pkl
 import random
 import sys
-from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime
 from glob import glob
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, List, Union
@@ -20,8 +19,6 @@ from kliff.dataset.weight import Weight
 
 if TYPE_CHECKING:
     from kliff.transforms.configuration_transforms import ConfigurationTransform
-
-from kliff.utils import get_n_configs_in_xyz
 
 
 class Trainer:
@@ -90,7 +87,7 @@ class Trainer:
 
         # dataset variables
         self.dataset_manifest: dict = {
-            "type": "kliff",
+            "type": "path",
             "path": "./",
             "save": False,
             "keys": {"energy": "energy", "forces": "forces"},
@@ -141,7 +138,6 @@ class Trainer:
                 "config": 1.0,
             },
             "normalize_per_atom": False,
-            "loss_traj": False,
         }
 
         self.optimizer_manifest: dict = {
@@ -190,7 +186,9 @@ class Trainer:
             "appending_to_previous_run": False,
             "verbose": False,
             "ckpt_interval": 100,
-            "per_atom_loss": {"train": None, "val": None},
+            "log_per_atom_pred": False,
+            # "per_atom_pred": {"train": None, "val": None},
+            "per_atom_pred_database": None,
         }
         self.parse_manifest(training_manifest)
         self.initialize()
@@ -267,10 +265,6 @@ class Trainer:
             )
 
         self.loss_manifest |= self.training_manifest.get("loss")
-        # update missing weights
-        for key in ["energy", "forces", "stress", "config"]:
-            if self.loss_manifest["weights"].get(key, None) is None:
-                self.loss_manifest["weights"][key] = None
 
         if self.training_manifest.get("optimizer", None) is None:
             logger.warning(
@@ -293,6 +287,11 @@ class Trainer:
 
         # dataset sample variables will be processed in the setup_dataset method
         self.export_manifest |= manifest.get("export", {})
+
+        # per save atom prediction?
+        self.current["log_per_atom_pred"] = training_manifest.get(
+            "log_per_atom_pred", False
+        )
 
     def config_to_dict(self):
         """
@@ -420,17 +419,20 @@ class Trainer:
 
     def setup_dataset(self):
         """
-        Set up the dataset based on the provided information.
+        Set up the dataset based on the provided information. If the per atom prediction
+        logging is requested, it will also assign a sequential index to each configuration
+        for logging.
         TODO: ColabFit integration for extreme scale datasets.
         """
-        dataset_module_manifest = deepcopy(self.dataset_manifest)
-        # dataset_module_manifest["weights"] = self.loss_manifest["weights"]
 
-        weights = self.loss_manifest["weights"]
+        self.dataset = Dataset.get_dataset_from_manifest(self.dataset_manifest)
+
+        weights = self.loss_manifest.get("weights", None)
 
         if weights is not None:
             if isinstance(weights, str):
                 weights = Path(weights)
+                Dataset.add_weights(self.dataset, weights)
             elif isinstance(weights, dict):
                 weights = Weight(
                     config_weight=weights.get("config", None),
@@ -438,19 +440,29 @@ class Trainer:
                     forces_weight=weights.get("forces", None),
                     stress_weight=weights.get("stress", None),
                 )
+                if isinstance(weights.forces_weight, list):
+                    weights.forces_weight = np.array(weights.forces_weight)
+                if isinstance(weights.config_weight, list):
+                    weights.config_weight = np.array(weights.config_weight)
+
+                Dataset.add_weights(self.dataset, weights)
             else:
                 raise TrainerError("Weights must be a path or a dictionary.")
 
-        dataset_list = _parallel_read(
-            self.dataset_manifest["path"],
-            num_chunks=self.optimizer_manifest["num_workers"],
-            energy_key=self.dataset_manifest.get("keys", {}).get("energy", "energy"),
-            forces_key=self.dataset_manifest.get("keys", {}).get("forces", "forces"),
-            weights=weights,
-        )
-        self.dataset = deepcopy(dataset_list[0])
-        for ds in dataset_list[1:]:
-            self.dataset.configs.extend(ds)
+        # index the dataset
+        # TODO: Can use identifier from the configuration?
+        if self.current["log_per_atom_pred"]:
+            for idx, config in enumerate(self.dataset):
+                config.metadata |= {"index": idx}
+
+            # TODO: add lmdb to the requirements
+            import lmdb  # conditional import, only needed for per-atom predictions
+
+            self.current["per_atom_pred_database"] = lmdb.open(
+                f"{self.current['run_dir']}/per_atom_pred_database.lmdb",
+                map_size=1e12,
+                subdir=False,
+            )
 
     def save_config(self):
         """
@@ -483,7 +495,7 @@ class Trainer:
                 for property_to_transform in property_transform:
                     property_name = property_to_transform.get("name", None)
                     if not property_name:
-                        continue  # it is probably an empty propery
+                        continue  # it is probably an empty property
                     transform_class_name = property_to_transform[property_name].get(
                         "name", None
                     )
@@ -514,11 +526,6 @@ class Trainer:
                         "Skipping configuration transform."
                     )
                 else:
-                    configuration_class_name = (
-                        "KIMDriverGraph"
-                        if configuration_class_name.lower() == "graph"
-                        else configuration_class_name
-                    )
                     configuration_transform_module = importlib.import_module(
                         f"kliff.transforms.configuration_transforms"
                     )
@@ -619,7 +626,7 @@ class Trainer:
             TrainerError(f"Could not load indices from {train_indices}.")
 
         if train_indices is None:
-            indices = np.random.permutation(train_size + val_size)
+            indices = np.random.permutation(len(self.dataset))
             train_indices = indices[:train_size]
             if val_size > 0:
                 val_indices = indices[-val_size:]
@@ -663,6 +670,37 @@ class Trainer:
                     val_indices,
                     fmt="%d",
                 )
+
+    def log_per_atom_outputs(
+        self,
+        epoch: int,
+        idx: Union[List[int], np.ndarray],
+        predictions: List[np.ndarray],
+    ):
+        """
+        Log the per atom outputs to the database. It saves dictionary of predictions and
+        n_atoms for each configuration. The key for predictions is pred_{n}, where n is
+        the index of the prediction. For more than one prediction, it will save pred_0,
+        pred_1, pred_2, etc. The key for the indices is idx
+
+        Args:
+            epoch: Current epoch
+            idx: List of indices of the configurations
+            predictions: List of predictions for the configurations
+
+        """
+        if self.current["per_atom_pred_database"] is None:
+            return
+
+        with self.current["per_atom_pred_database"].begin(write=True) as txn:
+            for ids, pred in zip(idx, predictions):
+                if pred is not None:
+                    txn.put(
+                        f"epoch_{epoch}|index_{ids}".encode(),
+                        pkl.dumps({"pred_0": pred, "n_atoms": pred.shape[0]}),
+                    )
+                else:
+                    logger.warning(f"Prediction for index {ids} is None. Skipping.")
 
     def loss(self, *args, **kwargs):
         raise TrainerError("loss not implemented.")
@@ -750,67 +788,6 @@ class Trainer:
                 f.write(f'    "{module}"\n')
             f.write(f"]\n")
             f.write("}\n")
-
-
-# Parallel processing for dataset loading #############################################
-def _parallel_read(
-    file_path,
-    num_chunks=None,
-    energy_key="Energy",
-    forces_key="forces",
-    weights=None,
-) -> List[Dataset]:
-    """
-    Read and transform frames in parallel. Returns n_chunks of datasets.
-    Args:
-        file_path: Path to the file
-        num_chunks: Number of chunks to split the dataset into, usually = number of cores
-        energy_key: Key for energy in the dataset
-        forces_key: Key for forces in the dataset
-
-    Returns:
-        List of datasets processed by each node
-
-    """
-    if not num_chunks:
-        num_chunks = multiprocessing.cpu_count()
-    total_frames = get_n_configs_in_xyz(file_path)
-    frames_per_chunk = total_frames // num_chunks
-
-    if (
-        frames_per_chunk == 0
-    ):  # if the number of frames is less than the number of chunks
-        frames_per_chunk = total_frames
-        num_chunks = 1
-
-    # Generate slices for each chunk
-    chunks = []
-    for i in range(num_chunks):
-        start = i * frames_per_chunk
-        end = (i + 1) * frames_per_chunk if i < num_chunks - 1 else total_frames
-        chunks.append((start, end))
-
-    with multiprocessing.Pool(processes=num_chunks) as pool:
-        ds = pool.starmap(
-            _read_frames,
-            [
-                (file_path, start, end, energy_key, forces_key, weights)
-                for start, end in chunks
-            ],
-        )
-
-    return ds
-
-
-def _read_frames(file_path, start, end, energy_key, forces_key, weights):
-    ds = Dataset.from_ase(
-        path=file_path,
-        energy_key=energy_key,
-        forces_key=forces_key,
-        slices=slice(start, end),
-        weight=weights,
-    )
-    return ds
 
 
 class TrainerError(Exception):
