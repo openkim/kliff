@@ -7,7 +7,6 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-import dill
 import numpy as np
 import yaml
 from loguru import logger
@@ -19,11 +18,7 @@ from kliff.utils import stress_to_tensor, stress_to_voigt, to_path
 
 # For type checking
 if TYPE_CHECKING:
-    from colabfit.tools.configuration import Configuration as ColabfitConfiguration
     from colabfit.tools.database import MongoDatabase
-
-    from kliff.transforms.configuration_transforms import ConfigurationTransform
-    from kliff.transforms.property_transforms import PropertyTransform
 
 # check if colabfit-tools is installed
 try:
@@ -268,7 +263,15 @@ class Configuration:
         species = atoms.get_chemical_symbols()
         coords = atoms.get_positions()
         PBC = atoms.get_pbc()
-        energy = atoms.info[energy_key]
+
+        try:
+            energy = atoms.info[energy_key] # energy is stored
+        except KeyError:
+            try:
+                energy = atoms.get_potential_energy() # Calculator is attached by energy is not computed yet
+            except RuntimeError:
+                energy = None
+
         try:
             forces = atoms.arrays[forces_key]  # ASE <= 3.22
         except KeyError:
@@ -309,11 +312,11 @@ class Configuration:
             cell=self.cell,
             pbc=self.PBC,
         )
-        if self.energy is not None:
+        if self._energy is not None:
             atoms.info["energy"] = self.energy
-        if self.forces is not None:
+        if self._forces is not None:
             atoms.set_array("forces", self.forces)
-        if self.stress is not None:
+        if self._stress is not None:
             atoms.info["stress"] = stress_to_tensor(self.stress)
         return atoms
 
@@ -1032,7 +1035,7 @@ class Dataset:
         return len(self.configs)
 
     def __getitem__(
-        self, idx: Union[int, np.ndarray, List]
+        self, idx: Union[int, np.ndarray, List, slice]
     ) -> Union[Configuration, "Dataset"]:
         """
         Get the configuration at index `idx`. If the index is a list, it returns a new
@@ -1047,6 +1050,8 @@ class Dataset:
         """
         if isinstance(idx, int):
             return self.configs[idx]
+        elif isinstance(idx, slice):
+            return Dataset(self.configs[idx])
         else:
             configs = [self.configs[i] for i in idx]
             return Dataset(configs)
@@ -1121,7 +1126,6 @@ class Dataset:
             logger.info("No explicit weights provided.")
             return
         elif isinstance(source, Weight):
-            print("HERE", source)
             for config in configurations:
                 config.weight = source
             logger.info("Weights set to the same value for all configurations.")

@@ -22,6 +22,7 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
     :maxdepth: 2
 
     installation
+    introduction
     tutorials
     theory
     modules/modules
