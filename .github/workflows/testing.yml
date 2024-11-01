@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up micromamba
-        uses: mamba-org/setup-micromamba@v1.9.0
+        uses: mamba-org/setup-micromamba@v2.0.0
         with:
           # the create command looks like this:
           # `micromamba create -n test-env python=<the corresponding version> kim-api=2.3.0`
