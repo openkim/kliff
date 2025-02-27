@@ -552,6 +552,13 @@ class DNNTrainer(Trainer):
         if self.export_manifest["model_path"]:
             path = self.export_manifest["model_path"]
 
+        if not self.export_manifest["model_name"]:
+            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
+        else:
+            qualified_model_name = self.export_manifest["model_name"]
+
+        path = os.path.join(path, qualified_model_name)
+
         os.makedirs(path, exist_ok=True)
 
         best_model = deepcopy(self.model)
@@ -572,11 +579,6 @@ class DNNTrainer(Trainer):
         self.configuration_transform.save_descriptor_state(path)  # descriptor.dat
 
         # CMakeLists.txt
-        if not self.export_manifest["model_name"]:
-            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
-        else:
-            qualified_model_name = self.export_manifest["model_name"]
-
         cmakefile = self._generate_kim_cmake(
             qualified_model_name,
             "TorchML__MD_173118614730_000",

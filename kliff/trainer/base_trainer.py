@@ -143,7 +143,7 @@ class Trainer:
         self.optimizer_manifest: dict = {
             "name": None,
             "learning_rate": None,
-            "kwargs": None,
+            "kwargs": {},
             "epochs": 10000,
             "num_workers": None,
             "batch_size": 1,

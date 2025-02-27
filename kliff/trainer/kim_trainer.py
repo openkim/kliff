@@ -38,10 +38,10 @@ class KIMTrainer(Trainer):
     for parameters transformation.
 
     Args:
-        configuration (dict): The configuration dictionary.
+        training_manifest (dict): The training_manifest dictionary.
     """
 
-    def __init__(self, configuration: dict):
+    def __init__(self, training_manifest: dict):
         self.model_driver_name = None
         self.parameters = None
         self.mutable_parameters_list = []
@@ -50,7 +50,7 @@ class KIMTrainer(Trainer):
         self.use_stress = False
         self.is_model_tarfile = False
 
-        super().__init__(configuration)
+        super().__init__(training_manifest)
 
         self.loss_function = self._get_loss_fn()
         self.result = None
@@ -188,6 +188,7 @@ class KIMTrainer(Trainer):
 
         x = self.model.get_opt_params()
         options = self.optimizer_manifest.get("kwargs", {})
+
         options["options"] = {
             "maxiter": self.optimizer_manifest["epochs"],
             "disp": self.current["verbose"],

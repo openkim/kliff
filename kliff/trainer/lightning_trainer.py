@@ -352,16 +352,16 @@ class GNNLightningTrainer(Trainer):
         else:
             transform = None
 
-        self.train_dataset = GraphDataset(self.train_dataset, transform)
-        if self.val_dataset:
-            self.val_dataset = GraphDataset(self.val_dataset, transform)
-
         if not transform:
             for config in self.train_dataset:
                 config.fingerprint = self.configuration_transform(config)
             if self.val_dataset:
                 for config in self.val_dataset:
                     config.fingerprint = self.configuration_transform(config)
+
+        self.train_dataset = GraphDataset(self.train_dataset, transform)
+        if self.val_dataset:
+            self.val_dataset = GraphDataset(self.val_dataset, transform)
 
         if self.optimizer_manifest["num_workers"]:
             num_workers = self.optimizer_manifest["num_workers"]
@@ -410,11 +410,12 @@ class GNNLightningTrainer(Trainer):
                 "Single precision is not supported yet. Using double precision."
             )
             # TODO: Add support for single precision
+        strategy = "ddp_notebook" if _is_running_in_notebook() else "ddp"
         return pl.Trainer(
             logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],
             accelerator="auto",
-            strategy="ddp",
+            strategy=strategy,
             callbacks=self.callbacks,
             num_nodes=num_nodes,
             # precision=32
@@ -471,6 +472,21 @@ class GNNLightningTrainer(Trainer):
         if self.export_manifest["model_path"]:
             path = self.export_manifest["model_path"]
 
+        if not self.export_manifest["model_name"]:
+            # current_model_iter = glob.glob(f"{self.export_manifest['model_path']}/*MO_000000000*")
+            # current_model_iter.sort()
+            # if current_model_iter:
+            #     model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
+            # else:
+            #     model_iter = 0
+            # TODO: get the model iter from the model name
+
+            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
+        else:
+            qualified_model_name = self.export_manifest["model_name"]
+
+        path = os.path.join(path, qualified_model_name)
+
         os.makedirs(path, exist_ok=True)
 
         # save the best pl_model
@@ -491,19 +507,6 @@ class GNNLightningTrainer(Trainer):
         self.configuration_transform.export_kim_model(path, "model.pt")
 
         # CMakeLists.txt
-        if not self.export_manifest["model_name"]:
-            # current_model_iter = glob.glob(f"{self.export_manifest['model_path']}/*MO_000000000*")
-            # current_model_iter.sort()
-            # if current_model_iter:
-            #     model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
-            # else:
-            #     model_iter = 0
-            # TODO: get the model iter from the model name
-
-            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
-        else:
-            qualified_model_name = self.export_manifest["model_name"]
-
         cmakefile = self._generate_kim_cmake(
             qualified_model_name,
             "TorchML__MD_173118614730_000",
@@ -530,6 +533,14 @@ class GNNLightningTrainer(Trainer):
         super().seed_all()
         pl.seed_everything(self.workspace["seed"])
 
+
+def _is_running_in_notebook():
+    """Detect if the current environment is a Jupyter Notebook."""
+    try:
+        from IPython import get_ipython
+        return 'zmqshell' in str(type(get_ipython()))
+    except:
+        return False
 
 # TODO: Custom loss (via torchmetrics)?
 # TODO: switch str everywhere to Path
