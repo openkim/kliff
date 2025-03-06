@@ -261,6 +261,7 @@ def install_kim_model(model_name: str, collection: str = "user") -> bool:
     else:
         return True
 
+
 def get_n_configs_in_xyz(file_path: str) -> int:
     """
     Get the number of configurations in a xyz file. It uses the grep command to count the number of lines

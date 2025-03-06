@@ -410,7 +410,13 @@ class GNNLightningTrainer(Trainer):
                 "Single precision is not supported yet. Using double precision."
             )
             # TODO: Add support for single precision
-        strategy = "ddp_notebook" if _is_running_in_notebook() else "ddp"
+
+        strategy = os.getenv("KLIFF_LIGHTNING_STRATEGY")
+        if not strategy:
+            # default strategy is ddp
+            # some older systems might need "auto"
+            strategy = "ddp_notebook" if _is_running_in_notebook() else "ddp"
+
         return pl.Trainer(
             logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],

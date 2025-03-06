@@ -125,7 +125,7 @@ setup(
             "ase<3.23",
             "libdescriptor",
         ],
-        "torch": ["torch", "torch_geometric", "pytorch_lightning"],
+        "torch": ["torch", "torch_geometric", "pytorch_lightning", "torch_scatter", "tensorboard", "tensorboardx"],
         "docs": [
             "sphinx",
             "furo",

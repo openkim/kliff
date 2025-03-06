@@ -7,7 +7,7 @@ from torch.utils.data import Dataset as TorchDataset
 from torch_geometric.data import Dataset as TorchGeometricDataset
 
 from kliff.dataset import Dataset
-from kliff.transforms.configuration_transforms import Descriptor, PyGGraph, RadialGraph
+from kliff.transforms.configuration_transforms.graphs import PyGGraph, RadialGraph
 
 
 class NeighborListDataset(TorchDataset):
@@ -177,7 +177,7 @@ class DescriptorDataset(TorchDataset):
             "weight": weight_0,
         }
 
-    def add_transform(self, transform: Descriptor):
+    def add_transform(self, transform: "Descriptor"):
         self.transform = transform
 
 

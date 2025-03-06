@@ -65,6 +65,7 @@ Please follow the instructions given on the official PyTorch_ website to install
     Please check PyTorch documentation for more detailed install options and different architectures.
 
 .. code-block:: bash
+
     $ pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
 
 
@@ -82,6 +83,7 @@ website only).
 
 
 .. code-block:: bash
+
     $ pip install torch_geometric
     $ pip install torch_scatter torch_sparse torch_cluster -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
 
@@ -95,6 +97,7 @@ For using multi GPU trainer, please also install PyTorch Lightning. The installa
 instructions can be found on the official website of Pytorch-lightning_.
 
 .. code-block:: bash
+
     $ pip install lightning
 
 

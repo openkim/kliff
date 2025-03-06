@@ -16,7 +16,7 @@ from .utils.dataloaders import DescriptorDataset
 from .utils.losses import MAE_loss, MSE_loss
 
 if TYPE_CHECKING:
-    from kliff.transforms.configuration_transforms import Descriptor
+    from kliff.transforms.configuration_transforms.descriptors import Descriptor
 
 
 class DNNTrainer(Trainer):

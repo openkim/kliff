@@ -15,7 +15,7 @@ try:
     import libdescriptor as lds
 except ImportError:
     lds = None
-    logger.error(
+    logger.warning(
         "descriptors module depends on libdescriptor, "
         "which is not found. please install it first."
     )
@@ -139,7 +139,7 @@ class Descriptor(ConfigurationTransform):
         else:
             raise DescriptorsError("Hyperparameters must be either a string or an Dict")
 
-    def _init_descriptor_from_kind(self) -> Tuple[lds.DescriptorKind, int]:
+    def _init_descriptor_from_kind(self) -> Tuple["lds.DescriptorKind", int]:
         """
         Initialize descriptor from descriptor kind. Currently only Symmetry Functions,
         Bispectrum, abd SOAP descriptors are supported.
