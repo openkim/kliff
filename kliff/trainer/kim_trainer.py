@@ -41,7 +41,7 @@ class KIMTrainer(Trainer):
         training_manifest (dict): The training_manifest dictionary.
     """
 
-    def __init__(self, training_manifest: dict):
+    def __init__(self, training_manifest: dict, model=None):
         self.model_driver_name = None
         self.parameters = None
         self.mutable_parameters_list = []
@@ -50,7 +50,10 @@ class KIMTrainer(Trainer):
         self.use_stress = False
         self.is_model_tarfile = False
 
-        super().__init__(training_manifest)
+        super().__init__(training_manifest, model)
+
+        if model:
+            self.setup_model() # call manually if model is provided
 
         self.loss_function = self._get_loss_fn()
         self.result = None
@@ -64,17 +67,19 @@ class KIMTrainer(Trainer):
         Path can be a folder containing the model, or a tar file. The model name is the KIM
         model name.
         """
-        if self.model_manifest["path"]:
-            try:
-                self.is_model_tarfile = tarfile.is_tarfile(self.model_manifest["path"])
-            except (IsADirectoryError, TypeError) as e:
-                self.is_model_tarfile = False
-                logger.debug(f"Model path is not a tarfile: {e}")
+        if not isinstance(self.model, KIMModel):
 
-        # check for unsupported model drivers
-        self.model = KIMModel.get_model_from_manifest(
-            self.model_manifest, self.transform_manifest, self.is_model_tarfile
-        )
+            if self.model_manifest["path"]:
+                try:
+                    self.is_model_tarfile = tarfile.is_tarfile(self.model_manifest["path"])
+                except (IsADirectoryError, TypeError) as e:
+                    self.is_model_tarfile = False
+                    logger.debug(f"Model path is not a tarfile: {e}")
+
+            # check for unsupported model drivers
+            self.model = KIMModel.get_model_from_manifest(
+                self.model_manifest, self.transform_manifest, self.is_model_tarfile
+            )
 
         self.parameters = self.model.get_model_params()
 

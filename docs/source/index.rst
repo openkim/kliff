@@ -32,6 +32,7 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
     :caption: Advanced Topics
     :maxdepth: 2
 
+    advanced/lammps
     howto/howto
     command_line
     contributing_guide

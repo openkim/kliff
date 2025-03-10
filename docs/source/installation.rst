@@ -11,16 +11,47 @@ Installation
 
 KLIFF requires:
 
-- Python_ 3.6 or newer.
+- Python_ 3.9
 - A C++ compiler that supports C++11.
+
+.. note::
+    For the instructions below, it is assumed that you have a working conda environment
+    installed on your system. If not, please install conda first (`link <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>`_)
+
+Create a new conda environment (recommended) for installing all dependencies.
+
+.. code-block:: bash
+
+    conda create -n kliff # create new empty env
+    conda activate kliff
+    conda install python=3.9 -c conda-forge
+
+Additionally you might need to install basic compilers and build essentials, it is highly system
+specific, and chances are that all the required dependencies are present in your system.
+If you want to be sure, you can also install these fundamental dependencies via conda
+
+.. code-block:: bash
+
+    conda install gxx_linux-64 gcc_linux-64 gfortran_linux-64 make cmake=3.18 unzip wget -c conda-forge
+
+for Apple Silicon
+
+.. tip::
+    Conda vs pip: During the instructions you will see switching between conda and pip
+    for installing different dependencies. Conda is more feature rich installer that can also install
+    non-python packages (like cmake, make, and compilers, etc) while pip can only install python
+    packages. We have used Conda where ever possible for non-python dependencies, while
+    using pip for Python dependencies.
+
+
 
 KLIFF
 =====
 
 .. code-block:: bash
 
-    $ git clone --branch kliff-master-v1 --single-branch https://github.com/ipcamit/kliff kliff-v1
-    $ pip install ./kliff-v1
+    git clone --branch kliff-master-v1 --single-branch https://github.com/ipcamit/kliff kliff-v1
+    pip install ./kliff-v1
 
 
 Other dependencies
@@ -37,7 +68,7 @@ The easiest way to install them is via conda:
 
 .. code-block:: bash
 
-    $ conda install -c conda-forge kim-api kimpy openkim-models
+    conda install -c conda-forge kim-api=2.3 kimpy openkim-models
 
 .. note::
     After installation, you can do ``$ kim-api-collections-management list``.
@@ -63,42 +94,35 @@ Please follow the instructions given on the official PyTorch_ website to install
 .. warning::
     Given below are instructions for CPU version of PyTorch 2.4. Which was the last tested version with KLIFF.
     Please check PyTorch documentation for more detailed install options and different architectures.
+    For older Apple Intel Macs, highest version of torch available is 2.2, so replace 2.4 with 2.2 in that case.
 
 .. code-block:: bash
 
-    $ pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
+    pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
 
 
-PyTorch Geometric
------------------
+Graph Neural Networks
+---------------------
 
 If you want to use the graph neural network potentials, you need to install PyTorch
-Geometric. The installation instructions can be found on the official website of
+Geometric, and Pytorch Lightning. The detailed installation instructions can be found on the official website of
 Pytorch-geometric_. It is also advisable to use ``torch-scatter`` dependency for
 the Pytorch-geometric package (installation instructions available on Pytorch-Geometric
 website only).
 
-.. warning::
-    Please ensure to match correct version of torch scatter etc. with pytorch.
-
-
-.. code-block:: bash
-
-    $ pip install torch_geometric
-    $ pip install torch_scatter torch_sparse torch_cluster -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
-
-PyTorch Lightning
------------------
-
-.. important::
-    This is an optional dependency needed if user want to train graph based neural networks.
-
 For using multi GPU trainer, please also install PyTorch Lightning. The installation
 instructions can be found on the official website of Pytorch-lightning_.
 
+.. warning::
+    Please ensure to match correct version of torch scatter with pytorch.
+
+For most common systems, the following commands will be enough, (``tensorboard`` is used for logging).
+
 .. code-block:: bash
 
-    $ pip install lightning
+    pip install torch_geometric
+    pip install torch_scatter torch_sparse torch_cluster -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
+    pip install lightning tensorboard tensorboardX
 
 
 Libdescriptor
@@ -113,9 +137,21 @@ conda:
 
 .. code-block:: bash
 
-    $ conda install -c conda-forge -c ipcamit libdescriptor
+    conda install -c conda-forge -c ipcamit libdescriptor
+
+Above command should install ``libdescriptor`` on both Linux and Apple Silicon Mac. For
+any other unsupported system, either you can use the ``legacy`` descriptor interface of
+KLIFF for now, or install it from the source (see detailed instructions `here <https://libdescriptor.readthedocs.io/en/latest/>`_.
 
 For more information on libdescriptor, please refer to the `libdescriptor documentation`_.
+
+TorchML Model driver
+--------------------
+
+ML models (most importantly graph neural networks) need the latest TorchML model driver
+to run with KIM-API. The installation details for the TorchML model driver can be accessed
+`here <https://kim-torchml-port.readthedocs.io/en/latest/introduction.html>`_.
+
 
 .. _Python: http://www.python.org
 .. _PyTorch: https://pytorch.org

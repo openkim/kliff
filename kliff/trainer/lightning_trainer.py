@@ -411,16 +411,13 @@ class GNNLightningTrainer(Trainer):
             )
             # TODO: Add support for single precision
 
-        strategy = os.getenv("KLIFF_LIGHTNING_STRATEGY")
-        if not strategy:
-            # default strategy is ddp
-            # some older systems might need "auto"
-            strategy = "ddp_notebook" if _is_running_in_notebook() else "ddp"
+        strategy = self.training_manifest.get("strategy", "ddp")
+        accelerator = self.training_manifest.get("accelerator", "auto")
 
         return pl.Trainer(
             logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],
-            accelerator="auto",
+            accelerator=accelerator,
             strategy=strategy,
             callbacks=self.callbacks,
             num_nodes=num_nodes,
