@@ -4,15 +4,11 @@
 Installation
 ============
 
-.. Warning::
-    This is for installing the beta version of KLIFF (v1). If you can see it on main
-    documentation, please inform me @ `gupta839 _at_ umn.edu`
-
-
 KLIFF requires:
 
 - Python_ 3.9
 - A C++ compiler that supports C++11.
+- Linux or MacOS (Apple Silicon) system (Intel Macs are not supported yet).
 
 .. note::
     For the instructions below, it is assumed that you have a working conda environment
@@ -22,19 +18,16 @@ Create a new conda environment (recommended) for installing all dependencies.
 
 .. code-block:: bash
 
-    conda create -n kliff # create new empty env
+    conda create -n kliff
     conda activate kliff
     conda install python=3.9 -c conda-forge
 
 Additionally you might need to install basic compilers and build essentials, it is highly system
 specific, and chances are that all the required dependencies are present in your system.
+These are mostly used for building C++-Python extensions, and similar programs like KIMPY.
 If you want to be sure, you can also install these fundamental dependencies via conda
 
-.. code-block:: bash
 
-    conda install gxx_linux-64 gcc_linux-64 gfortran_linux-64 make cmake=3.18 unzip wget -c conda-forge
-
-for Apple Silicon
 
 .. tip::
     Conda vs pip: During the instructions you will see switching between conda and pip
@@ -48,10 +41,41 @@ for Apple Silicon
 KLIFF
 =====
 
+KLIFF is built on top of KIM to fit physics-motivated potentials archived on OpenKIM_.
+To get KLIFF work with OpenKIM_ models, kim-api_ and
+kimpy_.
+
+It is advisable to install kim-api and kimpy via conda before installing KLIFF. This
+also ensures that the correct compilers and other tools are installed.
+
+.. code-block:: bash
+
+    conda install kim-api=2.3 kimpy -c conda-forge
+
+KLIFF can be installed in three ways:
+
+1. Installing KLIFF from source
+
+
 .. code-block:: bash
 
     git clone --branch kliff-master-v1 --single-branch https://github.com/ipcamit/kliff kliff-v1
     pip install ./kliff-v1
+
+2. Installing KLIFF from PyPI
+
+
+.. code-block:: bash
+
+    pip install kliff
+
+
+3. Installing KLIFF from conda
+
+
+.. code-block:: bash
+
+    conda install kliff -c conda-forge
 
 
 Other dependencies
@@ -60,15 +84,10 @@ Other dependencies
 KIM Models
 ----------
 
-KLIFF is built on top of KIM to fit physics-motivated potentials archived on OpenKIM_.
-To get KLIFF work with OpenKIM_ models, kim-api_ and
-kimpy_, and openkim-models_ are needed.
+.. note::
 
-The easiest way to install them is via conda:
-
-.. code-block:: bash
-
-    conda install -c conda-forge kim-api=2.3 kimpy openkim-models
+    Optional `openkim-models` can be installed via conda as well:
+    ``conda install openkim-models -c conda-forge``
 
 .. note::
     After installation, you can do ``$ kim-api-collections-management list``.
@@ -114,7 +133,8 @@ For using multi GPU trainer, please also install PyTorch Lightning. The installa
 instructions can be found on the official website of Pytorch-lightning_.
 
 .. warning::
-    Please ensure to match correct version of torch scatter with pytorch.
+
+    Please ensure to match the correct version of torch scatter with pytorch.
 
 For most common systems, the following commands will be enough, (``tensorboard`` is used for logging).
 
@@ -128,29 +148,60 @@ For most common systems, the following commands will be enough, (``tensorboard``
 Libdescriptor
 -------------
 
-.. important::
-    This is an optional dependency needed if user want to train descriptor based neural networks.
+Libdescriptor is a auto-differentiated descriptor library for unified Python-C++ API.
+It is used by the TorchML model driver for running Descriptor-based neural networks.
+This is an optional dependency needed if user want to train descriptor based neural networks.
 
 For working with descriptor-based potentials, you need to install libdescriptor. The original
-descriptor module now resides in ``legacy`` module of KLIFF. Libdescriptor can be installed using
+descriptor module now resides in ``legacy`` module of KLIFF, and user should decide on which descriptor
+module they want to use, based on their requirements (for detailed comparisons, see ).
+Libdescriptor can be installed using
 conda:
 
 .. code-block:: bash
 
-    conda install -c conda-forge -c ipcamit libdescriptor
+    conda install libdescriptor -c conda-forge -c ipcamit
 
 Above command should install ``libdescriptor`` on both Linux and Apple Silicon Mac. For
 any other unsupported system, either you can use the ``legacy`` descriptor interface of
-KLIFF for now, or install it from the source (see detailed instructions `here <https://libdescriptor.readthedocs.io/en/latest/>`_.
-
-For more information on libdescriptor, please refer to the `libdescriptor documentation`_.
+KLIFF for now, or install it from the source (see detailed documentation `here <https://libdescriptor.readthedocs.io/en/latest/>`_).
 
 TorchML Model driver
 --------------------
 
-ML models (most importantly graph neural networks) need the latest TorchML model driver
-to run with KIM-API. The installation details for the TorchML model driver can be accessed
+ML models (most importantly graph neural networks) need the latest `TorchML <https://openkim.org/id/TorchML__MD_173118614730_001/>`_ model driver
+to run with KIM-API. The installation details for the TorchML model driver are provided in
+the :ref:`advanced section <lammps>` .
+
+Detailed instructions on how to port your existing models to TorchML can be found
 `here <https://kim-torchml-port.readthedocs.io/en/latest/introduction.html>`_.
+
+Errors
+------
+
+.. note::
+    If you encounter any errors during the installation, or training, please refer to the bottom
+    of the tutorial notebook. Chances are that the error is already documented there. Otherwise
+    please raise an issue on the github repository.
+
+
+1. Incompatible architecture error on Apple Silicon Mac
+
+
+.. code-block::
+
+    '/Users/amitgupta/miniconda3/envs/kliff/lib/python3.9/site-packages/kliff/neighbor/neighlist.cpython-39-darwin.so'
+    (mach-o file, but is an incompatible architecture (have 'x86_64', need
+    'arm64e' or 'arm64'))
+
+
+If you get the following error on Apple Silicon Mac, it means that the package is not
+compiled for Arm64, rather it is compiled for x86_64. This points to an underlying issue
+with your conda environment, and you may need to reinstall the package.
+
+Easiest first attempt to fix it is to recreate the conda environment and reinstall the package
+from the top. For more detailed instructions, please refer to stackoverflow issue discussed
+`here <https://stackoverflow.com/questions/72308682/mach-o-file-but-is-an-incompatible-architecture-have-x86-64-need-arm64e>`_.
 
 
 .. _Python: http://www.python.org

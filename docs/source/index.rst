@@ -23,9 +23,7 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
 
     installation
     introduction
-    tutorials
     theory
-    modules/modules
 
 
 .. toctree::
@@ -37,6 +35,12 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
     command_line
     contributing_guide
 
+.. toctree::
+    :caption: UQ and Legacy Modules
+    :maxdepth: 2
+
+    legacy
+    tutorials
 
 .. toctree::
     :caption: Extra Information

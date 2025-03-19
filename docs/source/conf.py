@@ -38,9 +38,9 @@ copyright = "2021-2023, OpenKIM"
 author = "Mingjian Wen"
 
 # The short X.Y version
-version = "0.4"
+version = "1.0"
 # The full version, including alpha/beta/rc tags
-release = "0.4.1"
+release = "1.0.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -62,6 +62,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "myst_nb",
     "sphinx_copybutton",
+    "sphinx_design"
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
     # "myst_parser",
