@@ -2,9 +2,9 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+import kliff.neighbor.neighlist as nl  # C extension; from ., as otherwise circular imports
 from kliff.atomic_data import atomic_number, atomic_species
 from kliff.dataset.dataset import Configuration
-import kliff.neighbor.neighlist as nl  # C extension; from ., as otherwise circular imports
 
 
 class NeighborList:

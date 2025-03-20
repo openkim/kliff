@@ -541,9 +541,11 @@ def _is_running_in_notebook():
     """Detect if the current environment is a Jupyter Notebook."""
     try:
         from IPython import get_ipython
-        return 'zmqshell' in str(type(get_ipython()))
+
+        return "zmqshell" in str(type(get_ipython()))
     except:
         return False
+
 
 # TODO: Custom loss (via torchmetrics)?
 # TODO: switch str everywhere to Path

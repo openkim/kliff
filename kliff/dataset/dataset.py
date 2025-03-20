@@ -265,10 +265,12 @@ class Configuration:
         PBC = atoms.get_pbc()
 
         try:
-            energy = atoms.info[energy_key] # energy is stored
+            energy = atoms.info[energy_key]  # energy is stored
         except KeyError:
             try:
-                energy = atoms.get_potential_energy() # Calculator is attached by energy is not computed yet
+                energy = (
+                    atoms.get_potential_energy()
+                )  # Calculator is attached by energy is not computed yet
             except RuntimeError:
                 energy = None
 

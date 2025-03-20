@@ -53,7 +53,7 @@ class KIMTrainer(Trainer):
         super().__init__(training_manifest, model)
 
         if model:
-            self.setup_model() # call manually if model is provided
+            self.setup_model()  # call manually if model is provided
 
         self.loss_function = self._get_loss_fn()
         self.result = None
@@ -71,7 +71,9 @@ class KIMTrainer(Trainer):
 
             if self.model_manifest["path"]:
                 try:
-                    self.is_model_tarfile = tarfile.is_tarfile(self.model_manifest["path"])
+                    self.is_model_tarfile = tarfile.is_tarfile(
+                        self.model_manifest["path"]
+                    )
                 except (IsADirectoryError, TypeError) as e:
                     self.is_model_tarfile = False
                     logger.debug(f"Model path is not a tarfile: {e}")

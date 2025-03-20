@@ -113,7 +113,15 @@ setup(
     version=get_version(),
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
-    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru", "ase<3.23", "numpy<2.0"],
+    install_requires=[
+        "requests",
+        "scipy",
+        "pyyaml",
+        "monty",
+        "loguru",
+        "ase<3.23",
+        "numpy<2.0",
+    ],
     extras_require={
         "test": [
             "pytest",
@@ -125,7 +133,14 @@ setup(
             "ase<3.23",
             "libdescriptor",
         ],
-        "torch": ["torch", "torch_geometric", "pytorch_lightning", "torch_scatter", "tensorboard", "tensorboardx"],
+        "torch": [
+            "torch",
+            "torch_geometric",
+            "pytorch_lightning",
+            "torch_scatter",
+            "tensorboard",
+            "tensorboardx",
+        ],
         "docs": [
             "sphinx",
             "furo",
