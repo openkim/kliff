@@ -1,3 +1,3 @@
-from .generate_graph import KIMDriverGraph, PyGGraph
+from .generate_graph import PyGGraph, RadialGraph
 
-__all__ = ["KIMDriverGraph", "PyGGraph"]
+__all__ = ["RadialGraph", "PyGGraph"]

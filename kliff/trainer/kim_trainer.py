@@ -7,8 +7,8 @@ from loguru import logger
 
 from kliff.models import KIMModel
 
-from ._kim_loss_functions import MSE_loss
 from .base_trainer import Trainer, TrainerError
+from .utils.losses import MAE_loss, MSE_loss
 
 SCIPY_MINIMIZE_METHODS = [
     "Nelder-Mead",
@@ -38,10 +38,10 @@ class KIMTrainer(Trainer):
     for parameters transformation.
 
     Args:
-        configuration (dict): The configuration dictionary.
+        training_manifest (dict): The training_manifest dictionary.
     """
 
-    def __init__(self, configuration: dict):
+    def __init__(self, training_manifest: dict, model=None):
         self.model_driver_name = None
         self.parameters = None
         self.mutable_parameters_list = []
@@ -50,7 +50,10 @@ class KIMTrainer(Trainer):
         self.use_stress = False
         self.is_model_tarfile = False
 
-        super().__init__(configuration)
+        super().__init__(training_manifest, model)
+
+        if model:
+            self.setup_model()  # call manually if model is provided
 
         self.loss_function = self._get_loss_fn()
         self.result = None
@@ -64,17 +67,21 @@ class KIMTrainer(Trainer):
         Path can be a folder containing the model, or a tar file. The model name is the KIM
         model name.
         """
-        if self.model_manifest["path"]:
-            try:
-                self.is_model_tarfile = tarfile.is_tarfile(self.model_manifest["path"])
-            except (IsADirectoryError, TypeError) as e:
-                self.is_model_tarfile = False
-                logger.debug(f"Model path is not a tarfile: {e}")
+        if not isinstance(self.model, KIMModel):
 
-        # check for unsupported model drivers
-        self.model = KIMModel.get_model_from_manifest(
-            self.model_manifest, self.transform_manifest, self.is_model_tarfile
-        )
+            if self.model_manifest["path"]:
+                try:
+                    self.is_model_tarfile = tarfile.is_tarfile(
+                        self.model_manifest["path"]
+                    )
+                except (IsADirectoryError, TypeError) as e:
+                    self.is_model_tarfile = False
+                    logger.debug(f"Model path is not a tarfile: {e}")
+
+            # check for unsupported model drivers
+            self.model = KIMModel.get_model_from_manifest(
+                self.model_manifest, self.transform_manifest, self.is_model_tarfile
+            )
 
         self.parameters = self.model.get_model_params()
 
@@ -112,9 +119,15 @@ class KIMTrainer(Trainer):
         # compute the loss
         loss = 0.0
         for configuration in self.train_dataset:
-            compute_energy = True if configuration.weight.energy_weight else False
-            compute_forces = True if configuration.weight.forces_weight else False
-            compute_stress = True if configuration.weight.stress_weight else False
+            compute_energy = (
+                True if configuration.weight.energy_weight is not None else False
+            )
+            compute_forces = (
+                True if configuration.weight.forces_weight is not None else False
+            )
+            compute_stress = (
+                True if configuration.weight.stress_weight is not None else False
+            )
 
             prediction = self.model(
                 configuration,
@@ -123,20 +136,35 @@ class KIMTrainer(Trainer):
                 compute_stress=compute_stress,
             )
 
-            if configuration.weight.energy_weight:
-                loss += configuration.weight.energy_weight * self.loss_function(
-                    prediction["energy"], configuration.energy
+            if self.current["log_per_atom_pred"]:
+                self.log_per_atom_outputs(
+                    self.current["epoch"],
+                    [configuration.metadata.get("index")],
+                    [prediction["forces"]],
                 )
-            if configuration.weight.forces_weight:
-                loss += configuration.weight.forces_weight * self.loss_function(
-                    prediction["forces"], configuration.forces
-                )
-            if configuration.weight.stress_weight:
-                loss += configuration.weight.stress_weight * self.loss_function(
-                    prediction["stress"], configuration.stress
-                )
-            loss *= configuration.weight.config_weight
 
+            if configuration.weight.energy_weight is not None:
+                loss += self.loss_function(
+                    prediction["energy"],
+                    configuration.energy,
+                    configuration.weight.energy_weight,
+                )
+            if configuration.weight.forces_weight is not None:
+                loss += self.loss_function(
+                    prediction["forces"],
+                    configuration.forces,
+                    configuration.weight.forces_weight,
+                )
+            if configuration.weight.stress_weight is not None:
+                loss += self.loss_function(
+                    prediction["stress"],
+                    configuration.stress,
+                    configuration.weight.stress_weight,
+                )
+            if configuration.weight.config_weight is not None:
+                loss *= configuration.weight.config_weight
+
+        self.current["epoch"] += 1
         return loss
 
     def checkpoint(self, *args, **kwargs):
@@ -167,6 +195,7 @@ class KIMTrainer(Trainer):
 
         x = self.model.get_opt_params()
         options = self.optimizer_manifest.get("kwargs", {})
+
         options["options"] = {
             "maxiter": self.optimizer_manifest["epochs"],
             "disp": self.current["verbose"],
@@ -191,6 +220,8 @@ class KIMTrainer(Trainer):
         """
         if self.loss_manifest["function"].lower() == "mse":
             return MSE_loss
+        if self.loss_manifest["function"].lower() == "mae":
+            return MAE_loss
         else:
             raise TrainerError(
                 f"Loss function {self.loss_manifest['function']} not supported."

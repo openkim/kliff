@@ -22,19 +22,25 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
     :maxdepth: 2
 
     installation
-    tutorials
+    introduction
     theory
-    modules/modules
 
 
 .. toctree::
     :caption: Advanced Topics
     :maxdepth: 2
 
+    advanced/lammps
     howto/howto
     command_line
     contributing_guide
 
+.. toctree::
+    :caption: UQ and Legacy Modules
+    :maxdepth: 2
+
+    legacy
+    tutorials
 
 .. toctree::
     :caption: Extra Information

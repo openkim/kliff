@@ -76,7 +76,7 @@ neighlist = Extension(
 graph_module = Extension(
     "kliff.transforms.configuration_transforms.graphs.graph_module",
     sources=[
-        "kliff/transforms/configuration_transforms/graphs/kim_driver_graph_data.cpp",
+        "kliff/transforms/configuration_transforms/graphs/radial_graph.cpp",
         "kliff/neighbor/neighbor_list.cpp",
     ],
     include_dirs=get_includes(),
@@ -113,7 +113,15 @@ setup(
     version=get_version(),
     packages=find_packages(),
     ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
-    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru", "dill"],
+    install_requires=[
+        "requests",
+        "scipy",
+        "pyyaml",
+        "monty",
+        "loguru",
+        "ase<3.23",
+        "numpy<2.0",
+    ],
     extras_require={
         "test": [
             "pytest",
@@ -121,11 +129,18 @@ setup(
             "kimpy",
             "emcee",
             "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
-            "numpy",
-            "ase",
+            "numpy<2.0",
+            "ase<3.23",
             "libdescriptor",
         ],
-        "torch": ["torch", "torch_geometric", "pytorch_lightning"],
+        "torch": [
+            "torch",
+            "torch_geometric",
+            "pytorch_lightning",
+            "torch_scatter",
+            "tensorboard",
+            "tensorboardx",
+        ],
         "docs": [
             "sphinx",
             "furo",

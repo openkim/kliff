@@ -27,7 +27,7 @@ model:
 
 transforms:
     configuration:
-        name: Graph
+        name: RadialGraph # case sensitive
         kwargs:
             cutoff: 3.77
             species: ["Si"]

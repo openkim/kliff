@@ -18,7 +18,7 @@ model:
 
 transforms:
     configuration:
-        name: Descriptor
+        name: Descriptor # case sensitive
         kwargs:
             cutoff: 4.0
             species: ['Si']

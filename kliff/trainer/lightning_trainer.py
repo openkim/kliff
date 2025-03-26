@@ -22,7 +22,7 @@ else:
 
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
-from .torch_trainer_utils.dataloaders import GraphDataset
+from .utils.dataloaders import GraphDataset
 
 try:
     from torch_ema import ExponentialMovingAverage
@@ -33,10 +33,7 @@ except:
 
 from pytorch_lightning.callbacks import EarlyStopping
 
-from .torch_trainer_utils.lightning_utils import (
-    LossTrajectoryCallback,
-    SaveModelCallback,
-)
+from .utils.lightning_utils import SaveModelCallback, SavePerAtomPredictions
 
 
 class LightningTrainer(pl.LightningModule):
@@ -155,7 +152,7 @@ class LightningTrainer(pl.LightningModule):
             logger=True,
             sync_dist=True,
         )
-        return loss
+        return {"loss": loss, "per_atom_pred": predicted_forces}
 
     def configure_optimizers(self) -> Union[torch.optim.Optimizer, Dict]:
         """
@@ -225,7 +222,7 @@ class LightningTrainer(pl.LightningModule):
             logger=True,
             sync_dist=True,
         )
-        return {"val_loss": loss, "per_atom_force_loss": per_atom_force_loss}
+        return {"val_loss": loss, "per_atom_pred": predicted_forces}
 
     # def test_step(self, batch, batch_idx):
     #     pass
@@ -355,16 +352,16 @@ class GNNLightningTrainer(Trainer):
         else:
             transform = None
 
-        self.train_dataset = GraphDataset(self.train_dataset, transform)
-        if self.val_dataset:
-            self.val_dataset = GraphDataset(self.val_dataset, transform)
-
         if not transform:
             for config in self.train_dataset:
                 config.fingerprint = self.configuration_transform(config)
             if self.val_dataset:
                 for config in self.val_dataset:
                     config.fingerprint = self.configuration_transform(config)
+
+        self.train_dataset = GraphDataset(self.train_dataset, transform)
+        if self.val_dataset:
+            self.val_dataset = GraphDataset(self.val_dataset, transform)
 
         if self.optimizer_manifest["num_workers"]:
             num_workers = self.optimizer_manifest["num_workers"]
@@ -413,11 +410,15 @@ class GNNLightningTrainer(Trainer):
                 "Single precision is not supported yet. Using double precision."
             )
             # TODO: Add support for single precision
+
+        strategy = self.training_manifest.get("strategy", "ddp")
+        accelerator = self.training_manifest.get("accelerator", "auto")
+
         return pl.Trainer(
             logger=[self.tb_logger, self.csv_logger],
             max_epochs=self.optimizer_manifest["epochs"],
-            accelerator="auto",
-            strategy="ddp",
+            accelerator=accelerator,
+            strategy=strategy,
             callbacks=self.callbacks,
             num_nodes=num_nodes,
             # precision=32
@@ -451,15 +452,14 @@ class GNNLightningTrainer(Trainer):
             callbacks.append(early_stopping)
             logger.info("Early stopping setup complete.")
 
-        if self.loss_manifest.get("loss_traj", False):
-            loss_traj_folder = f"{self.current['run_dir']}/loss_trajectory"
-            loss_idxs = self.dataset_sample_manifest["val_indices"]
-            ckpt_interval = self.training_manifest.get("ckpt_interval", 10)
-            loss_trajectory_callback = LossTrajectoryCallback(
-                loss_traj_folder, loss_idxs, ckpt_interval
+        if self.current["log_per_atom_pred"]:
+            per_atom_pred_callback = SavePerAtomPredictions(
+                self.current["per_atom_pred_database"], ckpt_interval
             )
-            callbacks.append(loss_trajectory_callback)
-            logger.info("Loss trajectory setup complete.")
+            callbacks.append(per_atom_pred_callback)
+            logger.info("Per atom pred dumping setup complete.")
+        else:
+            logger.info("Per atom pred dumping not enabled.")
 
         return callbacks
 
@@ -474,6 +474,21 @@ class GNNLightningTrainer(Trainer):
         # create folder if not already present
         if self.export_manifest["model_path"]:
             path = self.export_manifest["model_path"]
+
+        if not self.export_manifest["model_name"]:
+            # current_model_iter = glob.glob(f"{self.export_manifest['model_path']}/*MO_000000000*")
+            # current_model_iter.sort()
+            # if current_model_iter:
+            #     model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
+            # else:
+            #     model_iter = 0
+            # TODO: get the model iter from the model name
+
+            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
+        else:
+            qualified_model_name = self.export_manifest["model_name"]
+
+        path = os.path.join(path, qualified_model_name)
 
         os.makedirs(path, exist_ok=True)
 
@@ -495,19 +510,6 @@ class GNNLightningTrainer(Trainer):
         self.configuration_transform.export_kim_model(path, "model.pt")
 
         # CMakeLists.txt
-        if not self.export_manifest["model_name"]:
-            # current_model_iter = glob.glob(f"{self.export_manifest['model_path']}/*MO_000000000*")
-            # current_model_iter.sort()
-            # if current_model_iter:
-            #     model_iter = int(current_model_iter[-1].split("_")[-1]) + 1
-            # else:
-            #     model_iter = 0
-            # TODO: get the model iter from the model name
-
-            qualified_model_name = f"{self.current['run_title']}_MO_000000000000_000"
-        else:
-            qualified_model_name = self.export_manifest["model_name"]
-
         cmakefile = self._generate_kim_cmake(
             qualified_model_name,
             "TorchML__MD_173118614730_000",
@@ -533,6 +535,16 @@ class GNNLightningTrainer(Trainer):
     def seed_all(self):
         super().seed_all()
         pl.seed_everything(self.workspace["seed"])
+
+
+def _is_running_in_notebook():
+    """Detect if the current environment is a Jupyter Notebook."""
+    try:
+        from IPython import get_ipython
+
+        return "zmqshell" in str(type(get_ipython()))
+    except:
+        return False
 
 
 # TODO: Custom loss (via torchmetrics)?
