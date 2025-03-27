@@ -565,7 +565,7 @@ class KIMModel(Model):
             raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
         # reset influence distance in case it changes
-        self.init_influence_distance()
+        self.influence_distance = self.init_influence_distance()
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """
@@ -600,7 +600,7 @@ class KIMModel(Model):
             raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
         # reset influence distance in case it changes
-        self.init_influence_distance()
+        self.influence_distance = self.init_influence_distance()
 
     def update_model_params(self, params: Sequence[float]):
         """
