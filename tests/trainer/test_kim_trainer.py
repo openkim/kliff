@@ -8,6 +8,7 @@ import yaml
 from kliff.models import KIMModel
 from kliff.trainer.kim_trainer import KIMTrainer
 
+
 def test_trainer():
     """
     Basic tests for proper initialization of the Trainer module
@@ -98,7 +99,7 @@ def test_trainer():
         "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0},
         "normalize_per_atom": True,
     }
-    print( trainer.loss_manifest, expected_loss_manifest)
+    print(trainer.loss_manifest, expected_loss_manifest)
     assert trainer.loss_manifest == expected_loss_manifest
 
     # dataset samples

@@ -421,8 +421,10 @@ class DNNTrainer(Trainer):
         ):
             self.log_per_atom_outputs(self.current["epoch"], indexes, per_atom_pred)
 
-        if (weights["forces"] is not None and
-                np.array(weights["forces"]).size != forces.shape[0]):
+        if (
+            weights["forces"] is not None
+            and np.array(weights["forces"]).size != forces.shape[0]
+        ):
             weights_forces = np.atleast_2d(weights["forces"])[contribution]
         else:
             weights_forces = weights["forces"]

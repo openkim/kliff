@@ -7,6 +7,7 @@ import yaml
 
 from kliff.trainer.lightning_trainer import GNNLightningTrainer
 
+
 def test_trainer():
     """
     Basic tests for proper initialization of the Trainer module

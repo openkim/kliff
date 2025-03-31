@@ -60,7 +60,7 @@ jobs:
 
           # install torch dependencies
           # Need to install torch manually as the install group cannot find torch
-          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu 
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install .[torch]
 
           # TODO, here, we install ptemcee from Yonatan's fork. See setup.py for details.
