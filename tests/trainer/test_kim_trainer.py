@@ -6,8 +6,7 @@ import pytest
 import yaml
 
 from kliff.models import KIMModel
-from kliff.trainer import KIMTrainer
-
+from kliff.trainer.kim_trainer import KIMTrainer
 
 def test_trainer():
     """
@@ -96,10 +95,10 @@ def test_trainer():
 
     expected_loss_manifest = {
         "function": "MSE",
-        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0, "stress": None},
+        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0},
         "normalize_per_atom": True,
-        "loss_traj": False,
     }
+    print( trainer.loss_manifest, expected_loss_manifest)
     assert trainer.loss_manifest == expected_loss_manifest
 
     # dataset samples

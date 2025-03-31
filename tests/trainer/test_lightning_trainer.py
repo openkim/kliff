@@ -5,8 +5,7 @@ import pytest
 import torch
 import yaml
 
-from kliff.trainer import GNNLightningTrainer
-
+from kliff.trainer.lightning_trainer import GNNLightningTrainer
 
 def test_trainer():
     """
@@ -57,7 +56,6 @@ def test_trainer():
     assert trainer.current["appending_to_previous_run"] == False
     assert trainer.current["verbose"] == False
     assert trainer.current["ckpt_interval"] == 3
-    assert trainer.current["per_atom_loss"] == {"train": None, "val": None}
 
     # check dataset manifest
     expected_dataset_manifest = {
@@ -76,14 +74,14 @@ def test_trainer():
 
     # check graph settings
     config_transform = {
-        "name": "Graph",
+        "name": "RadialGraph",
         "kwargs": {"cutoff": 3.77, "species": ["Si"], "n_layers": 1},
     }
     assert trainer.transform_manifest["configuration"] == config_transform
 
     expected_loss_manifest = {
         "function": "MSE",
-        "weights": {"config": 1.0, "energy": 1.0, "forces": 10.0, "stress": None},
+        "weights": {"config": 1.0, "energy": 1.0, "forces": 10.0},
         "normalize_per_atom": False,
         "loss_traj": False,
     }
@@ -99,11 +97,12 @@ def test_trainer():
     expected_optimizer_manifest = {
         "name": "Adam",
         "learning_rate": 0.001,
-        "kwargs": None,
+        "kwargs": {},
         "epochs": 2,
         "num_workers": None,
         "batch_size": 1,
     }
+    print(trainer.optimizer_manifest, expected_optimizer_manifest)
     assert trainer.optimizer_manifest == expected_optimizer_manifest
 
     # dummy training

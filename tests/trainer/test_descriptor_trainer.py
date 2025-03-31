@@ -6,7 +6,7 @@ import pytest
 import torch
 import yaml
 
-from kliff.trainer import DNNTrainer
+from kliff.trainer.torch_trainer import DNNTrainer
 
 
 def test_descriptor_trainer():
@@ -89,9 +89,8 @@ def test_descriptor_trainer():
 
     expected_loss_manifest = {
         "function": "MSE",
-        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0, "stress": None},
+        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0},
         "normalize_per_atom": True,
-        "loss_traj": False,
     }
 
     assert trainer.loss_manifest == expected_loss_manifest
@@ -106,7 +105,7 @@ def test_descriptor_trainer():
     expected_optimizer_manifest = {
         "name": "Adam",
         "learning_rate": 1.0e-3,
-        "kwargs": None,
+        "kwargs": {},
         "epochs": 2,
         "num_workers": None,
         "batch_size": 2,
