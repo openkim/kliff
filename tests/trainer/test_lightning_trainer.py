@@ -117,9 +117,15 @@ def test_trainer():
 
     # check if the kim model is saved, default folder is kim-model
     trainer.save_kim_model()
-    assert Path(f"kim-model/model.pt").exists()
-    assert Path(f"kim-model/kliff_graph.param").exists()
-    assert Path(f"kim-model/CMakeLists.txt").exists()
+
+    if not trainer.export_manifest["model_name"]:
+        qualified_model_name = f"{trainer.current['run_title']}_MO_000000000000_000"
+    else:
+        qualified_model_name = trainer.export_manifest["model_name"]
+
+    assert Path(f"kim-model/{qualified_model_name}/model.pt").exists()
+    assert Path(f"kim-model/{qualified_model_name}/kliff_graph.param").exists()
+    assert Path(f"kim-model/{qualified_model_name}/CMakeLists.txt").exists()
 
     # check restart
     # TODO: implement restart test

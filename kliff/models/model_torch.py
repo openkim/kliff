@@ -99,7 +99,7 @@ class ModelTorch(nn.Module):
             mode: Purpose of the loaded model. Should be either `train` or `eval`.
         """
         filename = to_path(filename)
-        state_dict = torch.load(str(filename))
+        state_dict = torch.load(str(filename), weights_only=False)
 
         # load model state dict
         self.load_state_dict(state_dict["model_state_dict"])

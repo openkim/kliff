@@ -123,12 +123,18 @@ def test_descriptor_trainer():
 
     # check if the kim model is saved, default folder is kim-model
     trainer.save_kim_model()
-    assert os.path.exists("./kim-model/CMakeLists.txt")
+
+    if not trainer.export_manifest["model_name"]:
+        qualified_model_name = f"{trainer.current['run_title']}_MO_000000000000_000"
+    else:
+        qualified_model_name = trainer.export_manifest["model_name"]
+
+    assert os.path.exists(f"./kim-model/{qualified_model_name}/CMakeLists.txt")
 
     # check if checkpoints are properly saved
     ckpt = f'{trainer.current["run_dir"]}/checkpoints/checkpoint_0.pkl'
     assert os.path.exists(ckpt)
-    ckpt_dict = torch.load(ckpt)
+    ckpt_dict = torch.load(ckpt, weights_only=False)
     assert ckpt_dict["model_state_dict"].keys() == model.state_dict().keys()
     assert (
         ckpt_dict["optimizer_state_dict"].keys()
