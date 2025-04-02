@@ -28,7 +28,7 @@ jobs:
       matrix:
         #os: [ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9","3.10","3.11"]
 
     runs-on: ${{ matrix.os }}
 
@@ -45,7 +45,7 @@ jobs:
             python=${{ matrix.python-version }}
             kim-api=2.3.0
             cmake<4.0.0
-            ipcamit::libdescriptor
+            ipcamit::libdescriptor=0.2.5
 
       - name: Install KIM model
         shell: bash -el {0}
