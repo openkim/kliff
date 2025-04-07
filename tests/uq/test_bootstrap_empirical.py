@@ -36,6 +36,7 @@ def calc_forces(uq_kim_model, uq_test_configs):
     ncas_forces = len(cas_forces)
     return calculator_forces, cas_forces, ncas_forces
 
+
 # calculators
 # forces
 # calc_forces = Calculator(model)
@@ -45,6 +46,7 @@ def calc_forces(uq_kim_model, uq_test_configs):
 # cas_energy = calc_energy.create(configs, use_energy=True, use_forces=False)
 # ncas_energy = len(calc_energy.get_compute_arguments())
 # calc_comb = _WrapperCalculator(calculators=[calc_energy, calc_forces])
+
 
 @pytest.fixture(scope="module")
 def calc_energy(uq_kim_model, uq_test_configs):

@@ -57,11 +57,13 @@ def model_c(descriptor):
     )
     return model
 
+
 # training set
 # FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
 # path = FILE_DIR.parent.joinpath("test_data/configs/SiC_4")
 # data = Dataset.from_path(path)
 # configs = data.get_configs()
+
 
 @pytest.fixture(scope="session")
 def calc(uq_test_configs, model_si, model_c):

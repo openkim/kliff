@@ -47,11 +47,13 @@ def calc(model, uq_test_configs):
     _ = calculator.create(uq_test_configs, use_energy=False, use_forces=True)
     return calculator
 
+
 # calculators
 # calc = CalculatorTorch(model)
 # _ = calc.create(configs, use_energy=False, use_forces=True)
 # fingerprints = calc.get_fingerprints()
 # nfingerprints = len(fingerprints)
+
 
 @pytest.fixture(scope="session")
 def fingerprints(calc):

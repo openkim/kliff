@@ -32,4 +32,3 @@ Before a pull request can be merged, the following items must be checked:
 
 Note that the CI system will run all the above checks. But it will be much more
 efficient if you already fix most errors prior to submitting the PR.
- 

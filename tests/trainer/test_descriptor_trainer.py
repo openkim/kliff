@@ -134,7 +134,11 @@ def test_descriptor_trainer():
     # check if checkpoints are properly saved
     ckpt = f'{trainer.current["run_dir"]}/checkpoints/checkpoint_0.pkl'
     assert os.path.exists(ckpt)
-    ckpt_dict = torch.load(ckpt, weights_only=False)
+    try:
+        ckpt_dict = torch.load(ckpt, weights_only=False)
+    except TypeError:
+        ckpt_dict = torch.load(ckpt)
+
     assert ckpt_dict["model_state_dict"].keys() == model.state_dict().keys()
     assert (
         ckpt_dict["optimizer_state_dict"].keys()
