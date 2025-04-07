@@ -421,6 +421,14 @@ class DNNTrainer(Trainer):
         ):
             self.log_per_atom_outputs(self.current["epoch"], indexes, per_atom_pred)
 
+        if (
+            weights["forces"] is not None
+            and np.array(weights["forces"]).size != forces.shape[0]
+        ):
+            weights_forces = np.atleast_2d(weights["forces"])[contribution]
+        else:
+            weights_forces = weights["forces"]
+
         loss_forces = self.loss(
             forces_predicted,
             torch.tensor(
@@ -428,7 +436,7 @@ class DNNTrainer(Trainer):
                 device=self.current["device"],
                 dtype=self.dtype,
             ),
-            weights["forces"],
+            weights_forces,
         )
         # loss = loss + loss_forces * self.loss_manifest["weights"]["forces"]
         # TODO: Discuss and check if this is correct

@@ -44,7 +44,7 @@ Below table illustrates the difference DUNN and TorchML model drivers:
 +----------------+--------------------------------------+------------------------------------------+
 | Performance    | Flexible but slower                  | Faster                                   |
 +----------------+--------------------------------------+------------------------------------------+
-| UQ             | Model dependent                      | Ensemble average                         |
+| UQ             | No UQ support yet                    | Ensemble average                         |
 +----------------+--------------------------------------+------------------------------------------+
 
 So decide as per your requirements which model driver you want to use.

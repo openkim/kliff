@@ -6,7 +6,7 @@ import pytest
 import torch
 import yaml
 
-from kliff.trainer import DNNTrainer
+from kliff.trainer.torch_trainer import DNNTrainer
 
 
 def test_descriptor_trainer():
@@ -89,9 +89,8 @@ def test_descriptor_trainer():
 
     expected_loss_manifest = {
         "function": "MSE",
-        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0, "stress": None},
+        "weights": {"config": 1.0, "energy": 1.0, "forces": 1.0},
         "normalize_per_atom": True,
-        "loss_traj": False,
     }
 
     assert trainer.loss_manifest == expected_loss_manifest
@@ -106,7 +105,7 @@ def test_descriptor_trainer():
     expected_optimizer_manifest = {
         "name": "Adam",
         "learning_rate": 1.0e-3,
-        "kwargs": None,
+        "kwargs": {},
         "epochs": 2,
         "num_workers": None,
         "batch_size": 2,
@@ -124,12 +123,18 @@ def test_descriptor_trainer():
 
     # check if the kim model is saved, default folder is kim-model
     trainer.save_kim_model()
-    assert os.path.exists("./kim-model/CMakeLists.txt")
+
+    if not trainer.export_manifest["model_name"]:
+        qualified_model_name = f"{trainer.current['run_title']}_MO_000000000000_000"
+    else:
+        qualified_model_name = trainer.export_manifest["model_name"]
+
+    assert os.path.exists(f"./kim-model/{qualified_model_name}/CMakeLists.txt")
 
     # check if checkpoints are properly saved
     ckpt = f'{trainer.current["run_dir"]}/checkpoints/checkpoint_0.pkl'
     assert os.path.exists(ckpt)
-    ckpt_dict = torch.load(ckpt)
+    ckpt_dict = torch.load(ckpt, weights_only=False)
     assert ckpt_dict["model_state_dict"].keys() == model.state_dict().keys()
     assert (
         ckpt_dict["optimizer_state_dict"].keys()
