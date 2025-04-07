@@ -1,8 +1,8 @@
 import numpy as np
 
-from kliff.calculators import Calculator
 from kliff.dataset import Dataset
-from kliff.loss import Loss
+from kliff.legacy.calculators import Calculator
+from kliff.legacy.loss import Loss
 from kliff.models import KIMModel
 
 
@@ -21,7 +21,7 @@ def init(path):
     model.set_opt_params(sigma=[[2.0951, "fix"]])
     model.set_opt_params(gamma=[[1.5]])
 
-    tset = Dataset(path / "configs" / "Si_4")
+    tset = Dataset.from_path(path / "configs" / "Si_4")
     configs = tset.get_configs()
 
     calc = Calculator(model)

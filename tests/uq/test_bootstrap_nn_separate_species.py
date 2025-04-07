@@ -4,10 +4,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kliff import nn
-from kliff.calculators.calculator_torch import CalculatorTorchSeparateSpecies
-from kliff.descriptors import SymmetryFunction
-from kliff.loss import Loss
+from kliff.dataset import Dataset
+from kliff.legacy import nn
+from kliff.legacy.calculators.calculator_torch import CalculatorTorchSeparateSpecies
+from kliff.legacy.descriptors import SymmetryFunction
+from kliff.legacy.loss import Loss
 from kliff.models import NeuralNetwork
 from kliff.uq.bootstrap import BootstrapNeuralNetworkModel
 
@@ -56,6 +57,11 @@ def model_c(descriptor):
     )
     return model
 
+# training set
+# FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
+# path = FILE_DIR.parent.joinpath("test_data/configs/SiC_4")
+# data = Dataset.from_path(path)
+# configs = data.get_configs()
 
 @pytest.fixture(scope="session")
 def calc(uq_test_configs, model_si, model_c):

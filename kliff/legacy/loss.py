@@ -6,10 +6,10 @@ import scipy.optimize
 from loguru import logger
 
 from kliff import parallel
-from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.calculators.calculator_torch import CalculatorTorch
 from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
+from kliff.legacy.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.legacy.calculators.calculator_torch import CalculatorTorch
 
 try:
     import torch
@@ -331,7 +331,7 @@ class LossPhysicsMotivatedModel:
                     )
 
             # adjust bounds
-            if self.calculator.has_opt_params_bounds():
+            if self.calculator.opt_params_has_bounds():
                 if method in ["trf", "dogbox"]:
                     bounds = self.calculator.get_opt_params_bounds()
                     lb = [b[0] if b[0] is not None else -np.inf for b in bounds]
@@ -356,7 +356,7 @@ class LossPhysicsMotivatedModel:
             else:
                 calculators = [self.calculator]
             for calc in calculators:
-                if calc.has_opt_params_bounds():
+                if calc.opt_params_has_bounds():
                     if method in ["L-BFGS-B", "TNC", "SLSQP"]:
                         bounds = self.calculator.get_opt_params_bounds()
                         kwargs["bounds"] = bounds

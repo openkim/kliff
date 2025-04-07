@@ -1,705 +1,461 @@
-import sys
+import pickle
 import warnings
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 import numpy as np
-from monty.json import MSONable
+
+if TYPE_CHECKING:
+    from kliff.transforms.parameter_transforms import ParameterTransform
+
+from loguru import logger
 
 
-# TODO, it is not a good idea to use list of float to represent a parameter value and
-#  bound (mainly because of efficiency stuff when setting it). Currently we do this
-#  because KIM API has to set individual components of a parameter by index.
-#  But here, we can have more cases, e.g. parameter transformation between linear and
-#  log space. Making it default to np.array should be much better.
-#
-class Parameter(MSONable):
+class Parameter(np.ndarray):
+    """Parameter class for containing physics-based model parameters.
+
+    This class provides utilities for managing model parameters between the "model space"
+    and the "parameter space". See the glossary below for the definition of these spaces.
+    Modeled on `torch.nn.Parameters`, it inherits from `numpy.ndarray`. It is a numpy
+    array with additional attributes such as name, transform, etc.
+
+    Glossary:
+        - Model space: The space in which the model expects the parameters to be in. Currently,
+            all models in OpenKIM expect the parameters to be in the affine cartesian space.
+        - Parameter space: Parameter space is the space in which you want to sample/optimize
+            the parameters. Most often parameters are transformed using bijective transformations
+            of the model inputs for ease of optimization/sampling. For example, the log
+            transform is used in searching for the optimal parameters of sloppy model parameters.
+            There can be cases where transformation functions are not bijective, e.g. ceiling function for
+            mapping continuous parameters to discrete values. Parameter space is mostly
+            used for optimization, and not the model itself. If no transform_function is
+            provided then parameter space and model space are same.
+
+        All functions that needs input/output in the model space, will use the suffix
+        `_model_space` and `_param_space` for the transformed parameter space.
+
+        Below is the list of such twinned functions, and their designed use cases:
+        1. `get_numpy_array_model_space` and `get_numpy_array_param_space`: These functions
+            return the numpy array of parameters in the model space and parameter space.
+            These functions should be used for getting the pure numpy array of parameters
+            where the ``Parameters`` class might not work, e.g for feeding values to the model.
+            They are also used in case of comparing the parameter state etc.
+        2. `copy_from_model_space` and `copy_from_param_space`: These functions copy the
+            provided array to self in the model space and parameter space. They are useful
+            for copying values during optimization etc. NOTE: These functions expect the
+            incoming array to be of the same type and shape as self, compensated for opt_mask.
+        3. `add_bounds_model_space` and `add_bounds_param_space`: These functions add bounds
+            to the parameter in the model space and parameter space.
+        4. `get_bounds_model_space` and `get_bounds_param_space`: These functions return the
+            bounds in the model space and parameter space.
+        5. `get_opt_numpy_array_param_space`: This function returns the numpy array of parameters
+            in the parameter space, with the opt_mask applied. This should be the de-facto method
+            for getting the numpy array of parameters for optimization. At present, it
+            does not have `_model_space` version, as there are no applications for it.
+            If needed, it can be added later.
+
+    Attributes:
+        name: Name of the parameter.
+        transform_function: Instance of  ``ParameterTransform`` object to be applied to the parameter.
+        index: Index of the parameter in the parameter vector. used for setting the parameter
+            in the KIMPY.
+        bounds: Bounds for the parameter, must be numpy array of shape n x 2, with [n,0] as
+            lower bound, and [n,1] as the upper bound. If None, no bounds are applied.
+        opt_mask: A boolean or boolean array of the same shape as the parameter. For a
+            vector parameter ``opt_mask`` acts as a binary mask to determine which vector
+            components will be optimized, e.g. for a parameter with value [1., 2., 3.],
+            and opt_mask [True, False, True], only the first and third components will be
+            optimized, and second one will be presumed constant.
     """
-    Potential parameter.
 
-    To follow the KIM model paradigm, a parameter is a list of floats that can be
-    adjusted to fit the potential to some parameters.
+    name: str
+    transform_function: "ParameterTransform"
+    index: int
+    bounds: np.ndarray
+    opt_mask: Union[np.ndarray, bool]
 
-    This class is mainly by physically-motivated potentials.
-
-    Args:
-        value: parameter values, should be a list of float or a 1D array.
-        fixed: whether parameter component should be fixed (i.e. not used for fitting).
-            Should have the same length of `value`. Default to not fixed for all
-            components.
-        lower_bound: lower bound of the allowed value for the parameter. Default to
-            `None`, i.e. no lower bound is applied.
-        upper_bound: upper bound of the allowed value for the parameter. Default to
-            `None`, i.e. no lower bound is applied.
-        name: name of the parameter.
-        index: integer index of the parameter.
-    """
-
-    def __init__(
-        self,
-        value: Union[Sequence[float], np.ndarray],
-        fixed: Optional[Sequence[bool]] = None,
-        lower_bound: Optional[Sequence[float]] = None,
-        upper_bound: Optional[Sequence[float]] = None,
-        name: Optional[str] = None,
-        index: Optional[int] = None,
+    def __new__(
+        cls,
+        input_array: Union[np.ndarray, float, int],
+        name: str = None,
+        transform_function: "ParameterTransform" = None,
+        bounds: np.ndarray = None,
+        index: int = None,
+        opt_mask: [np.ndarray, bool] = None,
     ):
-        self._value = np.asarray(_check_shape(value, "parameter value"))
-        self._fixed = (
-            [False] * len(self._value)
-            if fixed is None
-            else _check_shape(fixed, "fixed")
-        )
-        self._lower_bound = (
-            [None] * len(self._value)
-            if lower_bound is None
-            else _check_shape(lower_bound, "lower_bound")
-        )
-        self._upper_bound = (
-            [None] * len(self._value)
-            if upper_bound is None
-            else _check_shape(upper_bound, "upper_bound")
-        )
-        self._name = name
-        self._index = index
-
-    @property
-    def value(self) -> List[float]:
-        """
-        Parameter value.
-        """
-        return self._value
-
-    @value.setter
-    def value(self, value: Union[List[float], np.ndarray]):
-        self._value = value
-
-    # TODO, this is confusing. Rename it set_value_by_index to avoid confusion with
-    #  the above one?
-    def set_value(self, index: int, v: float):
-        """
-        Set the value of a component.
-        """
-        self._value[index] = float(v)
-
-    @property
-    def fixed(self) -> List[bool]:
-        """
-        Whether each parameter component is fixed or not (i.e. allow to fitting or not).
-        """
-        return self._fixed
-
-    def set_fixed(self, index: int, v: bool):
-        """
-        Set the fixed status of a component of the parameter.
+        """Initializes and returns a new instance of Parameter.
 
         Args:
-            index: index of the component
-            v: fix status
-        """
-        self._fixed[index] = v
+            input_array: Input numpy array to initialize the parameter with.
+            name: Name of the parameter
+            transform_function: Instance of  ``ParameterTransform`` object to be applied to the parameter.
+            bounds: n x 2 array of lower and upper bounds for the parameter. If None, no
+                bounds are applied
+            index: Index of the parameter in the parameter vector. Used for setting the
+             parameter in the KIMPY.
+            opt_mask: Boolean array of the same shape as the parameter. The values
+                marked ``True`` are optimized, and ``False`` are not optimized. Single
+                boolean value can also be provided, in which case it will be applied to
+                all the components of the parameter.
 
-    @property
-    def lower_bound(self) -> List[float]:
+        Returns:
+            A new instance of Parameter.
         """
-        Lower bound of parameter.
-        """
-        return self._lower_bound
+        array_in = np.array(input_array)
+        obj = array_in.view(cls)
+        obj.name = name
+        obj.transform_function = transform_function
+        obj.index = index
+        obj._is_transformed = False
+        obj.bounds = bounds
+        if opt_mask is not None:
+            if isinstance(opt_mask, bool):
+                opt_mask = np.ones_like(obj, dtype=bool) * opt_mask
+            obj.opt_mask = opt_mask
+        else:
+            obj.opt_mask = np.zeros(obj.shape, dtype=bool)
+        obj._bounds_transformed = False
+        return obj
 
-    def set_lower_bound(self, index: int, v: float):
+    # TODO: This seems a bit off, the signature should match np.array, need to look more in it
+    # but the format matches the one in numpy examples.
+    def __array_finalize__(self, obj):
+        """Finalizes a parameter, needed for numpy object cleanup."""
+        if obj is None:
+            return
+        self.name = getattr(obj, "name", None)
+        self.transform_function = getattr(obj, "transform_function", None)
+        self.bounds = getattr(obj, "bounds", None)
+        self.index = getattr(obj, "index", None)
+        self._is_transformed = getattr(obj, "_is_transformed", False)
+        self.opt_mask = getattr(obj, "opt_mask", None)
+        self._bounds_transformed = getattr(obj, "_bounds_transformed", False)
+
+    def __repr__(self):
+        return f"Parameter {self.name} {np.ndarray.__repr__(self)}."
+
+    def transform(self):
+        """Apply the transform to the parameter.
+
+        This method simple applies the function ~:kliff.transforms.ParameterTransform.__call__
+        to the parameter (or equivalently, ~:kliff.transforms.ParameterTransform.transform).
         """
-        Set the lower bound of a component of the parameter.
+        if self._is_transformed:
+            # warnings.warn("Parameter {0} has already been transformed.".format(self.name))
+            # Warnings become quite noisy, so commenting it out for now.
+            # TODO: figure out a better solution for this.
+            return
+        else:
+            if self.transform_function is not None:
+                transformed_array = self.transform_function(self)
+                self[:] = transformed_array
+            self._is_transformed = True
+
+    def inverse_transform(self):
+        """Apply the inverse transform to the parameter.
+
+        Simply applies the function :kliff.transforms.ParameterTransform.inverse_transform()
+        in place, to the parameters."""
+        if not self._is_transformed:
+            warnings.warn(f"Parameter {self.name} has not been transformed.")
+            return
+        else:
+            if self.transform_function is not None:
+                inv_transformed_array = self.transform_function.inverse_transform(self)
+                self[:] = inv_transformed_array
+            self._is_transformed = False
+
+    def copy_from_param_space(self, arr: np.ndarray):
+        """Copy array to self in the parameter space.
+
+        Array can be a numpy array or a Parameter object.
+        This method assumes that the array is of the same type and shape as self,
+        compensated for opt_mask. If not, it will raise an error.
+        This method also assumes that the incoming array is in the same space, as the parameter
+        currently (i.e. "Parameter space", see glossary above for detail).
 
         Args:
-            index: index of the component
-            v: lower bound value
+            arr: Array to copy to self.
         """
-        self._lower_bound[index] = v
+        # convert to numpy array
+        if (not isinstance(arr, (np.ndarray, Parameter))) and isinstance(
+            arr, (float, int)
+        ):
+            arr = np.asarray(arr)
 
-    @property
-    def upper_bound(self) -> List[float]:
-        """
-        Upper bound of parameter.
-        """
-        return self._upper_bound
+        tmp_arr = np.zeros_like(self)
+        tmp_arr[self.opt_mask] = arr
+        tmp_arr[~self.opt_mask] = self[~self.opt_mask]
+        arr = tmp_arr
+        arr = arr.astype(self.dtype)
+        self[:] = arr
 
-    def set_upper_bound(self, index: int, v: float):
-        """
-        Set the upper bound of a component of the parameter.
+    def copy_from_model_space(self, arr: np.array):
+        """Copy arr from model space.
+
+        Array can be a numpy array or a Parameter object. This method assumes that the
+        incoming array is in the model space and would need transformation to the parameter
+        space before copying. It is a safer method to use in most cases. If the parameter
+        is not transformed, it will transform it first for maintaining consistency.
+        This method requires the copied array to have consistent opt_mask applied.
 
         Args:
-            index: index of the component
-            v: upper bound value
+            arr: Array to copy to self.
         """
-        self._upper_bound[index] = v
+        # ensure that the parameter is transformed
+        if not self._is_transformed:
+            self.transform()
+        if self.transform_function is not None:
+            arr = self.transform_function.transform(arr)
+        self.copy_from_param_space(arr)
 
-    @property
-    def name(self) -> str:
+    def get_numpy_array_model_space(self) -> np.ndarray:
+        """Get a numpy array of parameters in the model space.
+
+        This method should be uses for getting the numpy array of parameters where the
+        ``Parameters`` class might not work, for feeding values to the model.
+
+        Returns:
+            A numpy array of parameters in the original space.
         """
-        Name of the parameter.
+        if (self.transform_function is not None) and self._is_transformed:
+            return self.transform_function.inverse_transform(self)
+        else:
+            return np.array(self)
+
+    def get_numpy_array_param_space(self):
+        """Applies the transform to the parameter, and returns the transformed array."""
+        self.transform()
+        return np.array(self)
+
+    def get_opt_numpy_array_param_space(self) -> np.ndarray:
+        """Get a masked numpy array of parameters in the transformed space.
+
+        This method is similar to :get_numpy_array_param_space but additionally does apply the
+        opt_mask, and returns the array. This ensures the correctness of the array for
+        optimization/other applications. *This should be the de-facto method for getting
+        the numpy array of parameters.*
+
+        Returns:
+            A numpy array of parameters in the original space.
         """
-        return self._name
+        np_arr = self.get_numpy_array_param_space()  # in transformed space
+        if self.opt_mask is not None:
+            np_arr = np_arr[self.opt_mask]
+        return np_arr
 
-    @property
-    def index(self) -> int:
-        """
-        Integer index of the parameter.
-        """
-        return self._index
+    def copy_at_param_space(
+        self, arr: Union[int, float, np.ndarray, List], index: Union[int, List[int]]
+    ):
+        """Copy values at a particular index or indices in parameter space.
 
-    def __len__(self):
-        return len(self.value)
-
-    def __getitem__(self, i: int):
-        return self._value[i]
-
-    def __setitem__(self, i: int, v: float):
-        self._value[i] = float(v)
-
-    def as_dict(self):
-        return {
-            "@module": self.__class__.__module__,
-            "@class": self.__class__.__name__,
-            "value": np.asarray(self._value).tolist(),
-            "fixed": self._fixed,
-            "lower_bound": self._lower_bound,
-            "upper_bound": self._upper_bound,
-            "name": self._name,
-            "index": self._index,
-        }
-
-    @classmethod
-    def from_dict(cls, d):
-        return cls(
-            value=d["value"],
-            fixed=d["fixed"],
-            lower_bound=d["lower_bound"],
-            upper_bound=d["upper_bound"],
-            name=d["name"],
-            index=d["index"],
-        )
-
-
-class OptimizingParameters(MSONable):
-    """
-    A collection of parameters that will be optimized.
-
-    This can be all the parameters of a model or a subset of the parameters of a model.
-    The behavior of individual component of a parameter can also be controlled. For
-    example, keep the 2nd component of a parameters fixed, while optimizing the other
-    components.
-
-    It interacts with optimizer to provide initial guesses of parameter values; it also
-    receives updated parameters from the optimizer and update model parameters.
-
-    Args:
-        model_params: {name, parameter} all the parameters of a model. The attributes
-            of these parameters will be modified to reflect whether it is optimized.
-    """
-
-    def __init__(self, model_params: Dict[str, Parameter]):
-        self.model_params = model_params
-
-        # list of optimizing param names
-        self._params = []
-
-        # individual components of parameters that are optimized
-        self._index = []
-
-    def read(self, filename: Path):
-        """
-        Read the parameters that will be optimized from a file.
-
-        Each parameter is a 1D array, and each component of the parameter array should be
-        listed in a new line. Each line can contains 1, 2, or 3 elements, described in
-        details below:
-
-        1st element: float or `DEFAULT`
-            Initial guess of the parameter component. If `DEFAULT` (case insensitive), the
-            value from the calculator is used as the initial guess.
-
-        The 2nd and 3rd elements are optional.
-
-        If 2 elements are provided:
-
-        2nd element: `FIX` (case insensitive)
-            If `FIX`, the corresponding component will not be optimized.
-
-        If 3 elements are provided:
-
-        2nd element: float or `INF` (case insensitive)
-            Lower bound of the parameter. `INF` indicates that the lower bound is
-            negative infinite, i.e. no lower bound is applied.
-
-        3rd element: float or `INF` (case insensitive)
-            Upper bound of the parameter. `INF` indicates that the upper bound is
-            positive infinite, i.e. no upper bound is applied.
-
-        Instead of reading fitting parameters from a file, you can also setting them
-        using a dictionary by calling the `set()` method.
+        This method directly copies the provided data, and does not perform any checks.
 
         Args:
-            filename: path to file that includes the fitting parameters.
-
-        Example:
-
-            # put the below in a file, say `model_params.txt` and you can read the fitting
-            # parameters by this_class.read(filename="model_params.txt")
-
-            A
-            DEFAULT
-            1.1
-
-            B
-            DEFAULT FIX
-            1.1     FIX
-
-            C
-            DEFAULT  0.1  INF
-            1.0      INF  2.1
-            2.0      FIX
+            index: Index or indices to copy the values at.
+            arr: Array to copy to self.
         """
-
-        with open(filename, "r") as fin:
-            lines = fin.readlines()
-            lines = _remove_comments(lines)
-
-        num_line = 0
-        while num_line < len(lines):
-            name = lines[num_line].strip()
-            num_line += 1
-
-            if name in self._params:
-                warnings.warn(
-                    f"file `{filename}`, line {num_line}. Parameter `{name}` already "
-                    f"set. Reset it.",
-                    category=Warning,
-                )
-
-            if name not in self.model_params:
-                raise ParameterError(
-                    f"file `{filename}`, line {num_line}. Parameter `{name}` not "
-                    f"supported."
-                )
-
-            num_components = len(self.model_params[name])
-
-            settings = []
-            for j in range(num_components):
-                settings.append(lines[num_line].split())
-                num_line += 1
-
-            self.set_one(name, settings)
-
-    def set(self, **kwargs):
-        """
-        Set the parameters that will be optimized.
-
-        One or more parameters can be set. Each argument is for one parameter, where the
-        argument name is the parameter name, the value of the argument is the
-        settings(including initial value, fix flag, lower bound, and upper bound).
-
-        The value of the argument should be a list of list, where each inner list is for
-        one component of the parameter, which can contain 1, 2, or 3 elements.  See
-        `~kliff.model.parameter.OptimizingParameters.read()` for the options of the
-        elements.
-
-        Example:
-            instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
-        """
-        for name, settings in kwargs.items():
-            if name in self._params:
-                msg = f"Parameter `{name}` already set. Reset it."
-                warnings.warn(msg, category=Warning)
-
-            if name not in self.model_params:
-                raise ParameterError(f"Parameter `{name}` not supported.")
-
-            self.set_one(name, settings)
-
-    def set_one(self, name: str, settings: List[List[Any]]):
-        """
-        Set one parameter that will be optimized.
-
-        The name of the parameter should be given as the first entry of a list (or tuple),
-        and then each data line should be given in in a list.
-
-        Args:
-            name: name of a fitting parameter
-            settings: initial value, flag to fix a parameter, lower and upper bounds of a
-                parameter.
-
-        Example:
-            name = 'param_A'
-            settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
-            instance.set_one(name, settings)
-        """
-        size = len(self.model_params[name])
-        if len(settings) != size:
+        if isinstance(index, int) and isinstance(arr, (int, float)):
+            index = [index]
+            arr = np.array([arr])
+        elif isinstance(index, list) and isinstance(arr, (list, np.ndarray)):
+            index = np.array(index)
+            arr = np.array(arr)
+        elif isinstance(index, np.ndarray) and isinstance(arr, np.ndarray):
+            if index.shape != arr.shape:
+                raise ParameterError("Index and value are array of different shapes.")
+        else:
             raise ParameterError(
-                f"Expect {size} components for parameter `{name}`, got {len(settings)}."
+                "Either index and value should both be scalar, or both be list/array of same length."
             )
 
-        for j, line in enumerate(settings):
-            num_items = len(line)
-            if num_items == 1:
-                self._read_1_item(name, j, line)
-            elif num_items == 2:
-                self._read_2_item(name, j, line)
-            elif num_items == 3:
-                self._read_3_item(name, j, line)
-            else:
-                raise ParameterError(
-                    f"More than 3 elements listed at data line {j+1} for "
-                    f"parameter `{name}`."
-                )
+        arr = arr.astype(self.dtype)
+        for i, j in zip(index, arr):
+            self[i] = j
 
-            # probably setting cutoff?
-            if "cut" in name:
-                # and not fix it?
-                if not (num_items == 2 and line[1].lower() == "fix"):
-                    warnings.warn(
-                        f"Parameter `{name}` seems to be a cutoff distance. KLIFF does "
-                        f"not support optimizing cutoff. Remove it from your "
-                        f"optimizing parameter or make it a `fix` parameter if you "
-                        f"want to use a different cutoff distance from the default "
-                        f"value in the model. Ignore this if `{name}` is not a cutoff "
-                        f"distance."
-                    )
-
-        self._set_index(name)
-
-        if name not in self._params:
-            self._params.append(name)
-
-    def echo_opt_params(
-        self, filename: Union[Path, TextIO, None] = sys.stdout, echo_size: bool = True
-    ) -> str:
-        """
-        Get the optimizing parameters as a string and/or print to file (stdout).
+    def add_transform(self, transform: "ParameterTransform"):
+        """Save a transform object with the parameter.
 
         Args:
-            filename: Path to the file to output the optimizing parameters. If `None`,
-                print to stdout.
-            echo_size: Whether to print the size of parameters. (Each parameter
-                may have one or more components).
+            transform: Instance of  ``ParameterTransform`` object to be applied to the parameter.
+        """
+        self.transform_function = transform
+        self.transform()
+        self._is_transformed = True
+        if self.bounds is not None and not self._bounds_transformed:
+            self.bounds = self.transform_function(self.bounds)
+
+    def add_bounds_model_space(self, bounds: np.ndarray):
+        """Add bounds to the parameter.
+
+        Bounds should be supplied in the model space. The bounds will be transformed if
+        the transform_function is provided to the parameter.
+
+        Args:
+            bounds: numpy array of shape (n, 2)
+        """
+        if bounds.shape[1] != 2:
+            raise ParameterError("Bounds must have shape (n, 2).")
+        if self.transform_function is not None:
+            self.bounds = self.transform_function(bounds)
+            self._bounds_transformed = True
+        else:
+            self.bounds = bounds
+
+    def add_bounds_param_space(self, bounds: np.ndarray):
+        """Add bounds to the parameter.
+
+        Add bounds to the parameter in parameter space. It does not do any additional checks
+        or perform any transformations.
+
+        Args:
+            bounds: numpy array of shape (n, 2)
+        """
+        if bounds.shape[1] != 2:
+            raise ParameterError("Bounds must have shape (n, 2).")
+        self.bounds = bounds
+        self._bounds_transformed = True
+
+    def add_opt_mask(self, mask: Union[np.ndarray, bool]):
+        """Set mask for optimizing vector quantities.
+
+        It expects an input array of shape (n,), where n is the dimension of the vector
+        quantity to be optimized. This array must contain n booleans indicating which
+        properties to optimize.
+
+        Args:
+            mask: boolean array of same shape as the vector quantity to be optimized
+        """
+        if isinstance(mask, bool):
+            mask = np.ones_like(self, dtype=bool) * mask
+        if mask.shape != self.shape:
+            raise ParameterError("Mask must have shape {0}.".format(self.shape))
+        self.opt_mask = mask
+
+    def get_bounds_param_space(self) -> List[Tuple[int, int]]:
+        """Returns bounds array that is used by scipy optimizer.
 
         Returns:
-            Optimizing parameters as a string.
+            A list of tuples of the form (lower_bound, upper_bound)
         """
-
-        s = "#" + "=" * 80 + "\n"
-        s += "# Model parameters that are optimized.\n"
-        s += "# Note that the parameters are in the transformed space if \n"
-        s += "# `params_transform` is provided when instantiating the model.\n"
-        s += "#" + "=" * 80 + "\n\n"
-
-        for name in self._params:
-            p = self.model_params[name]
-
-            if echo_size:
-                s += f"{name} {len(p)}\n"
-            else:
-                s += f"{name}\n"
-
-            for i in range(len(p)):
-                s += f"{p[i]:24.16e} "
-
-                if p.fixed[i]:
-                    s += "fix "
-
-                lb = p.lower_bound[i]
-                ub = p.upper_bound[i]
-                has_lb = lb is not None
-                has_ub = ub is not None
-                has_bounds = has_lb or has_ub
-                if has_bounds:
-                    if has_lb:
-                        s += f"{lb:24.16e} "
-                    else:
-                        s += "None "
-                    if has_ub:
-                        s += f"{ub:24.16e} "
-                    else:
-                        s += "None "
-                s += "\n"
-
-            s += "\n"
-
-        if filename is not None:
-            if isinstance(filename, (str, Path)):
-                with open(filename, "w") as f:
-                    f.write(s)
-            else:
-                print(s, file=filename)
-
-        return s
-
-    def get_num_opt_params(self) -> int:
-        """
-        Number of optimizing parameters.
-
-        This is the total number of model parameter components. For example,
-        if the model has two parameters set to be optimized and each have two components,
-        this will be four.
-        """
-        return len(self._index)
-
-    def get_opt_params(self) -> np.ndarray:
-        """
-        Nest all optimizing parameter values (except the fixed ones) to a 1D array.
-
-        The obtained values can be provided to the optimizer as the starting parameters.
-
-        This is the opposite operation of update_model_params().
-
-        Returns:
-            opt_params: A 1D array of nested optimizing parameter values.
-        """
-        params = []
-        for idx in self._index:
-            params.append(self.model_params[idx.name][idx.c_idx])
-        if len(params) == 0:
-            raise ParameterError("No parameters specified to optimize.")
-
-        return np.asarray(params)
-
-    def update_opt_params(self, params: Sequence[float]) -> Dict[str, Parameter]:
-        """
-        Update the optimizing parameter values from a sequence of float.
-
-        This is the opposite operation of get_opt_params().
-
-        Args:
-            params: updated parameter values from the optimizer.
-        """
-        for k, val in enumerate(params):
-            name = self._index[k].name
-            c_idx = self._index[k].c_idx
-            self.model_params[name][c_idx] = val
-
-        return self.model_params
-
-    def get_opt_param_name_value_and_indices(
-        self, index: int
-    ) -> Tuple[str, float, int, int]:
-        """
-        Get the `name`, `value`, `parameter_index`, and `component_index` of optimizing
-        parameter in slot `index`.
-
-        Args:
-            index: slot index of the optimizing parameter
-        """
-        name = self._index[index].name
-        p_idx = self._index[index].p_idx
-        c_idx = self._index[index].c_idx
-        value = self.model_params[name][c_idx]
-
-        return name, value, p_idx, c_idx
-
-    def get_opt_params_bounds(self) -> List[Tuple[int, int]]:
-        """
-        Get the lower and upper bounds of optimizing parameters.
-        """
+        arr = self.get_opt_numpy_array_param_space()
         bounds = []
-        for idx in self._index:
-            name = idx.name
-            c_idx = idx.c_idx
-            lower = self.model_params[name].lower_bound[c_idx]
-            upper = self.model_params[name].upper_bound[c_idx]
-            bounds.append([lower, upper])
-
+        if self.bounds is not None:
+            if (self.bounds.shape[0] == arr.shape[0]) and (self.bounds.shape[1] == 2):
+                for i in range(arr.shape[0]):
+                    bounds.append((self.bounds[i, 0], self.bounds[i, 1]))
+            else:
+                raise ValueError("Bounds must have shape: {0}x2.".format(arr.shape))
+        else:
+            bounds = [(None, None) for i in range(arr.shape[0])]
         return bounds
 
-    def has_opt_params_bounds(self) -> bool:
+    def get_bounds_model_space(self) -> np.ndarray:
+        """Get the bounds in the original space.
+
+        Returns:
+            A numpy array of bounds in the original space.
         """
-        Whether bounds are set for some parameters.
-        """
-        bounds = self.get_opt_params_bounds()
-        for low, up in bounds:
-            if low is not None or up is not None:
-                return True
-        return False
-
-    def _read_1_item(self, name, j, line):
-        self._read_1st_item(name, j, line[0])
-
-    def _read_2_item(self, name, j, line):
-        self._read_1st_item(name, j, line[0])
-
-        if line[1].lower() == "fix":
-            self.model_params[name].set_fixed(j, True)
+        if self.transform_function is not None:
+            return self.transform_function.inverse_transform(self.bounds)
         else:
-            raise ParameterError(f"Data at line {j+1} of {name} corrupted.")
+            return self.bounds
 
-    def _read_3_item(self, name, j, line):
-        self._read_1st_item(name, j, line[0])
+    def has_bounds(self) -> bool:
+        """Check if bounds are set for optimizing quantities
 
-        value = self.model_params[name][j]
-
-        # lower bound
-        if (line[1] is not None) and (
-            not (isinstance(line[1], str) and line[1].lower() == "none")
-        ):
-            try:
-                self.model_params[name].set_lower_bound(j, float(line[1]))
-            except ValueError as e:
-                raise ParameterError(f"{e}.\nData at line {j+1} of {name} corrupted.")
-
-            if float(line[1]) > value:
-                raise ParameterError(
-                    f"Lower bound ({line[1]}) larger than value({value}) at line {j+1} "
-                    f"of parameter `{name}`"
-                )
-
-        # upper bound
-        if (line[2] is not None) and (
-            not (isinstance(line[2], str) and line[2].lower() == "none")
-        ):
-            try:
-                self.model_params[name].set_upper_bound(j, float(line[2]))
-            except ValueError as e:
-                raise ParameterError(f"{e}.\nData at line {j+1} of {name} corrupted.")
-
-            if float(line[2]) < value:
-                raise ParameterError(
-                    f"Upper bound ({line[2]}) smaller than value({value}) at line {j+1} "
-                    f"of parameter `{name}`"
-                )
-
-    def _read_1st_item(self, name, j, first):
-        if isinstance(first, str) and first.lower() == "default":
-            pass
-        else:
-            try:
-                self.model_params[name][j] = float(first)
-            except ValueError as e:
-                raise ParameterError(
-                    f"{e}.\nData at line {j+1} of parameter `{name}` corrupted."
-                )
-
-    def _set_index(self, name: str):
+        Returns:
+            True if bounds are set, False otherwise.
         """
-        Include parameter component that will be optimized (i.e. `fixed` is False) in
-        the optimizing parameter index list.
-
-        Given a parameter and its values such as:
-
-        PARAM_FREE_B
-        1.1
-        2.2  fix
-        4.4  3.3  5.5
-
-        the first slot (1.1) and the third slot (4.4) will be included in self._index,
-        and later be optimized.
-
-        Args:
-            name: name of the parameter
-        """
-
-        size = len(self.model_params[name])
-        fix = self.model_params[name].fixed
-        p_idx = self.model_params[name].index
-
-        for c_idx in range(size):
-            if not fix[c_idx]:
-                idx = _Index(name, p_idx, c_idx)
-
-                # check whether already in self._index
-                already_in = None
-                for k, i in enumerate(self._index):
-                    if idx == i:
-                        already_in = k
-                        break
-                if already_in is not None:
-                    warnings.warn(
-                        f"Parameter `{name}` component `{c_idx}` already set. Reset it.",
-                        category=Warning,
-                    )
-                    self._index[already_in] = idx
-                else:
-                    self._index.append(idx)
+        return self.bounds is not None
 
     def as_dict(self):
-        return {
-            "@module": self.__class__.__module__,
-            "@class": self.__class__.__name__,
-            "model_params": {k: v.as_dict() for k, v in self.model_params.items()},
-            "params": self._params,
-        }
+        """Return a dictionary containing the state of the object."""
+        state_dict = self.__dict__.copy()
+        # Original dict will not have values
+        state_dict["@value"] = self.get_numpy_array_model_space()
+        state_dict["@module"] = self.__class__.__module__
+        state_dict["@class"] = self.__class__.__name__
+        return state_dict
+
+    def save(self, filename):
+        """Save the parameter to disk."""
+        state_dict = self.as_dict()
+        with open(filename, "wb") as f:
+            pickle.dump(state_dict, f)
 
     @classmethod
-    def from_dict(cls, d):
-        c = cls(
-            model_params={
-                k: Parameter.from_dict(v) for k, v in d["model_params"].items()
-            }
-        )
-        c._params = d["params"]
-        for name in d["params"]:
-            c._set_index(name)
+    def from_dict(cls, state_dict):
+        """Update the object's attributes based on the provided state dictionary.
 
-        return c
+        Args:
+            state_dict (dict): The dictionary containing the state of the object.
+                               This dictionary should include the "value" key.
+        """
 
+        # Extract the value from the state dictionary
+        value = state_dict.pop("@value")
+        class_name = state_dict.pop("@class")
+        module_name = state_dict.pop("@module")
+        is_transformed = state_dict.pop("_is_transformed")
+        bounds_transformed = state_dict.pop("_bounds_transformed")
+        # Update the object's attributes with the remaining key-value pairs
+        # Copy the extracted value to a parameter
+        obj = cls(value, **state_dict)
+        obj._is_transformed = is_transformed
+        obj._bounds_transformed = bounds_transformed
+        return obj
 
-class _Index:
-    """
-    Mapping of a component of the optimizing parameter list to the model parameter dict.
-    """
+    @classmethod
+    def load(cls, filename):
+        """Load a parameter from disk.
+        TODO: non classmethod version
+        """
+        with open(filename, "rb") as f:
+            state_dict = pickle.load(f)
+        return cls.from_dict(state_dict)
 
-    def __init__(self, name, parameter_index=None, component_index=None):
-        self.name = name
-        self.parameter_index = self.p_idx = parameter_index
-        self.component_index = self.c_idx = component_index
+    def get_opt_param_name_value_and_indices(
+        self,
+    ) -> Tuple[str, Union[float, np.ndarray], int]:
+        """Get the name, value, and indices of the optimizable parameters.
 
-    def set_parameter_index(self, index):
-        self.parameter_index = self.p_idx = index
+        Returns:
+            A tuple of lists of names, values, and indices of the optimizable parameters.
+        """
+        return self.name, self.get_numpy_array_model_space(), self.index
 
-    def set_component_index(self, index):
-        self.component_index = self.c_idx = index
+    @property
+    def lower_bound(self):
+        """Get the lower bounds of the parameter.
 
-    def __expr__(self):
-        return self.name
+        Always returns values in parameter space.
 
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
-        else:
-            return False
+        Returns:
+            A numpy array of lower bounds.
+        """
+        bounds = self.get_bounds_param_space()
+        return np.array([b[0] for b in bounds])
 
-    def __ne__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__dict__ != other.__dict__
-        else:
-            return True
+    @property
+    def upper_bound(self):
+        """Get the upper bounds of the parameter.
 
+        Always returns values in parameter space.
 
-def _remove_comments(lines: List[str]):
-    """
-    Remove lines in a string list that start with # and content after #.
-    """
-    processed_lines = []
-    for line in lines:
-        line = line.strip()
-        if not line or line[0] == "#":
-            continue
-        if "#" in line:
-            line = line[0 : line.index("#")]
-        processed_lines.append(line)
-    return processed_lines
+        Returns:
+            A numpy array of upper bounds.
+        """
+        bounds = self.get_bounds_param_space()
+        return np.array([b[1] for b in bounds])
 
+    @property
+    def is_mutable(self):
+        """Check if the parameter is mutable.
 
-def _check_shape(x: Any, key="parameter"):
-    """Check x to be a 1D array or list-like sequence."""
-    if isinstance(x, np.ndarray):
-        x = x.tolist()
-    if isinstance(x, Sequence):
-        if any(isinstance(i, Sequence) for i in x):
-            raise ParameterError(f"{key} should be a 1D array (or list).")
-    else:
-        raise ParameterError(f"{key} should be a 1D array (or list).")
-
-    return x.copy()
+        Returns:
+            True if the parameter is mutable, False otherwise.
+        """
+        return np.any(self.opt_mask)
 
 
 class ParameterError(Exception):

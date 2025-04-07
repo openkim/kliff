@@ -2,8 +2,10 @@ import numpy as np
 import pytest
 from scipy.optimize import OptimizeResult
 
-from kliff.calculators.calculator import Calculator, _WrapperCalculator
-from kliff.loss import Loss
+from kliff.dataset import Dataset
+from kliff.legacy.calculators.calculator import Calculator, _WrapperCalculator
+from kliff.legacy.loss import Loss
+from kliff.models import KIMModel
 from kliff.uq.bootstrap import (
     Bootstrap,
     BootstrapEmpiricalModel,
@@ -11,13 +13,19 @@ from kliff.uq.bootstrap import (
     bootstrap_cas_generator_empirical,
 )
 
-np.random.seed(1717)
+seed = 1717
+np.random.seed(seed)
 
 # Some variables
 min_kwargs = dict(method="lm")  # Optimizer settings
 nsamples = np.random.randint(1, 5)  # Number of samples
 
 
+# training set
+# FILE_DIR = Path(__file__).absolute().parent  # Directory of test file
+# path = FILE_DIR.parent.joinpath("test_data/configs/Si_4")
+# data = Dataset.from_path(path)
+# configs = data.get_configs()
 @pytest.fixture(scope="module")
 def calc_forces(uq_kim_model, uq_test_configs):
     """Calculator that only computes forces."""
@@ -28,6 +36,15 @@ def calc_forces(uq_kim_model, uq_test_configs):
     ncas_forces = len(cas_forces)
     return calculator_forces, cas_forces, ncas_forces
 
+# calculators
+# forces
+# calc_forces = Calculator(model)
+# cas_forces = calc_forces.create(configs, use_energy=False, use_forces=True)
+# ncas_forces = len(calc_forces.get_compute_arguments())
+# calc_energy = Calculator(model)
+# cas_energy = calc_energy.create(configs, use_energy=True, use_forces=False)
+# ncas_energy = len(calc_energy.get_compute_arguments())
+# calc_comb = _WrapperCalculator(calculators=[calc_energy, calc_forces])
 
 @pytest.fixture(scope="module")
 def calc_energy(uq_kim_model, uq_test_configs):

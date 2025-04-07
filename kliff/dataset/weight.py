@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 from loguru import logger
@@ -27,10 +27,10 @@ class Weight:
 
     def __init__(
         self,
-        config_weight: float = 1.0,
-        energy_weight: float = 1.0,
-        forces_weight: float = 1.0,
-        stress_weight: float = 1.0,
+        config_weight: Union[float, None] = 1.0,
+        energy_weight: Union[float, None] = 1.0,
+        forces_weight: Union[float, None] = 1.0,
+        stress_weight: Union[float, None] = 1.0,
     ):
         self._config_weight = config_weight
         self._energy_weight = energy_weight
@@ -44,17 +44,36 @@ class Weight:
     def config_weight(self):
         return self._config_weight
 
+    @config_weight.setter
+    def config_weight(self, value):
+        self._config_weight = value
+
     @property
     def energy_weight(self):
         return self._energy_weight
+
+    @energy_weight.setter
+    def energy_weight(self, value):
+        self._energy_weight = value
 
     @property
     def forces_weight(self):
         return self._forces_weight
 
+    @forces_weight.setter
+    def forces_weight(self, value):
+        self._forces_weight = value
+
     @property
     def stress_weight(self):
         return self._stress_weight
+
+    @stress_weight.setter
+    def stress_weight(self, value):
+        self._stress_weight = value
+
+    def __repr__(self):
+        return f"Weights: config={self.config_weight}, energy={self.energy_weight}, forces={self.forces_weight}, stress={self.stress_weight}"
 
     def _check_compute_flag(self, config):
         """
@@ -72,12 +91,20 @@ class Weight:
 
         # If the weight are really small, but not zero, then warn the user. Zero weight
         # usually means that the property is used.
-        if config._energy is not None and np.all(ew < 1e-12):
+        if config._energy is not None and ew is not None and np.all(ew < 1e-12):
             logger.warning(msg.format("energy", ew))
-        if config._forces is not None and np.all(fw < 1e-12):
+        if config._forces is not None and fw is not None and np.all(fw < 1e-12):
             logger.warning(msg.format("forces", fw))
-        if config._stress is not None and np.all(sw < 1e-12):
+        if config._stress is not None and sw is not None and np.all(sw < 1e-12):
             logger.warning(msg.format("stress", sw))
+
+    def to_dict(self):
+        return {
+            "config": self.config_weight,
+            "energy": self.energy_weight,
+            "forces": self.forces_weight,
+            "stress": self.stress_weight,
+        }
 
 
 class MagnitudeInverseWeight(Weight):

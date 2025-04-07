@@ -3,8 +3,10 @@ from multiprocessing import Pool
 import numpy as np
 import pytest
 
-from kliff.calculators import Calculator
-from kliff.loss import Loss
+from kliff.dataset import Dataset
+from kliff.legacy.calculators import Calculator
+from kliff.legacy.loss import Loss
+from kliff.models import KIMModel
 from kliff.uq import MCMC, get_T0
 
 try:
@@ -21,6 +23,15 @@ except ImportError:
 seed = 1717
 np.random.seed(seed)
 
+# # model
+# modelname = "SW_StillingerWeber_1985_Si__MO_405512056662_006"
+# model = KIMModel(modelname)
+# model.set_opt_params(A=[["default"]])
+#
+# # training set
+# path = Path(__file__).absolute().parents[1].joinpath("test_data/configs/Si_4")
+# data = Dataset.from_path(path)
+# configs = data.get_configs()
 
 # dimensionality --- Number of parameters is defined when creating the calculator
 nwalkers = 2 * np.random.randint(1, 3)
