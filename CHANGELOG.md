@@ -1,5 +1,33 @@
 # Change Log
 
+## v0.4.4 (2024/04/12)
+
+### Bug Fixes 🐛
+* Fix reading/writing xyz using T/F as PBC by @mjwen in https://github.com/openkim/kliff/pull/170
+### Enhancements 🛠
+* Deprecate travis build by @mjwen in https://github.com/openkim/kliff/pull/146
+* Add codecov check for test coverage by @mjwen in https://github.com/openkim/kliff/pull/165
+* Install kimpy from conda in GH actions by @mjwen in https://github.com/openkim/kliff/pull/167
+### Documentation 📖
+* Update installation docs for dependencies  by @mjwen in https://github.com/openkim/kliff/pull/148
+* Simplify installation docs by @mjwen in https://github.com/openkim/kliff/pull/149
+### Other Changes
+* Fix GH test with ptemcee  by @mjwen in https://github.com/openkim/kliff/pull/145
+* Update conda installation guide by @mjwen in https://github.com/openkim/kliff/pull/147
+* Fix readthedoc docs build by @mjwen in https://github.com/openkim/kliff/pull/150
+* Remove installing kimpy from conda in CI, it causes problem on macOS by @mjwen in https://github.com/openkim/kliff/pull/171
+* Add ptemcee from yonatank93's repo as dependency by @mjwen in https://github.com/openkim/kliff/pull/193
+* Refactor UQ tests by @yonatank93 in https://github.com/openkim/kliff/pull/192
+* Update kim_SW_Si.ipynb by @ProfessorMiller in https://github.com/openkim/kliff/pull/202
+* Debug cutoff radius update in KIM model by @dengtq in https://github.com/openkim/kliff/pull/205
+
+### New Contributors
+* @ProfessorMiller made their first contribution in https://github.com/openkim/kliff/pull/202
+* @dengtq made their first contribution in https://github.com/openkim/kliff/pull/205
+
+**Full Changelog**: https://github.com/openkim/kliff/compare/v0.4.3...v0.4.4
+
+
 ## v0.4.3 (2023/12/17)
 
 - Fix installing ptemcee
