@@ -390,7 +390,6 @@ class Model:
     def get_opt_param_name_value_and_indices(
         self, index: int
     ) -> Tuple[str, Union[float, np.ndarray], int]:
-        # ) -> Tuple[str, float, int, int]:
         for param_key in self.mutable_param_list:
             if self.model_params[param_key].is_mutable:
                 if index == self.model_params[param_key].index:

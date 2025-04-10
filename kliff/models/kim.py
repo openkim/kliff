@@ -539,7 +539,7 @@ class KIMModel(Model):
         """
         super().set_params_mutable(list_of_params)
         # reset influence distance in case it changes
-        self.init_influence_distance()
+        self.influence_distance = self.init_influence_distance()
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
         """
@@ -559,7 +559,7 @@ class KIMModel(Model):
             instance.set_one(name, settings)
         """
         super().set_one_opt_param(name, settings)
-        self.init_influence_distance()
+        self.influence_distance = self.init_influence_distance()
 
         param = self.model_params[name]
         # update kim internal model param (note, set_one will update model_params)
@@ -583,7 +583,7 @@ class KIMModel(Model):
             raise kimpy.KimPyError("Calling `kim_model.clear_then_refresh()` failed.")
 
         # reset influence distance in case it changes and get latest parameters
-        self.init_influence_distance()
+        self.influence_distance = self.init_influence_distance()
 
     def update_model_params(
         self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]

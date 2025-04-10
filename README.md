@@ -1,8 +1,6 @@
 # KIM-based Learning-Integrated Fitting Framework (KLIFF)
 
 ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/openkim/kliff/testing.yml)
-[![Build Status](https://travis-ci.com/openkim/kliff.svg?branch=master)](https://travis-ci.com/openkim/kliff)
-[![Python package](https://github.com/openkim/kliff/workflows/Python%20package/badge.svg)](https://github.com/openkim/kliff/actions)
 [![Documentation Status](https://readthedocs.org/projects/kliff/badge/?version=latest)](https://kliff.readthedocs.io/en/latest/?badge=latest)
 [![Anaconda-Server Badge](https://img.shields.io/conda/vn/conda-forge/kliff.svg)](https://anaconda.org/conda-forge/kliff)
 [![PyPI](https://img.shields.io/pypi/v/kliff.svg)](https://pypi.python.org/pypi/kliff)
@@ -19,7 +17,7 @@ as the neural network (NN) models.
 ### Using conda (recommended)
 
 ```sh
-conda intall -c conda-forge kliff
+conda install -c conda-forge kliff
 ```
 
 ### Using pip

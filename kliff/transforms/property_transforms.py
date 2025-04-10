@@ -51,7 +51,7 @@ class PropertyTransform:
 
     @staticmethod
     def get_configuration_list(
-        dataset: Union[List[Configuration], Dataset]
+        dataset: Union[List[Configuration], Dataset],
     ) -> List[Configuration]:
         """
         Get a list of configurations from a dataset. This method ensures constant API
