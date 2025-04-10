@@ -128,7 +128,10 @@ setup(
             "pytest-cov",
             "kimpy",
             "emcee",
-            "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
+            # The below one works if one installs this repo from source; however,
+            # PyPI does not allow this syntax. So we comment it out and a user need to
+            # install it manually for now.
+            # "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
             "numpy<2.0",
             "ase<3.23",
             "libdescriptor",
