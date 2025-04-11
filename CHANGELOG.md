@@ -1,5 +1,14 @@
 # Change Log
 
+
+## v1.0.1 (2025/04/11))
+
+### Other Changes
+* Update installation docs by @mjwen in https://github.com/openkim/kliff/pull/211
+
+**Full Changelog**: https://github.com/openkim/kliff/compare/v1.0.0...v1.0.1
+
+
 ## v1.0.0 (2025/04/11)
 
 **This is a backward incompatible version update from v0.x.x to v1.x.x. The functionality of v.0.x.x is completely kept in the [legacy](https://github.com/openkim/kliff/tree/legacy) branch. In addition, most of the functionality are kept in `kliff.legacy` of v1.x.x.**
@@ -71,6 +80,7 @@
 
 - Fix installing ptemcee
 
+
 ## v0.4.2 (2023/12/16)
 
 ### Enhancements 🛠
@@ -92,6 +102,7 @@
 - Update CI to fix cmake version by @mjwen in https://github.com/openkim/kliff/pull/117
 - WIP: Implement bootstrap by @yonatank93 in https://github.com/openkim/kliff/pull/107
 
+
 ## v0.4.1 (2022/10/06)
 
 ### Added
@@ -108,6 +119,7 @@
 ### Updated
 
 - Documentation on installing KLIFF and dependencies
+
 
 ## v0.4.0 (2022/04/27)
 
@@ -129,12 +141,14 @@
 
 - Change to use precommit GH action to check code format
 
+
 ## v0.3.3 (2022/03/25)
 
 ### Fixed
 
 - Fix neighlist (even after v0.3.2, the problem can still happen). Now neighlist is the
   same as kimpy
+
 
 ## v0.3.2 (2022/03/01)
 
@@ -146,6 +160,7 @@
 
 - Fix neighbor list segfault due to numerical error for 1D and 2D cases
 
+
 ## v0.3.1 (2021/11/20)
 
 - add gpu training for NN model; set the `gpu` parameter of a calculator (e.g.
@@ -156,6 +171,7 @@
 - fix: set `fingerprints_filename` and load descriptor state dict when reuse fingerprints
   (NN calculator)
 
+
 ## v0.3.0 (2021/08/03)
 
 - change license to LGPL
@@ -164,9 +180,11 @@
 - add `state_dict` for descriptors and save it together with model
 - change to use `loguru` for logging and allows user to set log level
 
+
 ## v0.2.2 (2021/05/24)
 
 - update to be compatible with `kimpy v2.0.0`
+
 
 ## v0.2.1 (2021/05/24)
 
@@ -174,16 +192,19 @@
 - use entry `entry_points` to handle command line tool
 - rename `utils` to `devtool`
 
+
 ## v0.2.0 (2021/01/19)
 
 - add type hint for all codes
 - reorganize model and parameters to make it more robust
 - add more docstring for many undocumented class and functions
 
+
 ## v0.1.7 (2020/12/20)
 
 - add GitHub actions to automatically deploy to PyPI
 - add a simple example to README
+
 
 ## v0.1.5 (2020/2/13)
 
@@ -191,10 +212,12 @@
 - add calculator to deal with multiple species for NN model
 - update dropout layer to be compatible with the pytorch 1.3
 
+
 ## v0.1.4 (2019/8/24)
 
 - add support for the geodesic Levenberg-Marquardt minimization algorithm
 - add command line tool `model` to inquire available parameters of KIM model
+
 
 ## v0.1.3 (2019/8/19)
 
@@ -206,6 +229,7 @@
   (supporting passing mean and stdev file)
 - rewrite symmetry descriptors to share with KIM driver
 
+
 ## v0.1.2 (2019/6/27)
 
 - MPI parallelization for physics-based models
@@ -213,17 +237,20 @@
 - various bug fixes
 - API changes \* class `DataSet` renamed to `Dataset` \* class `Calculator` moved to module `calculators` from module `calculator`
 
+
 ## v0.1.1 (2019/5/13)
 
 - KLIFF available from PyPI now. Using `$pip install kliff` to install.
 - Use SW model from the KIM website in tutorial.
 - Format code with `black`.
 
+
 ## v0.1.0 (2019/3/29)
 
 First official release, but API is not guaranteed to be stable.
 
 - Add more docs to {ref}`reference`.
+
 
 ## v0.0.1 (2019/1/1)
 
