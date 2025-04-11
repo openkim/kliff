@@ -29,9 +29,9 @@ def update_version(version, path, key, in_quotes=False, extra_space=False):
 
 
 if __name__ == "__main__":
-    major = 0
-    minor = 4
-    patch = 3
+    major = 1
+    minor = 0
+    patch = 0
 
     mmp = f"{major}.{minor}.{patch}"
     mm = f"{major}.{minor}"
