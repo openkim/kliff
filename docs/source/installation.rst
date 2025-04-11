@@ -59,8 +59,8 @@ KLIFF can be installed in three ways:
 
 .. code-block:: bash
 
-    git clone --branch kliff-master-v1 --single-branch https://github.com/ipcamit/kliff kliff-v1
-    pip install ./kliff-v1
+    git clone https://github.com/openkim/kliff
+    pip install ./kliff
 
 2. Installing KLIFF from PyPI
 

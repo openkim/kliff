@@ -56,13 +56,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.imgmath",
-    'sphinx.ext.mathjax',
+    "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     "myst_nb",
     "sphinx_copybutton",
-    "sphinx_design"
+    "sphinx_design",
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
     # "myst_parser",
@@ -228,7 +228,7 @@ autodoc_mock_imports = [
     "ase",
     "torch",
     "torch_lightning",
-    "libdescriptor"
+    "libdescriptor",
 ]
 
 # do not sort member functions of a class
@@ -343,6 +343,7 @@ def autodoc_module(path: Path, module: str):
 #     for mod in modules:
 #         autodoc_module(directory, mod)
 import importlib, inspect
+
 
 def create_apidoc(directory: Path = "./apidoc"):
     """
