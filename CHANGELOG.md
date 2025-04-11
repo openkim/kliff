@@ -1,16 +1,55 @@
 # Change Log
 
+## v1.0.0 (2025/04/11)
+
+**This is a backward incompatible version update from v0.x.x to v1.x.x. The functionality of v.0.x.x is completely kept in the [legacy](https://github.com/openkim/kliff/tree/legacy) branch. In addition, most of the functionality are kept in `kliff.legacy` of v1.x.x.**
+
+### New Features 🎉
+* Dataset object for v1 by @ipcamit in https://github.com/openkim/kliff/pull/135
+* Fundamental changes to KIM models, transforms, and parameter classes by @ipcamit in https://github.com/openkim/kliff/pull/140
+* Added complete transform module for graph generation and  by @ipcamit in https://github.com/openkim/kliff/pull/153
+* KIM Trainer and tests by @ipcamit in https://github.com/openkim/kliff/pull/183
+* Kliff DNN torch trainer by @ipcamit in https://github.com/openkim/kliff/pull/185
+
+### Bug Fixes 🐛
+* Fix tests due to function name changes  by @mjwen in https://github.com/openkim/kliff/pull/156
+* Order of arguments path and ase_atoms_list was switched in Dataset by @marcoscaa in https://github.com/openkim/kliff/pull/161
+* Colabfit enhancments by Eric by @ipcamit in https://github.com/openkim/kliff/pull/162
+* Added tests for newer modules by @ipcamit in https://github.com/openkim/kliff/pull/164
+
+### Enhancements 🛠
+* Format using black 24.1.0 by @mjwen in https://github.com/openkim/kliff/pull/157
+* ColabFit Changes by @EFuem in https://github.com/openkim/kliff/pull/174
+
+### Other Changes
+* GitHub cache  by @mjwen in https://github.com/openkim/kliff/pull/136
+* Add Py3.10 by @mjwen in https://github.com/openkim/kliff/pull/138
+* Kliff master v1 lightning by @ipcamit in https://github.com/openkim/kliff/pull/182
+* Moved older descriptor, calculator, loss to legacy + tests fixed by @ipcamit in https://github.com/openkim/kliff/pull/186
+* Documentation and minor usability fixes by @ipcamit in https://github.com/openkim/kliff/pull/204
+* Kliff master v1 by @ipcamit in https://github.com/openkim/kliff/pull/206
+* Merged main and v1 by @ipcamit in https://github.com/openkim/kliff/pull/207
+
+### New Contributors
+* @marcoscaa made their first contribution in https://github.com/openkim/kliff/pull/161
+
+**Full Changelog**: https://github.com/openkim/kliff/compare/v0.4.4...v1.0.0
+
+
 ## v0.4.4 (2024/04/12)
 
 ### Bug Fixes 🐛
 * Fix reading/writing xyz using T/F as PBC by @mjwen in https://github.com/openkim/kliff/pull/170
+
 ### Enhancements 🛠
 * Deprecate travis build by @mjwen in https://github.com/openkim/kliff/pull/146
 * Add codecov check for test coverage by @mjwen in https://github.com/openkim/kliff/pull/165
 * Install kimpy from conda in GH actions by @mjwen in https://github.com/openkim/kliff/pull/167
+
 ### Documentation 📖
 * Update installation docs for dependencies  by @mjwen in https://github.com/openkim/kliff/pull/148
 * Simplify installation docs by @mjwen in https://github.com/openkim/kliff/pull/149
+
 ### Other Changes
 * Fix GH test with ptemcee  by @mjwen in https://github.com/openkim/kliff/pull/145
 * Update conda installation guide by @mjwen in https://github.com/openkim/kliff/pull/147
