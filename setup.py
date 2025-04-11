@@ -29,19 +29,21 @@ class get_pybind11_includes:
 
 
 def get_includes():
-    return [get_pybind11_includes()]
+    return [get_pybind11_includes(), "kliff/neighbor"]
 
 
 def get_extra_compile_args():
     return ["-std=c++11"]
 
 
+# TODO: explore -Ofast and -march=native
+
 sym_fn = Extension(
-    "kliff.descriptors.symmetry_function.sf",
+    "kliff.legacy.descriptors.symmetry_function.sf",
     sources=[
-        "kliff/descriptors/symmetry_function/sym_fn_bind.cpp",
-        "kliff/descriptors/symmetry_function/sym_fn.cpp",
-        "kliff/descriptors/symmetry_function/helper.cpp",
+        "kliff/legacy/descriptors/symmetry_function/sym_fn_bind.cpp",
+        "kliff/legacy/descriptors/symmetry_function/sym_fn.cpp",
+        "kliff/legacy/descriptors/symmetry_function/helper.cpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
@@ -49,11 +51,11 @@ sym_fn = Extension(
 )
 
 bispectrum = Extension(
-    "kliff.descriptors.bispectrum.bs",
+    "kliff.legacy.descriptors.bispectrum.bs",
     sources=[
-        "kliff/descriptors/bispectrum/bispectrum_bind.cpp",
-        "kliff/descriptors/bispectrum/bispectrum.cpp",
-        "kliff/descriptors/bispectrum/helper.cpp",
+        "kliff/legacy/descriptors/bispectrum/bispectrum_bind.cpp",
+        "kliff/legacy/descriptors/bispectrum/bispectrum.cpp",
+        "kliff/legacy/descriptors/bispectrum/helper.cpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
@@ -65,6 +67,17 @@ neighlist = Extension(
     sources=[
         "kliff/neighbor/neighbor_list.cpp",
         "kliff/neighbor/neighbor_list_bind.cpp",
+    ],
+    include_dirs=get_includes(),
+    extra_compile_args=get_extra_compile_args(),
+    language="c++",
+)
+
+graph_module = Extension(
+    "kliff.transforms.configuration_transforms.graphs.graph_module",
+    sources=[
+        "kliff/transforms/configuration_transforms/graphs/radial_graph.cpp",
+        "kliff/neighbor/neighbor_list.cpp",
     ],
     include_dirs=get_includes(),
     extra_compile_args=get_extra_compile_args(),
@@ -99,8 +112,16 @@ setup(
     name="kliff",
     version=get_version(),
     packages=find_packages(),
-    ext_modules=[sym_fn, bispectrum, neighlist],
-    install_requires=["requests", "scipy", "pyyaml", "monty", "loguru"],
+    ext_modules=[sym_fn, bispectrum, neighlist, graph_module],
+    install_requires=[
+        "requests",
+        "scipy",
+        "pyyaml",
+        "monty",
+        "loguru",
+        "ase<3.23",
+        "numpy<2.0",
+    ],
     extras_require={
         "test": [
             "pytest",
@@ -111,8 +132,17 @@ setup(
             # PyPI does not allow this syntax. So we comment it out and a user need to
             # install it manually for now.
             # "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
+            "numpy<2.0",
+            "ase<3.23",
+            "libdescriptor",
+        ],
+        "torch": [
             "torch",
-            "numpy",
+            "torch_geometric",
+            "pytorch_lightning",
+            "torch_scatter",
+            "tensorboard",
+            "tensorboardx",
         ],
         "docs": [
             "sphinx",

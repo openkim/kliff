@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from loguru import logger
 
-from kliff.descriptors.descriptor import Descriptor
+from kliff.legacy.descriptors.descriptor import Descriptor
 from kliff.utils import create_directory, seed_all, to_path
 
 
@@ -18,8 +18,8 @@ class ModelTorch(nn.Module):
 
     Args:
         descriptor: atomic environment descriptor for computing configuration
-            fingerprints. See :meth:`~kliff.descriptors.SymmetryFunction` and
-            :meth:`~kliff.descriptors.Bispectrum`.
+            fingerprints. See :meth:`~kliff.legacy.descriptors.SymmetryFunction` and
+            :meth:`~kliff.legacy.descriptors.Bispectrum`.
         seed: random seed.
     """
 
@@ -99,7 +99,10 @@ class ModelTorch(nn.Module):
             mode: Purpose of the loaded model. Should be either `train` or `eval`.
         """
         filename = to_path(filename)
-        state_dict = torch.load(str(filename))
+        try:
+            state_dict = torch.load(str(filename), weights_only=False)
+        except TypeError:
+            state_dict = torch.load(filename)
 
         # load model state dict
         self.load_state_dict(state_dict["model_state_dict"])

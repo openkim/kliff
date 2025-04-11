@@ -17,8 +17,8 @@ class Descriptor:
 
     Process dataset to generate fingerprints. This is the base class for all descriptors,
     so it should not be used directly. Instead, descriptors built on top of this such as
-    :class:`~kliff.descriptors.SymmetryFunction` and
-    :class:`~kliff.descriptors.Bispectrum` can be used to transform the atomic environment
+    :class:`~kliff.legacy.descriptors.SymmetryFunction` and
+    :class:`~kliff.legacy.descriptors.Bispectrum` can be used to transform the atomic environment
     information into fingerprints.
 
     Args:
@@ -334,11 +334,11 @@ class Descriptor:
 
     def get_mean(self):
         """Return a list of the mean of the fingerprints."""
-        return self.mean.copy()
+        return self.mean
 
     def get_stdev(self):
         """Return a list of the standard deviation of the fingerprints."""
-        return self.stdev.copy()
+        return self.stdev
 
     def get_dtype(self):
         """Return the data type of the fingerprints."""

@@ -146,7 +146,7 @@ class CalculatorTorch:
     def set_fingerprints(self, fingerprints: List[dict]):
         """
         Update the fingerprints of the calculator. The fingerprints input argument should
-        be in the same format as the output of `meth:~kliff.descriptors.descriptor.load_fingerprints`,
+        be in the same format as the output of `meth:~kliff.legacy.descriptors.descriptor.load_fingerprints`,
         which is a list of dictionaries.
 
         Args:

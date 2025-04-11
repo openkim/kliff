@@ -21,7 +21,7 @@ def uq_test_data_dir():
 @pytest.fixture(scope="session")
 def uq_test_configs(uq_test_data_dir):
     # Load test configs
-    data = Dataset(uq_test_data_dir)
+    data = Dataset.from_path(uq_test_data_dir)
     return data.get_configs()
 
 

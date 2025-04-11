@@ -1,4 +1,3 @@
-import copy
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
@@ -6,8 +5,7 @@ from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 import numpy as np
 
 from kliff.dataset.dataset import Configuration
-from kliff.models.parameter import OptimizingParameters, Parameter
-from kliff.models.parameter_transform import ParameterTransform
+from kliff.models.parameter import Parameter
 from kliff.utils import yaml_dump, yaml_load
 
 
@@ -87,7 +85,7 @@ class ComputeArguments:
             name: name of the property, e.g. energy, forces, and stresses
         """
         if name not in self.compute_property:
-            ModelError(f"Model not initialized to comptue `{name}`.")
+            ModelError(f"Model not initialized to compute `{name}`.")
         return self.results[name]
 
     def get_energy(self) -> float:
@@ -171,150 +169,47 @@ class ComputeArguments:
 
 
 class Model:
-    """
-    Base class for all physics-motivated models.
-
-    Typically, a user will not directly use this.
-
-    Args:
-        model_name: name of the model.
-        params_transform: optional transformation of parameters. Let's call the
-            parameters initialized in `init_model_params()` as original parameter
-            space. Sometimes, it's easier to work in another parameter (e.g.
-            optimizers can perform better in the log space). Then we can use this
-            parameter transformation class to transform between the original
-            parameter space and the new easy-to-work space. Typically, a model only
-            knows how to work in its original space to compute, e.g. energy and
-            forces, so we need to inverse transform parameters back to original space
-            (after an optimizer update its value in the log space).
-            A `params_transform` instance should implement both a `transform` and an
-            `inverse_transform` method to accomplish the above tasks.
-            Note, all the parameters of this (the `Model`) class
-            (e.g. `self.model_params`, and `self.opt_params`) are in the transformed
-            easy-to-work space.
-    """
-
     def __init__(
         self,
         model_name: str = None,
-        params_transform: Optional[ParameterTransform] = None,
     ):
         self.model_name = model_name
-        self.params_transform = params_transform
-
         self.model_params = self.init_model_params()
-
-        if self.params_transform is not None:
-            # make a copy since params_transform can make changes in place
-            transformed = copy.deepcopy(self.model_params)
-            self.model_params_transformed = self.params_transform(transformed)
-        else:
-            self.model_params_transformed = self.model_params
-
-        self.opt_params = OptimizingParameters(self.model_params_transformed)
         self.influence_distance = self.init_influence_distance()
         self.supported_species = self.init_supported_species()
+        self.mutable_param_list = []
 
     def init_model_params(self, *args, **kwargs) -> Dict[str, Parameter]:
-        """
-        Initialize the parameters of the model.
-
-        Should return a dictionary of parameters.
-
-        Example:
-            model_params = {"sigma": Parameter([0.5]
-                      "epsilon": Parameter([0.4])
-
-            return model_params
-        """
         raise NotImplementedError("`init_model_params` not implemented.")
 
     def init_influence_distance(self, *args, **kwargs) -> float:
-        """
-        Initialize the influence distance (aka cutoff distance) of the model.
-
-        This is used to compute the neighbor list of each atom.
-
-        Example:
-            return 5.0
-        """
         raise NotImplementedError("`init_influence_distance` not implemented.")
 
     def init_supported_species(self, *args, **kwargs) -> Dict[str, int]:
-        """
-        Initialize the supported species of the model.
-
-        Should return a dict with chemical symbol as key and integer code as value.
-
-        Example:
-            return {"C:0, "O":1}
-        """
         raise NotImplementedError("`init_supported_species` not implemented.")
 
     def get_compute_argument_class(self):
-        # NOTE, change to compute argument class as needed
-        # return ComputeArguments
         raise NotImplementedError("`get_compute_argument_class` not implemented.")
 
     def write_kim_model(self, path: Path = None):
         raise NotImplementedError("`write_kim_model` not implemented yet.")
 
     def get_influence_distance(self) -> float:
-        """
-        Return influence distance (aka cutoff distance) of the model.
-        """
         return self.influence_distance
 
     def get_supported_species(self) -> Dict[str, int]:
-        """
-        Return supported species of the model, a dict with chemical symbol as key and
-        integer code as value.
-        """
         return self.supported_species
 
     def get_model_params(self) -> Dict[str, Parameter]:
-        """
-        Return all parameters of the model.
-        """
         return self.model_params
 
     def echo_model_params(
         self,
         filename: Union[Path, TextIO, None] = sys.stdout,
-        params_space: str = "original",
     ) -> str:
-        """
-        Echo the model parameters.
-
-        Args:
-            filename: Path to write the model parameter info (e.g. sys.stdout).
-                If `None`, do not write.
-            params_space: In which space to show the parameters, options are `original`
-                and `transformed`.
-
-        Returns:
-            model parameter info in a string
-        """
-
-        if params_space == "original":
-            params = self.model_params
-        elif params_space == "transformed":
-            if self.params_transform is None:
-                raise RuntimeError(
-                    "Cannot obtain parameters in transformed space when "
-                    "`params_transform` of model is not set."
-                )
-            else:
-                params = self.model_params_transformed
-        else:
-            supported = ["original", "transformed"]
-            raise ValueError(
-                f"Expect `params_space` to be one of {supported}; got {params_space}"
-            )
-
+        params = self.model_params
         s = "#" + "=" * 80 + "\n"
-        s += "# Available parameters to optimize.\n"
-        s += f"# Parameters in `{params_space}` space.\n"
+        s += "# Available parameters to optimize (In MODEL SPACE).\n"
         name = self.__class__.__name__ if self.model_name is None else self.model_name
         s += f"# Model: {name}\n"
 
@@ -322,8 +217,21 @@ class Model:
 
         for name, p in params.items():
             s += f"name: {name}\n"
-            s += f"value: {p.value}\n"
+            s += f"value: {p.get_numpy_array_model_space()}\n"
             s += f"size: {len(p)}\n\n"
+
+        s += "#" + "=" * 80 + "\n"
+        s += (
+            "# Following parameters have transformation objects attached, \n"
+            "# Parameter value in PARAM SPACE: \n"
+        )
+        for name, p in params.items():
+            if p.transform_function is not None:
+                s += f"name: {name}\n"
+                s += f"value: {p.get_numpy_array_param_space()}\n"
+                s += f"size: {len(p)}\n\n"
+
+        s += "#" + "=" * 80 + "\n"
 
         if filename is not None:
             if isinstance(filename, (str, Path)):
@@ -335,178 +243,188 @@ class Model:
         return s
 
     def read_opt_params(self, filename: Path):
+        pass
+
+    def set_params_mutable(self, list_of_params: List[str]):
         """
-        Read optimizing parameters from a file.
-
-        Each parameter is a 1D array, and each component of the parameter array should
-        be listed in a new line. Each line can contain 1, 2, or 3 elements, described
-        in details below:
-
-        1st element: float or `DEFAULT`
-            Initial guess of the parameter component. If `DEFAULT` (case insensitive),
-            the value from the calculator is used as the initial guess.
-
-        The 2nd and 3rd elements are optional.
-
-        If 2 elements are provided:
-
-        2nd element: `FIX` (case insensitive)
-            If `FIX`, the corresponding component will not be optimized.
-
-        If 3 elements are provided:
-
-        2nd element: float or `INF` (case insensitive)
-            Lower bound of the parameter. `INF` indicates that the lower bound is
-            negative infinite, i.e. no lower bound is applied.
-
-        3rd element: float or `INF` (case insensitive)
-            Upper bound of the parameter. `INF` indicates that the upper bound is
-            positive infinite, i.e. no upper bound is applied.
-
-        Instead of reading fitting parameters from a file, you can also setting them
-        using a dictionary by calling the `set_opt_params()` or `set_one_opt_params()`
-        method.
-
+        Set all the optimizable parameters from list of names of parameters
         Args:
-            filename: path to file that includes the fitting parameters.
-
+            list_of_params: List of string names of parameters
         Example:
-
-            # put the below in a file, say `model_params.txt` and you can read the fitting
-            # parameters by this_class.read(filename="model_params.txt")
-
-            A
-            DEFAULT
-            1.1
-
-            B
-            DEFAULT FIX
-            1.1     FIX
-
-            C
-            DEFAULT  0.1  INF
-            1.0      INF  2.1
-            2.0      FIX
+            model.set_params_mutable(["A", "B", "sigma"])
         """
-        self.opt_params.read(filename)
-        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
-
-        # reset influence distance in case it depends on parameters and changes
-        self.init_influence_distance()
+        for param in list_of_params:
+            self.model_params[param].add_opt_mask(
+                np.ones_like(self.model_params[param], dtype=bool)
+            )
+        self.mutable_param_list = list_of_params
 
     def set_opt_params(self, **kwargs):
-        """
-        Set the parameters that will be optimized.
-
-        One or more parameters can be set. Each argument is for one parameter, where the
-        argument name is the parameter name, the value of the argument is the
-        settings(including initial value, fix flag, lower bound, and upper bound).
-
-        The value of the argument should be a list of list, where each inner list is for
-        one component of the parameter, which can contain 1, 2, or 3 elements.
-         See `~kliff.model.model.Model.read_opt_params()` for the options of the elements.
-
-        Example:
-           instance.set(A=[['DEFAULT'], [2.0, 1.0, 3.0]], B=[[1.0, 'FIX'], [2.0, 'INF', 3.0]])
-        """
-        self.opt_params.set(**kwargs)
-        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
-
-        # reset influence distance in case it depends on parameters and changes
-        self.init_influence_distance()
+        keys = list(kwargs.keys())
+        for name, setting in kwargs.items():
+            self.set_one_opt_param(name, setting)
 
     def set_one_opt_param(self, name: str, settings: List[List[Any]]):
-        """
-        Set one parameter that will be optimized.
+        param = self.model_params[name]
+        # check the val kind
+        opt_mask = np.zeros_like(param, dtype=bool)
+        param_old = param.get_numpy_array_param_space()
+        bounds = np.array(
+            [[None, None]] * param_old.shape[0]
+        )  # for consistent boolean matching
 
-        The name of the parameter should be given as the first entry of a list (or tuple),
-        and then each data line should be given in in a list.
+        for i in range(param_old.shape[0]):
+            supplied_value = settings[i][0]
+            if supplied_value == "default":
+                param_old[i] = param.get_numpy_array_param_space()[i]
+            elif isinstance(supplied_value, (int, float)):
+                param_old[i] = supplied_value
+            elif isinstance(supplied_value, np.ndarray) or isinstance(
+                supplied_value, Parameter
+            ):
+                param_old[i] = supplied_value[0]
+            else:
+                raise ValueError("Settings array is not properly formatted")
 
-        Args:
-            name: name of a fitting parameter
-            settings: initial value, flag to fix a parameter, lower and upper bounds of a
-                parameter.
+            # bounds
+            # replace "inf" with np.inf
+            if len(settings[i]) > 1:
+                if len(settings[i]) == 3:
+                    bounds[i] = [settings[i][1], settings[i][2]]
+                    opt_mask[i] = True
+                elif settings[i][1] == "fix":
+                    opt_mask[i] = False
+                else:
+                    raise ValueError("Supplied value is not properly formatted")
+            else:
+                opt_mask[i] = True
 
-        Example:
-            name = 'param_A'
-            settings = [['default', 0, 20], [2.0, 'fix'], [2.2, 'inf', 3.3]]
-            instance.set_one(name, settings)
-        """
-        self.opt_params.set_one(name, settings)
-        self.model_params = self._inverse_transform_params(self.opt_params.model_params)
+        if (bounds != np.array([[None, None]] * param_old.shape[0])).all():
+            param.add_bounds_param_space(bounds)
+        # When model is operating with transformed parameters
+        # input is expected in transformed space
+        param.add_opt_mask(opt_mask)
+        for i in range(param_old.shape[0]):
+            param.copy_at_param_space(param_old[i], i)
 
-        # reset influence distance in case it depends on parameters and changes
-        self.init_influence_distance()
+        # update mutable param list
+        if name not in self.mutable_param_list and param.is_mutable:
+            self.mutable_param_list.append(name)
+        if name in self.mutable_param_list and not param.is_mutable:
+            self.mutable_param_list.remove(name)
 
     def echo_opt_params(self, filename: [Path, TextIO, None] = sys.stdout):
         """
         Echo the optimizing parameter to a file.
         """
-        return self.opt_params.echo_opt_params(filename)
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                print(
+                    f"Parameter:{param_key} : {self.model_params[param_key].get_numpy_array_model_space()}"
+                )
+
+        # return self.opt_params.echo_opt_params(filename)
 
     def get_num_opt_params(self) -> int:
         """
-        Number of optimizing parameters.
-
-        This is the total number of model parameter components. For example,
-        if the model has two parameters set to be optimized and each have two components,
-        this will be four.
+        Count and return number of optimizable parameters.
+        Utilizes `Parameter` class.
         """
-        return self.opt_params.get_num_opt_params()
+        i = 0
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                i += (
+                    self.model_params[param_key]
+                    .get_opt_numpy_array_param_space()
+                    .shape[0]
+                )
+        return i
 
     def get_opt_params(self) -> np.ndarray:
         """
-         Nest all optimizing parameter values (except the fixed ones) to a 1D array.
-
-        The obtained values can be provided to the optimizer as the starting parameters.
-
-        This is the opposite operation of update_model_params().
-
-        Returns:
-            opt_params: A 1D array of nested optimizing parameter values.
+        Get optimizable parameters, concatenated as a single numpy array. Obtained numpy array is the state for
+        the optimizer to optimize.
+        Utilizes `Parameter` class.
         """
-        return self.opt_params.get_opt_params()
+        opt_param = np.array([])
+        for param_key in self.mutable_param_list:
+            if self.model_params[param_key].is_mutable:  # additional check
+                opt_param = np.append(
+                    opt_param,
+                    self.model_params[param_key].get_opt_numpy_array_param_space(),
+                )
+            else:
+                # This should not happen
+                raise AttributeError(
+                    f"Parameter {param_key}, is not optimizable. Please report this error"
+                )
+        return opt_param
 
-    def update_model_params(self, params: Sequence[float]):
+    def update_model_params(
+        self, params: Union[np.ndarray, List[Union[float, int, Parameter]]]
+    ):
         """
-        Update the optimizing parameter values from a sequence of float.
-
-        This is the opposite operation of get_opt_params().
-
-        Note, self.model_params will be updated as well, since self.opt_params is
-        initialized from self.model_params without copying the `Parameter` instance.
+        Copy and update the parameter from incoming params array. This method utilizes the
+        parameters internal function to copy the parameter in a consistent manner.
 
         Args:
-            params: updated parameter values from the optimizer.
+            params: numpy array with the shape of optimized parameter concatenated array.
         """
-        self.model_params_transformed = self.opt_params.update_opt_params(params)
-        self.model_params = self._inverse_transform_params(
-            self.model_params_transformed
-        )
+        i = 0
+        for param_key in self.mutable_param_list:
+            if self.model_params[param_key].is_mutable:
+                param_size = (
+                    self.model_params[param_key]
+                    .get_opt_numpy_array_param_space()
+                    .shape[0]
+                )
+                self.model_params[param_key].copy_from_param_space(
+                    params[i : i + param_size]
+                )
+                i += param_size
+            else:
+                raise AttributeError(
+                    f"Parameter {param_key}, is not optimizable. Please report this error"
+                )
 
     def get_opt_param_name_value_and_indices(
         self, index: int
-    ) -> Tuple[str, float, int, int]:
-        """
-        Get the `name`, `value`, `parameter_index`, and `component_index` of optimizing
-        parameter in slot `index`.
+    ) -> Tuple[str, Union[float, np.ndarray], int]:
+        for param_key in self.mutable_param_list:
+            if self.model_params[param_key].is_mutable:
+                if index == self.model_params[param_key].index:
+                    return self.model_params[
+                        param_key
+                    ].get_opt_param_name_value_and_indices()
+        raise ModelError(f"Index {index} not found in mutable parameters.")
 
-        Args:
-            index: slot index of the optimizing parameter
+    def get_formatted_param_bounds(self) -> Tuple[Tuple[int, int]]:
         """
-        return self.opt_params.get_opt_param_name_value_and_indices(index)
+        Get the lower and upper bounds of optimizing parameters, to be supplied directly
+        to the scipy optimizer.
 
-    def get_opt_params_bounds(self) -> List[Tuple[int, int]]:
+        Returns:
+            tuple with bounds values. Unbound variables are provided with value (None, None)
         """
-        Get the lower and upper bounds of optimizing parameters.
-        """
-        return self.opt_params.get_opt_params_bounds()
+        bounds = []
+        for param_key in self.mutable_param_list:
+            if self.model_params[param_key].is_mutable:
+                bounds.extend(self.model_params[param_key].get_bounds_param_space())
+        return tuple(bounds)
 
-    def has_opt_params_bounds(self) -> bool:
+    def opt_params_has_bounds(self) -> bool:
         """
-        Whether bounds are set for some parameters.
+        Whether bounds are set for any of the parameters.
+
+        Returns:
+            boolean true if any of the parameters are marked mutable.
         """
-        return self.opt_params.has_opt_params_bounds()
+        has_bounds = False
+        for param in self.model_params:
+            if self.model_params[param].bounds is not None:
+                has_bounds = True
+                break
+        return has_bounds
 
     def save(self, filename: Path = "trained_model.yaml"):
         """
@@ -515,10 +433,14 @@ class Model:
         Args:
             filename: Path where to store the model.
         """
+        opt_params = {}
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                opt_params[param_key] = self.model_params[param_key].as_dict()
         d = {
             "@module": self.__class__.__module__,
             "@class": self.__class__.__name__,
-            "opt_params": self.opt_params.as_dict(),
+            "opt_params": opt_params,
         }
         yaml_dump(d, filename)
 
@@ -530,22 +452,48 @@ class Model:
             filename: Path where the model is stored.
         """
         d = yaml_load(filename)
-        self.opt_params = OptimizingParameters.from_dict(d["opt_params"])
+        for param in d["opt_params"]:
+            self.model_params[param].from_dict(d["opt_params"][param])
 
-        # Set model_params to opt_params.model_params since they should share the
-        # underlying `Parameter` objects
-        self.model_params = self.opt_params.model_params
+    def named_parameters(self):
+        """
+        Get a dict of parameters that are marked as mutable, and hence can be optimized.
+        The parameter values are subjected to change as per the transformations applied.
 
-    def _inverse_transform_params(self, model_params_transformed: Dict[str, Parameter]):
+        Returns:
+            Dictionary of parameters (~kliff.models.parameters.Parameter)
         """
-        Inverse transform the parameters.
+        param_opt_dict = {}
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                param_opt_dict[param_key] = self.model_params[param_key]
+        return param_opt_dict
+
+    def parameters(self):
         """
-        if self.params_transform is not None:
-            # make a copy since params_transform can make changes in place
-            transformed = copy.deepcopy(model_params_transformed)
-            return self.params_transform.inverse_transform(transformed)
-        else:
-            return model_params_transformed
+        Get a list of parameters that are marked as mutable, and hence can be optimized.
+
+        Returns:
+            List of parameters (~kliff.models.parameters.Parameter)
+        """
+        param_opt_list = []
+        for param_key in self.model_params:
+            if self.model_params[param_key].is_mutable:
+                param_opt_list.append(self.model_params[param_key])
+        return param_opt_list
+
+    # def parameters(self):
+    #     """
+    #     Get an iterator of parameters that are marked as mutable, and hence can be optimized.
+    #
+    #     Returns:
+    #         Iterator of parameters (~kliff.models.parameters.Parameter)
+    #     """
+    #     param_opt_list = []
+    #     for param_key in self.model_params:
+    #         if self.model_params[param_key].is_mutable:
+    #             yield self.model_params[param_key]
+    #
 
 
 class ModelError(Exception):

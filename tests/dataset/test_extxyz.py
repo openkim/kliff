@@ -109,6 +109,6 @@ def test_configuration(test_data_dir, f, s, order, e=True):
 
 
 def test_dataset(test_data_dir):
-    tset = Dataset(test_data_dir / "configs/MoS2")
+    tset = Dataset.from_path(test_data_dir / "configs/MoS2")
     configs = tset.get_configs()
     assert len(configs) == 3

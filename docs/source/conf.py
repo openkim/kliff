@@ -12,6 +12,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import os
 import sys
+import subprocess
+from pathlib import Path
 
 
 # sys.path.insert(0, os.path.abspath('.'))
@@ -36,9 +38,9 @@ copyright = "2021-2023, OpenKIM"
 author = "Mingjian Wen"
 
 # The short X.Y version
-version = "0.4"
+version = "1.0"
 # The full version, including alpha/beta/rc tags
-release = "0.4.4"
+release = "1.0.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -54,15 +56,19 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.imgmath",
-    # 'sphinx.ext.mathjax',
+    'sphinx.ext.mathjax',
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     "myst_nb",
     "sphinx_copybutton",
+    "sphinx_design"
     # 'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
+    # "myst_parser",
 ]
+
+myst_enable_extensions = ["amsmath", "dollarmath"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -221,6 +227,8 @@ autodoc_mock_imports = [
     "yaml",
     "ase",
     "torch",
+    "torch_lightning",
+    "libdescriptor"
 ]
 
 # do not sort member functions of a class
@@ -233,3 +241,158 @@ imgmath_latex_preamble = "\\usepackage{bm} \\usepackage{amsmath}"
 
 # -- myst-nb -----------------------------------------------------------------
 nb_execution_timeout = 120
+
+# -- generate api doc ----------------------------------------------------------
+
+
+def get_all_modules(source: Path = "./kliff") -> list[str]:
+    """
+    Get all modules of the package.
+
+    Note, this only get the first-level modules like `kliff.module_a`, not modules
+    (in subpackages) like `kliff.subpackage_a.module_b`. subpackage is considered
+    as a module.
+
+    This takes advantage of
+        $ sphinx-apidoc -f -e -o <outdir> <sourcedir>
+    Return a list of modules names.
+    """
+    results = subprocess.run(
+        ["sphinx-apidoc", "-f", "-e", "-o", "/tmp/kliff_apidoc", source],
+        capture_output=True,
+    )
+    results = results.stdout.decode("utf-8")
+
+    modules = []
+    for line in results.split("\n"):
+        if "Creating" in line:
+            name = line.split("/")[-1].split(".")
+            if len(name) >= 4:
+                mod = name[1]
+                if mod not in modules:
+                    modules.append(mod)
+    return modules
+
+
+def autodoc_package(path: Path, modules: list[str]):
+    """
+    Create a package reference page.
+
+    Args:
+        path: directory to place the file
+        modules: list of API modules
+    """
+    path = Path(path).resolve()
+    if not path.exists():
+        path.mkdir(parents=True)
+
+    with open(path / "kliff.rst", "w") as f:
+        f.write(".. _reference:\n\n")
+        f.write("Package Reference\n")
+        f.write("=================\n\n")
+        f.write(".. toctree::\n")
+        for m in modules:
+            f.write("    kliff." + m + "\n")
+
+
+def autodoc_module(path: Path, module: str):
+    """
+    Create a module reference page.
+
+    Args:
+        path: directory to place the file
+        module: name of the module
+    """
+    path = Path(path).resolve()
+    if not path.exists():
+        path.mkdir(parents=True)
+
+    module_name = "kliff." + module
+    fname = path.joinpath(module_name + ".rst")
+    with open(fname, "w") as f:
+        f.write(f"{module_name}\n")
+        f.write("-" * len(module_name) + "\n\n")
+        f.write(f".. automodule:: {module_name}\n")
+        f.write("    :members:\n")
+        f.write("    :undoc-members:\n")
+        # f.write("    :show-inheritance:\n")
+        f.write("    :inherited-members:\n")
+
+
+# def create_apidoc(directory: Path = "./apidoc"):
+#     """
+#     Create API documentation, a separate page for each module.
+#
+#     Args:
+#         directory:
+#
+#     Returns:
+#
+#     """
+#
+#     # modules with the below names will not be excluded
+#     excludes = ["cmdline"]
+#
+#     package_path = Path(__file__).parents[2] / "kliff"
+#     modules = get_all_modules(package_path)
+#     for exc in excludes:
+#         modules.remove(exc)
+#     modules = sorted(modules)
+#
+#     autodoc_package(directory, modules)
+#     for mod in modules:
+#         autodoc_module(directory, mod)
+import importlib, inspect
+
+def create_apidoc(directory: Path = "./apidoc"):
+    """
+    Create API documentation, listing all classes for each module, including nested modules.
+
+    Args:
+        directory: The directory where the .rst files will be stored.
+    """
+    # Exclude specific modules if needed
+    excludes = ["cmdline"]
+
+    # Path to the source code
+    package_path = Path(__file__).parents[2] / "kliff"
+    modules = get_all_modules(package_path)
+
+    # Exclude specified modules
+    for exc in excludes:
+        modules = [m for m in modules if not m.startswith(exc)]
+
+    # Sort modules alphabetically
+    modules = sorted(modules)
+
+    autodoc_package(directory, modules)
+
+    for mod in modules:
+        # Generate the .rst file for each module
+        autodoc_module(directory, mod)
+
+        # Import the module to inspect its classes
+        module_name = f"kliff.{mod}"
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError as e:
+            print(f"Error importing {module_name}: {e}")
+            continue
+
+        # Get all classes in the module
+        classes = inspect.getmembers(module, inspect.isclass)
+
+        # Write class documentation to the corresponding .rst file
+        rst_file = Path(directory) / f"{module_name.replace('.', '/')}.rst"
+        rst_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directories exist
+        with open(rst_file, "a") as f:
+            for class_name, class_obj in classes:
+                # Only document classes defined in the current module
+                if class_obj.__module__ == module_name:
+                    f.write(f"\n.. autoclass:: {module_name}.{class_name}\n")
+                    f.write(f"   :members:\n")
+                    f.write(f"   :undoc-members:\n")
+                    f.write(f"   :inherited-members:\n")
+
+
+create_apidoc(directory="./apidoc")

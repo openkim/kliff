@@ -5,10 +5,10 @@ import pytest
 import torch
 from torch import Tensor
 
-from kliff import nn
-from kliff.calculators import CalculatorTorch
 from kliff.dataset import Dataset
-from kliff.descriptors import SymmetryFunction
+from kliff.legacy import nn
+from kliff.legacy.calculators import CalculatorTorch
+from kliff.legacy.descriptors import SymmetryFunction
 from kliff.models import NeuralNetwork
 
 
@@ -42,7 +42,7 @@ def calc(test_data_dir, N1, N2):
     )
 
     # training set
-    data = Dataset(test_data_dir / "configs" / "Si_4")
+    data = Dataset.from_path(test_data_dir / "configs" / "Si_4")
     configs = data.get_configs()
 
     # calculator

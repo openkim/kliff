@@ -7,7 +7,10 @@
 
 ### Documentation at: <https://kliff.readthedocs.io>
 
-KLIFF is an interatomic potential fitting package that can be used to fit physics-motivated (PM) potentials, as well as machine learning potentials such as the neural network (NN) models.
+KLIFF is an interatomic potential fitting package that can be used to fit
+physics-motivated (PM) potentials, as well as machine learning potentials such
+as the neural network (NN) models.
+
 
 ## Installation
 
@@ -24,7 +27,6 @@ pip install kliff
 ```
 
 ### From source
-
 ```
 git clone https://github.com/openkim/kliff
 pip install ./kliff
@@ -41,12 +43,12 @@ pip install ./kliff
 ## A quick example to train a neural network potential
 
 ```python
-from kliff import nn
-from kliff.calculators import CalculatorTorch
-from kliff.descriptors import SymmetryFunction
+from kliff.legacy import nn
+from kliff.legacy.calculators import CalculatorTorch
+from kliff.legacy.descriptors import SymmetryFunction
 from kliff.dataset import Dataset
 from kliff.models import NeuralNetwork
-from kliff.loss import Loss
+from kliff.legacy.loss import Loss
 from kliff.utils import download_dataset
 
 # Descriptor to featurize atomic configurations
@@ -73,7 +75,7 @@ model.add_layers(
 # https://github.com/openkim/kliff/blob/master/examples/Si_training_set.tar.gz)
 dataset_path = download_dataset(dataset_name="Si_training_set")
 dataset_path = dataset_path.joinpath("varying_alat")
-train_set = Dataset(dataset_path)
+train_set = Dataset.from_path(dataset_path)
 configs = train_set.get_configs()
 
 # Set up calculator to compute energy and forces for atomic configurations in the
@@ -89,7 +91,9 @@ result = loss.minimize(method="Adam", num_epochs=10, batch_size=100, lr=0.001)
 model.write_kim_model()
 ```
 
-Detailed explanation and more tutorial examples can be found in the [documentation](https://kliff.readthedocs.io/en/latest/tutorials.html).
+Detailed explanation and more tutorial examples can be found in the
+[documentation](https://kliff.readthedocs.io/en/latest/tutorials.html).
+
 
 ## Why you want to use KLIFF (or not use it)
 
@@ -99,6 +103,7 @@ Detailed explanation and more tutorial examples can be found in the [documentati
 - Low level API for creating complex NN models
 - Parallel execution
 - [PyTorch](https://pytorch.org) backend for NN (include GPU training)
+- Support for deploying trained ML models with TorchScript and KIM-API
 
 ## Citing KLIFF
 

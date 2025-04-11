@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import numpy as np
 
 from kliff.dataset import Dataset
+from kliff.dataset.dataset import DatasetError
 from kliff.dataset.weight import MagnitudeInverseWeight, Weight
 
 np.random.seed(2022)
@@ -38,7 +41,7 @@ def test_magnitude_inverse_weight(test_data_dir):
 
     # Load the dataset and set the weight
     # We choose the following data set because it has energy, forces, and stress data
-    tset = Dataset(test_data_dir / "configs/Si.xyz", weight=weight)
+    tset = Dataset.from_path(test_data_dir / "configs/Si.xyz", weight=weight)
     configs = tset.get_configs()
 
     # Check if my implementation works. I do this by comparing it with my manual
@@ -84,3 +87,118 @@ def _compute_magnitude_inverse_weight(c1, c2, norm):
     """
     sigma = np.sqrt(c1**2 + (c2 * norm) ** 2)
     return 1 / sigma
+
+
+# tests for loading weights from a file
+def test_weight_from_file():
+    """Load 4 weights from a file"""
+    xyz_file = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
+    weight_file = Path(__file__).parents[1].joinpath("test_data/weights/weights_4.dat")
+    ds = Dataset.from_ase(
+        xyz_file,
+        energy_key="Energy",
+        forces_key="force",
+        weight=weight_file,
+    )
+    configs = ds.get_configs()
+    assert len(configs) == 4
+    weights = np.genfromtxt(weight_file, names=True)
+
+    config_weights = weights["Config"]
+    energy_weights = weights["Energy"]
+    forces_weights = weights["Forces"]
+    stress_weights = weights["Stress"]
+
+    assert configs[0].weight.config_weight == config_weights[0]
+    assert configs[0].weight.energy_weight == energy_weights[0]
+    assert configs[0].weight.forces_weight == forces_weights[0]
+    assert configs[0].weight.stress_weight == stress_weights[0]
+    assert configs[3].weight.config_weight == config_weights[3]
+    assert configs[3].weight.energy_weight == energy_weights[3]
+    assert configs[3].weight.forces_weight == forces_weights[3]
+    assert configs[3].weight.stress_weight == stress_weights[3]
+
+
+def test_single_weight_from_file():
+    """Load a single weight from a file"""
+    xyz_file = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
+    weight_file = Path(__file__).parents[1].joinpath("test_data/weights/weights_1.dat")
+    ds = Dataset.from_ase(
+        xyz_file,
+        energy_key="Energy",
+        forces_key="force",
+        weight=weight_file,
+    )
+    # all weights should be the same
+    configs = ds.get_configs()
+
+    weights = np.genfromtxt(weight_file, names=True)
+    config_weight = weights["Config"]
+    energy_weight = weights["Energy"]
+    forces_weight = weights["Forces"]
+    stress_weight = weights["Stress"]
+
+    assert len(configs) == 4
+    assert configs[0].weight.config_weight == config_weight
+    assert configs[0].weight.energy_weight == energy_weight
+    assert configs[0].weight.forces_weight == forces_weight
+    assert configs[0].weight.stress_weight == stress_weight
+    assert configs[3].weight.config_weight == config_weight
+    assert configs[3].weight.energy_weight == energy_weight
+    assert configs[3].weight.forces_weight == forces_weight
+    assert configs[3].weight.stress_weight == stress_weight
+
+
+def test_incomplete_weights_from_file():
+    """Load 3 weights from a file, this test should fail, with DatasetError, any other error is a failure of the test."""
+    xyz_file = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
+    weight_file = (
+        Path(__file__).parents[1].joinpath("test_data/weights/weights_4_incomplete.dat")
+    )
+    try:
+        ds = Dataset.from_ase(
+            xyz_file,
+            energy_key="Energy",
+            forces_key="force",
+            weight=weight_file,
+        )
+    except DatasetError:
+        assert True
+    except:
+        assert False, "Wrong expected Exception raised"
+    else:
+        assert False, "Expected Exception not raised"
+
+
+def test_minimal_weights_from_file():
+    """Load 2 weights from a file"""
+    xyz_file = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
+    weight_file = (
+        Path(__file__).parents[1].joinpath("test_data/weights/weights_4_partial.dat")
+    )
+
+    ds = Dataset.from_ase(
+        xyz_file,
+        energy_key="Energy",
+        forces_key="force",
+        weight=weight_file,
+    )
+    configs = ds.get_configs()
+    assert len(configs) == 4
+    weights = np.genfromtxt(weight_file, names=True)
+
+    assert len(weights.dtype.names) == 2
+    assert weights.dtype.names == ("Config", "Forces")
+
+    config_weights = weights["Config"]
+    forces_weights = weights["Forces"]
+
+    assert configs[0].weight.config_weight == config_weights[0]
+    assert configs[0].weight.energy_weight == 0.0
+    assert configs[0].weight.forces_weight == forces_weights[0]
+    assert configs[0].weight.stress_weight == 0.0
+
+    assert configs[3].weight.config_weight == config_weights[3]
+    assert configs[3].weight.energy_weight == 0.0
+    assert configs[3].weight.forces_weight == forces_weights[3]
+    assert configs[3].weight.stress_weight == 0.0
