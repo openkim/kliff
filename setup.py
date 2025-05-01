@@ -119,7 +119,7 @@ setup(
         "pyyaml",
         "monty",
         "loguru",
-        "ase<3.23",
+        "ase<3.26",
         "numpy<2.0",
     ],
     extras_require={
@@ -133,7 +133,7 @@ setup(
             # install it manually for now.
             # "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
             "numpy<2.0",
-            "ase<3.23",
+            "ase<3.26",
             "libdescriptor",
         ],
         "torch": [
