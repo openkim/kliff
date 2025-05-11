@@ -135,7 +135,7 @@ setup(
             "numpy<2.0",
             "ase<3.23",
             "libdescriptor",
-            "lmdb"
+            "lmdb",
         ],
         "torch": [
             "torch",

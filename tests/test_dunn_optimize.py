@@ -1,14 +1,16 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 import torch
-from pathlib import Path
 
 from kliff.dataset import Dataset
 from kliff.legacy import nn
-from kliff.legacy.descriptors import SymmetryFunction
 from kliff.legacy.calculators import CalculatorTorch
+from kliff.legacy.descriptors import SymmetryFunction
 from kliff.legacy.loss import Loss
 from kliff.models import NeuralNetwork
+
 
 @pytest.fixture(scope="session")
 def descriptor() -> SymmetryFunction:
@@ -50,7 +52,7 @@ def test_dunn_optimize(calculator):
     """Simple ‘does Adam run’ smoke test."""
     loss = Loss(calculator)
     res = loss.minimize("Adam", lr=1e-2, num_epochs=10, batch_size=1)
-    assert True # training went successfully
+    assert True  # training went successfully
 
 
 def test_dunn_optimize_per_atom_log(calculator, tmp_path):
@@ -60,9 +62,11 @@ def test_dunn_optimize_per_atom_log(calculator, tmp_path):
     and has at least one record.
     """
     log_per_atom_path = tmp_path / "log_per_atom"
-    loss = Loss(calculator,
-                log_per_atom_pred=True,
-                log_per_atom_pred_path=str(log_per_atom_path))
+    loss = Loss(
+        calculator,
+        log_per_atom_pred=True,
+        log_per_atom_pred_path=str(log_per_atom_path),
+    )
     res = loss.minimize("Adam", lr=1e-2, num_epochs=10, batch_size=1)
 
     lmdb_file = log_per_atom_path / "per_atom_pred_database.lmdb"
@@ -70,6 +74,7 @@ def test_dunn_optimize_per_atom_log(calculator, tmp_path):
 
     # Optional: open and check record count
     import lmdb
+
     env = lmdb.open(str(lmdb_file), readonly=True, lock=False, subdir=False)
     with env.begin() as txn:
         n_records = sum(1 for _ in txn.cursor())

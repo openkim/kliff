@@ -1,4 +1,5 @@
 import os
+import pickle as pkl
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
@@ -10,8 +11,6 @@ from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
 from kliff.legacy.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.legacy.calculators.calculator_torch import CalculatorTorch
-
-import pickle as pkl
 
 try:
     import torch
@@ -206,11 +205,18 @@ class Loss:
     ):
         if isinstance(calculator, CalculatorTorch):
             return LossNeuralNetworkModel(
-                calculator, nprocs, residual_fn, residual_data, log_per_atom_pred, log_per_atom_pred_path
+                calculator,
+                nprocs,
+                residual_fn,
+                residual_data,
+                log_per_atom_pred,
+                log_per_atom_pred_path,
             )
         else:
             if log_per_atom_pred_path is not None:
-                logger.error("log_per_atom_pred_path is only supported for torch calculators, for logging per atom prediction in Physics Motivated Model use the newer training API")
+                logger.error(
+                    "log_per_atom_pred_path is only supported for torch calculators, for logging per atom prediction in Physics Motivated Model use the newer training API"
+                )
 
             return LossPhysicsMotivatedModel(
                 calculator, nprocs, residual_fn, residual_data
@@ -706,14 +712,22 @@ class LossNeuralNetworkModel(object):
                 if not os.path.exists(log_per_atom_pred_path):
                     os.makedirs(log_per_atom_pred_path)
 
-            log_per_atom_pred_path = os.path.join(log_per_atom_pred_path, "per_atom_pred_database.lmdb")
+            log_per_atom_pred_path = os.path.join(
+                log_per_atom_pred_path, "per_atom_pred_database.lmdb"
+            )
             try:
                 import lmdb
             except ImportError:
-                logger.warning("lmdb not installed, please install it if you want to use log per atom prediction")
+                logger.warning(
+                    "lmdb not installed, please install it if you want to use log per atom prediction"
+                )
 
-            self.log_per_atom_pred_path = lmdb.open(log_per_atom_pred_path, map_size=1e12, subdir=False)
-            self.log_per_atom_pred_data_ctxt = self.log_per_atom_pred_path.begin(write=True)
+            self.log_per_atom_pred_path = lmdb.open(
+                log_per_atom_pred_path, map_size=1e12, subdir=False
+            )
+            self.log_per_atom_pred_data_ctxt = self.log_per_atom_pred_path.begin(
+                write=True
+            )
 
         else:
             self.log_per_atom_pred_path = None
