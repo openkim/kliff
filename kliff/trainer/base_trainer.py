@@ -744,21 +744,22 @@ class Trainer:
             CMakeLists.txt file as a string
         """
         model_name = model_name.replace("-", "_")
-        cmake = f"""cmake_minimum_required(VERSION 3.10)
+        cmake = f"""
+cmake_minimum_required(VERSION 3.10)
 
-                    list(APPEND CMAKE_PREFIX_PATH $ENV{{KIM_API_CMAKE_PREFIX_DIR}})
-                    find_package(KIM-API-ITEMS 2.2 REQUIRED CONFIG)
+list(APPEND CMAKE_PREFIX_PATH $ENV{{KIM_API_CMAKE_PREFIX_DIR}})
+find_package(KIM-API-ITEMS 2.2 REQUIRED CONFIG)
 
-                    kim_api_items_setup_before_project(ITEM_TYPE "portableModel")
-                    project({model_name})
-                    kim_api_items_setup_after_project(ITEM_TYPE "portableModel")
+kim_api_items_setup_before_project(ITEM_TYPE "portableModel")
+project({model_name})
+kim_api_items_setup_after_project(ITEM_TYPE "portableModel")
 
-                    add_kim_api_model_library(
-                    NAME            ${{PROJECT_NAME}}
-                    DRIVER_NAME     "{driver_name}"
-                    PARAMETER_FILES {" ".join(file_list)}
-                    )
-                """
+add_kim_api_model_library(
+NAME            ${{PROJECT_NAME}}
+DRIVER_NAME     "{driver_name}"
+PARAMETER_FILES {" ".join(file_list)}
+)
+        """
         return cmake
 
     def write_training_env_edn(self, path: str):
