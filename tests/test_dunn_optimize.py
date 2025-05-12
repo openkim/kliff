@@ -76,8 +76,8 @@ def test_dunn_optimize_per_atom_log(calculator, tmp_path):
     import lmdb
 
     env = lmdb.open(
-        str(lmdb_file), readonly=True, lock=False, subdir=False, map_size=2 * 1024**3
-    )  # 2 GB map size, else github actions fail
+        str(lmdb_file), readonly=True, lock=False, subdir=False, map_size=32 * 1024**2
+    )  # 32 MB map size, else github actions fail
     with env.begin() as txn:
         n_records = sum(1 for _ in txn.cursor())
     assert n_records > 0
