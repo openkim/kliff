@@ -361,6 +361,7 @@ Common Keys
    archive of the trained model and dependencies.
 -  **model_path**: Directory to store the exported model.
 -  **model_name**: Filename for the exported model.
+-  **driver_version**: Specific driver version you want to target for export. Only supported for TorchML driver currently.
 
 .. _example-3:
 

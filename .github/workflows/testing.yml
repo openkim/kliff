@@ -31,6 +31,9 @@ jobs:
         os: [ubuntu-latest]
         python-version: ["3.9","3.10","3.11"]
 
+    env:
+      KLIFF_LMDB_MAP_SIZE: 33554432
+
     steps:
       - uses: actions/checkout@v4
       - name: Set up micromamba

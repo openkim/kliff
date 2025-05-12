@@ -565,6 +565,11 @@ class DNNTrainer(Trainer):
         else:
             qualified_model_name = self.export_manifest["model_name"]
 
+        torchml_version = self.export_manifest.get("driver_version", "000")
+        if len(torchml_version) != 3:  # not a fully qualified version string
+            torchml_version = f"{int(torchml_version):03}"
+        cmake_version = "TorchML__MD_173118614730_" + str(torchml_version)
+
         path = os.path.join(path, qualified_model_name)
 
         os.makedirs(path, exist_ok=True)
@@ -589,7 +594,7 @@ class DNNTrainer(Trainer):
         # CMakeLists.txt
         cmakefile = self._generate_kim_cmake(
             qualified_model_name,
-            "TorchML__MD_173118614730_000",
+            torchml_driver,
             ["model.pt", "descriptor.dat", "kim_model.param"],
         )
 

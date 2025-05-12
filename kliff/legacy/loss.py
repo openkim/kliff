@@ -659,7 +659,8 @@ class LossNeuralNetworkModel(object):
         log_per_atom_pred: whether to log the prediction per atom (only forces supported currently.)
         log_per_atom_pred_path: path to save the per atom prediction. If not None, the per atom
             prediction will be saved to this path. The file name is
-            ``<log_per_atom_pred_path>/per_atom_pred_database.lmdb``.
+            ``<log_per_atom_pred_path>/per_atom_pred_database.lmdb``. You can control
+            the LMDB memory mapping by setting the environment variable ``KLIFF_LMDB_MAP_SIZE``.
     """
 
     torch_minimize_methods = [
@@ -722,8 +723,9 @@ class LossNeuralNetworkModel(object):
                     "lmdb not installed, please install it if you want to use log per atom prediction"
                 )
 
+            map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", "1e12")
             self.log_per_atom_pred_path = lmdb.open(
-                log_per_atom_pred_path, map_size=1e12, subdir=False
+                log_per_atom_pred_path, map_size=int(map_size), subdir=False
             )
             self.log_per_atom_pred_data_ctxt = self.log_per_atom_pred_path.begin(
                 write=True

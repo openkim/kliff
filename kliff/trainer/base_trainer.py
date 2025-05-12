@@ -38,6 +38,9 @@ class Trainer:
     - Set up the test train split
     Model, parameter transform and optimizer setup are left for the derived classes to
     implement.
+
+    env variables:
+        KLIFF_LMDB_MAP_SIZE: lmdb mmap size, defaults to 1e12
     """
 
     def __init__(self, training_manifest: dict, model=None):
@@ -166,6 +169,7 @@ class Trainer:
             "model_name": None,
             "model_path": None,
             "generate_tarball": False,
+            "driver_version": "000",
         }
 
         # state variables
@@ -458,9 +462,12 @@ class Trainer:
             # TODO: add lmdb to the requirements
             import lmdb  # conditional import, only needed for per-atom predictions
 
+            map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", 1e12)
+            map_size = int(map_size)
+
             self.current["per_atom_pred_database"] = lmdb.open(
                 f"{self.current['run_dir']}/per_atom_pred_database.lmdb",
-                map_size=1e12,
+                map_size=map_size,
                 subdir=False,
             )
 
