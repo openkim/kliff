@@ -1,4 +1,5 @@
 import os
+import pickle as pkl
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
@@ -187,6 +188,10 @@ class Loss:
                 "normalize_by_natoms": True,
             }
             See the documentation of :meth:`energy_forces_residual` for more.
+        log_per_atom_pred: whether to log the prediction per atom.
+        log_per_atom_pred_path: path to save the per atom prediction. If not None, the per atom
+            prediction will be saved to this path. The file name is
+            ``<log_per_atom_pred_path>/per_atom_pred_database.lmdb``.
     """
 
     def __new__(
@@ -195,12 +200,24 @@ class Loss:
         nprocs: int = 1,
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
+        log_per_atom_pred: Optional[bool] = False,
+        log_per_atom_pred_path: Optional[str] = None,
     ):
         if isinstance(calculator, CalculatorTorch):
             return LossNeuralNetworkModel(
-                calculator, nprocs, residual_fn, residual_data
+                calculator,
+                nprocs,
+                residual_fn,
+                residual_data,
+                log_per_atom_pred,
+                log_per_atom_pred_path,
             )
         else:
+            if log_per_atom_pred_path is not None:
+                logger.error(
+                    "log_per_atom_pred_path is only supported for torch calculators, for logging per atom prediction in Physics Motivated Model use the newer training API"
+                )
+
             return LossPhysicsMotivatedModel(
                 calculator, nprocs, residual_fn, residual_data
             )
@@ -639,6 +656,11 @@ class LossNeuralNetworkModel(object):
                 "normalize_by_natoms": True,
             }
             See the documentation of :meth:`energy_forces_residual` for more.
+        log_per_atom_pred: whether to log the prediction per atom (only forces supported currently.)
+        log_per_atom_pred_path: path to save the per atom prediction. If not None, the per atom
+            prediction will be saved to this path. The file name is
+            ``<log_per_atom_pred_path>/per_atom_pred_database.lmdb``. You can control
+            the LMDB memory mapping by setting the environment variable ``KLIFF_LMDB_MAP_SIZE``.
     """
 
     torch_minimize_methods = [
@@ -660,6 +682,8 @@ class LossNeuralNetworkModel(object):
         nprocs: int = 1,
         residual_fn: Optional[Callable] = None,
         residual_data: Optional[Dict[str, Any]] = None,
+        log_per_atom_pred: bool = False,
+        log_per_atom_pred_path: Optional[str] = None,
     ):
         if not torch_avail:
             report_import_error("pytorch")
@@ -681,6 +705,36 @@ class LossNeuralNetworkModel(object):
         self.optimizer = None
         self.optimizer_state_path = None
 
+        self.log_predictions = log_per_atom_pred
+        if log_per_atom_pred:
+            if log_per_atom_pred_path is None:
+                log_per_atom_pred_path = os.getcwd()
+            else:
+                if not os.path.exists(log_per_atom_pred_path):
+                    os.makedirs(log_per_atom_pred_path)
+
+            log_per_atom_pred_path = os.path.join(
+                log_per_atom_pred_path, "per_atom_pred_database.lmdb"
+            )
+            try:
+                import lmdb
+            except ImportError:
+                logger.warning(
+                    "lmdb not installed, please install it if you want to use log per atom prediction"
+                )
+
+            map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", "1e12")
+            self.log_per_atom_pred_path = lmdb.open(
+                log_per_atom_pred_path, map_size=int(map_size), subdir=False
+            )
+            self.log_per_atom_pred_data_ctxt = self.log_per_atom_pred_path.begin(
+                write=True
+            )
+
+        else:
+            self.log_per_atom_pred_path = None
+
+        self._epoch = 0
         logger.debug(f"`{self.__class__.__name__}` instantiated.")
 
     def minimize(
@@ -737,6 +791,7 @@ class LossNeuralNetworkModel(object):
 
         epoch = 0  # in case never enters loop
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
+            self._epoch = epoch
             # get the loss without any optimization if continue a training
             if self.start_epoch != 0 and epoch == self.start_epoch:
                 epoch_loss = self._get_loss_epoch(loader)
@@ -766,6 +821,11 @@ class LossNeuralNetworkModel(object):
         self.calculator.save_model(epoch, force_save=True)
 
         logger.info(f"Finish minimization using optimization method: {method}.")
+
+        if self.log_predictions:
+            self.log_per_atom_pred_data_ctxt.commit()
+            self.log_per_atom_pred_path.close()
+            logger.info(f"Per atom prediction saved to {self.log_per_atom_pred_path}")
 
     def _get_loss_epoch(self, loader):
         epoch_loss = 0
@@ -809,6 +869,7 @@ class LossNeuralNetworkModel(object):
         ):
             loss = self._get_loss_single_config(sample, energy, forces, stress)
             losses.append(loss)
+
         loss_batch = torch.stack(losses).sum()
         if normalize:
             loss_batch /= len(batch)
@@ -824,6 +885,12 @@ class LossNeuralNetworkModel(object):
 
         if self.calculator.use_forces:
             ref_forces = sample["forces"].to(device)
+            if self.log_predictions:
+                # save per atom prediction, forces only currently
+                self.log_per_atom_pred_data_ctxt.put(
+                    f"epoch_{self._epoch}|index_{sample['index']}".encode(),
+                    pkl.dumps({"pred_0": ref_forces, "n_atoms": ref_forces.shape[0]}),
+                )
             if self.calculator.use_energy:
                 pred = torch.cat((pred, pred_forces.reshape(-1)))
                 ref = torch.cat((ref, ref_forces.reshape(-1)))

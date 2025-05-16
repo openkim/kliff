@@ -38,6 +38,9 @@ class Trainer:
     - Set up the test train split
     Model, parameter transform and optimizer setup are left for the derived classes to
     implement.
+
+    env variables:
+        KLIFF_LMDB_MAP_SIZE: lmdb mmap size, defaults to 1e12
     """
 
     def __init__(self, training_manifest: dict, model=None):
@@ -166,6 +169,7 @@ class Trainer:
             "model_name": None,
             "model_path": None,
             "generate_tarball": False,
+            "driver_version": "000",
         }
 
         # state variables
@@ -458,9 +462,12 @@ class Trainer:
             # TODO: add lmdb to the requirements
             import lmdb  # conditional import, only needed for per-atom predictions
 
+            map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", 1e12)
+            map_size = int(map_size)
+
             self.current["per_atom_pred_database"] = lmdb.open(
                 f"{self.current['run_dir']}/per_atom_pred_database.lmdb",
-                map_size=1e12,
+                map_size=map_size,
                 subdir=False,
             )
 
@@ -737,21 +744,22 @@ class Trainer:
             CMakeLists.txt file as a string
         """
         model_name = model_name.replace("-", "_")
-        cmake = f"""cmake_minimum_required(VERSION 3.10)
+        cmake = f"""
+cmake_minimum_required(VERSION 3.10)
 
-                    list(APPEND CMAKE_PREFIX_PATH $ENV{{KIM_API_CMAKE_PREFIX_DIR}})
-                    find_package(KIM-API-ITEMS 2.2 REQUIRED CONFIG)
+list(APPEND CMAKE_PREFIX_PATH $ENV{{KIM_API_CMAKE_PREFIX_DIR}})
+find_package(KIM-API-ITEMS 2.2 REQUIRED CONFIG)
 
-                    kim_api_items_setup_before_project(ITEM_TYPE "portableModel")
-                    project({model_name})
-                    kim_api_items_setup_after_project(ITEM_TYPE "portableModel")
+kim_api_items_setup_before_project(ITEM_TYPE "portableModel")
+project({model_name})
+kim_api_items_setup_after_project(ITEM_TYPE "portableModel")
 
-                    add_kim_api_model_library(
-                    NAME            ${{PROJECT_NAME}}
-                    DRIVER_NAME     "{driver_name}"
-                    PARAMETER_FILES {" ".join(file_list)}
-                    )
-                """
+add_kim_api_model_library(
+NAME            ${{PROJECT_NAME}}
+DRIVER_NAME     "{driver_name}"
+PARAMETER_FILES {" ".join(file_list)}
+)
+        """
         return cmake
 
     def write_training_env_edn(self, path: str):

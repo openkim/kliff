@@ -57,3 +57,8 @@ training:
     device: cpu
     ckpt_interval: 3
     verbose: False
+
+export: # optional: export the trained model
+    model_path: ./
+    model_name: GNN__MO_111111111111_000
+    driver_version: "001"

@@ -18,6 +18,9 @@ class FingerprintsDataset(Dataset):
 
     def __init__(self, filename: Path, transform: Optional[Callable] = None):
         self.fp = load_fingerprints(filename)
+        for i, f in enumerate(self.fp):
+            f["index"] = i
+
         self.transform = transform
 
     def __len__(self):
