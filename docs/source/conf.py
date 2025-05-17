@@ -14,7 +14,7 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-
+from typing import List
 
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -230,8 +230,12 @@ autodoc_mock_imports = [
     "torch_lightning",
     "torch_scatter",
     "torch_sparse",
+    "torch_geometric",
     "libdescriptor",
-    "colabfit"
+    "colabfit",
+    "loguru",
+    "tensorboard",
+    "tensorboardx",
 ]
 
 # do not sort member functions of a class
@@ -248,7 +252,7 @@ nb_execution_timeout = 120
 # -- generate api doc ----------------------------------------------------------
 
 
-def get_all_modules(source: Path = "./kliff") -> list[str]:
+def get_all_modules(source: Path = "./kliff"):
     """
     Get all modules of the package.
 
@@ -276,7 +280,7 @@ def get_all_modules(source: Path = "./kliff") -> list[str]:
 
 
 
-def autodoc_package(path: Path, modules: list[str]):
+def autodoc_package(path: Path, modules:List[str] ):
     """
     Create a package reference page.
 
