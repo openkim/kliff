@@ -152,6 +152,7 @@ setup(
             "sphinx-autodoc-typehints",
             "sphinx-copybutton",
             "matplotlib",
+            "loguru"
         ],
     },
     entry_points={"console_scripts": ["kliff = kliff.cmdline.cli:main"]},
