@@ -384,12 +384,14 @@ Let us define a vey value dict directly and try to train a simple
 Stillinger-Weber Si potential
 
 Step 0: Get the dataset
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
-.. code:: bash
+In your shell (or notebook with ``!``).
 
-    !wget https://raw.githubusercontent.com/openkim/kliff/main/examples/Si_training_set_4_configs.tar.gz
-    !tar -xvf Si_training_set_4_configs.tar.gz
+.. code-block:: bash
+
+    wget https://raw.githubusercontent.com/openkim/kliff/main/examples/Si_training_set_4_configs.tar.gz
+    tar -xvf Si_training_set_4_configs.tar.gz
 
 
 .. parsed-literal::
@@ -413,23 +415,23 @@ Step 0: Get the dataset
 
 
 Step 1: workspace config
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 Create a folder named ``SW_train_example``, and use it for everything
 
-.. code:: python
+.. code-block:: python
 
     workspace = {"name": "SW_train_example", "random_seed": 12345}
 
 Step 2: define the dataset
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
 
-.. code:: python
+.. code-block:: python
 
     dataset = {"type": "path", "path": "Si_training_set_4_configs", "shuffle": True}
 
 Step 3: model
-^^^^^^^^^^^^^
+-------------
 
 Install the KIM model if not already installed.
 
@@ -437,36 +439,36 @@ Install the KIM model if not already installed.
 
    You can also provide custom KIM model by defining the `path` to a valid KIM portable model. In that case KLIFF will install the model for you.
 
-.. code:: python
+.. code:: bash
 
-    !kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
+    kim-api-collections-management install user SW_StillingerWeber_1985_Si__MO_405512056662_006
 
 
 .. parsed-literal::
 
     Item 'SW_StillingerWeber_1985_Si__MO_405512056662_006' already installed in collection 'user'.
     
-    Success!
+    Success\!
 
 
-.. code:: python
+.. code-block:: python
 
     model = {"name": "SW_StillingerWeber_1985_Si__MO_405512056662_006"}
 
 Step 4: select parameters to be trained
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------
 
-.. code:: python
+.. code-block:: python
 
     transforms = {"parameter": ["A", "B", "sigma"]}
 
 Step 5: training
-^^^^^^^^^^^^^^^^
+----------------
 
 Lets train it using scipy, lbfgs optimizer (physics based models can
 only work with scipy optimizers). With test train split of 1:3.
 
-.. code:: python
+.. code-block:: python
 
     training = {
         "loss" : {"function" : "MSE"},
@@ -477,16 +479,16 @@ only work with scipy optimizers). With test train split of 1:3.
     }
 
 Step 6: (Optional) export the model?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------
 
-.. code:: python
+.. code-block:: python
 
     export = {"model_path":"./", "model_name": "MySW__MO_111111111111_000"} # name can be anything, but better to have KIM-API qualified name for convenience
 
 Step 7: Put it all together, and pass to the trainer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------------------------------
 
-.. code:: python
+.. code-block:: python
 
     training_manifest = {
         "workspace": workspace,
@@ -497,7 +499,7 @@ Step 7: Put it all together, and pass to the trainer
         "export": export
     }
 
-.. code:: python
+.. code-block:: python
 
     from kliff.trainer.kim_trainer import KIMTrainer
     
@@ -555,7 +557,7 @@ The model should now be trained, you can install it as:
 Let us quickly check the trained model, here we are using the ASE
 calculator to check the energy and forces
 
-.. code:: python
+.. code-block:: python
 
     from ase.calculators.kim.kim import KIM
     from ase.build import bulk
@@ -581,7 +583,7 @@ This indicates that your conda environment is not properly setting up
 the ``LD_LIBRARY_PATH``. You can fix this by running the following
 command:
 
-.. code:: {bash}
+.. code:: bash
 
    export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 

@@ -145,7 +145,9 @@ instantiate the sampler are:
   ``kwargs``.
 
 
-.. How to run sampling
+How to run sampling
+-------------------
+
 After the sampler is created, the MCMC run is done by calling
 :meth:`~kliff.uq.MCMC.run_mcmc`.
 
@@ -279,6 +281,7 @@ walker). When the resulting :math:`\hat{R}^p` values are larger than the thresho
 satisfied.
 
 .. note::
+
    Some sampling temperatures might converge at slower rates compared to others.
    So, user can terminate the MCMC simulation as long as the samples at the target
    temperatures, e.g., :math:`T_0`, have converged.
@@ -314,6 +317,7 @@ the same as the original dataset. The difference between the datasets gives a se
 probability in data.
 
 .. note::
+
    Although usually :math:`M` is set to be the same as :math:`N`, in principle it
    doesn't need to be.
 
@@ -340,6 +344,7 @@ calculation is
       loss.minimize(**min_kwargs)
 
       bs = Bootstrap(loss, *args, **kwargs)
+
 
    When instantiating the parent class :class:`~kliff.uq.Bootstrap`, it will return either
    an instance of :class:`~kliff.uq.BootstrapEmpiricalModel` or
@@ -398,12 +403,13 @@ calculation is
      passed into the optimizer. This argument can be thought of as the optimizer setting.
 
      .. note::
-	Since the mapping from the bootstrap dataset to the inferred parameters contains
-	optimization, then it is recommended to use the same optimizer setting when we
-	iterate over each bootstrap compute argument and train the potential.
-	Additionally, the optimizer setting should also be the same as the setting used
-	in the initial training, when we use the original set of compute arguments to
-	train the potential.
+
+        Since the mapping from the bootstrap dataset to the inferred parameters contains
+        optimization, then it is recommended to use the same optimizer setting when we
+        iterate over each bootstrap compute argument and train the potential.
+        Additionally, the optimizer setting should also be the same as the setting used
+        in the initial training, when we use the original set of compute arguments to
+        train the potential.
 
    * ``callback``, which is an option to specify a function that will be called in each
      iteration. This can be used as a debugging tool or to monitor convergence.

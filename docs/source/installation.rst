@@ -164,7 +164,7 @@ conda:
 
 Above command should install ``libdescriptor`` on both Linux and Apple Silicon Mac. For
 any other unsupported system, either you can use the ``legacy`` descriptor interface of
-KLIFF for now, or install it from the source (see detailed documentation `here <https://libdescriptor.readthedocs.io/en/latest/>`_).
+KLIFF for now, or install it from the source (see detailed `documentation <https://libdescriptor.readthedocs.io/en/latest/>`_).
 
 TorchML Model driver
 --------------------
@@ -175,6 +175,11 @@ the :ref:`advanced section <lammps>` .
 
 Detailed instructions on how to port your existing models to TorchML can be found
 `here <https://kim-torchml-port.readthedocs.io/en/latest/introduction.html>`_.
+
+.. tip::
+
+    You can also use `Klay <https://klay.readthedocs.io>`_ (KLIFF Layers) sister python
+    package to generate ML models, which are inherently compatible with KLIFF and OpenKIM.
 
 Errors
 ------
@@ -200,8 +205,7 @@ compiled for Arm64, rather it is compiled for x86_64. This points to an underlyi
 with your conda environment, and you may need to reinstall the package.
 
 Easiest first attempt to fix it is to recreate the conda environment and reinstall the package
-from the top. For more detailed instructions, please refer to stackoverflow issue discussed
-`here <https://stackoverflow.com/questions/72308682/mach-o-file-but-is-an-incompatible-architecture-have-x86-64-need-arm64e>`_.
+from the top. For more detailed instructions, please refer to `stackoverflow issue <https://stackoverflow.com/questions/72308682/mach-o-file-but-is-an-incompatible-architecture-have-x86-64-need-arm64e>`_.
 
 
 .. _Python: http://www.python.org

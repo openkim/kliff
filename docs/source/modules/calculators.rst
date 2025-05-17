@@ -24,7 +24,7 @@ A calculator for the physics-motivated potential can be created by:
 
 .. code-block:: python
 
-    from kliff.calculators import Calculator
+    from kliff.legacy.calculators import Calculator
 
     model = ...  # create a model
     configs = ...  # get a list of configurations
@@ -44,20 +44,20 @@ If the potential is to be trained on `energy` only, it would be better to set
 Other methods of the calculator include:
 
 - `Initialization`:
-  :meth:`~kliff.calculators.Calculator.get_compute_arguments`.
+  :meth:`~kliff.legacy.calculators.Calculator.get_compute_arguments`.
 - `Property calculation using a model`:
-  :meth:`~kliff.calculators.Calculator.compute`,
-  :meth:`~kliff.calculators.Calculator.get_compute_arguments`,
-  :meth:`~kliff.calculators.Calculator.compute`,
-  :meth:`~kliff.calculators.Calculator.get_energy`,
-  :meth:`~kliff.calculators.Calculator.get_forces`,
-  :meth:`~kliff.calculators.Calculator.get_stress`,
-  :meth:`~kliff.calculators.Calculator.get_prediction`,
-  :meth:`~kliff.calculators.Calculator.get_reference`.
+  :meth:`~kliff.legacy.calculators.Calculator.compute`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_compute_arguments`,
+  :meth:`~kliff.legacy.calculators.Calculator.compute`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_energy`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_forces`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_stress`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_prediction`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_reference`.
 - `Optimizing parameters`:
-  :meth:`~kliff.calculators.Calculator.get_opt_params`,
-  :meth:`~kliff.calculators.Calculator.get_opt_params_bounds`,
-  :meth:`~kliff.calculators.Calculator.update_model_params`.
+  :meth:`~kliff.legacy.calculators.Calculator.get_opt_params`,
+  :meth:`~kliff.legacy.calculators.Calculator.get_opt_params_bounds`,
+  :meth:`~kliff.legacy.calculators.Calculator.update_model_params`.
 
 .. seealso::
     See :class:`kliff.calculators.Calculator` for a complete list of the member

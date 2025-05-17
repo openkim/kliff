@@ -38,14 +38,14 @@ Step 1: workspace config
 
 Create a folder named ``DNN_train_example``, and use it for everything
 
-.. code:: python
+.. code-block:: python
 
     workspace = {"name": "DNN_train_example", "random_seed": 12345}
 
 Step 2: define the dataset
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     dataset = {"type": "path", "path": "Si_training_set_4_configs", "shuffle": True}
 
@@ -56,7 +56,7 @@ We will use a simple fully connected neural network with ``tanh``
 non-linearities and width of 51 (dims of our descriptor later). Model
 will contain 1 hidden layer with dimension 50, i.e.
 
-.. code:: python
+.. code-block:: python
 
     import torch
     import torch.nn as nn
@@ -80,7 +80,7 @@ will contain 1 hidden layer with dimension 50, i.e.
 
 
 
-.. code:: python
+.. code-block:: python
 
     model = {"name": "MY_ML_MODEL"}
 
@@ -90,7 +90,7 @@ Step 4: select appropriate configuration transforms
 Let us use default ``set51`` in Behler symmetry functions as the
 configuration transform descriptor
 
-.. code:: python
+.. code-block:: python
 
     transforms = {
             "configuration": {
@@ -109,7 +109,7 @@ Step 5: training
 
 Lets train it using Adam optimizer. With test train split of 1:3.
 
-.. code:: python
+.. code-block:: python
 
     training = {
             "loss": {
@@ -137,14 +137,14 @@ Lets train it using Adam optimizer. With test train split of 1:3.
 Step 6: (Optional) export the model?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     export = {"model_path":"./", "model_name": "MyDNN__MO_111111111111_000"} # name can be anything, but better to have KIM-API qualified name for convenience
 
 Step 7: Put it all together, and pass to the trainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     training_manifest = {
         "workspace": workspace,
@@ -155,7 +155,7 @@ Step 7: Put it all together, and pass to the trainer
         "export": export
     }
 
-.. code:: python
+.. code-block:: python
 
     from kliff.trainer.torch_trainer import DNNTrainer
     

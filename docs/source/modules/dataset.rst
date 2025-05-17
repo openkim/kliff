@@ -30,7 +30,7 @@ To create a data, do:
 
     from kliff.dataset import Dataset
     path = 'path_to_my_dataset_files'
-    dset = Dataset(path, format='extxyz')
+    dset = Dataset.from_path(path)
 
 
 where ``path`` is a file storing a configuration or a directory containing multiple
@@ -200,7 +200,7 @@ which put a single weight for each property.
 
     path = 'path_to_my_dataset_files'
     weight = Weight()
-    dset = Dataset(path, weight=weight, format='extxyz')
+    dset = Dataset.from_path(path, weight=weight, format='extxyz')
 
     # Retrieve the weights
     config_weight = configs[0].config_weight
