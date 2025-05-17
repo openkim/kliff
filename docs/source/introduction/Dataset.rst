@@ -57,7 +57,7 @@ dataset, which is
 
 You can easily initialize the ``Configuration`` from ``ase.Atoms``
 
-.. code:: python
+.. code-block:: python
 
     import numpy as np
     from ase.build import bulk
@@ -93,7 +93,7 @@ Direct initialization
 For conversion to newer or unsupported dataformats, you can directly
 initialize the configuration object as
 
-.. code:: python
+.. code-block:: python
 
     cell = np.eye(3)  # 3x3 identity matrix
     species = ["Al", "Al", "Al", "Al"]
@@ -143,7 +143,7 @@ object using ``Configuration.to_ase_atoms``, or to extxyz file using
 ``Configuration.to_file``. For more details, please refer to the API
 docs.
 
-.. code:: python
+.. code-block:: python
 
     ase_atoms = configuration.to_ase_atoms()
     print(np.allclose(ase_atoms.get_positions(), configuration.coords))
@@ -151,7 +151,11 @@ docs.
     configuration.to_file("config1.extxyz")
     print("\nSaved extxyz header: ")
     print("="*80)
-    !head -2 config1.extxyz
+
+
+.. code-block:: bash
+
+    head -2 config1.extxyz
 
 .. tip::
 
@@ -175,7 +179,7 @@ Exception handling for ``Configuration``
 If any absent property is accessed, you get ``ConfigurationError``
 exception. User should handle these exceptions as they see fit.
 
-.. code:: python
+.. code-block:: python
 
     configuration.forces # raises exception
 
@@ -224,7 +228,7 @@ options, which include:
 1. List of ASE Atoms objects (with keyword ``ase_atoms_list`` eplicitly specified)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     from kliff.dataset import Dataset
     
@@ -283,7 +287,7 @@ and forces keys (``forces`` and ``energy`` in above example) explicitly
 to the function to ensure that properties are correctly mapped in KLIFF
 configuration.
 
-.. code:: python
+.. code-block:: python
 
     from kliff.utils import get_n_configs_in_xyz # how many configs in xyz file 
     # Read the dataset from DS_jasbxoigo7r4_0_0.xyz
@@ -306,7 +310,7 @@ indices, slices, or list of numbers.
     Please note that slices and lists of config returns a new dataset object with
     desired configuration (as opposed to python list).
 
-.. code:: python
+.. code-block:: python
 
     # access individual configs
     print(ds[1], ds[-1])
@@ -358,7 +362,7 @@ toy dataset with 4 configurations.
     Si_training_set_4_configs/Si_alat5.420_scale0.005_perturb1.xyz
 
 
-.. code:: python
+.. code-block:: python
 
     ds = Dataset.from_path("./Si_training_set_4_configs") # 4 configs in ./Si_training_set_4_configs
     assert len(ds) == 4
@@ -374,7 +378,7 @@ toy dataset with 4 configurations.
 
 You can also stream data from Colabfit Exchange as
 
-.. code:: python
+.. code-block:: python
 
    ds = Dataset.from_colabfit("my_colabfit_database", "DS_xxxxxxxxxxxx_0", colabfit_uri = "mongodb://localhost:27017")
 
@@ -391,7 +395,7 @@ extend the ``Dataset`` class manually using the default
 will need to store the list of loaded configurations in the
 ``Dataset.config`` member variable
 
-.. code:: python
+.. code-block:: python
 
    class CustomDataset(Dataset):
        @classmethod

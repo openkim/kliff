@@ -16,7 +16,7 @@ To carry out optimization, first create a loss object:
 
 .. code-block:: python
 
-    from kliff.loss import Loss
+    from kliff.legacy.loss import Loss
 
     calculator = ...  # create a calculator
     Loss(calculator, nprocs=1, residual_fn=None, residual_data=None)
@@ -97,20 +97,20 @@ that constructs the residual using energy and forces is defined as (in a nutshel
 
     def energy_forces_residual(identifier, natoms, weight, prediction, reference, data):
 
-	# extract up the weight information
-	config_weight = weight.config_weight
-	energy_weight = weight.energy_weight
-	forces_weight = weight.forces_weight
+        # extract up the weight information
+        config_weight = weight.config_weight
+        energy_weight = weight.energy_weight
+        forces_weight = weight.forces_weight
 
-	# obtain residual and properly normalize it
-	residual = config_weight * (prediction - reference)
-	residual[0] *= energy_weight
-	residual[1:] *= forces_weight
+        # obtain residual and properly normalize it
+        residual = config_weight * (prediction - reference)
+        residual[0] *= energy_weight
+        residual[1:] *= forces_weight
 
-	if data["normalize_by_natoms"]:
-	    residual /= natoms
+        if data["normalize_by_natoms"]:
+            residual /= natoms
 
-	return residual
+        return residual
 
 
 This residual function retrieves the weights for energy and forces f``weight``
@@ -165,34 +165,34 @@ weigh more for the configurations with cracks.
     # define my own residual function
     def residual_fn(identifier, natoms, weight, prediction, reference, data):
 
-	# extract the weight information
-	config_weight = weight.config_weight
-        energy_weight = weight.energy_weight
-        forces_weight = weight.forces_weight
+        # extract the weight information
+        config_weight = weight.config_weight
+            energy_weight = weight.energy_weight
+            forces_weight = weight.forces_weight
 
-	# larger weight for configuration with cracks
-        if 'with_cracks' in identifer:
-            config_weight *= 10
+        # larger weight for configuration with cracks
+            if 'with_cracks' in identifer:
+                config_weight *= 10
 
-	normalize = data["normalize_by_natoms"]
-	if normalize:
-	    energy_weight /= natoms
-            forces_weight /= natoms
+        normalize = data["normalize_by_natoms"]
+        if normalize:
+            energy_weight /= natoms
+                forces_weight /= natoms
 
-        # obtain residual and properly normalize it
-        residual = config_weight * (prediction - reference)
-        residual[0] *= energy_weight
-        residual[1:] *= forces_weight
+            # obtain residual and properly normalize it
+            residual = config_weight * (prediction - reference)
+            residual[0] *= energy_weight
+            residual[1:] *= forces_weight
 
-        return residual
+            return residual
 
 
     calculator = ...  # create a calculator
     loss = Loss(
         calculator,
-	nprocs=1,
-	residual_fn=residual_fn,
-	residual_data={"normalize_by_natoms": True}
+        nprocs=1,
+        residual_fn=residual_fn,
+        residual_data={"normalize_by_natoms": True}
     )
 
 

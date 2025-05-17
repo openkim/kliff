@@ -47,7 +47,7 @@ Step 1: workspace config
 
 Create a folder named ``GNN_train_example``, and use it for everything
 
-.. code:: python
+.. code-block:: python
 
     workspace = {"name": "GNN_train_example", "random_seed": 12345}
 
@@ -57,7 +57,7 @@ Step 2: define the dataset
 Load the newly downloaded dataset kept in the folder:
 ``Si_training_set_4_configs``
 
-.. code:: python
+.. code-block:: python
 
     dataset = {"type": "path", "path": "Si_training_set_4_configs", "shuffle": True}
 
@@ -71,7 +71,7 @@ implementing the model, let us look at the data structure provided by
 which is the most commonly used input scturcture for graph based neural
 networks.
 
-.. code:: python
+.. code-block:: python
 
     from kliff.transforms.configuration_transforms.graphs import RadialGraph
     from kliff.dataset import Dataset
@@ -166,7 +166,7 @@ explicitly define the used inputs in the manifest as ``input_args``. In
 example below, we only use the atomix numbers, coordinates, edge
 indices, and contributions information.
 
-.. code:: python
+.. code-block:: python
 
     model = {"name": "SchNet1",
              "input_args":["z", "coords", "edge_index0", "contributions"]
@@ -180,7 +180,7 @@ its custom Shifted Soft Plus non-linearity.
 
    More details about the model given below will be added shortly.
 
-.. code:: python
+.. code-block:: python
 
     import torch
     import torch.nn as nn
@@ -309,7 +309,7 @@ Step 4: select appropriate configuration transforms
 We will use RadialGraph, with single convolution layer, with a cutoff of
 ``4.0``.
 
-.. code:: python
+.. code-block:: python
 
     transforms = {
             "configuration": {
@@ -328,7 +328,7 @@ Step 5: training
 Using the default setting from the previous example, lets train it using
 Adam optimizer. With test train split of 1:3.
 
-.. code:: python
+.. code-block:: python
 
     training = {
             "loss": {
@@ -368,7 +368,7 @@ Macs, you might need to change these defaults.
 You can edit them by providing additional key value pairs ``strategy``
 and ``accelerator``, i.e.
 
-.. code:: python
+.. code-block:: python
 
     training["strategy"] = "ddp_notebook" # only for jupyter notebook, try "auto" or "ddp" for normal usage
     training["accelerator"] = "cpu" # for Apple Mac, "auto" for rest
@@ -376,14 +376,14 @@ and ``accelerator``, i.e.
 Step 6: (Optional) export the model?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     export = {"model_path":"./", "model_name": "SchNet1__MO_111111111111_000"} # name can be anything, but better to have KIM-API qualified name for convenience
 
 Step 7: Put it all together, and pass to the trainer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     training_manifest = {
         "workspace": workspace,
@@ -400,7 +400,7 @@ benefit of using Lightning is that it abstracts away any distributed and
 GPU specific instructions, and automate hardware acceleration. This
 ensures that the training always performs most optimally.
 
-.. code:: python
+.. code-block:: python
 
     from kliff.trainer.lightning_trainer import GNNLightningTrainer
     
@@ -523,7 +523,7 @@ A simple reinstall will ensure that kliff is built with the latest
 
 Try setting the ``strategy`` to ``auto``
 
-.. code:: python
+.. code-block:: python
 
    training["strategy"] = "auto"
 

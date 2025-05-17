@@ -46,7 +46,7 @@ with KLIFF’s data structures (i.e., ``Configuration``,
 
       conda install -c ipcamit libdescriptor
 
-.. code:: python
+.. code-block:: python
 
     from kliff.transforms.configuration_transforms.descriptors import show_available_descriptors
     show_available_descriptors()
@@ -62,7 +62,7 @@ with KLIFF’s data structures (i.e., ``Configuration``,
     SOAP
 
 
-.. code:: python
+.. code-block:: python
 
     from kliff.transforms.configuration_transforms.descriptors import Descriptor
     from kliff.transforms.configuration_transforms.default_hyperparams import symmetry_functions_set30
@@ -183,7 +183,7 @@ See example below.
 KLIFF Descriptor ``backward`` and ``forward``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: python
+.. code-block:: python
 
     # generate Si configuration
     from ase.build import bulk
@@ -215,7 +215,7 @@ Radial Graphs
 Similarly users can also generate radial graphs for graph neural
 networks.
 
-.. code:: python
+.. code-block:: python
 
     from kliff.transforms.configuration_transforms.graphs import RadialGraph
     
