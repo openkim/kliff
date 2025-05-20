@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from ase import io
+from ase import Atoms, io
 
 from kliff.dataset import Configuration
 from kliff.dataset.dataset import ConfigurationError
@@ -30,19 +30,16 @@ def test_configuration_to_ase():
     """Test converting Configuration to ASE atoms object"""
 
     filename = Path(__file__).parents[1].joinpath("test_data/configs/Si_4.xyz")
-    atoms = io.read(filename, index=":")
+    atoms: Atoms = io.read(filename, index=":")
     config = Configuration.from_ase_atoms(
         atoms[0], energy_key="Energy", forces_key="force"
     )
 
     atoms = config.to_ase_atoms()
     assert np.allclose(atoms.get_positions(), config.coords)
-    assert atoms.info["energy"] == config.energy
-    assert np.allclose(atoms.arrays["forces"], config.forces)
-    assert np.allclose(stress_to_voigt(atoms.info["stress"]), config.stress)
-    # TODO: As per Marcos' suggestion, we should use the dict
-    # method to get the ASE atoms properties. It solves the issue
-    # of associated calculator.
+    assert atoms.get_potential_energy() == config.energy
+    assert np.allclose(atoms.get_forces(), config.forces)
+    assert np.allclose(stress_to_voigt(atoms.get_stress(voigt=False)), config.stress)
 
 
 def test_configuration_from_file():

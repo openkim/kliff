@@ -26,7 +26,12 @@ try:
 except ImportError:
     MongoDatabase = None
 
+import ase
 import ase.io
+from ase.calculators.singlepoint import (
+    PropertyNotImplementedError,
+    SinglePointCalculator,
+)
 from ase.data import chemical_symbols
 
 # map from file_format to file extension
@@ -241,6 +246,24 @@ class Configuration:
 
         return self
 
+    def to_colabfit(
+        self,
+        database_client: "MongoDatabase",
+        data_object: dict,
+        weight: Optional[Weight] = None,
+    ):
+        """
+        Save configuration from colabfit database.
+
+        Args:
+            database_client:
+            data_object:
+            weight:
+
+        Returns:
+        """
+        raise NotImplementedError("Export to colabfit is not supported yet.")
+
     @classmethod
     def from_ase_atoms(
         cls,
@@ -248,6 +271,7 @@ class Configuration:
         weight: Optional[Weight] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
+        stress_key: str = "stress",
     ):
         """
         Read configuration from ase.Atoms object.
@@ -258,6 +282,7 @@ class Configuration:
                 function.
             energy_key: Name of the field in extxyz that stores the energy.
             forces_key: Name of the field in extxyz that stores the forces.
+            stress_key: Name of the field in extxyz that stores the stress.
         """
         cell = atoms.get_cell()
         species = atoms.get_chemical_symbols()
@@ -265,27 +290,23 @@ class Configuration:
         PBC = atoms.get_pbc()
 
         try:
-            energy = atoms.info[energy_key]  # energy is stored
-        except KeyError:
-            try:
-                energy = (
-                    atoms.get_potential_energy()
-                )  # Calculator is attached by energy is not computed yet
-            except RuntimeError:
-                energy = None
+            energy = (
+                atoms.get_potential_energy()
+            )  # calculator is attached with property
+        except (PropertyNotImplementedError, RuntimeError):
+            energy = atoms.info.get(energy_key, None)  # search the info dict, else None
 
         try:
-            forces = atoms.arrays[forces_key]  # ASE <= 3.22
-        except KeyError:
-            try:
-                forces = atoms.get_forces()  # ASE >= 3.23
-            except RuntimeError:
-                forces = None
+            forces = atoms.get_forces()
+        except (PropertyNotImplementedError, RuntimeError):
+            forces = atoms.arrays.get(forces_key, None)
 
         try:
             stress = atoms.get_stress(voigt=True)
-        except RuntimeError:
-            stress = None
+        except (PropertyNotImplementedError, RuntimeError):
+            stress: Optional[np.ndarray] = atoms.arrays.get(stress_key, None)
+            if stress is not None and stress.ndim == 2:
+                stress: list = stress_to_voigt(stress)
 
         weight = weight
 
@@ -314,12 +335,24 @@ class Configuration:
             cell=self.cell,
             pbc=self.PBC,
         )
-        if self._energy is not None:
-            atoms.info["energy"] = self.energy
-        if self._forces is not None:
-            atoms.set_array("forces", self.forces)
-        if self._stress is not None:
-            atoms.info["stress"] = stress_to_tensor(self.stress)
+        properties = {}
+        try:
+            properties["energy"] = self.energy
+        except ConfigurationError:
+            pass
+
+        try:
+            properties["forces"] = self.forces
+        except ConfigurationError:
+            pass
+
+        try:
+            properties["stress"] = self.stress
+        except ConfigurationError:
+            pass
+
+        calc = SinglePointCalculator(atoms, **properties)
+        atoms.calc = calc
         return atoms
 
     @property
@@ -820,6 +853,7 @@ class Dataset:
         weight: Optional[Union[Weight, Path]] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
+        stress_key: str = "stress",
         slices: Union[slice, str] = ":",
         file_format: str = "xyz",
     ) -> "Dataset":
@@ -849,6 +883,7 @@ class Dataset:
                 (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
+            stress_key: Name of the field in extxyz/ase.Atoms that stores the stress.
             slices: Slice of the configurations to read. It is used only when `path` is
                 a file.
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
@@ -858,7 +893,14 @@ class Dataset:
         """
         instance = cls()
         instance.add_from_ase(
-            path, ase_atoms_list, weight, energy_key, forces_key, slices, file_format
+            path,
+            ase_atoms_list,
+            weight,
+            energy_key,
+            forces_key,
+            stress_key,
+            slices,
+            file_format,
         )
         return instance
 
@@ -869,6 +911,7 @@ class Dataset:
         weight: Optional[Weight] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
+        stress_key: str = "stress",
         slices: str = ":",
         file_format: str = "xyz",
     ) -> List[Configuration]:
@@ -883,6 +926,7 @@ class Dataset:
                 function.
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
+            stress_key: Name of the field in extxyz/ase.Atoms that stores the stress.
             slices: Slice of the configurations to read. It is used only when `path` is
                 a file.
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
@@ -902,6 +946,7 @@ class Dataset:
                     weight=weight,
                     energy_key=energy_key,
                     forces_key=forces_key,
+                    stress_key=stress_key,
                 )
                 for config in ase_atoms_list
             ]
@@ -937,6 +982,7 @@ class Dataset:
                         weight=weight,
                         energy_key=energy_key,
                         forces_key=forces_key,
+                        stress_key=stress_key,
                     )
                     for config in all_configs
                 ]
@@ -947,6 +993,7 @@ class Dataset:
                         weight=weight,
                         energy_key=energy_key,
                         forces_key=forces_key,
+                        stress_key=stress_key,
                     )
                     for f in all_files
                 ]
@@ -966,6 +1013,7 @@ class Dataset:
         weight: Optional[Union[Weight, Path]] = None,
         energy_key: str = "energy",
         forces_key: str = "forces",
+        stress_key: str = "stress",
         slices: str = ":",
         file_format: str = "xyz",
     ):
@@ -996,6 +1044,7 @@ class Dataset:
                 (in which case the same weight is used for all configurations).
             energy_key: Name of the field in extxyz/ase.Atoms that stores the energy.
             forces_key: Name of the field in extxyz/ase.Atoms that stores the forces.
+            stress_key: Name of the field in extxyz/ase.Atoms that stores the stress.
             slices: Slice of the configurations to read. It is used only when `path` is
                 a file.
             file_format: Format of the file that stores the configuration, e.g. `xyz`.
@@ -1010,15 +1059,96 @@ class Dataset:
                 weight,
                 energy_key,
                 forces_key,
+                stress_key,
                 slices,
                 file_format,
             )
         else:
             configs = self._read_from_ase(
-                path, ase_atoms_list, None, energy_key, forces_key, slices, file_format
+                path,
+                ase_atoms_list,
+                None,
+                energy_key,
+                forces_key,
+                stress_key,
+                slices,
+                file_format,
             )
             Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
+
+    def to_path(self, path: Union[Path, str], prefix: Union[str, None] = None) -> None:
+        """
+        Save the dataset to a folder, as per the KLIFF xyz format. The folder will
+        contain multiple files, each containing a configuration. Prefix is added to the
+        filename of each configuration. Path is created if it does not exist.
+
+        Args:
+            path: Path to the directory to save the dataset.
+            prefix: Prefix to add to the filename of each configuration.
+        """
+        path = to_path(path)
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+
+        if prefix is None:
+            prefix = "config_"
+
+        for i, config in enumerate(self.configs):
+            config.to_file(path.joinpath(f"{prefix}{i}.xyz"))
+
+        logger.info(f"Dataset saved to {path}.")
+
+    def to_ase(self, path: Union[Path, str]) -> None:
+        """
+        Save the dataset to a file in ASE format. The file will contain multiple
+        configurations, each separated by a newline. The file will be saved in the
+        specified path. The file format is determined by the extension of the path.
+
+        Args:
+            path: Path to the file to save the dataset.
+
+        """
+        path = to_path(path)
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+        to_format = (
+            "extxyz" if str(path.suffix[1:]).lower() == "xyz" else path.suffix[1:]
+        )
+        ase.io.write(
+            path,
+            self.to_ase_list(),
+            format=to_format,
+            append=True,
+        )
+        logger.info(f"Dataset saved to {path}.")
+
+    def to_ase_list(self) -> List[ase.Atoms]:
+        """
+        Convert the dataset to a list of ase.Atoms objects.
+
+        Returns:
+            List of ase.Atoms objects.
+        """
+        return [config.to_ase_atoms() for config in self.configs]
+
+    def to_colabfit(
+        self,
+        colabfit_database: str,
+        colabfit_dataset: str,
+        colabfit_uri: str = "mongodb://localhost:27017",
+    ):
+        """
+        Save dataset to a colabfit database.
+        Args:
+            colabfit_database:
+            colabfit_dataset:
+            colabfit_uri:
+
+        Returns:
+        """
+        raise NotImplementedError("Export to colabfit, not implemented yet.")
 
     def get_configs(self) -> List[Configuration]:
         """
