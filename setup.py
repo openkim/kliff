@@ -33,7 +33,7 @@ def get_includes():
 
 
 def get_extra_compile_args():
-    return ["-std=c++11"]
+    return ["-std=c++14"]
 
 
 # TODO: explore -Ofast and -march=native

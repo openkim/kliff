@@ -232,4 +232,206 @@ networks.
 
     PyGGraph(energy=0.0, forces=[2, 3], n_layers=1, coords=[54, 3], images=[54], species=[54], z=[54], cell=[9], contributions=[54], num_nodes=54, idx=-1, edge_index0=[2, 14])
 
+Due to overloaded ``__call__`` method, you can also use the the RadialGraph module as a
+"function call".
 
+.. code-block:: python
+
+    graph = graph_generator(Si_config)
+
+    print(graph.keys())
+
+
+.. parsed-literal::
+
+    ['cell', 'coords', 'energy', 'contributions', 'images', 'z', 'species', 'idx', 'forces', 'num_nodes', 'edge_index0', 'n_layers', 'shifts']
+
+
+The meaning of these keys are defined below:
+
++---------------------------------------+------------------------------+
+| Parameter                             | Description                  |
++=======================================+==============================+
+| ``cell``                              | The simulation cell          |
+|                                       | dimensions, typically a 3×3  |
+|                                       | tensor representing the      |
+|                                       | periodic boundary conditions |
+|                                       | (PBC).                       |
++---------------------------------------+------------------------------+
+| ``coords``                            | Cartesian coordinates of the |
+|                                       | atomic positions in the      |
+|                                       | structure.                   |
++---------------------------------------+------------------------------+
+| ``energy``                            | Total energy of the system,  |
+|                                       | used as a target property in |
+|                                       | training.                    |
++---------------------------------------+------------------------------+
+| ``contributions``                     | Energy contributions from    |
+|                                       | individual atoms or          |
+|                                       | interactions (optional,      |
+|                                       | depending on model),         |
+|                                       | equivalent to batch index    |
++---------------------------------------+------------------------------+
+| ``images``                            | mapping from ghost atom      |
+|                                       | number to actual atom index  |
+|                                       | (for summing up forces)      |
++---------------------------------------+------------------------------+
+| ``z``                                 | Atomic numbers of the        |
+|                                       | elements in the structure,   |
+|                                       | serving as node features.    |
++---------------------------------------+------------------------------+
+| ``species``                           | unique indexes for each      |
+|                                       | species of atom present      |
+|                                       | (from 0 to total number of   |
+|                                       | species present, i.e. for    |
+|                                       | H2O, ``species`` go from 0   |
+|                                       | to 1, with H mapped to 0 and |
+|                                       | O mapped to 1).              |
++---------------------------------------+------------------------------+
+| ``idx``                               | Internal index of the        |
+|                                       | configuration or dataset,    |
+|                                       | set to -1 as default.        |
++---------------------------------------+------------------------------+
+| ``forces``                            | Forces acting on each atom,  |
+|                                       | often used as labels in      |
+|                                       | force-predicting models (for |
+|                                       | contributing atoms).         |
++---------------------------------------+------------------------------+
+| ``num_nodes``                         | Number of nodes (atoms) in   |
+|                                       | the graph representation of  |
+|                                       | the structure (including     |
+|                                       | contributing and             |
+|                                       | non-contributing atoms).     |
++---------------------------------------+------------------------------+
+| ``edge_index{0 - n}``                 | Connectivity information     |
+|                                       | (edges) in COO like format,  |
+|                                       | defining which atoms are     |
+|                                       | connected in the graph (2 x  |
+|                                       | N matrix). The storage       |
+|                                       | format is “staged graph”     |
+|                                       | where graph needed for each  |
+|                                       | convolution step             |
+|                                       | (``n = n_layers - 1``) gets  |
+|                                       | a corresponding edge index.  |
++---------------------------------------+------------------------------+
+| ``n_layers``                          | Number of layers in the      |
+|                                       | generated staged graph.      |
++---------------------------------------+------------------------------+
+| ``shifts``                            | vectors to add in the        |
+|                                       | position vectors of the      |
+|                                       | destination edge atom to get |
+|                                       | correct vector in minimum    |
+|                                       | image convention like PBC.   |
+|                                       | When ``mic=False`` this      |
+|                                       | defaults to al zeros.        |
++---------------------------------------+------------------------------+
+
+
+Minimum image convention vs staged graphs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``RadialGraph`` module provides functionality to both generate the staged graphs
+for parallel convolution [see theory section] and conventional edge graphs for more
+efficient training. It be accessed via ``mic`` keyword argument in the module (default
+value ``False``). Major difference between the two is that staged graphs explicitly
+maps the ghost atoms, whereas the mic graph indexes the periodic images using a
+``shifts`` vector.
+
+Example below highlights the difference between the two approach
+
+.. code-block::python
+
+    from kliff.transforms.configuration_transforms.graphs import RadialGraph
+    from ase.build import bulk
+    from kliff.dataset import Configuration
+    from ase.calculators.singlepoint import SinglePointCalculator
+    import torch # RadialGraph is native torch module
+    import numpy as np
+
+    # Let us create a simple bulk Si configuration
+    atoms = bulk("Si")
+    calc = SinglePointCalculator(atoms, energy=0.0,
+                    forces=np.zeros_like(atoms.get_global_number_of_atoms()))
+    atoms.calc = calc
+    config = Configuration.from_ase_atoms(atoms)
+
+    staged_graph_module = RadialGraph(species=["Si"], cutoff=3.77, n_layers=2)
+    # to enable MIC, give mic=True, and omit the n_layers argument
+    mic_graph_module = RadialGraph(species=["Si"], cutoff=3.77, mic=True)
+
+
+    staged_graph = staged_graph_module(config)
+    mic_graph = mic_graph_module(config)
+
+
+The major difference between the two graphs is now that staged graphs
+always uses non-periodic atoms, and contains one graph per convolution. Therefore
+it contains unique edge-pairs for each edge. MIC graph only uses the original periodic
+atom image and hence contains one graph duplicate edges, but unique shift vectors.
+
+.. code-block::python
+
+    print(staged_graph.edge_index0)
+    print(staged_graph.edge_index1)
+    print(staged_graph.shifts[0:3,:])
+
+.. parsed-literal::
+
+    tensor([[  0,   0,   0,   0,   1,   1,   1,   1,  77, 117, 125, 126, 134, 174],
+        [  1,  77, 117, 125,   0, 126, 134, 174,   0,   0,   0,   1,   1,   1]])
+
+    tensor([[  0,   0,   0,   0,   1,   1,   1,   1,  76,  77,  77,  77,  77,  78,
+              79,  86,  87, 116, 117, 117, 117, 117, 118, 119, 124, 125, 125, 125,
+             125, 126, 126, 126, 126, 127, 132, 133, 134, 134, 134, 134, 135, 164,
+             165, 172, 173, 174, 174, 174, 174, 175],
+            [  1,  77, 117, 125,   0, 126, 134, 174,  77,   0,  76,  78,  86,  77,
+             126,  77, 134, 117,   0, 116, 118, 164, 117, 126, 125,   0, 124, 132,
+             172,   1,  79, 119, 127, 126, 125, 134,   1,  87, 133, 135, 134, 117,
+             174, 125, 174,   1, 165, 173, 175, 174]])
+
+    tensor([[0., 0., 0.],
+            [0., 0., 0.],
+            [0., 0., 0.]], dtype=torch.float64)
+
+.. code-block:: python
+
+    print(mic_graph.edge_index0)
+    print(mic_graph.edge_index1)
+    print(mic_graph.shifts[0:3,:])
+
+.. parsed-literal::
+
+    tensor([[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]])
+
+
+    KeyError: 'edge_index1'
+
+
+    tensor([[ 0.0000,  0.0000,  0.0000],
+            [ 0.0000, -2.7150, -2.7150],
+            [-2.7150,  0.0000, -2.7150]], dtype=torch.float64)
+
+However these differences are more cosmetic, and both graphs will yield equivalent results
+if used correctly:
+
+.. code-block:: python
+
+    pos_vectors_ghost = staged_graph.coords[staged_graph.edge_index0[1]] -
+                            staged_graph.coords[staged_graph.edge_index0[0]]
+    pos_vectors_mic_incorrect = mic_graph.coords[mic_graph.edge_index0[1]] -
+                            mic_graph.coords[mic_graph.edge_index0[0]]
+    print("Naive vectors:", torch.allclose(pos_vectors_ghost, pos_vectors_mic_incorrect)
+    print("Shift compensated vectors:", torch.allclose(pos_vectors_ghost,
+                                                pos_vectors_mic_incorrect +
+                                                mic_graph.shifts)) # add shift vectors to get correct result
+
+.. parsed-literal::
+
+    Naive vectors: False
+    Shift compensated vectors: True
+
+.. tip::
+
+    Rule of thumb is that MIC graphs are better at training for their efficiency, staged
+    graphs are better at large scale simulations due to their parallelism and domain
+    decomposition.
