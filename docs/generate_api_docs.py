@@ -14,21 +14,20 @@ def get_all_modules(source: Path = "./kliff") -> list[str]:
         $ sphinx-apidoc -f -e -o <outdir> <sourcedir>
     Return a list of modules names.
     """
-    results = subprocess.run(
-        ["sphinx-apidoc", "-f", "-e", "-o", "/tmp/kliff_apidoc", source],
-        capture_output=True,
+    outdir = Path("/tmp/kliff_apidoc")
+    subprocess.run(
+        ["sphinx-apidoc", "-f", "-e", "-o", outdir, source],
+        check=True,
     )
-    results = results.stdout.decode("utf-8")
 
-    modules = []
-    for line in results.split("\n"):
-        if "Creating" in line:
-            name = line.split("/")[-1].split(".")
-            if len(name) >= 4:
-                mod = name[1]
-                if mod not in modules:
-                    modules.append(mod)
-    return modules
+    # every generated file is kliff.<module>.rst
+    modules = [
+        p.stem.split(".", 1)[1]          # keep text after 'kliff.'
+        for p in outdir.glob("kliff.*.rst")
+        if p.stem != "kliff"             # skip the package page itself
+    ]
+    return sorted(set(modules))
+
 
 
 def autodoc_package(path: Path, modules: list[str]):

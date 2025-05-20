@@ -14,7 +14,7 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-
+from typing import List
 
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -63,10 +63,12 @@ extensions = [
     "myst_nb",
     "sphinx_copybutton",
     "sphinx_design",
-    # 'sphinx.ext.todo',
+    'sphinx.ext.todo',
     # 'sphinx.ext.coverage',
     # "myst_parser",
 ]
+
+todo_include_todos = False
 
 myst_enable_extensions = ["amsmath", "dollarmath"]
 
@@ -227,8 +229,23 @@ autodoc_mock_imports = [
     "yaml",
     "ase",
     "torch",
-    "torch_lightning",
+    "pytorch_lightning",
+    "torch_scatter",
+    "torch_sparse",
+    "torch_geometric",
     "libdescriptor",
+    "colabfit",
+    "loguru",
+    "tensorboard",
+    "tensorboardx",
+    "monty",
+    "kliff.neighbor",
+    "kliff.neighbor.neighlist",
+    "kliff.legacy.descriptors.bispectrum",
+    "kliff.legacy.descriptors.bispectrum.bs",
+    "kliff.legacy.descriptors.symmetry_function",
+    "kliff.legacy.descriptors.symmetry_function.sf",
+    "kliff.transforms.configuration_transforms.graphs.graph_module"
 ]
 
 # do not sort member functions of a class
@@ -245,7 +262,7 @@ nb_execution_timeout = 120
 # -- generate api doc ----------------------------------------------------------
 
 
-def get_all_modules(source: Path = "./kliff") -> list[str]:
+def get_all_modules(source: Path = "./kliff"):
     """
     Get all modules of the package.
 
@@ -257,24 +274,23 @@ def get_all_modules(source: Path = "./kliff") -> list[str]:
         $ sphinx-apidoc -f -e -o <outdir> <sourcedir>
     Return a list of modules names.
     """
-    results = subprocess.run(
-        ["sphinx-apidoc", "-f", "-e", "-o", "/tmp/kliff_apidoc", source],
-        capture_output=True,
+    outdir = Path("/tmp/kliff_apidoc")
+    subprocess.run(
+        ["sphinx-apidoc", "-f", "-e", "-o", outdir, source],
+        check=True,
     )
-    results = results.stdout.decode("utf-8")
 
-    modules = []
-    for line in results.split("\n"):
-        if "Creating" in line:
-            name = line.split("/")[-1].split(".")
-            if len(name) >= 4:
-                mod = name[1]
-                if mod not in modules:
-                    modules.append(mod)
-    return modules
+    # every generated file is kliff.<module>.rst
+    modules = [
+        p.stem.split(".", 1)[1]          # keep text after 'kliff.'
+        for p in outdir.glob("kliff.*.rst")
+        if p.stem != "kliff"             # skip the package page itself
+    ]
+    return sorted(set(modules))
 
 
-def autodoc_package(path: Path, modules: list[str]):
+
+def autodoc_package(path: Path, modules:List[str] ):
     """
     Create a package reference page.
 
@@ -316,7 +332,7 @@ def autodoc_module(path: Path, module: str):
         f.write("    :members:\n")
         f.write("    :undoc-members:\n")
         # f.write("    :show-inheritance:\n")
-        f.write("    :inherited-members:\n")
+        # f.write("    :inherited-members:\n")
 
 
 # def create_apidoc(directory: Path = "./apidoc"):
@@ -393,7 +409,7 @@ def create_apidoc(directory: Path = "./apidoc"):
                     f.write(f"\n.. autoclass:: {module_name}.{class_name}\n")
                     f.write(f"   :members:\n")
                     f.write(f"   :undoc-members:\n")
-                    f.write(f"   :inherited-members:\n")
+                    # f.write(f"   :inherited-members:\n")
 
 
 create_apidoc(directory="./apidoc")

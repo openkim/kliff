@@ -6,3 +6,5 @@ matplotlib
 myst-nb
 sphinx-copybutton
 sphinx-design
+loguru
+monty
