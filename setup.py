@@ -120,7 +120,7 @@ setup(
         "monty",
         "loguru",
         "ase",
-        "numpy<2.0",
+        "numpy",
     ],
     extras_require={
         "test": [
@@ -132,7 +132,7 @@ setup(
             # PyPI does not allow this syntax. So we comment it out and a user need to
             # install it manually for now.
             # "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
-            "numpy<2.0",
+            "numpy",
             "ase",
             "libdescriptor",
             "lmdb",

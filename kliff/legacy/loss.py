@@ -723,7 +723,7 @@ class LossNeuralNetworkModel(object):
                     "lmdb not installed, please install it if you want to use log per atom prediction"
                 )
 
-            map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", "1e12")
+            map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", 1e12)
             self.log_per_atom_pred_path = lmdb.open(
                 log_per_atom_pred_path, map_size=int(map_size), subdir=False
             )

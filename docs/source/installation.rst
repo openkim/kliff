@@ -119,6 +119,12 @@ Please follow the instructions given on the official PyTorch_ website to install
 
     pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
 
+.. warning::
+
+    Pytorch < 2.3 works with numpy < 2.0, so if you see warning/error message like,
+    ``"A module that was compiled using NumPy 1.x cannot be run in NumPy 2.0.2 as it may crash."``
+    you need to either i) downgrade numpy < 2.0 (``pip install "numpy<2.0"``) or ii) update torch
+    to version >= 2.3.
 
 Graph Neural Networks
 ---------------------
