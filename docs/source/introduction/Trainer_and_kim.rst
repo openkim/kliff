@@ -2,7 +2,7 @@ Trainer Manifest
 ================
 
 KLIFF uses YAML configuration files to control the training of
-interatomic force fields with machine-learning models. A typical
+interatomic potentials with machine-learning models. A typical
 configuration file is divided into the following top-level sections:
 
 1. **workspace**
@@ -103,7 +103,7 @@ Example
 Purpose
 ~~~~~~~
 
-Defines the model used to fit the interatomic force field. KLIFF
+Defines the model used to fit the interatomic potential. KLIFF
 supports multiple backends, including KIM models (``kim`` type) and
 Torch/PyTorch-based ML models (``torch`` type).
 

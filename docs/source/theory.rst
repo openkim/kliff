@@ -4,7 +4,7 @@
 Theory
 ============
 
-Fundamental principles of force field training,
+Fundamental principles for training interatomic potentials,
 
 .. toctree::
    :maxdepth: 1
