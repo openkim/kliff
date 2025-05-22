@@ -33,7 +33,7 @@ def get_includes():
 
 
 def get_extra_compile_args():
-    return ["-std=c++11"]
+    return ["-std=c++14"]
 
 
 # TODO: explore -Ofast and -march=native
@@ -119,8 +119,8 @@ setup(
         "pyyaml",
         "monty",
         "loguru",
-        "ase<3.23",
-        "numpy<2.0",
+        "ase",
+        "numpy",
     ],
     extras_require={
         "test": [
@@ -132,8 +132,8 @@ setup(
             # PyPI does not allow this syntax. So we comment it out and a user need to
             # install it manually for now.
             # "ptemcee @ git+https://github.com/yonatank93/ptemcee.git@enhance_v1.0.0",
-            "numpy<2.0",
-            "ase<3.23",
+            "numpy",
+            "ase",
             "libdescriptor",
             "lmdb",
         ],

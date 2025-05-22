@@ -90,7 +90,7 @@ exceptions in reading these files.
 Direct initialization
 ~~~~~~~~~~~~~~~~~~~~~
 
-For conversion to newer or unsupported dataformats, you can directly
+For conversion to newer or unsupported data formats, you can directly
 initialize the configuration object as
 
 .. code-block:: python
@@ -385,6 +385,14 @@ You can also stream data from Colabfit Exchange as
 .. warning::
 
    The Colabfit interface is under heavy development so please check back for any changes till this warning is not removed
+
+Exporting the dataset
+~~~~~~~~~~~~~~~~~~~~~
+
+You can export the dataset to different formats using ``to_<form>`` methods. Here, ``<form>``
+can be ``ase``, ``path``, and ``colabfit``. For interactive inter-compatibility you can
+also export the dataset to list of ``ase.Atoms`` objects using ``Dataset.to_ase_list`` method.
+
 
 Custom Dataset Class
 --------------------

@@ -68,7 +68,7 @@ Here we need to take a little detour to implement our own Schnet model.
 Detailed discussion about is provided in the appendix. Before
 implementing the model, let us look at the data structure provided by
 :py:class:`~kliff.transforms.configuration_transforms.graphs.RadialGraph`,
-which is the most commonly used input scturcture for graph based neural
+which is the most commonly used input structure for graph based neural
 networks.
 
 .. code-block:: python
@@ -159,6 +159,14 @@ The meaning of these keys are defined below:
 +---------------------------------------+------------------------------+
 | ``n_layers``                          | Number of layers in the      |
 |                                       | generated staged graph.      |
++---------------------------------------+------------------------------+
+| ``shifts``                            | vectors to add in the        |
+|                                       | position vectors of the      |
+|                                       | destination edge atom to get |
+|                                       | correct vector in minimum    |
+|                                       | image convention like PBC.   |
+|                                       | When ``mic=False`` this      |
+|                                       | defaults to al zeros.        |
 +---------------------------------------+------------------------------+
 
 Users can use any of the above fields in there models, they just need to

@@ -25,7 +25,6 @@ simulation codes such as LAMMPS_, ASE_, DL_POLY_, and GULP_ among others.
     introduction
     theory
 
-
 .. toctree::
     :caption: Advanced Topics
     :maxdepth: 2

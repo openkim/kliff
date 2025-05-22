@@ -44,6 +44,7 @@ class PyGGraph(Data):
         self.cell = None
         self.contributions = None
         self.idx = None
+        self.shifts = None
 
     def __inc__(self, key: str, value: torch.Tensor, *args, **kwargs):
         if "index" in key or "face" in key:
@@ -103,20 +104,24 @@ class RadialGraph(ConfigurationTransform):
         n_layers (int): Number of convolution layers.
         copy_to_config (bool): If True, the graph will be copied to
             the Configuration object's fingerprint attribute.
+        mic (bool): If True, module will return conventional MIC graphs, as opposed to
+            the parallel staged graphs.
     """
 
     def __init__(
         self,
         species: List[str],
         cutoff: float,
-        n_layers: int,
+        n_layers: int = 1,
         copy_to_config: bool = False,
+        mic: bool = False,
     ):
         super().__init__(copy_to_config=copy_to_config)
         self.species = species
         self.cutoff = cutoff
         self.n_layers = n_layers
         self.infl_dist = n_layers * cutoff
+        self.mic = mic
         self._tg = graph_module
 
     def forward(self, configuration: Configuration) -> PyGGraph:
@@ -130,14 +135,23 @@ class RadialGraph(ConfigurationTransform):
         Returns:
             C++ custom graph object or Pytorch Geometric Data object.
         """
-        graph = graph_module.get_complete_graph(
-            self.n_layers,
-            self.cutoff,
-            configuration.species,
-            configuration.coords,
-            configuration.cell,
-            configuration.PBC,
-        )
+        if self.mic:
+            graph = graph_module.get_mic_graph(
+                self.cutoff,
+                configuration.species,
+                configuration.coords,
+                configuration.cell,
+                configuration.PBC,
+            )
+        else:
+            graph = graph_module.get_staged_graph(
+                self.n_layers,
+                self.cutoff,
+                configuration.species,
+                configuration.coords,
+                configuration.cell,
+                configuration.PBC,
+            )
         graph.energy = configuration.energy
         graph.forces = configuration.forces
         graph.idx = configuration.metadata.get("index", -1)
@@ -166,6 +180,7 @@ class RadialGraph(ConfigurationTransform):
         pyg_graph.contributions = torch.as_tensor(graph.contributions)
         pyg_graph.num_nodes = torch.as_tensor(graph.n_nodes)
         pyg_graph.idx = torch.as_tensor(graph.idx)
+        pyg_graph.shifts = torch.as_tensor(graph.shifts)
         for i in range(graph.n_layers):
             pyg_graph.__setattr__(
                 f"edge_index{i}", torch.as_tensor(graph.edge_index[i])
