@@ -3,14 +3,17 @@ import hashlib
 import importlib
 import json
 import os
+import pickle as pkl
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
+import lmdb
 import numpy as np
 import yaml
 from loguru import logger
 from monty.dev import requires
+from openpyxl.utils.cell import coordinate_from_string
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
@@ -606,6 +609,50 @@ class Configuration:
         else:
             return None
 
+    def to_dict(self) -> dict:
+        cell = self.cell
+        species = self.species
+        coords = self.coords
+        PBC = self.PBC
+        try:
+            energy = self.energy
+        except ConfigurationError:
+            energy = None
+        try:
+            forces = self.forces
+        except ConfigurationError:
+            forces = None
+        try:
+            stress = self.stress
+        except ConfigurationError:
+            stress = None
+
+        weight = self.weight
+        if weight is not None:
+            energy_weight = weight.energy_weight
+            forces_weight = weight.forces_weight
+            stress_weight = weight.stress_weight
+            config_weight = weight.config_weight
+        else:
+            energy_weight = None
+            forces_weight = None
+            stress_weight = None
+            config_weight = None
+
+        return {
+            "cell": cell,
+            "species": species,
+            "coords": coords,
+            "energy": energy,
+            "forces": forces,
+            "stress": stress,
+            "PBC": PBC,
+            "energy_weight": energy_weight,
+            "forces_weight": forces_weight,
+            "stress_weight": stress_weight,
+            "config_weight": config_weight,
+        }
+
 
 class Dataset:
     """
@@ -1076,6 +1123,431 @@ class Dataset:
             )
             Dataset.add_weights(configs, weight)
         self.configs.extend(configs)
+
+    @classmethod
+    def from_lmdb(
+        cls,
+        lmdb_file: Path,
+        n_configs: int,
+        config_key_prefix: Optional[str] = None,
+        coords_key: str = "coords",
+        species_key: str = "species",
+        pbc_key: str = "PBC",
+        cell_key: str = "cell",
+        energy_key: str = "energy",
+        forces_key: str = "forces",
+        stress_key: str = "stress",
+        config_weight_key: str = "config_weight",
+        energy_weight_key: str = "energy_weight",
+        forces_weight_key: str = "forces_weight",
+        stress_weight_key: str = "stress_weight",
+        metadata_keys: Optional[List[str]] = None,
+    ) -> "Dataset":
+        """
+        Load dataset from an LMDB file.
+
+        Args:
+            lmdb_file: Path to the LMDB file.
+            n_configs: Number of configurations to load.
+            config_key_prefix: KLIFF assumes that configurations can be loaded as "prefix{idx}"
+                where idx is the index of the configuration in the LMDB file.
+            coords_key: Key to get coordinates from the lmdb configuration.
+            species_key: Key to get species from the lmdb configuration.
+            pbc_key: Key to get PBC array from the lmdb configuration.
+            cell_key: Key to get cell vectors from the lmdb configuration.
+            energy_key: Key to get energy from the lmdb configuration.
+            forces_key: Key to get forces from the lmdb configuration.
+            stress_key: Key to get stress from the lmdb configuration.
+            config_weight_key: Key to get config_weight from the lmdb configuration.
+            energy_weight_key: Key to get energy_weight from the lmdb configuration.
+            forces_weight_key: Key to get forces_weight from the lmdb configuration.
+            stress_weight_key: Key to get stress_weight from the lmdb configuration.
+            metadata_keys: List of keys to get all metadata from the lmdb configuration.
+
+        Returns:
+            Dataset object.
+
+        """
+        instance = cls()
+        instance.add_from_lmdb(
+            lmdb_file,
+            n_configs,
+            config_key_prefix,
+            coords_key,
+            species_key,
+            pbc_key,
+            cell_key,
+            energy_key,
+            forces_key,
+            stress_key,
+            config_weight_key,
+            energy_weight_key,
+            forces_weight_key,
+            stress_weight_key,
+            metadata_keys,
+        )
+
+    def add_from_lmdb(
+        self,
+        lmdb_file,
+        n_configs,
+        config_key_prefix,
+        coords_key,
+        species_key,
+        pbc_key,
+        cell_key,
+        energy_key,
+        forces_key,
+        stress_key,
+        config_weight_key,
+        energy_weight_key,
+        forces_weight_key,
+        stress_weight_key,
+        metadata_keys,
+    ):
+        """
+        Add configurations from an LMDB file.
+
+        Args:
+            lmdb_file: Path to the LMDB file.
+            n_configs: Number of configurations to load.
+            config_key_prefix: KLIFF assumes that configurations can be loaded as "prefix{idx}"
+                where idx is the index of the configuration in the LMDB file.
+            coords_key: Key to get coordinates from the lmdb configuration.
+            species_key: Key to get species from the lmdb configuration.
+            pbc_key: Key to get PBC array from the lmdb configuration.
+            cell_key: Key to get cell vectors from the lmdb configuration.
+            energy_key: Key to get energy from the lmdb configuration.
+            forces_key: Key to get forces from the lmdb configuration.
+            stress_key: Key to get stress from the lmdb configuration.
+            config_weight_key: Key to get config_weight from the lmdb configuration.
+            energy_weight_key: Key to get energy_weight from the lmdb configuration.
+            forces_weight_key: Key to get forces_weight from the lmdb configuration.
+            stress_weight_key: Key to get stress_weight from the lmdb configuration.
+            metadata_keys: List of keys to get all metadata from the lmdb configuration.
+        """
+        configs = self._read_from_lmdb(
+            lmdb_file,
+            n_configs,
+            config_key_prefix,
+            coords_key,
+            species_key,
+            pbc_key,
+            cell_key,
+            energy_key,
+            forces_key,
+            stress_key,
+            config_weight_key,
+            energy_weight_key,
+            forces_weight_key,
+            stress_weight_key,
+            metadata_keys,
+        )
+        self.configs.extend(configs)
+
+    @staticmethod
+    def _read_from_lmdb(
+        self,
+        lmdb_file,
+        n_configs,
+        config_key_prefix,
+        coords_key,
+        species_key,
+        pbc_key,
+        cell_key,
+        energy_key,
+        forces_key,
+        stress_key,
+        config_weight_key,
+        energy_weight_key,
+        forces_weight_key,
+        stress_weight_key,
+        metadata_keys,
+    ) -> List[Configuration]:
+        """
+        Read configurations from an LMDB file.
+
+        Args:
+            lmdb_file: Path to the LMDB file.
+            n_configs: Number of configurations to load.
+            config_key_prefix: KLIFF assumes that configurations can be loaded as "prefix{idx}"
+                where idx is the index of the configuration in the LMDB file.
+            coords_key: Key to get coordinates from the lmdb configuration.
+            species_key: Key to get species from the lmdb configuration.
+            pbc_key: Key to get PBC array from the lmdb configuration.
+            cell_key: Key to get cell vectors from the lmdb configuration.
+            energy_key: Key to get energy from the lmdb configuration.
+            forces_key: Key to get forces from the lmdb configuration.
+            stress_key: Key to get stress from the lmdb configuration.
+            config_weight_key: Key to get config_weight from the lmdb configuration.
+            energy_weight_key: Key to get energy_weight from the lmdb configuration.
+            forces_weight_key: Key to get forces_weight from the lmdb configuration.
+            stress_weight_key: Key to get stress_weight from the lmdb configuration.
+            metadata_keys: List of keys to get all metadata from the lmdb configuration.
+
+        """
+        try:
+            # local import to avoid unnecessary dependency
+            import lmdb
+        except ImportError:
+            raise DatasetError(
+                "LMDB is needed for reading configurations from LMDB dataset, please do `pip install lmdb` first"
+            )
+
+        map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", 1e12)
+        map_size = int(map_size)
+        logger.info(
+            f"Using lmdb map size={map_size}, to change it use KLIFF_LMDB_MAP_SIZE env variable"
+        )
+
+        env = lmdb.open(lmdb_file, map_size=map_size, subdir=False)
+        txn = env.begin(write=False)
+        n_configs_available = txn.stat()["entries"]
+        if n_configs_available < n_configs:
+            raise DatasetError(
+                f"LMDB file {lmdb_file} contains only {n_configs_available} configurations; asked to load {n_configs} configurations."
+            )
+        else:
+            logger.info(f"Reading {n_configs} configurations from {lmdb_file}")
+
+        configs = []
+
+        for i in range(n_configs):
+            config_key_prefix = (
+                f"{i}".encode()
+                if config_key_prefix is None
+                else f"{config_key_prefix}{i}".encode()
+            )
+            config_dict: dict = pkl.loads(txn.get(config_key_prefix))
+
+            coords = config_dict.get(coords_key, None)
+            species = config_dict.get(species_key, None)
+            pbc = config_dict.get(pbc_key, None)
+            cell = config_dict.get(cell_key, None)
+            energy = config_dict.get(energy_key, None)
+            forces = config_dict.get(forces_key, None)
+            stress = config_dict.get(stress_key, None)
+            configuration_weight = config_dict.get(config_weight_key, None)
+            energy_weight = config_dict.get(energy_weight_key, None)
+            forces_weight = config_dict.get(forces_weight_key, None)
+            stress_weight = config_dict.get(stress_weight_key, None)
+            weight = Weight(
+                config_weight=configuration_weight,
+                energy_weight=energy_weight,
+                forces_weight=forces_weight,
+                stress_weight=stress_weight,
+            )
+
+            metadata = {}
+            for keys in metadata_keys:
+                metadata[keys] = config_dict.get(keys, None)
+
+            config = Configuration(
+                cell, species, coords, pbc, energy, forces, stress, weight
+            )
+            config._metadata = metadata
+
+            configs.append(config)
+
+        env.close()
+        return configs
+
+    def to_lmdb(self, lmdb_file):
+        map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", 1e12)
+        map_size = int(map_size)
+
+        env = lmdb.open(lmdb_file, map_size=map_size, subdir=False)
+        txn = env.begin(write=True)
+
+        n_configs_available = txn.stat()["entries"]
+
+        for i, config in enumerate(self.configs):
+            key = f"{n_configs_available + i}".encode()
+            config_dict = config.to_dict()
+            txn.put(key, pkl.dumps(config_dict))
+
+        txn.commit()
+        env.close()
+
+    @classmethod
+    def from_parquet(
+        cls,
+        parquet_file: Path,
+        n_configs: Optional[int] = None,
+        coords_key: str = "coords",
+        species_key: str = "species",
+        pbc_key: str = "PBC",
+        cell_key: str = "cell",
+        energy_key: str = "energy",
+        forces_key: str = "forces",
+        stress_key: str = "stress",
+        config_weight_key: str = "config_weight",
+        energy_weight_key: str = "energy_weight",
+        forces_weight_key: str = "forces_weight",
+        stress_weight_key: str = "stress_weight",
+        metadata_keys: Optional[List[str]] = None,
+    ) -> "Dataset":
+        """
+        Load dataset from a Parquet file.
+
+        Args:
+            parquet_file: Path to the Parquet file.
+            n_configs: Maximum number of configurations to load (loads all if None).
+            *_key: Names of the columns in the Parquet table.
+            metadata_keys: List of additional column names to store in config._metadata.
+        """
+        instance = cls()
+        instance.add_from_parquet(
+            parquet_file,
+            n_configs,
+            coords_key,
+            species_key,
+            pbc_key,
+            cell_key,
+            energy_key,
+            forces_key,
+            stress_key,
+            config_weight_key,
+            energy_weight_key,
+            forces_weight_key,
+            stress_weight_key,
+            metadata_keys,
+        )
+        return instance
+
+    def add_from_parquet(
+        self,
+        parquet_file: Path,
+        n_configs: Optional[int],
+        coords_key: str,
+        species_key: str,
+        pbc_key: str,
+        cell_key: str,
+        energy_key: str,
+        forces_key: str,
+        stress_key: str,
+        config_weight_key: str,
+        energy_weight_key: str,
+        forces_weight_key: str,
+        stress_weight_key: str,
+        metadata_keys: Optional[List[str]],
+    ):
+        """
+        Add configurations from a Parquet file to this Dataset.
+        """
+        configs = self._read_from_parquet(
+            parquet_file,
+            n_configs,
+            coords_key,
+            species_key,
+            pbc_key,
+            cell_key,
+            energy_key,
+            forces_key,
+            stress_key,
+            config_weight_key,
+            energy_weight_key,
+            forces_weight_key,
+            stress_weight_key,
+            metadata_keys,
+        )
+        self.configs.extend(configs)
+
+    @staticmethod
+    def _read_from_parquet(
+        parquet_file: Path,
+        n_configs: Optional[int],
+        coords_key: str,
+        species_key: str,
+        pbc_key: str,
+        cell_key: str,
+        energy_key: str,
+        forces_key: str,
+        stress_key: str,
+        config_weight_key: str,
+        energy_weight_key: str,
+        forces_weight_key: str,
+        stress_weight_key: str,
+        metadata_keys: Optional[List[str]],
+    ) -> List[Configuration]:
+        """
+        Read configurations from a Parquet file.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise DatasetError(
+                "pandas (and pyarrow or fastparquet) is required for Parquet support; "
+                "please install with `pip install pandas pyarrow`."
+            )
+
+        df = pd.read_parquet(parquet_file)
+        total = len(df)
+        if n_configs is not None and total < n_configs:
+            raise DatasetError(
+                f"Parquet file {parquet_file} contains only {total} rows; "
+                f"asked to load {n_configs} configurations."
+            )
+
+        n = n_configs or total
+        configs: List[Configuration] = []
+        for _, row in df.iloc[:n].iterrows():
+            coords = row.get(coords_key)
+            species = row.get(species_key)
+            pbc = row.get(pbc_key)
+            cell = row.get(cell_key)
+            energy = row.get(energy_key)
+            forces = row.get(forces_key)
+            stress = row.get(stress_key)
+            config_weight = row.get(config_weight_key)
+            energy_weight = row.get(energy_weight_key)
+            forces_weight = row.get(forces_weight_key)
+            stress_weight = row.get(stress_weight_key)
+
+            weight = Weight(
+                config_weight=config_weight,
+                energy_weight=energy_weight,
+                forces_weight=forces_weight,
+                stress_weight=stress_weight,
+            )
+
+            metadata = {}
+            if metadata_keys:
+                for key in metadata_keys:
+                    metadata[key] = row.get(key)
+
+            config = Configuration(
+                cell, species, coords, pbc, energy, forces, stress, weight
+            )
+            config._metadata = metadata
+            configs.append(config)
+
+        return configs
+
+    def to_parquet(
+        self,
+        parquet_file: Path,
+        compression: Optional[str] = None,
+    ):
+        """
+        Write the entire Dataset to a Parquet file.
+
+        Args:
+            parquet_file: Path where to write the Parquet file.
+            compression: Optional Parquet compression ("snappy", "gzip", etc.).
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise DatasetError(
+                "pandas (and pyarrow or fastparquet) is required for Parquet support; "
+                "please install with `pip install pandas pyarrow`."
+            )
+
+        # Serialize each config to a dict and form a DataFrame
+        records = [cfg.to_dict() for cfg in self.configs]
+        df = pd.DataFrame.from_records(records)
+        df.to_parquet(parquet_file, index=False, compression=compression)
 
     def to_path(self, path: Union[Path, str], prefix: Union[str, None] = None) -> None:
         """
