@@ -13,7 +13,6 @@ import numpy as np
 import yaml
 from loguru import logger
 from monty.dev import requires
-from openpyxl.utils.cell import coordinate_from_string
 
 from kliff.dataset.extxyz import read_extxyz, write_extxyz
 from kliff.dataset.weight import Weight
