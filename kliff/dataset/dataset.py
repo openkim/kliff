@@ -16,7 +16,7 @@ from monty.dev import requires
 from kliff.dataset.weight import Weight
 from kliff.utils import to_path
 
-from .configuration import Configuration
+from .configuration import Configuration, ConfigurationError
 
 # For type checking
 if TYPE_CHECKING:
@@ -29,12 +29,13 @@ except ImportError:
     MongoDatabase = None
 
 import ase
-import ase.io
 import ase.build.bulk
+import ase.io
 
 # map from file_format to file extension
 SUPPORTED_FORMAT = {"xyz": ".xyz"}
 SUPPORTED_PARSERS = ["ase"]
+
 
 class Dataset:
     """
@@ -553,6 +554,7 @@ class Dataset:
 
         """
         instance = cls()
+        lmdb_file = str(lmdb_file)
         instance.add_from_lmdb(
             lmdb_file,
             n_configs,
@@ -751,13 +753,14 @@ class Dataset:
             import lmdb
         except ImportError:
             raise DatasetError(
-                "LMDB is needed for writing configurations to LMDB dataset," 
+                "LMDB is needed for writing configurations to LMDB dataset,"
                 "please do `pip install lmdb` first"
             )
 
         map_size = os.environ.get("KLIFF_LMDB_MAP_SIZE", 1e12)
         map_size = int(map_size)
 
+        lmdb_file = str(lmdb_file)
         env = lmdb.open(lmdb_file, map_size=map_size, subdir=False)
         txn = env.begin(write=True)
 
@@ -770,186 +773,6 @@ class Dataset:
 
         txn.commit()
         env.close()
-
-    @classmethod
-    def from_parquet(
-        cls,
-        parquet_file: Path,
-        n_configs: Optional[int] = None,
-        coords_key: str = "coords",
-        species_key: str = "species",
-        pbc_key: str = "PBC",
-        cell_key: str = "cell",
-        energy_key: str = "energy",
-        forces_key: str = "forces",
-        stress_key: str = "stress",
-        config_weight_key: str = "config_weight",
-        energy_weight_key: str = "energy_weight",
-        forces_weight_key: str = "forces_weight",
-        stress_weight_key: str = "stress_weight",
-        metadata_keys: Optional[List[str]] = None,
-    ) -> "Dataset":
-        """
-        Load dataset from a Parquet file.
-
-        Args:
-            parquet_file: Path to the Parquet file.
-            n_configs: Maximum number of configurations to load (loads all if None).
-            *_key: Names of the columns in the Parquet table.
-            metadata_keys: List of additional column names to store in config._metadata.
-        """
-        instance = cls()
-        instance.add_from_parquet(
-            parquet_file,
-            n_configs,
-            coords_key,
-            species_key,
-            pbc_key,
-            cell_key,
-            energy_key,
-            forces_key,
-            stress_key,
-            config_weight_key,
-            energy_weight_key,
-            forces_weight_key,
-            stress_weight_key,
-            metadata_keys,
-        )
-        return instance
-
-    def add_from_parquet(
-        self,
-        parquet_file: Path,
-        n_configs: Optional[int],
-        coords_key: str,
-        species_key: str,
-        pbc_key: str,
-        cell_key: str,
-        energy_key: str,
-        forces_key: str,
-        stress_key: str,
-        config_weight_key: str,
-        energy_weight_key: str,
-        forces_weight_key: str,
-        stress_weight_key: str,
-        metadata_keys: Optional[List[str]],
-    ):
-        """
-        Add configurations from a Parquet file to this Dataset.
-        """
-        configs = self._read_from_parquet(
-            parquet_file,
-            n_configs,
-            coords_key,
-            species_key,
-            pbc_key,
-            cell_key,
-            energy_key,
-            forces_key,
-            stress_key,
-            config_weight_key,
-            energy_weight_key,
-            forces_weight_key,
-            stress_weight_key,
-            metadata_keys,
-        )
-        self.configs.extend(configs)
-
-    @staticmethod
-    def _read_from_parquet(
-        parquet_file: Path,
-        n_configs: Optional[int],
-        coords_key: str,
-        species_key: str,
-        pbc_key: str,
-        cell_key: str,
-        energy_key: str,
-        forces_key: str,
-        stress_key: str,
-        config_weight_key: str,
-        energy_weight_key: str,
-        forces_weight_key: str,
-        stress_weight_key: str,
-        metadata_keys: Optional[List[str]],
-    ) -> List[Configuration]:
-        """
-        Read configurations from a Parquet file.
-        """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise DatasetError(
-                "pandas (and pyarrow or fastparquet) is required for Parquet support; "
-                "please install with `pip install pandas pyarrow`."
-            )
-
-        df = pd.read_parquet(parquet_file)
-        total = len(df)
-        if n_configs is not None and total < n_configs:
-            raise DatasetError(
-                f"Parquet file {parquet_file} contains only {total} rows; "
-                f"asked to load {n_configs} configurations."
-            )
-
-        n = n_configs or total
-        configs: List[Configuration] = []
-        for _, row in df.iloc[:n].iterrows():
-            coords = row.get(coords_key)
-            species = row.get(species_key)
-            pbc = row.get(pbc_key)
-            cell = row.get(cell_key)
-            energy = row.get(energy_key)
-            forces = row.get(forces_key)
-            stress = row.get(stress_key)
-            config_weight = row.get(config_weight_key)
-            energy_weight = row.get(energy_weight_key)
-            forces_weight = row.get(forces_weight_key)
-            stress_weight = row.get(stress_weight_key)
-
-            weight = Weight(
-                config_weight=config_weight,
-                energy_weight=energy_weight,
-                forces_weight=forces_weight,
-                stress_weight=stress_weight,
-            )
-
-            metadata = {}
-            if metadata_keys:
-                for key in metadata_keys:
-                    metadata[key] = row.get(key)
-
-            config = Configuration(
-                cell, species, coords, pbc, energy, forces, stress, weight
-            )
-            config._metadata = metadata
-            configs.append(config)
-
-        return configs
-
-    def to_parquet(
-        self,
-        parquet_file: Path,
-        compression: Optional[str] = None,
-    ):
-        """
-        Write the entire Dataset to a Parquet file.
-
-        Args:
-            parquet_file: Path where to write the Parquet file.
-            compression: Optional Parquet compression ("snappy", "gzip", etc.).
-        """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise DatasetError(
-                "pandas (and pyarrow or fastparquet) is required for Parquet support; "
-                "please install with `pip install pandas pyarrow`."
-            )
-
-        # Serialize each config to a dict and form a DataFrame
-        records = [cfg.to_dict() for cfg in self.configs]
-        df = pd.DataFrame.from_records(records)
-        df.to_parquet(parquet_file, index=False, compression=compression)
 
     def to_path(self, path: Union[Path, str], prefix: Union[str, None] = None) -> None:
         """
@@ -1400,12 +1223,6 @@ class Dataset:
             raise DatasetError(f"Dataset type {dataset_type} not supported.")
 
         return dataset
-
-
-class ConfigurationError(Exception):
-    def __init__(self, msg):
-        super(ConfigurationError, self).__init__(msg)
-        self.msg = msg
 
 
 class DatasetError(Exception):

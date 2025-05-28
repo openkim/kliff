@@ -18,8 +18,8 @@ except ImportError:
     MongoDatabase = None
 
 import ase
-import ase.io
 import ase.build.bulk
+import ase.io
 from ase.calculators.singlepoint import (
     PropertyNotImplementedError,
     SinglePointCalculator,
@@ -646,9 +646,10 @@ class Configuration:
     def bulk(cls, **kwargs) -> "Configuration":
         """
         Transparent wrapper to get KLIFF configuration from bulk ASE atoms.
+        Mostly for convenience.
 
         Args:
-            **kwargs:
+            **kwargs: All the args that will be passed to `ase.build.bulk`
 
         Returns:
             Configuration
@@ -657,7 +658,7 @@ class Configuration:
         config = cls.from_ase_atoms(atoms)
         return config
 
-    def get_supercell(self, nx: int=1, ny: int=1, nz: int=1) -> "Configuration":
+    def get_supercell(self, nx: int = 1, ny: int = 1, nz: int = 1) -> "Configuration":
         """
         Generate supercell from a configuration.
 
@@ -676,10 +677,12 @@ class Configuration:
         for i in range(nx):
             for j in range(ny):
                 for k in range(nz):
-                    translations.append(i * self.cell[0] + j * self.cell[1] + k * self.cell[2])
+                    translations.append(
+                        i * self.cell[0] + j * self.cell[1] + k * self.cell[2]
+                    )
 
         translations = np.vstack(translations)
-        new_coords = (self.coords[None, : , :] + translations[:, None, :]).reshape(-1, 3)
+        new_coords = (self.coords[None, :, :] + translations[:, None, :]).reshape(-1, 3)
         new_species = self.species * (nx * ny * nz)
 
         try:
@@ -705,7 +708,7 @@ class Configuration:
             forces=new_forces,
             stress=new_stress,
             PBC=self.PBC,
-            weight=self.weight
+            weight=self.weight,
         )
 
 
