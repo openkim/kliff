@@ -13,8 +13,9 @@ import yaml
 from loguru import logger
 from monty.dev import requires
 
+from kliff.atomic_data import atomic_species
 from kliff.dataset.weight import Weight
-from kliff.utils import to_path
+from kliff.utils import str_to_numpy, to_path
 
 from .configuration import Configuration, ConfigurationError
 
@@ -732,6 +733,9 @@ class Dataset:
                 stress_weight=stress_weight,
             )
 
+            if not isinstance(species[0], str):
+                species = [atomic_species[z] for z in species]
+
             metadata = {}
             if metadata_keys is not None:
                 for keys in metadata_keys:
@@ -773,6 +777,163 @@ class Dataset:
 
         txn.commit()
         env.close()
+
+    @classmethod
+    def from_huggingface(
+        cls,
+        hf_id: str,
+        split: str = "train",
+        n_configs: Optional[int] = None,
+        coords_key: str = "positions",
+        species_key: str = "atomic_numbers",
+        pbc_key: str = "pbc",
+        cell_key: str = "cell",
+        energy_key: str = "energy",
+        forces_key: str = "atomic_forces",
+        stress_key: Optional[str] = None,
+        weights_file: Optional[Union[str, Path]] = None,
+        **load_kwargs,
+    ) -> "Dataset":
+        """
+        Load dataset from a HuggingFace Hub dataset.
+
+        Args:
+            hf_id:         Huggingface id e.g. "colabfit/xxMD-CASSCF_train"
+            split:         which split to load, e.g. "train"
+            n_configs:     optionally limit to the first N configs
+            *_key:         column names in the HF dataset
+            load_kwargs:   passed through to `datasets.load_dataset`
+
+        Returns:
+            Dataset
+        """
+        instance = cls()
+        instance.add_from_huggingface(
+            hf_id,
+            split,
+            n_configs,
+            coords_key,
+            species_key,
+            pbc_key,
+            cell_key,
+            energy_key,
+            forces_key,
+            stress_key,
+            weights_file=weights_file,
+            **load_kwargs,
+        )
+        return instance
+
+    def add_from_huggingface(
+        self,
+        hf_id,
+        split,
+        n_configs,
+        coords_key,
+        species_key,
+        pbc_key,
+        cell_key,
+        energy_key,
+        forces_key,
+        stress_key: Optional[str] = None,
+        weights_file: Optional[Union[str, Path]] = None,
+        **load_kwargs,
+    ):
+        """
+        Add configurations from a HuggingFace Hub dataset.
+
+        Args:
+            hf_id:         Huggingface id e.g. "colabfit/xxMD-CASSCF_train"
+            split:         which split to load, e.g. "train"
+            n_configs:     optionally limit to the first N configs
+            *_key:         column names in the HF dataset
+            load_kwargs:   passed through to `datasets.load_dataset`
+
+        """
+        configs = self._read_from_huggingface(
+            hf_id,
+            split,
+            n_configs,
+            coords_key,
+            species_key,
+            pbc_key,
+            cell_key,
+            energy_key,
+            forces_key,
+            stress_key,
+            weights_file=weights_file,
+            **load_kwargs,
+        )
+        if weights_file is not None:
+            Dataset.add_weights(configs, weights_file)
+        self.configs.extend(configs)
+
+    @staticmethod
+    def _read_from_huggingface(
+        hf_id,
+        split,
+        n_configs,
+        coords_key,
+        species_key,
+        pbc_key,
+        cell_key,
+        energy_key,
+        forces_key,
+        stress_key,
+        **load_kwargs,
+    ) -> List[Configuration]:
+        """
+        Load from HuggingFace using `datasets`, build Configuration objects.
+
+        TODO: Iterating through the hugging face parquet/whatever database is very slow
+              find a faster way to map/batch it.
+        """
+        try:
+            from datasets import load_dataset
+            from tqdm.auto import tqdm
+        except ImportError:
+            raise DatasetError(
+                "Please `pip install datasets tqdm` to load from HuggingFace"
+            )
+
+        # 1) load the split
+        ds = load_dataset(hf_id, split=split, **load_kwargs)
+        if n_configs is not None:
+            ds = ds.select(range(n_configs))
+
+        results = []
+        for ex in tqdm(ds, total=len(ds), desc=f"Processing HF dataset: {hf_id}"):
+            # extract arrays (they may already be lists or numpy arrays)
+            coords = str_to_numpy(ex[coords_key], float)
+            atomic_numbers_or_species = str_to_numpy(ex[species_key], int)
+            pbc = str_to_numpy(ex[pbc_key], bool)
+            cell = str_to_numpy(ex[cell_key], float)
+
+            energy = float(ex[energy_key]) if energy_key is not None else None
+            forces = (
+                str_to_numpy(ex[forces_key], float) if forces_key is not None else None
+            )
+            stress = (
+                str_to_numpy(ex[forces_key], float) if stress_key is not None else None
+            )
+
+            if not isinstance(atomic_numbers_or_species[0], str):
+                atomic_numbers_or_species = [
+                    atomic_species[z] for z in atomic_numbers_or_species
+                ]
+
+            cfg = Configuration(
+                coords=coords,
+                species=atomic_numbers_or_species,
+                PBC=pbc,
+                cell=cell,
+                energy=energy,
+                forces=forces,
+                stress=stress,
+            )
+            results.append(cfg)
+
+        return results
 
     def to_path(self, path: Union[Path, str], prefix: Union[str, None] = None) -> None:
         """

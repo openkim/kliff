@@ -393,6 +393,33 @@ You can export the dataset to different formats using ``to_<form>`` methods. Her
 can be ``ase``, ``path``, and ``colabfit``. For interactive inter-compatibility you can
 also export the dataset to list of ``ase.Atoms`` objects using ``Dataset.to_ase_list`` method.
 
+Downloading datasets from HuggingFace 🤗
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+KLIFF can now directly download appropriate datasets from Hugging Face. All you need to provide
+is the dataset id, and the split. It is optimized for the Colafit distributed datasets,
+but is universal and applicable to all configuration datasets.
+
+Example, if you want to use the `xxMD-DFT_validation <https://huggingface.co/datasets/colabfit/xxMD-DFT_validation>`_
+dataset, you can just do
+
+.. parsed-literal::
+
+    >>> ds = Dataset.from_huggingface("colabfit/xxMD-DFT_validation", "train")
+    Processing HF dataset: colabfit/xxMD-DFT_validation: 100%|██████████████████████████| 21605/21605 [00:15<00:00, 1438.90it/s]
+
+and the dataset is ready to be used! The progress bar will indicate number of configurations
+parsed as it can get slow sometimes.
+
+.. tip::
+
+    Hugging Face requires all the datasets to be marked as ``train``, or ``test`` etc, so
+    lot of datasets just leave the default type as ``train``, even though the name says
+    validation! So please beware of the split you want to use for any data (second argument).
+
+.. code-block::python
+
+
 
 Custom Dataset Class
 --------------------

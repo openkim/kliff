@@ -136,6 +136,8 @@ setup(
             "ase",
             "libdescriptor",
             "lmdb",
+            "datasets",  # for hugging face
+            "tqdm",
         ],
         "torch": [
             "torch",
