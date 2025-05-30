@@ -883,57 +883,68 @@ class Dataset:
         **load_kwargs,
     ) -> List[Configuration]:
         """
-        Load from HuggingFace using `datasets`, build Configuration objects.
-
-        TODO: Iterating through the hugging face parquet/whatever database is very slow
-              find a faster way to map/batch it.
+        read and process data from a HuggingFace dataset.
         """
         try:
             from datasets import load_dataset
-            from tqdm.auto import tqdm
         except ImportError:
             raise DatasetError(
-                "Please `pip install datasets tqdm` to load from HuggingFace"
+                "Please do `pip install datasets` first to load from HuggingFace"
             )
 
-        # 1) load the split
+        # 1. pull the split
+        logger.info(f"Loading dataset from HuggingFace: {hf_id} ...")
         ds = load_dataset(hf_id, split=split, **load_kwargs)
+
+        # 2. optionally truncate
         if n_configs is not None:
             ds = ds.select(range(n_configs))
 
-        results = []
-        for ex in tqdm(ds, total=len(ds), desc=f"Processing HF dataset: {hf_id}"):
-            # extract arrays (they may already be lists or numpy arrays)
-            coords = str_to_numpy(ex[coords_key], float)
-            atomic_numbers_or_species = str_to_numpy(ex[species_key], int)
-            pbc = str_to_numpy(ex[pbc_key], bool)
-            cell = str_to_numpy(ex[cell_key], float)
+        # 3. keep only the columns we need
+        cols = [coords_key, species_key, pbc_key, cell_key]
+        if energy_key:
+            cols.append(energy_key)
+        if forces_key:
+            cols.append(forces_key)
+        if stress_key:
+            cols.append(stress_key)
+        ds = ds.select_columns(cols)
 
-            energy = float(ex[energy_key]) if energy_key is not None else None
-            forces = (
-                str_to_numpy(ex[forces_key], float) if forces_key is not None else None
+        # this is logged to mainly tell the user that something is going on, else for
+        # large datasets it appears as hung
+        logger.info(
+            f"Loaded {len(ds)} configurations from {hf_id}; processing ... (it may take a little while)"
+        )
+        # 4) have HF convert ALL of them to NumPy arrays at once
+        ds.set_format(type="numpy", columns=cols)
+
+        # 5) extract the raw arrays
+        coords_arr: np.ndarray = ds[coords_key]
+        species_arr: np.ndarray = ds[species_key]
+        pbc_arr: np.ndarray = ds[pbc_key]
+        cell_arr: np.ndarray = ds[cell_key]
+        if energy_key:
+            energy_arr: np.ndarray = ds[energy_key]
+        if forces_key:
+            forces_arr: np.ndarray = ds[forces_key]
+        if stress_key:
+            stress_arr: np.ndarray = ds[stress_key]
+
+        logger.info(f"Processed {len(coords_arr)} configurations from HuggingFace")
+        configs = []
+        for i in range(len(coords_arr)):
+            configs.append(
+                Configuration(
+                    coords=coords_arr[i],
+                    species=species_arr[i].tolist(),
+                    PBC=pbc_arr[i].tolist(),
+                    cell=cell_arr[i],
+                    energy=float(energy_arr[i]) if energy_key else None,
+                    forces=forces_arr[i] if forces_key else None,
+                    stress=(stress_arr[i] if stress_key else None),
+                )
             )
-            stress = (
-                str_to_numpy(ex[forces_key], float) if stress_key is not None else None
-            )
-
-            if not isinstance(atomic_numbers_or_species[0], str):
-                atomic_numbers_or_species = [
-                    atomic_species[z] for z in atomic_numbers_or_species
-                ]
-
-            cfg = Configuration(
-                coords=coords,
-                species=atomic_numbers_or_species,
-                PBC=pbc,
-                cell=cell,
-                energy=energy,
-                forces=forces,
-                stress=stress,
-            )
-            results.append(cfg)
-
-        return results
+        return configs
 
     def to_path(self, path: Union[Path, str], prefix: Union[str, None] = None) -> None:
         """

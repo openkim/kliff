@@ -417,9 +417,6 @@ parsed as it can get slow sometimes.
     lot of datasets just leave the default type as ``train``, even though the name says
     validation! So please beware of the split you want to use for any data (second argument).
 
-.. code-block::python
-
-
 
 Custom Dataset Class
 --------------------
