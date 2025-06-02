@@ -2,10 +2,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from ase import Atoms, io
+from ase import Atoms, build, io
 
 from kliff.dataset import Configuration
-from kliff.dataset.dataset import ConfigurationError
+from kliff.dataset.configuration import ConfigurationError
 from kliff.utils import stress_to_voigt
 
 
@@ -57,3 +57,25 @@ def test_configuration_from_file():
     # stress should raise exception
     with pytest.raises(ConfigurationError):
         stress = config.stress
+
+
+def test_configuration_from_ase_bulk():
+    """Test initializing Configuration from ASE build.bulk function"""
+    bulk_config = build.bulk(name="Si", a=5.44, crystalstructure="diamond")
+    config = Configuration.from_ase_atoms(bulk_config)
+    config_direct = Configuration.bulk(name="Si", a=5.44, crystalstructure="diamond")
+
+    assert config.species == config_direct.species
+    assert np.allclose(config.coords, config_direct.coords)
+    assert np.allclose(config.cell, config_direct.cell)
+    assert np.allclose(config.PBC, config_direct.PBC)
+
+
+def test_supercell():
+    """Test creation of supercell"""
+    conf = Configuration.bulk(name="Si", a=5.44, crystalstructure="diamond")
+    super_cell = conf.get_supercell(2, 2, 2)
+
+    assert np.allclose(super_cell.cell, 2 * conf.cell)
+    assert conf.get_num_atoms() * 8 == super_cell.get_num_atoms()
+    assert np.allclose(conf.coords, super_cell.coords[: conf.coords.shape[0], :])

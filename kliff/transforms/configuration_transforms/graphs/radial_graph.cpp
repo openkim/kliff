@@ -16,6 +16,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <numeric>
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -465,6 +466,12 @@ GraphData get_mic_graph(double cutoff,
       = py::array_t<int64_t>(n_atoms, contributions.data());
   graph_data.shifts = shifts;
 
+  // images == atom index, for full compatibility
+  py::array_t<int64_t> arr(n_atoms);
+  auto buf = arr.request();
+  auto ptr = static_cast<int64_t*>(buf.ptr);
+  std::iota(ptr, ptr + n_atoms, 0);
+  graph_data.images = std::move(arr);
 
   delete[] graph_edge_indices[0];
   delete[] graph_edge_indices;

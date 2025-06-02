@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from kliff.dataset.dataset import Configuration, Dataset, read_extxyz, write_extxyz
+from kliff.dataset import Configuration, Dataset, read_extxyz, write_extxyz
 
 
 def test_read_write_extxyz(test_data_dir, tmp_dir):

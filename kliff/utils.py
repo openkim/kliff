@@ -3,9 +3,10 @@ import pickle
 import random
 import subprocess
 import tarfile
+from ast import literal_eval
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import numpy as np
 import requests
@@ -288,3 +289,21 @@ def get_n_configs_in_xyz(file_path: str) -> int:
         num_atoms = int(result.stdout.strip())
 
     return num_atoms
+
+
+def str_to_numpy(expression: str, dtype: Any) -> Union[np.ndarray, Any]:
+    """
+    Convert a string to numpy array. For reading from SQL/HF databases.
+
+    Args:
+        expression: Numpy array expression.
+        dtype: dtype to convert to.
+
+    Returns:
+        Numpy array of str, else returns the same object.
+    """
+    return (
+        np.array(literal_eval(expression), dtype)
+        if isinstance(expression, str)
+        else expression
+    )
