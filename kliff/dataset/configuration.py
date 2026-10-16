@@ -426,7 +426,7 @@ class Configuration:
 
     @stress.setter
     def stress(self, stress: Union[List[float], np.ndarray]):
-        """
+        r"""
         Set the stress of the configuration. The stress is given in Voigt notation i.e
         :math:`\sigma=[\sigma_{xx},\sigma_{yy},\sigma_{zz},\sigma_{yz},\sigma_{xz},
         \sigma_{xy}]`.

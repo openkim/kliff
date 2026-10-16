@@ -180,7 +180,7 @@ def pickle_load(filename: Union[Path, str]):
 
 
 def stress_to_voigt(input_stress: np.ndarray) -> list:
-    """
+    r"""
     Convert stress from 3x3 tensor notation to 6x1 Voigt notation.
     :math:`\sigma_{ij} = [\sigma_{11}, \sigma_{22}, \sigma_{33}, \sigma_{23}, \sigma_{13}, \sigma_{12}]`
 
