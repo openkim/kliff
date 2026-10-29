@@ -268,7 +268,7 @@ if emcee_avail:
 
         Notes:
             As a convention, KLIFF inflates the likelihood by some sampling temperature,
-            i.e., :math:`L(\\theta) \propto \exp(-C(\\theta) / T)`. As a default, the
+            i.e., :math:`L(\\theta) \\propto \\exp(-C(\\theta) / T)`. As a default, the
             sampling temperature is set to the natural temperature. To use the untempered
             likelihood (:math:`T=1`), user should specify the argument ``T=1``.
 

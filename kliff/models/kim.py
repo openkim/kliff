@@ -6,7 +6,6 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
-import kimpy
 import numpy as np
 from loguru import logger
 
