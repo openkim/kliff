@@ -4,7 +4,6 @@
 import importlib.metadata
 import os
 import tarfile
-from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Union
 
 import pytorch_lightning as pl
@@ -359,14 +358,30 @@ class GNNLightningTrainer(Trainer):
                 for config in self.val_dataset:
                     config.fingerprint = self.configuration_transform(config)
 
+            # RadialGraph C extension always upcasts coords/forces to float64 regardless
+            # of input dtype. Cast fingerprints back to match the model's default dtype.
+            if torch.get_default_dtype() == torch.float32:
+                for ds in [self.train_dataset, self.val_dataset]:
+                    if ds is None:
+                        continue
+                    for config in ds:
+                        fp = getattr(config, "fingerprint", None)
+                        if fp is None:
+                            continue
+                        if hasattr(fp, "coords") and fp.coords is not None:
+                            fp.coords = fp.coords.to(torch.float32)
+                        if hasattr(fp, "forces") and fp.forces is not None:
+                            fp.forces = fp.forces.to(torch.float32)
+
         self.train_dataset = GraphDataset(self.train_dataset, transform)
         if self.val_dataset:
             self.val_dataset = GraphDataset(self.val_dataset, transform)
 
-        if self.optimizer_manifest["num_workers"]:
-            num_workers = self.optimizer_manifest["num_workers"]
+        num_workers = self.optimizer_manifest.get("num_workers", None)
+        if num_workers is None:
+            num_workers = int(os.getenv("SLURM_CPUS_PER_TASK", 1))
         else:
-            num_workers = os.getenv("SLURM_CPUS_PER_TASK", 1)
+            num_workers = int(num_workers)
 
         self.data_module = LightningDataset(
             self.train_dataset,
@@ -497,17 +512,23 @@ class GNNLightningTrainer(Trainer):
 
         os.makedirs(path, exist_ok=True)
 
-        # save the best pl_model
-        pl_module = deepcopy(self.pl_model)
-        pl_module.load_state_dict(
-            torch.load(f"{self.current['run_dir']}/checkpoints/best_model.pth")
+        # Load best checkpoint directly into self.pl_model.
+        # deepcopy(self.pl_model) fails when the model contains e3nn layers because
+        # SphericalHarmonics stores self.sph_func = torch.jit.script(...) as an instance
+        # attribute, and ScriptFunction.__reduce__ raises PickleError. Training is complete
+        # so mutating self.pl_model is safe.
+        self.pl_model.load_state_dict(
+            torch.load(
+                f"{self.current['run_dir']}/checkpoints/best_model.pth",
+                weights_only=False,
+            )
         )
         try:
-            model = torch.jit.script(pl_module.model)
+            model = torch.jit.script(self.pl_model.model)
         except RuntimeError:
             from e3nn.util import jit  # model might be an e3nn model
 
-            model = jit.script(pl_module.model)
+            model = jit.script(self.pl_model.model)
         model = model.cpu()
         torch.jit.save(model, f"{path}/model.pt")
 
